@@ -450,7 +450,8 @@ class RobotRigidGroup:
         linear_velocities = np.zeros((n_links, 3))
         angular_velocities = np.zeros((n_links, 3))
         for i, prim in enumerate(self.prims):
-            linear_velocity, angular_velocity = prim.get_velocities()
+            linear_velocity = prim.get_linear_velocity()
+            angular_velocity = prim.get_angular_velocity()
             linear_velocities[i, :] = linear_velocity
             angular_velocities[i, :] = angular_velocity
         return linear_velocities, angular_velocities
