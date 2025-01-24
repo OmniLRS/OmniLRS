@@ -203,7 +203,7 @@ class CraterGenerator:
 
         # Index of the profile
         if index == -1:
-            if size > 10:
+            if size > (15 / self._resolution):
                 low_ratio_ind = self._rng.integers(0, 1, 1) # To pick between 5 and 13 for large craters
                 if low_ratio_ind == 0:
                     index = 5
@@ -247,7 +247,7 @@ class CraterGenerator:
         coords: np.ndarray = None,
         radius: np.ndarray = None,
         craters_data: List[CraterData] = None,
-    ) -> Tuple[np.ndarray, np.ndarray, List[CraterData]]:
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray,List[CraterData]]:
         """
         Generates a DEM with craters.
 
@@ -260,7 +260,9 @@ class CraterGenerator:
 
         # Creates a padded DEM and mask
         DEM_padded = np.zeros((self._pad_size * 2 + DEM.shape[0], self._pad_size * 2 + DEM.shape[1]))
-        mask_padded = np.ones_like(DEM_padded)
+        crater_mask_padded = np.ones_like(DEM_padded)
+        background_mask_padded = np.ones_like(DEM_padded)
+        crater_ejecta_mask_padded = np.zeros_like(DEM_padded)
         DEM_padded[self._pad_size : -self._pad_size, self._pad_size : -self._pad_size] = DEM
 
         # Creates a cache to store craters data
@@ -268,10 +270,14 @@ class CraterGenerator:
             craters_data = []
 
         # Sort the radius in decreasing order so that deformation is applied to big crater first then small ones
+        sorted_ind = (-radius).argsort()
 
         # Adds the craters to the DEM
         if len(craters_data) == 0:
-            for coord, rad in zip(coords, radius):
+            for crater_ind in sorted_ind:
+            #for coord, rad in zip(coords, radius):
+                coord = coords[crater_ind]
+                rad = radius[crater_ind]
                 rad = int(rad * 2 / self._resolution)
                 coord_s = coord / self._resolution
                 c, crater_data = self.generateCrater(int(rad))
@@ -286,13 +292,32 @@ class CraterGenerator:
                 ] += c
 
                  # Generate several other mask for inter crater rocks and ejecta regions
-                mask_padded = cv2.circle(
-                    mask_padded,
+                crater_mask_padded = cv2.circle(
+                    crater_mask_padded,
                     (coord2[1], coord2[0]),
                     int(crater_data.size / 4),
                     0,
                     -1,
                 )
+
+                # Crater ejecta mask if crater is large enough
+                if rad > (15 / self._resolution):
+                    crater_ejecta_mask_padded = cv2.circle(
+                        crater_ejecta_mask_padded,
+                        (coord2[1], coord2[0]),
+                        int(crater_data.size  / 4),
+                        1,
+                        int(crater_data.size  / 2),
+                    )
+
+                crater_ejecta_mask_padded = cv2.circle(
+                        crater_ejecta_mask_padded,
+                        (coord2[1], coord2[0]),
+                        int(crater_data.size  / 4),
+                        0,
+                        -1,
+                    )    
+
                 craters_data.append(crater_data)
         else:
             for crater_data in craters_data:
@@ -305,21 +330,52 @@ class CraterGenerator:
                     coord[0] : coord[0] + crater_data.size,
                     coord[1] : coord[1] + crater_data.size,
                 ] += c
-                mask_padded = cv2.circle(
-                    mask_padded,
+                crater_mask_padded = cv2.circle(
+                    crater_mask_padded,
                     (coord2[1], coord2[0]),
                     int(crater_data.size / 4),
                     0,
                     -1,
                 )
+                # Crater ejecta mask if crater is large enough
+                if rad > (15 / self._resolution):
+                    crater_ejecta_mask_padded = cv2.circle(
+                        crater_ejecta_mask_padded,
+                        (coord2[1], coord2[0]),
+                        int(crater_data.size  / 4),
+                        1,
+                        int(crater_data.size  / 2),
+                    )
+                crater_ejecta_mask_padded = cv2.circle(
+                    crater_ejecta_mask_padded,
+                    (coord2[1], coord2[0]),
+                    int(crater_data.size  / 4),
+                    0,
+                    -1,
+                )  
 
-        mask_padded[: self._pad_size + 1, :] = 0
-        mask_padded[:, : self._pad_size + 1] = 0
-        mask_padded[-self._pad_size - 1 :, :] = 0
-        mask_padded[:, -self._pad_size - 1 :] = 0
+        background_mask_padded[: self._pad_size + 1, :] = 0
+        background_mask_padded[:, : self._pad_size + 1] = 0
+        background_mask_padded[-self._pad_size - 1 :, :] = 0
+        background_mask_padded[:, -self._pad_size - 1 :] = 0
+
+        crater_mask_padded[: self._pad_size + 1, :] = 0
+        crater_mask_padded[:, : self._pad_size + 1] = 0
+        crater_mask_padded[-self._pad_size - 1 :, :] = 0
+        crater_mask_padded[:, -self._pad_size - 1 :] = 0
+
+        crater_ejecta_mask_padded[: self._pad_size + 1, :] = 0
+        crater_ejecta_mask_padded[:, : self._pad_size + 1] = 0
+        crater_ejecta_mask_padded[-self._pad_size - 1 :, :] = 0
+        crater_ejecta_mask_padded[:, -self._pad_size - 1 :] = 0
+
+
+        # Return - DEM, background_mask, crater_mask, crater_ejecta_mask, crater_data
         return (
             DEM_padded[self._pad_size : -self._pad_size, self._pad_size : -self._pad_size],
-            mask_padded[self._pad_size : -self._pad_size, self._pad_size : -self._pad_size],
+            background_mask_padded[self._pad_size : -self._pad_size, self._pad_size : -self._pad_size],
+            crater_mask_padded[self._pad_size : -self._pad_size, self._pad_size : -self._pad_size],
+            crater_ejecta_mask_padded[self._pad_size : -self._pad_size, self._pad_size : -self._pad_size],
             craters_data,
         )
 
@@ -597,7 +653,9 @@ class GenerateProceduralMoonYard:
 
         self.DE = DeformationEngine(moon_yard.deformation_engine)
         self._dem_init = None
-        self._mask = None
+        self._background_mask = None
+        self._crater_mask = None
+        self._crater_ejecta_mask = None
         self._dem_delta = None
         self._num_pass = None
 
@@ -611,15 +669,17 @@ class GenerateProceduralMoonYard:
 
         DEM = self.T.generateRandomTerrain(is_lab=self.is_lab, is_yard=self.is_yard)
         coords, radius = self.D.run()
-        DEM, mask, craters_data = self.G.generateCraters(DEM, coords, radius)
+        DEM, background_mask, crater_mask, crater_ejecta_mask, craters_data = self.G.generateCraters(DEM, coords, radius)
         DEM = self.T.applyHighResolutionNoise(DEM)
         self._dem_init = DEM
         self._dem_delta = np.zeros_like(DEM)
-        self._mask = mask
-        self._num_pass = np.zeros_like(mask)
-        return DEM, mask, craters_data
+        self._background_mask = background_mask
+        self._crater_mask = crater_mask
+        self._crater_ejecta_mask = crater_ejecta_mask
+        self._num_pass = np.zeros_like(crater_mask)
+        return DEM, background_mask, crater_mask, crater_ejecta_mask, craters_data
 
-    def augment(self, DEM: np.ndarray, mask: np.ndarray) -> np.ndarray:
+    def augment(self, DEM: np.ndarray, background_mask: np.ndarray, crater_mask: np.ndarray, crater_ejecta_mask: np.ndarray) -> np.ndarray:
         """
         Generates a random terrain DEM with craters.
 
@@ -627,13 +687,15 @@ class GenerateProceduralMoonYard:
             tuple: random terrain DEM with craters, mask of the craters, and the data regarding the craters generation.
         """
         coords, radius = self.D.run()
-        DEM, mask_, craters_data = self.G.generateCraters(DEM, coords, radius)
-        mask = mask * mask_
+        DEM, background_mask, crater_mask, crater_ejecta_mask, craters_data = self.G.generateCraters(DEM, coords, radius)
+        crater_mask = crater_mask * crater_mask
         self._dem_init = DEM
         self._dem_delta = np.zeros_like(DEM)
-        self._mask = mask
-        self._num_pass = np.zeros_like(mask)
-        return DEM, mask, craters_data
+        self._crater_mask = crater_mask
+        self._background_mask = background_mask
+        self._crater_ejecta_mask = crater_ejecta_mask
+        self._num_pass = np.zeros_like(crater_mask)
+        return DEM, background_mask, crater_mask,  craters_data
 
     def register_terrain(self, DEM: np.ndarray, mask: np.ndarray):
         """
