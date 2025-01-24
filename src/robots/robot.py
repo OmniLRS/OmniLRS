@@ -450,10 +450,23 @@ class RobotRigidGroup:
         linear_velocities = np.zeros((n_links, 3))
         angular_velocities = np.zeros((n_links, 3))
         for i, prim in enumerate(self.prims):
+            orientation = prim.get_world_pose()[1]
+            quaternion = [orientation[1], orientation[2], orientation[3], orientation[0]]
+            rotation = R.from_quat(quaternion)
+            pitch_angle = 2 * np.arctan2(rotation.as_quat()[1], rotation.as_quat()[3])
+            pitch_correction_quat = [0, -np.sin(pitch_angle / 2), 0, np.cos(pitch_angle / 2)]
+            inverse_pitch_rotation = R.from_quat(pitch_correction_quat)
+            rotation_corrected = rotation * inverse_pitch_rotation
+            # Linear velocity
             linear_velocity = prim.get_linear_velocity()
-            angular_velocity = prim.get_angular_velocity()
-            linear_velocities[i, :] = linear_velocity
-            angular_velocities[i, :] = angular_velocity
+            linear_velocity_local = rotation_corrected.inv().apply(linear_velocity)
+            linear_velocities[i, :] = linear_velocity_local
+            print("Linear velocity: ", linear_velocity_local)
+            # Angular velocity
+            angular_velocity = prim.get_angular_velocity() * np.pi / 180
+            angular_velocity_local = rotation_corrected.inv().apply(angular_velocity)
+            angular_velocities[i, :] = angular_velocity_local
+            print("Angular velocity: ", angular_velocity_local *0.105)
         return linear_velocities, angular_velocities
 
     def get_net_contact_forces(self) -> np.ndarray:
