@@ -425,13 +425,8 @@ class RobotRigidGroup:
         orientations = np.zeros((n_links, 4))
         for i, prim in enumerate(self.prims):
             position, orientation = prim.get_world_pose()
-            quaternion = [orientation[1], orientation[2], orientation[3], orientation[0]]
-            rotation = R.from_quat(quaternion)
-            pitch_angle = 2 * np.arctan2(rotation.as_quat()[1], rotation.as_quat()[3])
-            pitch_correction_quat = [0, -np.sin(pitch_angle / 2), 0, np.cos(pitch_angle / 2)]
-            inverse_pitch_rotation = R.from_quat(pitch_correction_quat)
-            rotation_corrected = rotation * inverse_pitch_rotation
-            quaternion_corrected = rotation_corrected.as_quat()
+            rotation = self.world_to_local_frame(orientation)
+            quaternion_corrected = rotation.as_quat()
             orientation_corrected = [quaternion_corrected[3], quaternion_corrected[0], quaternion_corrected[1], quaternion_corrected[2]]
             positions[i, :] = position
             orientations[i, :] = orientation_corrected
@@ -451,22 +446,15 @@ class RobotRigidGroup:
         angular_velocities = np.zeros((n_links, 3))
         for i, prim in enumerate(self.prims):
             orientation = prim.get_world_pose()[1]
-            quaternion = [orientation[1], orientation[2], orientation[3], orientation[0]]
-            rotation = R.from_quat(quaternion)
-            pitch_angle = 2 * np.arctan2(rotation.as_quat()[1], rotation.as_quat()[3])
-            pitch_correction_quat = [0, -np.sin(pitch_angle / 2), 0, np.cos(pitch_angle / 2)]
-            inverse_pitch_rotation = R.from_quat(pitch_correction_quat)
-            rotation_corrected = rotation * inverse_pitch_rotation
+            rotation = self.world_to_local_frame(orientation)
             # Linear velocity
             linear_velocity = prim.get_linear_velocity()
-            linear_velocity_local = rotation_corrected.inv().apply(linear_velocity)
+            linear_velocity_local = rotation.inv().apply(linear_velocity)
             linear_velocities[i, :] = linear_velocity_local
-            print("Linear velocity: ", linear_velocity_local)
             # Angular velocity
             angular_velocity = prim.get_angular_velocity() * np.pi / 180
-            angular_velocity_local = rotation_corrected.inv().apply(angular_velocity)
+            angular_velocity_local = rotation.inv().apply(angular_velocity)
             angular_velocities[i, :] = angular_velocity_local
-            print("Angular velocity: ", angular_velocity_local *0.105)
         return linear_velocities, angular_velocities
 
     def get_net_contact_forces(self) -> np.ndarray:
@@ -483,6 +471,24 @@ class RobotRigidGroup:
             contact_force = prim_view.get_net_contact_forces(dt = 1/60).squeeze()
             contact_forces[i, :] = contact_force
         return contact_forces
+
+    def world_to_local_frame(self, orientation: np.ndarray) -> R:
+        """
+        Convert orientation from world frame to local frame.
+
+        Args:
+            orientations (np.ndarray): The orientations in world (w, x, y, z)
+        
+        Returns:
+            R: Corrected rotation in local frame.
+        """
+        
+        rotation = R.from_quat([orientation[1], orientation[2], orientation[3], orientation[0]])
+        pitch_angle = 2 * np.arctan2(rotation.as_quat()[1], rotation.as_quat()[3])
+        pitch_correction_quat = [0, -np.sin(pitch_angle / 2), 0, np.cos(pitch_angle / 2)]
+        inverse_pitch_rotation = R.from_quat(pitch_correction_quat)
+        rotation_corrected = rotation * inverse_pitch_rotation
+        return rotation_corrected
 
     def apply_force_torque(self, forces: np.ndarray, torques: np.ndarray) -> None:
         """
