@@ -72,6 +72,10 @@ class CraterGenerator:
 
         with open(self._profiles_path, "rb") as handle:
             self._profiles = pickle.load(handle)
+        
+        # Quick part to see spline profile
+        #for ii in range(len(self._profiles)):
+        #    print(self._profiles[ii](0))
 
     def sat_gaussian(self, x: np.ndarray, mu1: float, mu2: float, std: float) -> np.ndarray:
         """
@@ -155,7 +159,6 @@ class CraterGenerator:
 
         Returns:
             np.ndarray: crater DEM."""
-
         crater = self._profiles[crater_data.crater_profile_id](2 * distance / crater_data.size)
         return crater
 
@@ -200,7 +203,14 @@ class CraterGenerator:
 
         # Index of the profile
         if index == -1:
-            index = self._rng.integers(0, len(self._profiles), 1)[0]
+            if size > 10:
+                low_ratio_ind = self._rng.integers(0, 1, 1) # To pick between 5 and 13 for large craters
+                if low_ratio_ind == 0:
+                    index = 5
+                else:
+                       index = 13
+            else:
+                index = self._rng.integers(0, len(self._profiles), 1)[0]
             pass
         elif index < len(self._profiles):
             pass
@@ -257,6 +267,8 @@ class CraterGenerator:
         if craters_data is None:
             craters_data = []
 
+        # Sort the radius in decreasing order so that deformation is applied to big crater first then small ones
+
         # Adds the craters to the DEM
         if len(craters_data) == 0:
             for coord, rad in zip(coords, radius):
@@ -266,10 +278,14 @@ class CraterGenerator:
                 crater_data.coord = (coord[0], coord[1])
                 coord2 = (coord_s + self._pad_size).astype(np.int64)
                 coord = (coord_s - crater_data.size / 2 + self._pad_size).astype(np.int64)
+
+                # Add logic to apply smaller crater last. For each smaller crater, super position them then smooth the internal of crater to remove artifacts
                 DEM_padded[
                     coord[0] : coord[0] + crater_data.size,
                     coord[1] : coord[1] + crater_data.size,
                 ] += c
+
+                 # Generate several other mask for inter crater rocks and ejecta regions
                 mask_padded = cv2.circle(
                     mask_padded,
                     (coord2[1], coord2[0]),
@@ -332,6 +348,11 @@ class Distribute:
         self._area = self._x_max * self._y_max
         self._num_repeat = cfg.num_repeat
         self._rng = np.random.default_rng(cfg.seed)
+        self._radius_range = cfg.radius_range
+        self._dist_exp = cfg.dist_exp
+        self._dist_coef = cfg.dist_coef
+        self._radius_step = cfg.radius_step
+        self._radius_step_factor = cfg.radius_step_factor
 
     def sampleFromPoisson(self, density: float, r_minmax: Tuple[float]) -> Tuple[np.ndarray, np.ndarray]:
         """
@@ -360,6 +381,7 @@ class Distribute:
 
         Returns:
             tuple: coordinates of the craters (in meters)."""
+
 
         mark_age = self._rng.uniform(0, 1, coords.shape[0])
         boole_keep = np.zeros(mark_age.shape[0], dtype=bool)
@@ -420,6 +442,29 @@ class Distribute:
         coords, radius = self.hardcoreRejection(coords, radius)
         coords, radius = self.checkPrevious(coords, radius, prev_coords)
         return coords, radius
+    
+    def calcRadiiBins (self) -> None:
+        """
+        Automatically generate crater radii bin as ranges for the generation process. The bin width grows exponentially
+        """
+        self._radius = []
+        cur_radius = self._radius_range[0]
+        while cur_radius < self._radius_range[1]:
+            next_radius = cur_radius + self._radius_step
+            self._radius.append([cur_radius, next_radius])
+            cur_radius = next_radius
+
+    def calcDensities (self) -> None:
+        """
+        Automatically calculate the density of a crater with radius range. Density evaluate at the center of the radii range. Density follows inverse exponential distribution
+        """
+        self._densities = []
+        for radius_range in self._radius:
+            density_query = (radius_range[0] + radius_range[1])  # Query distribution using average diameter of crater
+            cum_num_per_km2 = self._dist_coef * density_query ** self._dist_exp # NASA models fit to km2
+            self._densities.append(cum_num_per_km2/1000000) # convert density from km2 to m2
+            
+        
 
     def run(self) -> Tuple[np.ndarray, np.ndarray]:
         """
@@ -428,6 +473,22 @@ class Distribute:
         Returns:
             tuple: coordinates of the craters, radii of the craters."""
 
+        # If radius list is empty, automatically generate them. Else uses defined radius list
+        if len(self._radius) == 0:
+            print ("Empty radius list set. Generating radius list and density list")
+            self.calcRadiiBins()
+            self.calcDensities()
+        else:
+            # If density list is empty, automatically calculate density. Else uses defined density list
+            if len(self._densities) == 0:
+                print ("Empty density list set. Generating density list")
+                self.calcDensities()
+        
+        
+        if not len(self._radius) == len(self._densities):
+            raise("Density and radii list must have equal lengths")
+        
+        # Gnerate crater 
         prev_coords = None
         for d, r_minmax in zip(self._densities, self._radius):
             new_coords, new_radius = self.simulateHCPoissonProcess(d, r_minmax, prev_coords)
@@ -490,15 +551,17 @@ class BaseTerrainGenerator:
             lr_noise = self._rng.uniform(self._min_elevation, self._max_elevation, [4, 4])
         hr_noise = cv2.resize(lr_noise, (self._y_size, self._x_size), interpolation=cv2.INTER_CUBIC)
         self._DEM += hr_noise
-        # Generate high frequency noise to simulate small scale terrain features.
-        lr_noise = self._rng.uniform(self._min_elevation * 0.01, self._max_elevation * 0.01, [100, 100])
-        hr_noise = cv2.resize(lr_noise, (self._y_size, self._x_size), interpolation=cv2.INTER_CUBIC)
-        self._DEM += hr_noise
-        # Normalize the DEM between 0 and 1 and scale it to the desired elevation range.
-        # self._DEM = (self._DEM - self._DEM.min()) / (self._DEM.max() - self._DEM.min())
-        # Scale the DEM to the desired elevation range.
-        # self._DEM = self._DEM * (self._max_elevation - self._min_elevation) + self._min_elevation
         return self._DEM * self._z_scale
+    
+    def applyHighResolutionNoise (self, DEM: np.ndarray) -> np.ndarray:
+        ## Apply high frequency noise to DEM with crater. HR noise is separated to prevent smoothing artifacts
+        lr_noise = self._rng.uniform(self._min_elevation * 0.01, self._max_elevation * 0.01, [10000, 10000])
+        hr_noise = cv2.resize(lr_noise, (self._y_size, self._x_size), interpolation=cv2.INTER_CUBIC)
+        DEM += hr_noise
+        return DEM
+
+    
+
 
 
 class GenerateProceduralMoonYard:
@@ -549,6 +612,7 @@ class GenerateProceduralMoonYard:
         DEM = self.T.generateRandomTerrain(is_lab=self.is_lab, is_yard=self.is_yard)
         coords, radius = self.D.run()
         DEM, mask, craters_data = self.G.generateCraters(DEM, coords, radius)
+        DEM = self.T.applyHighResolutionNoise(DEM)
         self._dem_init = DEM
         self._dem_delta = np.zeros_like(DEM)
         self._mask = mask
