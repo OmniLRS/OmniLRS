@@ -313,7 +313,7 @@ class CraterGenerator:
                 crater_ejecta_mask_padded = cv2.circle(
                         crater_ejecta_mask_padded,
                         (coord2[1], coord2[0]),
-                        int(crater_data.size  / 4),
+                        int(crater_data.size  / 4) - 5,
                         0,
                         -1,
                     )    
@@ -695,7 +695,7 @@ class GenerateProceduralMoonYard:
         self._background_mask = background_mask
         self._crater_ejecta_mask = crater_ejecta_mask
         self._num_pass = np.zeros_like(crater_mask)
-        return DEM, background_mask, crater_mask,  craters_data
+        return DEM, background_mask, crater_mask, crater_ejecta_mask, craters_data
 
     def register_terrain(self, DEM: np.ndarray, mask: np.ndarray):
         """
@@ -703,7 +703,7 @@ class GenerateProceduralMoonYard:
         """
         self._dem_init = DEM
         self._dem_delta = np.zeros_like(DEM)
-        self._mask = mask
+        self._crater_mask = mask
         self._num_pass = np.zeros_like(mask)
 
     def deform(
@@ -719,7 +719,7 @@ class GenerateProceduralMoonYard:
         self._dem_delta, self._num_pass = self.DE.deform(
             self._dem_delta, self._num_pass, world_positions, world_orientations, contact_forces[:, 2]
         )
-        return self._dem_init + self._dem_delta, self._mask
+        return self._dem_init + self._dem_delta, self._background_mask, self._crater_mask, self._crater_ejecta_mask
 
 
 if __name__ == "__main__":
