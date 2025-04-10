@@ -426,7 +426,7 @@ class RockManager:
                 if name in self.children_nodes:
                     output = self.mixers[name].executeGraph(parents=parents[self.settings[name]["parent"]])
                 else:
-                    output = self.mixers[name].executeGraph(num)
+                    output = self.mixers[name].executeGraph(num, use_mask_area = False)
                 # Check if it the node is the parent of any other node.
                 if (name in self.dependency_graph.keys()) and (len(self.dependency_graph[name]) > 0):
                     # If so collects parent data from the mixer.
