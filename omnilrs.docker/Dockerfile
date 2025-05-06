@@ -62,6 +62,7 @@ ENV RMW_IMPLEMENTATION=rmw_fastrtps_cpp
 RUN echo "alias kk='clear'" >> /root/.bashrc
 RUN echo "alias tt='tmux new'" >> /root/.bashrc
 RUN echo "alias isaacpy='/isaac-sim/python.sh'" >> /root/.bashrc
+RUN echo "alias isaacapp='/isaac-sim/runapp.sh'" >> /root/.bashrc
 RUN echo "alias roskb='ros2 run teleop_twist_keyboard teleop_twist_keyboard'" >> /root/.bashrc
 # entrypoint.sh only runs on container startup so when 'exec' into already running container) need this to provide the ROS2 environment
 RUN echo "source /opt/ros/$ROS_DISTRO/setup.bash" >> /root/.bashrc
