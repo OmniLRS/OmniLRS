@@ -15,6 +15,9 @@ RUN apt-get update && apt-get install -q -y \
   gnupg2 \
   curl \
   libglib2.0-0 \
+  tmux \
+  vim \
+  nano \
   && rm -rf /var/lib/apt/lists/*
 
 
@@ -53,8 +56,16 @@ RUN /isaac-sim/python.sh -m pip install gdal==$(gdal-config --version)
 ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/isaac-sim/exts/omni.isaac.ros2_bridge/humble/lib
 ENV RMW_IMPLEMENTATION=rmw_fastrtps_cpp
 
-# setup entrypoint
+## For convenience:
+RUN echo "alias kk='clear'" >> /root/.bashrc
+RUN echo "alias tt='tmux new'" >> /root/.bashrc
+RUN echo "alias isaacpy='/isaac-sim/python.sh'" >> /root/.bashrc
+RUN echo "alias roskb='ros2 run teleop_twist_keyboard teleop_twist_keyboard'" >> /root/.bashrc
+# Save the bash history immediately on each execution
+RUN echo "export PROMPT_COMMAND='history -a' " >> "/root/.bashrc"
+RUN echo "export HISTFILE=/commandhistory/.bash_history" >> "/root/.bashrc"
+ 
+# Setup entrypoint
 COPY ./entrypoint.sh /
-
 ENTRYPOINT ["/entrypoint.sh"]
 CMD ["bash"]
