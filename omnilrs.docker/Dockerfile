@@ -1,4 +1,4 @@
-FROM nvcr.io/nvidia/isaac-sim:2023.1.1
+FROM nvcr.io/nvidia/isaac-sim:4.5.0
 
 RUN /isaac-sim/python.sh -m pip install opencv-python omegaconf hydra-core
 
