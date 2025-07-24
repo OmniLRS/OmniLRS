@@ -7,6 +7,7 @@ __email__ = "antoine.richard@uni.lu"
 __status__ = "development"
 
 from typing import Dict, List, Tuple
+from scipy.spatial.transform import Rotation as R
 import numpy as np
 import warnings
 import os
@@ -424,8 +425,16 @@ class RobotRigidGroup:
         orientations = np.zeros((n_links, 4))
         for i, prim in enumerate(self.prims):
             position, orientation = prim.get_world_pose()
+            quaternion = [orientation[1], orientation[2], orientation[3], orientation[0]]
+            rotation = R.from_quat(quaternion)
+            pitch_angle = 2 * np.arctan2(rotation.as_quat()[1], rotation.as_quat()[3])
+            pitch_correction_quat = [0, -np.sin(pitch_angle / 2), 0, np.cos(pitch_angle / 2)]
+            inverse_pitch_rotation = R.from_quat(pitch_correction_quat)
+            rotation_corrected = rotation * inverse_pitch_rotation
+            quaternion_corrected = rotation_corrected.as_quat()
+            orientation_corrected = [quaternion_corrected[3], quaternion_corrected[0], quaternion_corrected[1], quaternion_corrected[2]]
             positions[i, :] = position
-            orientations[i, :] = orientation
+            orientations[i, :] = orientation_corrected
         return positions, orientations
 
     def get_velocities(self) -> Tuple[np.ndarray, np.ndarray]:
@@ -457,7 +466,7 @@ class RobotRigidGroup:
         n_links = len(self.target_links)
         contact_forces = np.zeros((n_links, 3))
         for i, prim_view in enumerate(self.prim_views):
-            contact_force = prim_view.get_net_contact_forces().squeeze()
+            contact_force = prim_view.get_net_contact_forces(dt = 1/60).squeeze()
             contact_forces[i, :] = contact_force
         return contact_forces
 
