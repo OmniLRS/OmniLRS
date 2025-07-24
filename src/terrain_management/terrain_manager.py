@@ -96,7 +96,8 @@ class TerrainManager:
         assert os.path.isdir(self._dems_path), "dems_path must be a directory."
 
         for folder in os.listdir(self._dems_path):
-            assert os.path.isdir(os.path.join(self._dems_path, folder)), "dems_path must contain only folders."
+            if not os.path.isdir(os.path.join(self._dems_path, folder)):
+                continue
             dem_path = os.path.join(self._dems_path, folder, "dem.npy")
             mask_path = os.path.join(self._dems_path, folder, "mask.npy")
             assert os.path.isfile(dem_path), "dem.npy not found in folder."
