@@ -62,6 +62,9 @@ class SDG_SimulationManager:
         self.AL = AutonomousLabeling(self.generation_settings)
         self.AL.load()
         self.count = 0
+        # Randomize once to setup the camera mixer
+        self.LC.randomize()
+
 
     def run_simulation(self) -> None:
         """

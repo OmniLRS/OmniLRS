@@ -46,7 +46,8 @@ RUN /isaac-sim/python.sh -m pip install \
   numba \
   gdown \
   em \
-  lark
+  lark \
+  pandas
 RUN /isaac-sim/python.sh -m pip install gdal==$(gdal-config --version)
 
 # isaac ros2_bridge config

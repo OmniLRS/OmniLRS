@@ -2,16 +2,14 @@ name: SDG
 generation_settings:
   num_images: 1000
   prim_path: Camera
-  camera_name: camera_annotations
-  camera_resolution: ${as_tuple:640,480}
+  camera_names: [camera_annotations]
+  camera_resolutions: [[640, 480]]
   data_dir: data
-  annotator_list: ["rgb", "semantic_segmentation", "instance_segmentation"]
-  image_format: png
-  annot_format: json
+  annotators_list: [["rgb", "semantic_segmentation", "instance_segmentation"]]
+  image_formats: [png]
+  annot_formats: [json]
   element_per_folder: 1000
-  add_noise_to_rgb: False
-  sigma: 5.0
-  seed: 42
+  save_intrinsics: True
 
 camera_settings:
   camera_path: Camera/camera_annotations
