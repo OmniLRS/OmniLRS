@@ -64,7 +64,6 @@ def instantiateConfigs(cfg: dict) -> dict:
     ret = {}
     for k, v in cfg.items():
         if isinstance(v, dict):
-            print(f"Instantiating config: {k} with args: {v}")
             if k in instantiable_configs:
                 ret[k] = configFactory(k, **v)
             else:
