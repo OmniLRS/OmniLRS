@@ -41,10 +41,10 @@ class AutoLabelingConf:
         assert len(self.camera_names) > 0, "camera_names must have at least one element"
         assert len(self.camera_names) == len(
             self.camera_resolutions
-        ), "camera_names and camera_resolutions must have the same length"
+        ), f"camera_names and camera_resolutions must have the same length, get {self.camera_names} and {self.camera_resolutions}"
         assert len(self.camera_names) == len(
             self.annotators_list
-        ), "camera_names and annotators_list must have the same length"
+        ), f"camera_names and annotators_list must have the same length, get {self.camera_names} and {self.annotators_list}"
         assert len(self.camera_names) == len(
             self.image_formats
         ), "camera_names and image_format must have the same length"

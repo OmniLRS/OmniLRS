@@ -57,8 +57,9 @@ class SDG_Lunaryard(LunaryardController):
         self.rng = np.random.default_rng(seed=terrain_manager.moon_yard.crater_distribution.seed)
 
     def load(self) -> None:
-        self.createCamera()
         super().load()
+        self.createCamera()
+        self.createCameraSampler()
 
     def createCamera(self):
         """

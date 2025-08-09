@@ -75,7 +75,7 @@ class SDG_SimulationManager:
                 try:
                     self.AL.record()
                     self.count += 1
-                except:
-                    pass
+                except Exception as e:
+                    print(f"Exception occurred: {e}")
                 self.LC.randomize()
         self.timeline.stop()

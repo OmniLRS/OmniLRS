@@ -130,12 +130,13 @@ class AutonomousLabeling:
         Find the prim and path of the cameras that will be used to generate the synthetic data.
         """
         for prim in Usd.PrimRange(self.meta_prim):
+            print(f"Checking prim: {prim.GetName()}")
             if prim.GetName() in self.camera_names:
                 self.camera_prims[prim.GetName()] = prim
                 self.camera_paths[prim.GetName()] = str(prim.GetPath())
 
         if len(self.camera_prims) != len(self.camera_names):
-            raise ValueError("Some cameras were not found in the scene")
+            raise ValueError(f"Some cameras were not found in the scene. Expected {self.camera_names}, found {self.camera_prims}.")
 
     def get_camera_idx(self, camera_name: str) -> int:
         idx = -1

@@ -30,11 +30,12 @@ ENV ROS_DISTRO humble
 
 # install ros2 packages
 RUN apt-get update && apt-get install -y \
-  ros-humble-ros-core=0.10.0-1* \
+  ros-${ROS_DISTRO}-ros-core=0.10.0-1* \
   gdal-bin \
   libgdal-dev \
-  ros-humble-vision-msgs \
-  ros-humble-tf2-msgs \
+  ros-${ROS_DISTRO}-vision-msgs \
+  ros-${ROS_DISTRO}-tf2-msgs \
+  ros-${ROS_DISTRO}-teleop-twist-keyboard \
   g++ \
   wget \
   && rm -rf /var/lib/apt/lists/*
@@ -46,12 +47,19 @@ RUN /isaac-sim/python.sh -m pip install \
   numba \
   gdown \
   em \
-  lark
+  lark \
+  pandas 
 RUN /isaac-sim/python.sh -m pip install gdal==$(gdal-config --version)
 
 # isaac ros2_bridge config
-ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/isaac-sim/exts/omni.isaac.ros2_bridge/humble/lib
+# ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/isaac-sim/exts/omni.isaac.ros2_bridge/humble/lib
 ENV RMW_IMPLEMENTATION=rmw_fastrtps_cpp
+
+
+RUN echo "source /opt/ros/$ROS_DISTRO/setup.bash" >> /root/.bashrc
+
+# Save bash history
+RUN echo "export PROMPT_COMMAND='history -a' " >> "/root/.bashrc"
 
 # setup entrypoint
 COPY ./entrypoint.sh /
