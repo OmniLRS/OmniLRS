@@ -11,12 +11,12 @@ enforce_realtime: true
 
 # Stage settings, only edit if you know what you are doing.
 lunaryard_settings:
-  lab_length: 80.0  
-  lab_width: 80.0
-  resolution: 0.05
+  lab_length: 20.0
+  lab_width: 20.0
+  resolution: 0.025
   coordinates:
-    latitude: -80.0
-    longitude: 26.3
+    latitude: 46.8
+    longitude: -26.3
 
 stellar_engine_settings:
   start_date:
@@ -40,7 +40,7 @@ sun_settings:
 
 # Rocks sampling parameters.
 rocks_settings:
-  enable: True
+  enable: False
   instancers_path: /Lunaryard/Rocks
   rocks_settings:
     medium_rocks:
@@ -305,7 +305,7 @@ terrain_manager:
   resolution: ${..lunaryard_settings.resolution}
 
 robots_settings:
-  uses_nucleus: True
+  uses_nucleus: False
   is_ROS2: True
   max_robots: 5
   robots_root: "/Robots"
