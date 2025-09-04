@@ -166,9 +166,9 @@ class StellarEngine:
             bool: True if the time was updated, False otherwise.
         """
         self.current_time += datetime.timedelta(seconds=dt * self.cfg.time_scale)
-        logging.debug(
-            f"StellarEngine: current time is {self.current_time} (dt = {dt * self.cfg.time_scale}s)"
-        )
+        # logging.debug(
+        #     f"StellarEngine: current time is {self.current_time} (dt = {dt * self.cfg.time_scale}s)"
+        # )
         time_delta = self.current_time - self.last_update
         update = False
         if time_delta.total_seconds() >= self.cfg.update_interval:
