@@ -1,5 +1,7 @@
 physics_scene:
-  dt: 0.016666
+  #dt: 0.016666
+  #dt: 0.16666666
+  dt: 0.0333
   gravity: [0.0, 0.0, -1.62]
   enable_ccd: true
   enable_stabilization: true

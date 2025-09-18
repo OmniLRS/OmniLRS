@@ -204,8 +204,8 @@ class SinusoidalDepthDistributionGenerator(DepthDistributionGenerator):
             depth_dist_x (np.ndarray): depth distribution on x axis
         """
         return np.cos(
-            self.depth_distribution.wave_frequency * np.pi * np.linspace(-1, 1, self.footprint_profile_height)
-        )  # create depth distribution on x axis
+            self.depth_distribution.wave_frequency * np.linspace(0, 1.5 * np.pi / self.depth_distribution.wave_frequency, self.footprint_profile_height)
+            )
 
     def get_depth_distribution(self) -> np.ndarray:
         """
@@ -552,6 +552,9 @@ class DeformationEngine:
         Args:
             deformation_engine (DeformationEngineConf): deformation engine configuration.
         """
+        self.actual_velocity = 0.0
+        self.cell_counter = 0.0
+
         self.terrain_resolution = deformation_engine.terrain_resolution
         self.terrain_width = deformation_engine.terrain_width
         self.terrain_height = deformation_engine.terrain_height
@@ -661,7 +664,7 @@ class DeformationEngine:
             + self.profile[:, 1] * self.headings[:, 1, None]
             + world_positions[:, 1][:, None]
         )
-        self.profile_global = projection_points.reshape(-1, 2)
+        self.profile_global = projection_points.reshape(-1, 2) / self.terrain_resolution
 
     def force_depth_regression_model(self, normal_forces: np.ndarray) -> np.ndarray:
         """
@@ -687,17 +690,75 @@ class DeformationEngine:
         ===
         num_points = n * num_point_sample
         """
-        depth = np.zeros((normal_forces.shape[0], self.profile.shape[0]))
+        # Depth deformation due to contact force
         amplitude, mean_value = self.force_depth_regression_model(normal_forces)
-        depth = self.boundary_dist[None, :] * (amplitude[:, None]/2.0 * self.depth_dist[None, :] - mean_value[:, None])
-        self.depth = depth.reshape(-1)
+        sinkage_force = np.ones(self.boundary_dist.shape) * mean_value[:, None]
+
+        # Depth deformation due to slip
+        #slip = - 0.033558 * np.abs(self.slip_ratio)
+        #slip = - 0.033558 * np.abs(self.slip_ratio) * np.maximum(self.angular_velocity, self.actual_velocity)
+        slip = - 0.033558 * np.abs(self.slip_ratio) * np.maximum(0.5+0.5*self.angular_velocity, 0.5+0.5*self.actual_velocity)
+        sinkage_slip = slip[:, None] * np.ones(self.boundary_dist.shape)
+        
+        # Trace deformation
+        trace = amplitude[:, None] / 2.0 * self.depth_dist[None, :] * (1.0-np.abs(np.mean(self.slip_ratio)))
+        self.cell_counter += self.actual_velocity / (30 * self.terrain_resolution)  # 30 ... timesteps per second for 30 Hz (dt)
+        n_cells_to_roll = int(self.cell_counter)
+        trace_wheels = [row.flatten() for row in trace]
+        rearranged_trace = [np.reshape(row, (-1, self.footprint_profile_height), order='C') for row in trace_wheels]
+        rolled_rearranged_trace = [np.roll(row, shift=-n_cells_to_roll, axis=1) for row in rearranged_trace]
+        rolled_rearranged_array = np.vstack(rolled_rearranged_trace)
+        trace_restored = np.reshape(rolled_rearranged_array, trace.shape)
+
+        self.sinkage_force = sinkage_force.reshape(-1)
+        self.sinkage_slip = sinkage_slip.reshape(-1)
+        self.trace = trace_restored.reshape(-1)
+
+    def get_slip_ratio(self, linear_velocity: np.ndarray, angular_velocity: np.ndarray, epsilon=5e-2) -> np.ndarray:
+        """
+        Calculate slip ratio.
+        Args:
+            linear_velocity (np.ndarray): linear velocity of robot's links (n, 3)
+            angular_velocity (np.ndarray): angular velocity of robot's links (n, 3)
+        Returns:
+            slip_ratio (np.ndarray): slip ratio (n,)
+        """
+        r = 0.105  # Wheel radius
+        epsilon = 1e-2
+
+        # Extract actual and commanded velocities per wheel
+        actual_velocity = linear_velocity[:, 0]  # shape: (4,)
+        commanded_velocity = angular_velocity[:, 1] * r  # shape: (4,)
+        self.angular_velocity = np.abs(np.mean(angular_velocity[:, 1])) * r # Store angular velocity for later use
+        self.actual_velocity = np.abs(np.mean(actual_velocity))  # Store actual velocity for later use
+        abs_actual = np.abs(actual_velocity)
+        abs_commanded = np.abs(commanded_velocity)
+
+        slip_ratio = np.zeros(4)
+        # Case 1: both velocities near zero → no motion
+        mask_stationary = (abs_actual < epsilon) & (abs_commanded < epsilon)
+        slip_ratio[mask_stationary] = 0.0
+        # Case 2: traction (wheel spinning faster than motion)
+        mask_slip = (abs_actual <= abs_commanded) & ~mask_stationary
+        slip_ratio[mask_slip] = 1 - (actual_velocity[mask_slip] / commanded_velocity[mask_slip])
+        # Case 3: braking (wheel slower than motion)
+        mask_skid = (abs_actual > abs_commanded)
+        slip_ratio[mask_skid] = commanded_velocity[mask_skid] / actual_velocity[mask_skid] - 1
+        # Optional: clip extreme values
+        slip_ratio = np.clip(slip_ratio, -1.0, 1.0)
+
+        self.slip_ratio = slip_ratio  # or return it if you prefer
 
     def deform(
         self,
         DEM: np.ndarray,
         num_pass: np.ndarray,
+        depth_memory: np.ndarray,
+        trace_memory: np.ndarray,
         world_positions: np.ndarray,
         world_orientations: np.ndarray,
+        linear_velocities: np.ndarray,
+        angular_velocities: np.ndarray,
         normal_forces: np.ndarray,
     ) -> Tuple[np.ndarray]:
         """
@@ -712,13 +773,22 @@ class DeformationEngine:
             num_pass (np.ndarray): number of passes on each pixel
         """
         self.get_footprint_profile_in_global(world_positions, world_orientations)
+        self.get_slip_ratio(linear_velocities, angular_velocities)
         self.get_deformation_depth(normal_forces)
+
         for i, profile_point in enumerate(self.profile_global):
-            x = int(profile_point[0] / self.terrain_resolution)
-            y = int(self.sim_height - profile_point[1] / self.terrain_resolution)
-            DEM[y, x] += self.depth[i] * ((self.deform_constrain.deform_decay_ratio) ** num_pass[y, x])
+            x = int(profile_point[0])
+            y = int(self.sim_height - profile_point[1])
+            # Depth Deformation
+            depth = self.sinkage_force[i] + self.sinkage_slip[i]
+            depth_apply = min(0, depth - depth_memory[y, x])
+            DEM[y, x] += depth_apply                                    
+            depth_memory[y, x] += depth_apply
+            # Trace Deformation
+            DEM[y, x] += - trace_memory[y, x] + self.trace[i]
+            trace_memory[y, x] = self.trace[i]
             num_pass[y, x] += 1
-        return DEM, num_pass
+        return DEM, num_pass, depth_memory, trace_memory
 
 
 if __name__ == "__main__":

@@ -277,7 +277,7 @@ class TerrainManager:
         self.update(update_collider=True)
 
     def deformTerrain(
-        self, world_positions: np.ndarray, world_orientations: np.ndarray, contact_forces: np.ndarray
+        self, world_positions: np.ndarray, world_orientations: np.ndarray, linear_velocities: np.ndarray, angular_velocities: np.ndarray, contact_forces: np.ndarray
     ) -> None:
         """
         Deforms the terrain based on the given body transforms.
@@ -288,7 +288,7 @@ class TerrainManager:
             contact_forces (np.ndarray): the contact forces of the bodies.
         """
 
-        self._DEM, self._mask = self._G.deform(world_positions, world_orientations, contact_forces)
+        self._DEM, self._mask = self._G.deform(world_positions, world_orientations, linear_velocities, angular_velocities, contact_forces)
         self.update(update_collider=False)
 
     def loadTerrainByName(self, name: str) -> None:

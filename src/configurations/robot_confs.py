@@ -24,6 +24,7 @@ class RobotParameters:
     pose: Pose = field(default_factory=dict)
     domain_id: int = field(default_factory=int)
     target_links: List[str] = field(default_factory=list)
+    visual_links: List[str] = field(default_factory=list)
 
     def __post_init__(self):
         self.usd_path = os.path.join(os.getcwd(), self.usd_path)

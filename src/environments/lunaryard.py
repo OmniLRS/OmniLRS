@@ -371,18 +371,27 @@ class LunaryardController(BaseEnv):
         world_positions = []
         world_orientations = []
         contact_forces = []
+        linear_velocities = []
+        angular_velocities = []
         for rrg in self.robotManager.robots_RG.values():
             position, orientation = rrg.get_pose()
             world_positions.append(position)
             world_orientations.append(orientation)
+            linear_velocity, angular_velocity = rrg.get_velocities()
+            linear_velocities.append(linear_velocity)
+            angular_velocities.append(angular_velocity)
             contact_forces.append(rrg.get_net_contact_forces())
         world_positions = np.concatenate(world_positions, axis=0)
         world_orientations = np.concatenate(world_orientations, axis=0)
+        linear_velocities = np.concatenate(linear_velocities, axis=0)
+        angular_velocities = np.concatenate(angular_velocities, axis=0)
         contact_forces = np.concatenate(contact_forces, axis=0)
 
         self.T.deformTerrain(
             world_positions,
             world_orientations,
+            linear_velocities,
+            angular_velocities,
             contact_forces,
         )
         self.load_DEM()
