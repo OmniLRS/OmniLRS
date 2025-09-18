@@ -542,6 +542,8 @@ class GenerateProceduralMoonYard:
         self._mask = None
         self._dem_delta = None
         self._num_pass = None
+        self._depth_memory = None
+        self._trace_memory = None
 
     def randomize(self) -> np.ndarray:
         """
@@ -558,6 +560,8 @@ class GenerateProceduralMoonYard:
         self._dem_delta = np.zeros_like(DEM)
         self._mask = mask
         self._num_pass = np.zeros_like(mask)
+        self._depth_memory = np.zeros_like(mask)
+        self._trace_memory = np.zeros_like(mask)
         return DEM, mask, craters_data
 
     def augment(self, DEM: np.ndarray, mask: np.ndarray) -> np.ndarray:
@@ -574,6 +578,8 @@ class GenerateProceduralMoonYard:
         self._dem_delta = np.zeros_like(DEM)
         self._mask = mask
         self._num_pass = np.zeros_like(mask)
+        self._depth_memory = np.zeros_like(mask)
+        self._trace_memory = np.zeros_like(mask)
         return DEM, mask, craters_data
 
     def register_terrain(self, DEM: np.ndarray, mask: np.ndarray):
@@ -584,9 +590,11 @@ class GenerateProceduralMoonYard:
         self._dem_delta = np.zeros_like(DEM)
         self._mask = mask
         self._num_pass = np.zeros_like(mask)
+        self._depth_memory = np.zeros_like(mask)
+        self._trace_memory = np.zeros_like(mask)
 
     def deform(
-        self, world_positions: np.ndarray, world_orientations: np.ndarray, contact_forces: np.ndarray
+        self, world_positions: np.ndarray, world_orientations: np.ndarray, linear_velocities: np.ndarray, angular_velocities: np.ndarray, contact_forces: np.ndarray
     ) -> np.ndarray:
         """
         Add vertical deformation to terrain DEM.
@@ -595,8 +603,8 @@ class GenerateProceduralMoonYard:
             world_orientations (numpy.ndarray): world orientations of robot links (N, 4)
             contact_forces(numpy.ndarray): contact forces on robot links (N, 3)
         """
-        self._dem_delta, self._num_pass = self.DE.deform(
-            self._dem_delta, self._num_pass, world_positions, world_orientations, contact_forces[:, 2]
+        self._dem_delta, self._num_pass, self._depth_memory, self._trace_memory = self.DE.deform(
+            self._dem_delta, self._num_pass, self._depth_memory, self._trace_memory, world_positions, world_orientations, linear_velocities, angular_velocities,contact_forces[:, 2]
         )
         return self._dem_init + self._dem_delta, self._mask
 

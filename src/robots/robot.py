@@ -92,6 +92,7 @@ class RobotManager:
                 self.add_RRG(
                     robot_parameter.robot_name,
                     robot_parameter.target_links,
+                    robot_parameter.visual_links,
                     robot_parameter.base_link,
                     world,
                 )
@@ -128,6 +129,7 @@ class RobotManager:
                 self.add_RRG(
                     robot_parameter.robot_name,
                     robot_parameter.target_links,
+                    robot_parameter.visual_links,
                     robot_parameter.base_link,
                     world,
                 )
@@ -188,6 +190,7 @@ class RobotManager:
         self,
         robot_name: str = None,
         target_links: List[str] = None,
+        visual_links: List[str] = None,
         pose_base_link: str = None,
         world = None,
     ) -> None:
@@ -203,6 +206,7 @@ class RobotManager:
             self.robots_root,
             robot_name,
             target_links,
+            visual_links,
             pose_base_link,
         )
         rrg.initialize(world)
@@ -548,7 +552,7 @@ class RobotRigidGroup:
     It is used to retrieve world pose, and contact forces, or apply force/torque.
     """
 
-    def __init__(self, root_path: str = "/Robots", robot_name: str = None, target_links: List[str] = None, base_link:str=None):
+    def __init__(self, root_path: str = "/Robots", robot_name: str = None, target_links: List[str] = None, visual_links: List[str] = None, base_link: str = None) -> None:
         """
         Args:
             root_path (str): The root path of the robots.
@@ -559,8 +563,11 @@ class RobotRigidGroup:
         self.root_path = root_path
         self.robot_name = robot_name
         self.target_links = target_links
+        self.visual_links = visual_links
         self.prims = []
+        self.p_prims = []
         self.prim_views = []
+        self.p_prim_views = []
         self.base_link = base_link
         self.base_prim = None
 
@@ -575,6 +582,7 @@ class RobotRigidGroup:
         self.dt = world.get_physics_dt()
         world.reset()
         self._initialize_target_links()
+        self._initialize_visual_links()
         self._initialize_base_link()
         world.reset()
 
@@ -583,8 +591,14 @@ class RobotRigidGroup:
     def _initialize_target_links(self):
         if len(self.target_links) > 0:
             for target_link in self.target_links:
-                print(target_link)
                 rigid_prim, rigid_prim_view = self._initialize_link(target_link)
+                self.p_prims.append(rigid_prim)
+                self.p_prim_views.append(rigid_prim_view)
+
+    def _initialize_visual_links(self):
+        if len(self.visual_links) > 0:
+            for visual_link in self.visual_links:
+                rigid_prim, rigid_prim_view = self._initialize_link(visual_link)
                 self.prims.append(rigid_prim)
                 self.prim_views.append(rigid_prim_view)
 
@@ -615,7 +629,7 @@ class RobotRigidGroup:
             pose (np.ndarray): The world pose matrix of target links.
         """
 
-        n_links = len(self.target_links)
+        n_links = len(self.visual_links)
         pose = np.zeros((n_links, 4, 4))
         for i, prim in enumerate(self.prims):
             position, orientation = prim.get_world_pose()
@@ -640,7 +654,7 @@ class RobotRigidGroup:
             orientations (np.ndarray): The orientation of target links. (w, x, y, z)
         """
 
-        n_links = len(self.target_links)
+        n_links = len(self.visual_links)
         positions = np.zeros((n_links, 3))
         orientations = np.zeros((n_links, 4))
         for i, prim in enumerate(self.prims):
@@ -673,7 +687,7 @@ class RobotRigidGroup:
             angular_velocities (np.ndarray): The angular velocity of target links.
         """
 
-        n_links = len(self.target_links)
+        n_links = len(self.visual_links)
         linear_velocities = np.zeros((n_links, 3))
         angular_velocities = np.zeros((n_links, 3))
         for i, prim in enumerate(self.prims):
@@ -699,7 +713,7 @@ class RobotRigidGroup:
 
         n_links = len(self.target_links)
         contact_forces = np.zeros((n_links, 3))
-        for i, prim_view in enumerate(self.prim_views):
+        for i, prim_view in enumerate(self.p_prim_views):
             contact_force = prim_view.get_net_contact_forces(dt = self.dt).squeeze()
             contact_forces[i, :] = contact_force
         return contact_forces
@@ -736,5 +750,5 @@ class RobotRigidGroup:
         n_links = len(self.target_links)
         assert forces.shape[0] == n_links, "given force does not have matching shape."
         assert torques.shape[0] == n_links, "given torque does not have matching shape."
-        for i, prim_view in enumerate(self.prim_views):
+        for i, prim_view in enumerate(self.p_prim_views):
             prim_view.apply_forces_and_torques_at_pos(forces=forces[i], torques=torques[i], is_global=False)
