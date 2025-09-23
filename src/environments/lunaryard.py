@@ -77,6 +77,9 @@ class LunaryardController(BaseEnv):
         )
         self.dem = None
         self.mask = None
+        self.background_mask = None
+        self.crater_mask = None
+        self.crater_ejecta_mask = None
         self.scene_name = "/Lunaryard"
         self.deformation_conf = terrain_manager.moon_yard.deformation_engine
 
@@ -157,7 +160,7 @@ class LunaryardController(BaseEnv):
         self.build_scene()
 
         # Generates the instancer for the rocks
-        self.RM.build(self.dem, self.mask)
+        self.RM.build(self.dem, self.background_mask, self.crater_ejecta_mask)
         # Loads the DEM and the mask
         self.switch_terrain(self.stage_settings.terrain_id)
         if self.enable_stellar_engine:
@@ -173,7 +176,9 @@ class LunaryardController(BaseEnv):
         """
 
         self.dem = self.T.getDEM()
-        self.mask = self.T.getMask()
+        self.background_mask = self.T.getBackgroundMask()
+        self.crater_mask = self.T.getCraterMask()
+        self.crater_ejecta_mask = self.T.getCraterEjectaMask()
 
     # ==============================================================================
     # Stellar engine control
@@ -335,7 +340,7 @@ class LunaryardController(BaseEnv):
         else:
             self.T.loadTerrainId(flag)
         self.load_DEM()
-        self.RM.updateImageData(self.dem, self.mask)
+        self.RM.updateImageData(self.dem, self.background_mask, self.crater_ejecta_mask)
         self.RM.randomizeInstancers(10)
 
     def enable_rocks(self, flag: bool = True) -> None:
@@ -386,7 +391,7 @@ class LunaryardController(BaseEnv):
             contact_forces,
         )
         self.load_DEM()
-        self.RM.updateImageData(self.dem, self.mask)
+        self.RM.updateImageData(self.dem, self.background_mask)
 
     def apply_terramechanics(self) -> None:
         for rrg in self.robotManager.robots_RG.values():
