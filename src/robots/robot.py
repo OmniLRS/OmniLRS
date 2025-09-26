@@ -376,6 +376,7 @@ class RobotRigidGroup:
             world (World): A Omni.isaac.core.world.World object.
         """
 
+        self.dt = world.get_physics_dt()
         world.reset()
         if len(self.target_links) > 0:
             for target_link in self.target_links:
@@ -466,7 +467,7 @@ class RobotRigidGroup:
         n_links = len(self.target_links)
         contact_forces = np.zeros((n_links, 3))
         for i, prim_view in enumerate(self.prim_views):
-            contact_force = prim_view.get_net_contact_forces(dt = 1/60).squeeze()
+            contact_force = prim_view.get_net_contact_forces(dt = self.dt).squeeze()
             contact_forces[i, :] = contact_force
         return contact_forces
 
