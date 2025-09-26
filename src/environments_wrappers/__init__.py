@@ -8,7 +8,7 @@ __status__ = "development"
 
 
 def startSim(cfg: dict):
-    from omni.isaac.kit import SimulationApp
+    from isaacsim import SimulationApp
     import omni
     from src.environments.rendering import set_lens_flares, set_chromatic_aberrations, set_motion_blur
 

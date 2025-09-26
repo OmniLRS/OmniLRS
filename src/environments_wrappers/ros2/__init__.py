@@ -17,12 +17,12 @@ def enable_ros2(simulation_app, bridge_name="foxy", **kwargs) -> None:
         simulation_app (SimulationApp): SimulationApp instance.
         **kwargs: Additional keyword arguments."""
 
-    from omni.isaac.core.utils.extensions import enable_extension
+    from isaacsim.core.utils.extensions import enable_extension
 
     if bridge_name == "foxy":
-        enable_extension("omni.isaac.ros2_bridge")
+        enable_extension("isaacsim.ros2.bridge")
     elif bridge_name == "humble":
-        enable_extension("omni.isaac.ros2_bridge") # replaced omni.isaac.ros2_bridge_humble
+        enable_extension("isaacsim.ros2.bridge") # replaced omni.isaac.ros2_bridge_humble
     else:
         raise ValueError("Bridge not supported, please choose between foxy and humble.")
     enable_extension("omni.kit.viewport.actions")

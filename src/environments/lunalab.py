@@ -9,7 +9,7 @@ __status__ = "development"
 from typing import List, Tuple, Dict
 import numpy as np
 
-from omni.isaac.core.utils.stage import open_stage, add_reference_to_stage
+from isaacsim.core.utils.stage import open_stage, add_reference_to_stage
 import omni
 
 from pxr import UsdGeom, UsdLux, Gf, Usd

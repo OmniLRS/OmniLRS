@@ -57,10 +57,7 @@ RUN /isaac-sim/python.sh -m pip install \
 RUN /isaac-sim/python.sh -m pip install gdal==$(gdal-config --version)
 
 # isaac ros2_bridge config  
-# ENV LD_LIBRARY_PATH=/isaac-sim/exts/isaacsim.ros2_bridge/${ROS_DISTRO}/lib
-
 ENV isaac_sim_package_path=/isaac-sim
-
 ENV RMW_IMPLEMENTATION=rmw_fastrtps_cpp
 ENV LD_LIBRARY_PATH=/isaac-sim/exts/isaacsim.ros2.bridge/humble/lib
 

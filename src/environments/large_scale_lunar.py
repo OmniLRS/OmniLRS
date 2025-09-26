@@ -12,7 +12,7 @@ import numpy as np
 import math
 import os
 
-from omni.isaac.core.utils.stage import add_reference_to_stage
+from isaacsim.core.utils.stage import add_reference_to_stage
 import omni
 
 from pxr import UsdLux, Gf, Usd
