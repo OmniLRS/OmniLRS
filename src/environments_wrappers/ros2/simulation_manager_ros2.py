@@ -8,8 +8,8 @@ __status__ = "development"
 
 from threading import Thread
 
-from omni.isaac.kit import SimulationApp
-from omni.isaac.core import World
+from isaacsim import SimulationApp
+from isaacsim.core.api.world import World
 from typing import Union
 import logging
 import omni
