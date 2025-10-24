@@ -17,7 +17,7 @@ import omni
 
 from pxr import UsdGeom, UsdLux, Gf, Usd
 
-from src.terrain_management.large_scale_terrain.pxr_utils import set_xform_ops, load_material
+from src.terrain_management.large_scale_terrain.pxr_utils import set_xform_ops, load_material, set_texture_path
 from src.physics.terramechanics_parameters import RobotParameter, TerrainMechanicalParameter
 from src.configurations.stellar_engine_confs import StellarEngineConf, SunConf
 from src.configurations.procedural_terrain_confs import TerrainManagerConf
@@ -112,7 +112,9 @@ class LunaryardController(BaseEnv):
         # Creates the earth
         self._earth_prim = self.stage.DefinePrim(self.stage_settings.earth_path, "Xform")
         self._earth_prim.GetReferences().AddReference(self.stage_settings.earth_usd_path)
-
+        earth_texture_path = os.path.abspath("assets/Textures/Earth/earth_color_with_clouds.tif")
+        material_path = f"{self.stage_settings.earth_path}/Looks/OmniPBR"
+        set_texture_path(self.stage, material_path, "Shader", earth_texture_path)
         dist = self.stage_settings.earth_distance * self.stage_settings.earth_scale
         px = math.cos(math.radians(self.stage_settings.earth_azimuth)) * dist
         py = math.sin(math.radians(self.stage_settings.earth_azimuth)) * dist
