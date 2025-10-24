@@ -7,11 +7,15 @@ __email__ = "antoine.richard@uni.lu"
 __status__ = "development"
 
 import os
+import logging
 
 from pxr import UsdGeom, Gf, Usd, Vt, UsdShade, UsdPhysics
 
 from omni.physx.scripts import utils as physx_utils
 import omni
+
+logger = logging.getLogger(__name__)
+logging.basicConfig(format="%(asctime)s %(message)s", datefmt="%m/%d/%Y %I:%M:%S %p")
 
 collider_modes = [
     "none",
@@ -261,3 +265,30 @@ def load_material(material_name: str, material_path: str):
 def make_rigid(stage: Usd.Stage, path: str):
     prim = stage.GetPrimAtPath(path)
     rigid = UsdPhysics.RigidBodyAPI.Apply(prim)
+
+
+def set_texture_path(stage: Usd.Stage, material_path: str, shader_name: str, texture_path: str):
+    """
+    Sets the texture path for a shader within a material.
+
+    Args:
+        stage (Usd.Stage): The stage.
+        material_path (str): The path to the material prim.
+        shader_name (str): The name of the shader prim inside the material.
+        texture_path (str): The absolute path to the texture file.
+    """
+    material_prim = stage.GetPrimAtPath(material_path)
+    if not material_prim.IsValid():
+        logger.error(f"Warning: Material not found at {material_path}")
+        return
+    # Get shader from material prim
+    shader = UsdShade.Shader(material_prim.GetPrimAtPath(shader_name))
+    if not shader:
+        logger.error(f"Warning: Shader '{shader_name}' not found in material '{material_path}'")
+        return
+    # Write the texture file to albedo map
+    file_attribute = shader.GetInput("diffuse_texture")
+    if file_attribute:
+        file_attribute.Set(texture_path)
+    else:
+        logger.error(f"Warning: Shader at '{shader.GetPath()}' has no 'file' input.")
