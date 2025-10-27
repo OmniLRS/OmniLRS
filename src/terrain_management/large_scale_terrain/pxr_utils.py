@@ -239,13 +239,14 @@ def bind_material(stage: Usd.Stage, mtl_prim_path: str, prim_path: str):
     UsdShade.MaterialBindingAPI(prim).Bind(shade, UsdShade.Tokens.strongerThanDescendants)
 
 
-def load_material(material_name: str, material_path: str):
+def load_material(material_name: str, material_path: str, destination_path: str = "/Looks"):
     """
     Loads a material.
 
     Args:
         material_name (str): The name that will be given to the material in the scene.
         material_path (str): The path to the material file (on the drive).
+        destination_path (str): The scene path where the material will be created.
 
     Raises:
         AssertionError: If the material file is not found.
@@ -253,13 +254,14 @@ def load_material(material_name: str, material_path: str):
 
     assert os.path.exists(material_path), "Material file not found at: {}".format(material_path)
 
+    mtl_path = os.path.join(destination_path, material_name)
     omni.kit.commands.execute(
         "CreateMdlMaterialPrimCommand",
         mtl_url=material_path,
         mtl_name=material_name,
-        mtl_path=os.path.join("/Looks", material_name),
+        mtl_path=mtl_path,
     )
-    return os.path.join("/Looks", material_name)
+    return mtl_path
 
 
 def make_rigid(stage: Usd.Stage, path: str):
