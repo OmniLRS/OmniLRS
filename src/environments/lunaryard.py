@@ -122,10 +122,11 @@ class LunaryardController(BaseEnv):
         set_xform_ops(self._earth_prim, Gf.Vec3d(px, py, pz), Gf.Quatd(0, 0, 0, 1))
 
         # Load default textures
-        self.stage.DefinePrim("/Looks", "Xform")
-        load_material("Basalt", "assets/Textures/GravelStones.mdl")
-        load_material("Sand", "assets/Textures/Sand.mdl")
-        load_material("LunarRegolith8k", "assets/Textures/LunarRegolith8k.mdl")
+        looks_path = os.path.join(self.scene_name, "Looks")
+        self.stage.DefinePrim(looks_path, "Scope")
+        load_material("Basalt", "assets/Textures/GravelStones.mdl", looks_path)
+        load_material("Sand", "assets/Textures/Sand.mdl", looks_path)
+        load_material("LunarRegolith8k", "assets/Textures/LunarRegolith8k.mdl", looks_path)
 
     def instantiate_scene(self) -> None:
         """
