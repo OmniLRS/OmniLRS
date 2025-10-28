@@ -36,47 +36,44 @@ class StaticAssetManager:
         return prim
 
     def _set_pose(self, prim_path: str, position, orientation):
-        # prim = self._stage.GetPrimAtPath(prim_path) # gets previously created prim of the static asset
-        # UsdGeom.XformCommonAPI(prim).SetTranslate(Gf.Vec3d(position[0], position[1], position[2]))
-        
-        # q = Gf.Quatf(orientation[3], Gf.Vec3f(orientation[0], orientation[1], orientation[2])) # q = (w, (x,y,z)) | w - angle of rotation; x,y,z - axis of rotation
-        # UsdGeom.Xformable(prim).AddOrientOp().Set(q)
-
-        # xform = UsdGeom.Xformable(prim)
-        # orient_op = xform.GetOrderedXformOpsAttr().GetXformOp("xformOp:orient") # have to check first if orentOp already exists
-
-        # if orient_op is None:
-        #     orient_op = xform.AddOrientOp()
-        # orient_op.Set(q)
-
         prim = self._stage.GetPrimAtPath(prim_path)
         xform = UsdGeom.Xformable(prim)
+        self._set_translate(xform, position)
+        self._set_orientation(xform, orientation)
 
-        # Find existing ops (don’t recreate if present)
+    def _set_translate(self, xform, position ):
         translate_op = None
-        orient_op = None
-        # (scale_op only if you need scale)
 
         for op in xform.GetOrderedXformOps():
             t = op.GetOpType()
             if t == UsdGeom.XformOp.TypeTranslate:
                 translate_op = op
-            elif t == UsdGeom.XformOp.TypeOrient:
-                orient_op = op
-            # elif t == UsdGeom.XformOp.TypeScale:
-            #     scale_op = op
-
-        # Create missing ops in a clean order
+        
         if translate_op is None:
             translate_op = xform.AddTranslateOp()
+
+        if translate_op.GetPrecision() == UsdGeom.XformOp.PrecisionDouble: 
+            translate_op.Set(Gf.Vec3d(Gf.Vec3d(position[0], position[1], position[2])))
+        else:
+            translate_op.Set(Gf.Vec3f(Gf.Vec3f(position[0], position[1], position[2])))
+
+    def _set_orientation(self, xform, orientation ):
+        #NOTE: why does precision depend on the format of orientation [x,y,z,w] ?
+        orient_op = None
+
+        for op in xform.GetOrderedXformOps():
+            t = op.GetOpType()
+            if t == UsdGeom.XformOp.TypeOrient:
+                orient_op = op
+        
         if orient_op is None:
             orient_op = xform.AddOrientOp()
-        # if scale_op is None:
-        #     scale_op = xform.AddScaleOp()
 
-        # Set values
-        translate_op.Set(Gf.Vec3d(Gf.Vec3d(position[0], position[1], position[2])))
-        q = Gf.Quatd(orientation[3], Gf.Vec3d(orientation[0], orientation[1], orientation[2])) # tried using Quatf and Vec3f (float), but had to use Quatd and Vec3d (double)
+        if orient_op.GetPrecision() == UsdGeom.XformOp.PrecisionDouble: # NOTE: if orientation is as [1,0,0,0] then it is double, if [0,0,0,1] then it sees it as float -> why?
+            q = Gf.Quatd(orientation[3], Gf.Vec3d(orientation[0], orientation[1], orientation[2])) 
+        else:
+            q = Gf.Quatf(orientation[3], Gf.Vec3f(orientation[0], orientation[1], orientation[2]))
+
         orient_op.Set(q)
 
 

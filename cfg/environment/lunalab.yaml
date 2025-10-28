@@ -187,7 +187,7 @@ static_assets:
       usd_path: assets/USD_Assets/robots/ros2_husky_PhysX_vlp16.usd
       pose:
         position: [5.0, 6.2, 0.5]
-        orientation: [1, 0, 0, 0]
+        orientation: [0, 0, 0, 1]
       collision: True
 
     - asset_name: rock1
