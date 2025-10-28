@@ -179,3 +179,20 @@ robots_settings:
         orientation: [1, 0, 0, 0]
       domain_id: 0
       target_links: ["front_left_wheel_link", "front_right_wheel_link", "rear_left_wheel_link", "rear_right_wheel_link"]
+
+static_assets:
+  static_assets_root: "/StaticAssets"
+  parameters:
+    - asset_name: lander
+      usd_path: assets/USD_Assets/robots/ros2_husky_PhysX_vlp16.usd
+      pose:
+        position: [5.0, 6.2, 0.5]
+        orientation: [1, 0, 0, 0]
+      collision: True
+
+    - asset_name: rock1
+      usd_path: assets/USD_Assets/robots/ros2_husky_PhysX_vlp16.usd
+      pose:
+        position: [5.0, 7.5, 0.5]
+        orientation: [1, 0, 0, 0]
+      collision: False
