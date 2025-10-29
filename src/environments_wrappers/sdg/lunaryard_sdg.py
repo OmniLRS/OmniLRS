@@ -177,11 +177,12 @@ class SDG_Lunaryard(LunaryardController):
         self.randomizeCamera()
 
     def randomize(self) -> None:
-        self.randomizeSun()
-        self.randomizeEarth()
-        self.randomizeCamera()
         if self.counter % 100 == 0:
             self.randomize_rocks()
         if self.counter % 1000 == 0:
             self.switchTerrain(-1)
+        self.randomizeSun()
+        self.randomizeEarth()
+        self.randomizeCamera()
+
         self.counter += 1
