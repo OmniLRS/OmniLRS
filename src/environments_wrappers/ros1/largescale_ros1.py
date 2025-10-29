@@ -53,7 +53,7 @@ class ROS_LargeScaleManager(ROS_BaseManager):
             rospy.Subscriber("/OmniLRS/Sun/AngularSize", Float32, self.set_sun_angle, queue_size=1)
         )
 
-    def periodicUpdate(self, dt: float) -> None:
+    def periodic_update(self, dt: float) -> None:
         """
         Updates the lab.
 
