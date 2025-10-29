@@ -462,6 +462,7 @@ class LargeScaleTerrainConf:
 
         assert len(self.starting_position) == 2, "starting_position must be a tuple of length 2."
 
+        self.earth_path: str = "/LargeScaleLunar/Earth"
         self.earth_usd_path: str = "assets/USD_Assets/common/Earth.usd"
         self.earth_azimuth: float = 90.0
         self.earth_elevation: float = 45.0

@@ -132,7 +132,7 @@ terrain_manager:
       seed: ${....seed}
     
     deformation_engine:
-      enable: False
+      enable: True
       delay: 2.0
       terrain_width: ${....lunaryard_settings.lab_width}
       terrain_height: ${....lunaryard_settings.lab_length}

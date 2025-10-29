@@ -9,8 +9,8 @@ __status__ = "development"
 import numpy as np
 import omni
 import os
-from omni.isaac.core.utils.prims import delete_prim
-from omni.isaac.core.utils.semantics import add_update_semantics
+from isaacsim.core.utils.prims import delete_prim
+from isaacsim.core.utils.semantics import add_update_semantics
 from pxr import UsdGeom, Gf
 from WorldBuilders.pxr_utils import createObject, createXform
 

@@ -8,7 +8,7 @@ __status__ = "development"
 
 from typing import Union
 
-from omni.isaac.core import World
+from isaacsim.core.api.world import World
 import omni
 
 from src.environments_wrappers.ros1.largescale_ros1 import ROS_LargeScaleManager

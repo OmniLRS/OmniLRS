@@ -12,17 +12,17 @@ import warnings
 import os
 
 import omni
-from omni.isaac.core.world import World
+from isaacsim.core.api.world import World
 import omni.graph.core as og
-from omni.isaac.core.utils.stage import add_reference_to_stage
-from omni.isaac.core.utils.transformations import (
+from isaacsim.core.utils.stage import add_reference_to_stage
+from isaacsim.core.utils.transformations import (
     get_relative_transform,
     pose_from_tf_matrix,
 )
-from omni.isaac.core.utils.rotations import quat_to_rot_matrix
-from omni.isaac.core.utils.nucleus import get_assets_root_path
+from isaacsim.core.utils.rotations import quat_to_rot_matrix
+from isaacsim.core.utils.nucleus import get_assets_root_path
 from omni.isaac.dynamic_control import _dynamic_control
-from omni.isaac.core.prims import RigidPrim, RigidPrimView
+from isaacsim.core.prims import SingleRigidPrim, RigidPrim
 from pxr import Gf, UsdGeom, Usd
 
 from WorldBuilders.pxr_utils import createXform, createObject, setDefaultOps
@@ -378,11 +378,11 @@ class RobotRigidGroup:
         world.reset()
         if len(self.target_links) > 0:
             for target_link in self.target_links:
-                rigid_prim = RigidPrim(
+                rigid_prim = SingleRigidPrim(
                     prim_path=os.path.join(self.root_path, self.robot_name, target_link),
                     name=f"{self.robot_name}/{target_link}",
                 )
-                rigid_prim_view = RigidPrimView(
+                rigid_prim_view = RigidPrim(
                     prim_paths_expr=os.path.join(self.root_path, self.robot_name, target_link),
                     name=f"{self.robot_name}/{target_link}_view",
                     track_contact_forces=True,

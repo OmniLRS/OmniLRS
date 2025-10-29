@@ -12,12 +12,12 @@ import numpy as np
 import math
 import os
 
-from omni.isaac.core.utils.stage import add_reference_to_stage
+from isaacsim.core.utils.stage import add_reference_to_stage
 import omni
 
 from pxr import UsdGeom, UsdLux, Gf, Usd
 
-from src.terrain_management.large_scale_terrain.pxr_utils import set_xform_ops, load_material
+from src.terrain_management.large_scale_terrain.pxr_utils import set_xform_ops, load_material, set_texture_path
 from src.physics.terramechanics_parameters import RobotParameter, TerrainMechanicalParameter
 from src.configurations.stellar_engine_confs import StellarEngineConf, SunConf
 from src.configurations.procedural_terrain_confs import TerrainManagerConf
@@ -112,7 +112,9 @@ class LunaryardController(BaseEnv):
         # Creates the earth
         self._earth_prim = self.stage.DefinePrim(self.stage_settings.earth_path, "Xform")
         self._earth_prim.GetReferences().AddReference(self.stage_settings.earth_usd_path)
-
+        earth_texture_path = os.path.abspath("assets/Textures/Earth/earth_color_with_clouds.tif")
+        material_path = f"{self.stage_settings.earth_path}/Looks/OmniPBR"
+        set_texture_path(self.stage, material_path, "Shader", earth_texture_path)
         dist = self.stage_settings.earth_distance * self.stage_settings.earth_scale
         px = math.cos(math.radians(self.stage_settings.earth_azimuth)) * dist
         py = math.sin(math.radians(self.stage_settings.earth_azimuth)) * dist
@@ -120,10 +122,11 @@ class LunaryardController(BaseEnv):
         set_xform_ops(self._earth_prim, Gf.Vec3d(px, py, pz), Gf.Quatd(0, 0, 0, 1))
 
         # Load default textures
-        self.stage.DefinePrim("/Looks", "Xform")
-        load_material("Basalt", "assets/Textures/GravelStones.mdl")
-        load_material("Sand", "assets/Textures/Sand.mdl")
-        load_material("LunarRegolith8k", "assets/Textures/LunarRegolith8k.mdl")
+        looks_path = os.path.join(self.scene_name, "Looks")
+        self.stage.DefinePrim(looks_path, "Scope")
+        load_material("Basalt", "assets/Textures/GravelStones.mdl", looks_path)
+        load_material("Sand", "assets/Textures/Sand.mdl", looks_path)
+        load_material("LunarRegolith8k", "assets/Textures/LunarRegolith8k.mdl", looks_path)
 
     def instantiate_scene(self) -> None:
         """

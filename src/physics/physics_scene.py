@@ -8,7 +8,7 @@ __status__ = "development"
 
 from src.configurations.physics_confs import PhysicsSceneConf
 
-from omni.isaac.core.physics_context.physics_context import PhysicsContext
+from isaacsim.core.api.physics_context.physics_context import PhysicsContext
 
 
 class PhysicsSceneManager:

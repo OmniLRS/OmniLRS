@@ -11,7 +11,7 @@ from scipy.spatial.transform import Rotation as SSTR
 import numpy as np
 
 # Once the sim is started load isaac libs (including ROS)
-from omni.isaac.core import World
+from isaacsim.core.api.world import World
 from pxr import Gf
 import omni
 
