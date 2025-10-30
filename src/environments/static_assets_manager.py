@@ -1,15 +1,16 @@
 __author__ = "Aleksa Stanivuk, Cristian-Augustin Susanu"
 __status__ = "development"
 
+from pathlib import Path
 from typing import Dict
 import os
+from assets import get_assets_path
 import omni
-from pxr import Usd, UsdGeom, Gf, UsdPhysics
+from pxr import UsdGeom, Gf, UsdPhysics
 
 class StaticAssetManager:
     """
-    Spawns one USD prim per entry under /StaticAssets/<asset_name>.
-    No instancers, no ROS. Pure stage composition via references.
+    Spawns one USD prim per entry under static assets configs in yaml.
     """
 
     def __init__(self, root_path: str = "/StaticAssets"):
@@ -30,8 +31,10 @@ class StaticAssetManager:
             self._set_collision(prim_path, a.get("collision", True))
 
     def _create_reference(self, prim_path: str, usd_path: str):
-        prim = self._stage.DefinePrim(prim_path, "Xform")   # this in essence creates an empty wrapper / holder 
-        prim.GetReferences().AddReference(usd_path)         # that will reference to USD model in an external file
+        assets_root = Path(get_assets_path())  
+        real_usd_path = str(assets_root / usd_path.lstrip("/"))
+        prim = self._stage.DefinePrim(prim_path, "Xform")       # this in essence creates an empty wrapper / holder 
+        prim.GetReferences().AddReference(real_usd_path)         # that will reference to USD model in an external file
 
         return prim
 
