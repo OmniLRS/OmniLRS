@@ -6,7 +6,7 @@ import os
 import omni
 from pxr import UsdGeom, Gf
 
-class MonitoringCameraManager:
+class MonitoringCamerasManager:
     """
     Spawns one camera per entry under monitoring camera configs in yaml.
     """
@@ -37,18 +37,6 @@ class MonitoringCameraManager:
             self._set_camera_intrinsics(prim, resolution, fov_deg)
 
             #TODO publish through ros2
-            topic = c["ROS2_topic"]
-            if topic:
-                self._attach_ros2_publisher(
-                    prim_path=prim_path,
-                    topic_name=topic,
-                    width=int(resolution[0]) if isinstance(resolution, (list, tuple)) else int(resolution.get("width", 1280)),
-                    height=int(resolution[1]) if isinstance(resolution, (list, tuple)) else int(resolution.get("height", 720)),
-                    frame_id=c.get("frame_id", name),
-                    depth=bool(c.get("depth", False)),
-                    segmentation=bool(c.get("segmentation", False)),
-                    qos=str(c.get("qos", "SYSTEM_DEFAULT")),
-                )
     
     def _set_pose(self, prim_path: str, position, orientation):
         prim = self._stage.GetPrimAtPath(prim_path)
