@@ -196,3 +196,38 @@ static_assets_settings:
         position: [5.0, 6.2, 0.0]
         orientation: [0, 0, 0, 1] 
       collision: True
+
+monitoring_cameras:
+  cameras_root: "/MonitoringCameras"
+  parameters:
+    - name: "corner_sw"
+      resolution: [1280, 720]           # [width, height]
+      field_of_view_deg: 90
+      pose:
+        position: [0.0, 0.0, 2.5]
+        orientation: [0.0, 0.0, 0.284215, 0.958761]   # yaw ≈ +33.024° toward center
+      ROS2_topic: "/monitoring/god-view/1"
+
+    - name: "corner_se"
+      resolution: [1280, 720]
+      field_of_view_deg: 90
+      pose:
+        position: [10.0, 0.0, 2.5]
+        orientation: [0.0, 0.0, 0.958761, 0.284215]   # yaw ≈ +146.976° toward center
+      ROS2_topic: "/monitoring/god-view/2"
+
+    - name: "corner_ne"
+      resolution: [1280, 720]
+      field_of_view_deg: 90
+      pose:
+        position: [10.0, 6.5, 2.5]
+        orientation: [0.0, 0.0, -0.958761, 0.284215]  # yaw ≈ −146.976° toward center
+      ROS2_topic: "/monitoring/god-view/3"
+
+    - name: "corner_nw"
+      resolution: [1280, 720]
+      field_of_view_deg: 90
+      pose:
+        position: [0.0, 6.5, 2.5]
+        orientation: [0.0, 0.0, -0.284215, 0.958761]  # yaw ≈ −33.024° toward center
+      ROS2_topic: "/monitoring/god-view/4"
