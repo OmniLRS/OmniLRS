@@ -15,7 +15,6 @@ import logging
 import omni
 import time
 
-from src.environments.static_assets_manager import StaticAssetManager
 from src.environments_wrappers.ros2.largescale_ros2 import ROS_LargeScaleManager
 from src.environments_wrappers.ros2.lunaryard_ros2 import ROS_LunaryardManager
 from src.environments_wrappers.ros2.robot_manager_ros2 import ROS_RobotManager
@@ -201,13 +200,6 @@ class ROS2_SimulationManager:
         else:
             self.ROSRobotManager.RM.preload_robot(self.world)
         self.ROSLabManager.LC.add_robot_manager(self.ROSRobotManager.RM)
-
-        # Add static assets after the terrain and robots were added
-        static_assets_cfg = self.cfg["environment"].get("static_assets")
-        if static_assets_cfg and "parameters" in static_assets_cfg:
-            root = static_assets_cfg.get("static_assets_root", "/StaticAssets")
-            self.static_asset_manager = StaticAssetManager(root_path=root)
-            self.static_asset_manager.spawn_from_config(static_assets_cfg)
 
         for i in range(100):
             self.world.step(render=True)

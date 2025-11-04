@@ -14,6 +14,7 @@ import omni
 
 from pxr import UsdGeom, UsdLux, Gf, Usd
 
+from src.environments.static_assets_manager import StaticAssetsManager
 from src.physics.terramechanics_parameters import RobotParameter, TerrainMechanicalParameter
 from src.terrain_management.large_scale_terrain.pxr_utils import set_xform_ops
 from src.configurations.procedural_terrain_confs import TerrainManagerConf
@@ -35,6 +36,7 @@ class LunalabController(BaseEnv):
         lunalab_settings: LunalabConf = None,
         rocks_settings: Dict = None,
         terrain_manager: TerrainManagerConf = None,
+        static_assets_settings: Dict = None,
         **kwargs,
     ) -> None:
         """
@@ -60,6 +62,7 @@ class LunalabController(BaseEnv):
             robot_param=RobotParameter(),
             terrain_param=TerrainMechanicalParameter(),
         )
+        self.SAM = StaticAssetsManager(static_assets_settings)
         self.dem = None
         self.mask = None
         self.scene_name = "/Lunalab"
@@ -108,6 +111,7 @@ class LunalabController(BaseEnv):
         self.RM.build(self.dem, self.mask)
         # Loads the DEM and the mask
         self.switch_terrain(0)
+        self.SAM.spawn_from_config()
 
     def add_robot_manager(self, robotManager: RobotManager) -> None:
         """
