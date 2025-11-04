@@ -8,21 +8,22 @@ from assets import get_assets_path
 import omni
 from pxr import UsdGeom, Gf, UsdPhysics
 
-class StaticAssetManager:
+class StaticAssetsManager:
     """
     Spawns one USD prim per entry under static assets configs in yaml.
     """
 
-    def __init__(self, root_path: str = "/StaticAssets"):
-        self._root_path = root_path
+    def __init__(self, static_assets_cfg):
+        self._cfg = static_assets_cfg
+        self._root_path = static_assets_cfg["root_path"]
         self._stage = omni.usd.get_context().get_stage()
         self._stage.DefinePrim(self._root_path, "Xform")
 
-    def spawn_from_config(self, static_assets: Dict):
-        if not static_assets or "parameters" not in static_assets:
-            return
+    def spawn_from_config(self):
+        if "parameters" not in self._cfg:
+            return 
 
-        for a in static_assets["parameters"]:
+        for a in self._cfg["parameters"]:
             name = a["asset_name"]
             prim_path = os.path.join(self._root_path, name)
             self._create_reference(prim_path, a["usd_path"])
