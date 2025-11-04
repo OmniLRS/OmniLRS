@@ -34,8 +34,8 @@ class StaticAssetsManager:
     def _create_reference(self, prim_path: str, usd_path: str):
         assets_root = Path(get_assets_path())  
         real_usd_path = str(assets_root / usd_path.lstrip("/"))
-        prim = self._stage.DefinePrim(prim_path, "Xform")       # this in essence creates an empty wrapper / holder 
-        prim.GetReferences().AddReference(real_usd_path)         # that will reference to USD model in an external file
+        prim = self._stage.DefinePrim(prim_path, "Xform")           # this in essence creates an empty wrapper / holder 
+        prim.GetReferences().AddReference(real_usd_path)            # that will reference to USD model in an external file
 
         return prim
 
@@ -46,6 +46,7 @@ class StaticAssetsManager:
         self._set_orientation(xform, orientation)
 
     def _set_translate(self, xform, position ):
+        # the precision depends on the format of orientation [x,y,z,w] -> if orientation is as [1,0,0,0] then it is double, if [0,0,0,1] then it is seen as float
         translate_op = None
 
         for op in xform.GetOrderedXformOps():
@@ -62,7 +63,7 @@ class StaticAssetsManager:
             translate_op.Set(Gf.Vec3f(Gf.Vec3f(position[0], position[1], position[2])))
 
     def _set_orientation(self, xform, orientation ):
-        #NOTE: why does precision depend on the format of orientation [x,y,z,w] ?
+        # the precision depends on the format of orientation [x,y,z,w] -> if orientation is as [1,0,0,0] then it is double, if [0,0,0,1] then it is seen as float
         orient_op = None
 
         for op in xform.GetOrderedXformOps():
@@ -73,7 +74,7 @@ class StaticAssetsManager:
         if orient_op is None:
             orient_op = xform.AddOrientOp()
 
-        if orient_op.GetPrecision() == UsdGeom.XformOp.PrecisionDouble: # NOTE: if orientation is as [1,0,0,0] then it is double, if [0,0,0,1] then it sees it as float -> why?
+        if orient_op.GetPrecision() == UsdGeom.XformOp.PrecisionDouble: 
             q = Gf.Quatd(orientation[3], Gf.Vec3d(orientation[0], orientation[1], orientation[2])) 
         else:
             q = Gf.Quatf(orientation[3], Gf.Vec3f(orientation[0], orientation[1], orientation[2]))
