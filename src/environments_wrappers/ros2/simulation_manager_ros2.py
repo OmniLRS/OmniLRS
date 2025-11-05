@@ -203,11 +203,11 @@ class ROS2_SimulationManager:
         self.ROSLabManager.LC.add_robot_manager(self.ROSRobotManager.RM)
 
         # Add monitoring cameras
-        monitoring_cameras_cfg = self.cfg["environment"].get("monitoring_cameras")
-        if monitoring_cameras_cfg and "parameters" in monitoring_cameras_cfg:
-            root = monitoring_cameras_cfg.get("monitoring_cameras_root", "/MonitoringCameras")
-            self.monitoring_cameras_manager = MonitoringCamerasManager(root_path=root)
-            self.monitoring_cameras_manager.spawn_from_config(monitoring_cameras_cfg)
+        # monitoring_cameras_cfg = self.cfg["environment"].get("monitoring_cameras")
+        # if monitoring_cameras_cfg and "parameters" in monitoring_cameras_cfg:
+        #     root = monitoring_cameras_cfg.get("monitoring_cameras_root", "/MonitoringCameras")
+        #     self.monitoring_cameras_manager = MonitoringCamerasManager(root_path=root)
+        #     self.monitoring_cameras_manager.spawn_from_config(monitoring_cameras_cfg)
 
         for i in range(100):
             self.world.step(render=True)
