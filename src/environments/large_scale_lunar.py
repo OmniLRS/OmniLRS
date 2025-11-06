@@ -156,8 +156,8 @@ class LargeScaleController(BaseEnv):
         # Sets the sun using the stellar engine if enabled
         if self.enable_stellar_engine:
             self.SE.set_lat_lon(*self.LSTM.get_lat_lon())
-        self.SAM.spawn_from_config()
-        self.MCM.spawn_from_config()
+        self.SAM.spawn()
+        self.MCM.spawn()
 
     def add_robot_manager(self, robotManager: RobotManager) -> None:
         """

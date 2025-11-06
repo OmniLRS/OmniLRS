@@ -114,8 +114,8 @@ class LunalabController(BaseEnv):
         self.RM.build(self.dem, self.mask)
         # Loads the DEM and the mask
         self.switch_terrain(0)
-        self.SAM.spawn_from_config()
-        self.MCM.spawn_from_config()
+        self.SAM.spawn()
+        self.MCM.spawn()
 
     def add_robot_manager(self, robotManager: RobotManager) -> None:
         """

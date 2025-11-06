@@ -172,8 +172,8 @@ class LunaryardController(BaseEnv):
         if self.enable_stellar_engine:
             self.SE.set_lat_lon(self.stage_settings.coordinates.latitude, self.stage_settings.coordinates.longitude)
             self.update_stellar_engine()
-        self.SAM.spawn_from_config()
-        self.MCM.spawn_from_config()
+        self.SAM.spawn()
+        self.MCM.spawn()
 
     def add_robot_manager(self, robotManager: RobotManager) -> None:
         self.robotManager = robotManager
