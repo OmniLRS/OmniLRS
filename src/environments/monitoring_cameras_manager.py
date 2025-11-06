@@ -5,6 +5,8 @@ from typing import Dict
 import os
 import omni
 from pxr import UsdGeom, Gf
+import omni.replicator.core as rep
+import omni.syntheticdata as sd
 
 class MonitoringCamerasManager:
     """
@@ -24,7 +26,6 @@ class MonitoringCamerasManager:
         for c in self._cfg["camera_definitions"]:
             name = c["name"]
             prim_path = os.path.join(self._root_path, name)
-            # prim = self._create_camera_prim(prim_path)
             prim = self._stage.DefinePrim(prim_path, "Camera") # "Camera" here is the USD type identifier, not name of the camera
             cam = UsdGeom.Camera(prim)
             pose = c["pose"]
@@ -34,11 +35,17 @@ class MonitoringCamerasManager:
                 pose["orientation"],
             )
             self._set_camera_attributes(cam, c["camera_params"])
-            # resolution = c["resolution"]
-            # fov_deg = float(c["field_of_view_deg"])
-            # self._set_camera_intrinsics(prim, resolution, fov_5.deg)
+            self._set_publisher( prim_path, c["ros2"])
 
-            #TODO publish through ros2
+    def _set_publisher(self, prim_path, ros2_cfg:Dict):
+        # inspired by https://docs.isaacsim.omniverse.nvidia.com/5.0.0/ros2_tutorials/tutorial_ros2_camera_publishing.html
+        # but simplified
+        rp = rep.create.render_product(prim_path, (ros2_cfg["resolution"][0], ros2_cfg["resolution"][1])) 
+
+        rv = sd.SyntheticData.convert_sensor_type_to_rendervar("Rgb")
+        w = rep.writers.get(rv + "ROS2PublishImage")
+        w.initialize(topicName=ros2_cfg["topic"], frameId=ros2_cfg["frame_id"], queueSize=1, nodeNamespace="")
+        w.attach([rp])
 
     def  _set_camera_attributes(self, camera, cfg_params):
         camera.CreateFocalLengthAttr().Set(float(cfg_params["focal_length"]))
@@ -86,17 +93,3 @@ class MonitoringCamerasManager:
         else:
             q = Gf.Quatf(orientation[3], Gf.Vec3f(orientation[0], orientation[1], orientation[2]))
         orient_op.Set(q)
-
-    # def _set_camera_intrinsics(self, prim, resolution, fov_deg: float):
-    #     #NOTE: the following link describes camera intrinsics 
-    #     # https://isaac-sim.github.io/IsaacLab/main/source/api/lab/isaaclab.sensors.html?utm_source=chatgpt.com#isaaclab.sensors.Camera.set_intrinsic_matrices
-    #     cam = UsdGeom.Camera(prim)
-    #     width = int(resolution[0])
-    #     height = int(resolution[1])
-
-    #     aspect = max(width, 1) / max(height, 1) # pixel aspect #NOTE(Due to limitations of Omniverse camera, we need to assume that the camera is a spherical lens, i.e. has square pixels), reffer to above link
-
-    #     #NOTE camera creation https://docs.omniverse.nvidia.com/dev-guide/latest/programmer_ref/usd/cameras/create-perspective-camera.html
-
-    #     #NOTE what to do with resolution? -> it is used only for render_product ... https://youtu.be/T5Zlb5Ujtes?si=T3PVl_1t5bS1GmEE
-        # 

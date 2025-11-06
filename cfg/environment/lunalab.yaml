@@ -200,9 +200,7 @@ static_assets_settings:
 monitoring_cameras_settings:
   root_path: "/MonitoringCameras"
   camera_definitions:
-    - name: "corner_sw"
-      # resolution: [1280, 720]           # [width, height]
-      # field_of_view_deg: 90
+    - name: "corner"
       pose:
         position: [0.0, 0.0, 2.5]
         orientation: [0.493, -0.302, -0.169, 0.796]
@@ -213,4 +211,9 @@ monitoring_cameras_settings:
         fstop: 5.0
         focus_distance: 10.0
         clipping_range: [0.01, 1000000.0]
-      ROS2_topic: "/monitoring/god-view/1"
+      ros2:
+        topic: "/monitoring/corner"
+        frame_id: "corner_id"
+        type: "rgb"
+        # publish_rate_hz: 2.0 # stans for every 0.5s - in order to not overwhelm the network -> maybe further implementation
+        resolution: [1280, 720]  
