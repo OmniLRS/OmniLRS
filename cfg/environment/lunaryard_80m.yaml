@@ -212,7 +212,9 @@ monitoring_cameras_settings:
         focus_distance: 10.0
         clipping_range: [0.01, 1000000.0]
       ros2:
+        enabled: False
         topic: "/monitoring/corner"
         frame_id: "corner_id"
-        type: "rgb"
-        resolution: [1280, 720]  
+      type: "Rgb" # make sure to have correct naming - eg. Rgb ; Depth ; SemanticSegmentation ; InstanceSegmentation ; Normals
+      resolution: [1280, 720]  
+      # stream_frequency: 2.0 #  every 0.5s - in order to not overwhelm the network
