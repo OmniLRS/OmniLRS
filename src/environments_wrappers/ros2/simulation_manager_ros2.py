@@ -15,7 +15,6 @@ import logging
 import omni
 import time
 
-from src.environments.monitoring_cameras_manager import MonitoringCamerasManager
 from src.environments_wrappers.ros2.largescale_ros2 import ROS_LargeScaleManager
 from src.environments_wrappers.ros2.lunaryard_ros2 import ROS_LunaryardManager
 from src.environments_wrappers.ros2.robot_manager_ros2 import ROS_RobotManager
@@ -201,13 +200,6 @@ class ROS2_SimulationManager:
         else:
             self.ROSRobotManager.RM.preload_robot(self.world)
         self.ROSLabManager.LC.add_robot_manager(self.ROSRobotManager.RM)
-
-        # Add monitoring cameras
-        # monitoring_cameras_cfg = self.cfg["environment"].get("monitoring_cameras")
-        # if monitoring_cameras_cfg and "parameters" in monitoring_cameras_cfg:
-        #     root = monitoring_cameras_cfg.get("monitoring_cameras_root", "/MonitoringCameras")
-        #     self.monitoring_cameras_manager = MonitoringCamerasManager(root_path=root)
-        #     self.monitoring_cameras_manager.spawn_from_config(monitoring_cameras_cfg)
 
         for i in range(100):
             self.world.step(render=True)

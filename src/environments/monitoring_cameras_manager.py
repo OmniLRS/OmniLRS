@@ -40,17 +40,19 @@ class MonitoringCamerasManager:
                 pose["orientation"],
             )
             self._set_camera_attributes(cam, c["camera_params"])
-            self._set_publisher( prim_path, c["ros2"])
+            rp = rep.create.render_product(prim_path, (c["resolution"][0], c["resolution"][1])) 
 
-    def _set_publisher(self, prim_path, ros2_cfg:Dict):
+            if c["ros2"]["enabled"]:
+                self._set_ros2_publisher(rp, c["ros2"], c["type"])
+
+
+    def _set_ros2_publisher(self, render_product, ros2_cfg:Dict, type:str):
         # inspired by https://docs.isaacsim.omniverse.nvidia.com/5.0.0/ros2_tutorials/tutorial_ros2_camera_publishing.html
         # but simplified
-        rp = rep.create.render_product(prim_path, (ros2_cfg["resolution"][0], ros2_cfg["resolution"][1])) 
-
-        rv = sd.SyntheticData.convert_sensor_type_to_rendervar("Rgb")
+        rv = sd.SyntheticData.convert_sensor_type_to_rendervar(type)
         w = rep.writers.get(rv + "ROS2PublishImage")
         w.initialize(topicName=ros2_cfg["topic"], frameId=ros2_cfg["frame_id"], queueSize=1, nodeNamespace="")
-        w.attach([rp])
+        w.attach([render_product])
 
     def  _set_camera_attributes(self, camera, cfg_params):
         camera.CreateFocalLengthAttr().Set(float(cfg_params["focal_length"]))
