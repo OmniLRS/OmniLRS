@@ -179,6 +179,7 @@ robots_settings:
         orientation: [1, 0, 0, 0]
       domain_id: 0
       target_links: ["front_left_wheel_link", "front_right_wheel_link", "rear_left_wheel_link", "rear_right_wheel_link"]
+      base_link: "base_link" # core link used to determine the position of the robot
 
 static_assets_settings:
   root_path: "/StaticAssets"
