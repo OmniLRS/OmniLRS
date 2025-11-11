@@ -77,6 +77,7 @@ class RobotManager:
                 self.add_RRG(
                     robot_parameter.robot_name,
                     robot_parameter.target_links,
+                    robot_parameter.base_link,
                     world,
                 )
 
@@ -105,6 +106,7 @@ class RobotManager:
                 self.add_RRG(
                     robot_parameter.robot_name,
                     robot_parameter.target_links,
+                    robot_parameter.base_link,
                     world,
                 )
 
@@ -150,7 +152,8 @@ class RobotManager:
         self,
         robot_name: str = None,
         target_links: List[str] = None,
-        world=None,
+        base_link: str = None,
+        world = None,
     ) -> None:
         """
         Add a robot rigid group to the scene.
@@ -164,6 +167,7 @@ class RobotManager:
             self.robots_root,
             robot_name,
             target_links,
+            base_link,
         )
         rrg.initialize(world)
         self.robots_RG[robot_name] = rrg
@@ -353,7 +357,7 @@ class RobotRigidGroup:
     It is used to retrieve world pose, and contact forces, or apply force/torque.
     """
 
-    def __init__(self, root_path: str = "/Robots", robot_name: str = None, target_links: List[str] = None):
+    def __init__(self, root_path: str = "/Robots", robot_name: str = None, target_links: List[str] = None, base_link:str=None):
         """
         Args:
             root_path (str): The root path of the robots.
@@ -366,6 +370,8 @@ class RobotRigidGroup:
         self.target_links = target_links
         self.prims = []
         self.prim_views = []
+        self.base_link = base_link
+        self.base_prim = None
 
     def initialize(self, world: World) -> None:
         """
@@ -376,21 +382,37 @@ class RobotRigidGroup:
         """
 
         world.reset()
+        self._initialize_target_links()
+        self._initialize_base_link()
+        world.reset()
+
+        print("initialized")
+
+    def _initialize_target_links(self):
         if len(self.target_links) > 0:
             for target_link in self.target_links:
-                rigid_prim = SingleRigidPrim(
-                    prim_path=os.path.join(self.root_path, self.robot_name, target_link),
-                    name=f"{self.robot_name}/{target_link}",
-                )
-                rigid_prim_view = RigidPrim(
-                    prim_paths_expr=os.path.join(self.root_path, self.robot_name, target_link),
-                    name=f"{self.robot_name}/{target_link}_view",
-                    track_contact_forces=True,
-                )
-                rigid_prim_view.initialize()
+                rigid_prim, rigid_prim_view = self._initialize_link(target_link)
                 self.prims.append(rigid_prim)
                 self.prim_views.append(rigid_prim_view)
-        world.reset()
+
+    def _initialize_base_link(self):
+        rigid_prim, rigid_prim_view = self._initialize_link(self.base_link)
+        self.base_prim = rigid_prim
+        print("initialized base link")
+
+    def _initialize_link(self, link):
+        rigid_prim = SingleRigidPrim(
+            prim_path=os.path.join(self.root_path, self.robot_name, link),
+            name=f"{self.robot_name}/{link}",
+        )
+        rigid_prim_view = RigidPrim(
+            prim_paths_expr=os.path.join(self.root_path, self.robot_name, link),
+            name=f"{self.robot_name}/{link}_view",
+            track_contact_forces=True,
+        )
+        rigid_prim_view.initialize()
+
+        return rigid_prim, rigid_prim_view
 
     def get_world_poses(self) -> np.ndarray:
         """
@@ -427,6 +449,18 @@ class RobotRigidGroup:
             positions[i, :] = position
             orientations[i, :] = orientation
         return positions, orientations
+    
+    def get_base_pose(self) -> Tuple[list, list]:
+        """
+        Returns a pair of value representing the robot's pose, and orientation respectively, based on the base_link.
+
+        Returns:
+            position (np.ndarray): The position of base link. (x, y, z)
+            orientation (np.ndarray): The orientation of base link. (x, y, z, w)
+        """
+        position, orientation = self.base_prim.get_world_pose()
+
+        return position, orientation
 
     def get_velocities(self) -> Tuple[np.ndarray, np.ndarray]:
         """
