@@ -6,6 +6,8 @@ __maintainer__ = "Antoine Richard"
 __email__ = "antoine.richard@uni.lu"
 __status__ = "development"
 
+import threading
+import time
 from typing import Dict, List, Tuple
 import numpy as np
 import warnings
@@ -27,6 +29,11 @@ from pxr import Gf, UsdGeom, Usd
 
 from WorldBuilders.pxr_utils import createXform, createObject, setDefaultOps
 from src.configurations.robot_confs import RobotManagerConf
+# from src.robots.robot_controller_yamcs import RobotControllerYamcs
+import numpy as np
+from scipy.spatial.transform import Rotation as R
+
+from src.environments.utils import transform_orientation_into_xyz
 
 
 class RobotManager:
@@ -54,6 +61,7 @@ class RobotManager:
         createXform(self.stage, self.robots_root)
         self.robots: Dict[str, Robot] = {}
         self.robots_RG: Dict[str, RobotRigidGroup] = {}
+        # self.yamcs_controller: RobotControllerYamcs
         self.num_robots = 0
 
     def preload_robot(
@@ -208,6 +216,39 @@ class RobotManager:
             warnings.warn("Robot does not exist. Ignoring request.")
             print("available robots: ", self.robots.keys())
 
+    def start_transmitting_yamcs(self):
+        #TODO connect to yamcs client
+        #TODO take seconds to wait out of config
+        #TODO define a transmitting message {robot_name, property, value}
+        print("connected")
+        print(self.robots.keys())
+        print(self.robots_RG.keys())
+        for robot_name in self.robots.keys():
+            robot_name = robot_name.replace("/","")
+            t = threading.Thread(
+                target=self._yamcs_transmitter,
+                args=(robot_name, 3),
+                name="yamcs-transmitter-" + robot_name,
+                daemon=True,
+            )   
+            t.start()
+        print("ended")
+
+    #TODO maybe make a specific dict with the values that should be used by transmitters
+    def _yamcs_transmitter(self, robot_name, interval_s):
+        print("started transmitter for: " + robot_name)
+        try:
+            while True:
+                position, orientation = self.robots_RG[str(robot_name)].get_base_pose()
+                euler_orient = transform_orientation_into_xyz(orientation)
+                print(f"Robot: {robot_name}")
+                print(f"Position: {np.round(position,1)}")
+                print(f"Orientation: {np.round(orientation,1)}")
+                print(f"Euler: {np.round(euler_orient,1)}")
+                print("----")
+                time.sleep(interval_s) #TODO: maybe change into simulation secs
+        finally:
+            print("ended transmitter for: " + robot_name)
 
 class Robot:
     """
