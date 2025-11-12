@@ -1,4 +1,7 @@
-FROM nvcr.io/nvidia/isaac-sim:5.0.0
+FROM nvcr.io/nvidia/isaac-sim:5.1.0
+
+# Switch to root user for system-level installations (5.1.0 runs as non-root by default)
+USER root
 
 RUN /isaac-sim/python.sh -m pip install --upgrade pip
 RUN /isaac-sim/python.sh -m pip install \
@@ -33,7 +36,8 @@ RUN echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/r
 ENV LANG=C.UTF-8
 ENV LC_ALL=C.UTF-8
 
-ENV ROS_DISTRO=humble
+# Isaac Sim 5.1.0 is based on Ubuntu 24.04 (Noble) which uses ROS 2 Jazzy
+ENV ROS_DISTRO=jazzy
 
 # install ros2 packages  
 RUN apt-get update && apt-get install -y \
@@ -53,24 +57,25 @@ RUN /isaac-sim/python.sh -m pip install \
   gdown \
   em \
   lark \
-  pandas
+  pandas \
+  numpy-quaternion
 
 RUN /isaac-sim/python.sh -m pip install gdal==$(gdal-config --version)
 
-# isaac ros2_bridge config  
+# isaac ros2_bridge config (updated for Jazzy)
 ENV isaac_sim_package_path=/isaac-sim
 ENV RMW_IMPLEMENTATION=rmw_fastrtps_cpp
-ENV LD_LIBRARY_PATH=/isaac-sim/exts/isaacsim.ros2.bridge/humble/lib
+ENV LD_LIBRARY_PATH=/isaac-sim/exts/isaacsim.ros2.bridge/jazzy/lib
 
-## For convenience:
+## For convenience (keep as root user):
 RUN echo "alias kk='clear'" >> /root/.bashrc
 RUN echo "alias tt='tmux new'" >> /root/.bashrc
 RUN echo "alias isaacpy='/isaac-sim/python.sh'" >> /root/.bashrc
 RUN echo "alias isaacapp='/isaac-sim/runapp.sh'" >> /root/.bashrc
-RUN echo "alias humble='unset LD_LIBRARY_PATH && source /opt/ros/$ROS_DISTRO/setup.bash'" >> /root/.bashrc
+RUN echo "alias jazzy='unset LD_LIBRARY_PATH && source /opt/ros/$ROS_DISTRO/setup.bash'" >> /root/.bashrc
 # Save the bash history immediately on each execution
-RUN echo "export PROMPT_COMMAND='history -a' " >> "/root/.bashrc"
-RUN echo "export HISTFILE=/commandhistory/.bash_history" >> "/root/.bashrc"
+RUN echo "export PROMPT_COMMAND='history -a' " >> /root/.bashrc
+RUN echo "export HISTFILE=/commandhistory/.bash_history" >> /root/.bashrc
 
 # setup entrypoint
 COPY ./entrypoint.sh /
