@@ -200,7 +200,6 @@ class ROS2_SimulationManager:
         else:
             self.ROSRobotManager.RM.preload_robot(self.world)
         self.ROSLabManager.LC.add_robot_manager(self.ROSRobotManager.RM)
-        self.ROSLabManager.LC.start_transmitting_yamcs()
 
         for i in range(100):
             self.world.step(render=True)
