@@ -117,6 +117,11 @@ class LunalabController(BaseEnv):
         self.SAM.spawn()
         self.MCM.spawn()
 
+        # self.robotManager.start_transmitting_yamcs()
+
+    def start_transmitting_yamcs(self) -> None:
+        self.robotManager.start_transmitting_yamcs()
+
     def add_robot_manager(self, robotManager: RobotManager) -> None:
         """
         Adds the robot manager to the environment.
