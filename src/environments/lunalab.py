@@ -117,11 +117,6 @@ class LunalabController(BaseEnv):
         self.SAM.spawn()
         self.MCM.spawn()
 
-        # self.robotManager.start_transmitting_yamcs()
-
-    def start_transmitting_yamcs(self) -> None:
-        self.robotManager.start_transmitting_yamcs()
-
     def add_robot_manager(self, robotManager: RobotManager) -> None:
         """
         Adds the robot manager to the environment.
@@ -131,6 +126,7 @@ class LunalabController(BaseEnv):
         """
 
         self.robotManager = robotManager
+        self.robotManager.start_transmitting_yamcs()
 
     def get_lux_assets(self, prim: "Usd.Prim") -> List[Usd.Prim]:
         """
