@@ -170,21 +170,12 @@ robots_settings:
   is_ROS2: False
   max_robots: 5
   robots_root: "/Robots"
-  # parameters:
-    # -
-    #   robot_name: ex1
-    #   usd_path: assets/USD_Assets/robots/ex1.usd
-    #   pose:
-    #     position: [5.0, 5.0, 0.5]
-    #     orientation: [1, 0, 0, 0]
-    #   domain_id: 0
-    #   target_links: ["left_front_wheel_link", "left_rear_wheel_link", "right_front_wheel_link", "right_rear_wheel_link"]
-    
-    # -
-    #   robot_name: jackal
-    #   usd_path: assets/USD_Assets/robots/jackal.usd
-    #   pose:
-    #     position: [5.0, 5.0, 0.5]
-    #     orientation: [1, 0, 0, 0]
-    #   domain_id: 0
-    #   target_links: ["front_left_wheel_link", "front_right_wheel_link", "rear_left_wheel_link", "rear_right_wheel_link"]
+  parameters:
+    -
+      robot_name: husky
+      usd_path: assets/USD_Assets/robots/ros2_husky_PhysX_vlp16.usd
+      pose:
+        position: [40.0, 40.0, 0.3]
+        orientation: [1, 0, 0, 0]
+      domain_id: 0
+      target_links: ["front_left_wheel_link", "front_right_wheel_link", "rear_left_wheel_link", "rear_right_wheel_link"]

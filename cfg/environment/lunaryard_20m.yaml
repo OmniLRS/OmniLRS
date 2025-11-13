@@ -295,7 +295,7 @@ terrain_manager:
     is_lab: False
 
   root_path: /Lunaryard
-  texture_path: /Looks/Basalt
+  texture_path: /Lunaryard/Looks/Basalt
   dems_path: Terrains/Lunaryard
   mesh_position: [0, 0, 0]
   mesh_orientation: [0, 0, 0, 1] # Quaternion x,y,z,w
@@ -321,7 +321,7 @@ robots_settings:
 #    
   #  -
   #    robot_name: jackal
-  #    usd_path: assets/USD_Assets/robots/ros2_husky_PhysX_vlp16.usd
+  #    usd_path: assets/USD_Assets/robots/ros2_jackal_PhysX_vlp16_stereo.usd
   #    pose:
   #      position: [5.0, 5.0, 0.5]
   #      orientation: [1, 0, 0, 0]

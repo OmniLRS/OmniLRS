@@ -11,7 +11,7 @@ from src.environments_wrappers.sdg.lunalab_sdg import SDG_Lunalab
 from src.configurations.auto_labeling_confs import AutoLabelingConf, CameraConf
 from src.labeling.auto_label import AutonomousLabeling
 
-from omni.isaac.core import World
+from isaacsim.core.api.world import World
 from typing import Union
 import omni
 

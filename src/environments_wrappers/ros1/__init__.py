@@ -16,7 +16,7 @@ def enable_ros1(simulation_app, **kwargs) -> None:
         **kwargs: Additional keyword arguments."""
 
     # Enables this ROS1 extension
-    from omni.isaac.core.utils.extensions import enable_extension
+    from isaacsim.core.utils.extensions import enable_extension
 
     enable_extension("omni.isaac.ros_bridge")
     enable_extension("omni.kit.viewport.actions")
