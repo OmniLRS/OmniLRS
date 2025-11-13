@@ -7,7 +7,7 @@ __email__ = "antoine.richard@uni.lu"
 __status__ = "development"
 
 from scipy.spatial.transform import Rotation as SSTR
-from typing import List, Tuple
+from typing import Dict, List, Tuple
 import numpy as np
 import math
 import os
@@ -17,6 +17,7 @@ import omni
 
 from pxr import UsdLux, Gf, Usd
 
+from src.environments.static_assets_manager import StaticAssetsManager
 from src.terrain_management.large_scale_terrain_manager import LargeScaleTerrainManager
 from src.terrain_management.large_scale_terrain.pxr_utils import set_xform_ops, set_texture_path
 from src.configurations.stellar_engine_confs import StellarEngineConf, SunConf
@@ -38,6 +39,7 @@ class LargeScaleController(BaseEnv):
         stellar_engine_settings: StellarEngineConf = None,
         sun_settings: SunConf = None,
         is_simulation_alive: callable = lambda: True,
+        static_assets_settings: Dict = None,
         **kwargs,
     ) -> None:
         """
@@ -62,6 +64,7 @@ class LargeScaleController(BaseEnv):
             self.enable_stellar_engine = True
         else:
             self.enable_stellar_engine = False
+        self.SAM = StaticAssetsManager(static_assets_settings)
         self.dem = None
         self.mask = None
         self.scene_name = "/LargeScaleLunar"
@@ -150,6 +153,7 @@ class LargeScaleController(BaseEnv):
         # Sets the sun using the stellar engine if enabled
         if self.enable_stellar_engine:
             self.SE.set_lat_lon(*self.LSTM.get_lat_lon())
+        self.SAM.spawn_from_config()
 
     def add_robot_manager(self, robotManager: RobotManager) -> None:
         """
