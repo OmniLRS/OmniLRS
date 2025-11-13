@@ -92,6 +92,10 @@ class AutonomousLabeling:
         self.meta_prim = self.stage.GetPrimAtPath(cfg.prim_path)
         self.synth_counter = 0
 
+        ## Verify the directory exists
+        if not os.path.exists(self.data_dir):
+            os.makedirs(self.data_dir)
+
     def formatWriterConfig(self) -> Dict[str, Union[float, bool, int, str]]:
         for i, camera_name in enumerate(self.camera_names):
             self.writers_cfgs[camera_name] = {}
