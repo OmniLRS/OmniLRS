@@ -17,6 +17,7 @@ import omni
 
 from pxr import UsdGeom, UsdLux, Gf, Usd
 
+from src.environments.monitoring_cameras_manager import MonitoringCamerasManager
 from src.environments.static_assets_manager import StaticAssetsManager
 from src.terrain_management.large_scale_terrain.pxr_utils import set_xform_ops, load_material, set_texture_path
 from src.physics.terramechanics_parameters import RobotParameter, TerrainMechanicalParameter
@@ -44,6 +45,7 @@ class LunaryardController(BaseEnv):
         stellar_engine_settings: StellarEngineConf = None,
         sun_settings: SunConf = None,
         static_assets_settings: Dict = None,
+        monitoring_cameras_settings: Dict = None,
         **kwargs,
     ) -> None:
         """
@@ -78,6 +80,7 @@ class LunaryardController(BaseEnv):
             terrain_param=TerrainMechanicalParameter(),
         )
         self.SAM = StaticAssetsManager(static_assets_settings)
+        self.MCM = MonitoringCamerasManager(monitoring_cameras_settings)
         self.dem = None
         self.mask = None
         self.scene_name = "/Lunaryard"
@@ -169,7 +172,8 @@ class LunaryardController(BaseEnv):
         if self.enable_stellar_engine:
             self.SE.set_lat_lon(self.stage_settings.coordinates.latitude, self.stage_settings.coordinates.longitude)
             self.update_stellar_engine()
-        self.SAM.spawn_from_config()
+        self.SAM.spawn()
+        self.MCM.spawn()
 
     def add_robot_manager(self, robotManager: RobotManager) -> None:
         self.robotManager = robotManager

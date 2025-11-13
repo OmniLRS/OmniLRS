@@ -17,6 +17,7 @@ import omni
 
 from pxr import UsdLux, Gf, Usd
 
+from src.environments.monitoring_cameras_manager import MonitoringCamerasManager
 from src.environments.static_assets_manager import StaticAssetsManager
 from src.terrain_management.large_scale_terrain_manager import LargeScaleTerrainManager
 from src.terrain_management.large_scale_terrain.pxr_utils import set_xform_ops, set_texture_path
@@ -40,6 +41,7 @@ class LargeScaleController(BaseEnv):
         sun_settings: SunConf = None,
         is_simulation_alive: callable = lambda: True,
         static_assets_settings: Dict = None,
+        monitoring_cameras_settings: Dict = None,
         **kwargs,
     ) -> None:
         """
@@ -65,6 +67,7 @@ class LargeScaleController(BaseEnv):
         else:
             self.enable_stellar_engine = False
         self.SAM = StaticAssetsManager(static_assets_settings)
+        self.MCM = MonitoringCamerasManager(monitoring_cameras_settings)
         self.dem = None
         self.mask = None
         self.scene_name = "/LargeScaleLunar"
@@ -153,7 +156,8 @@ class LargeScaleController(BaseEnv):
         # Sets the sun using the stellar engine if enabled
         if self.enable_stellar_engine:
             self.SE.set_lat_lon(*self.LSTM.get_lat_lon())
-        self.SAM.spawn_from_config()
+        self.SAM.spawn()
+        self.MCM.spawn()
 
     def add_robot_manager(self, robotManager: RobotManager) -> None:
         """
