@@ -22,10 +22,18 @@ class YamcsTMTC:
     ) -> None:
         self._yamsc_client = YamcsClient(yamcs_conf["address"])
         self._yamsc_processor = self._yamsc_client.get_processor(instance=yamcs_conf["instance"], processor=yamcs_conf["processor"])
+        # self._yamsc_processor.commands.subscribe(self._command_callback)
         self._mdb = self._yamsc_client.get_mdb(instance=yamcs_conf["instance"])  #NOTE https://docs.yamcs.org/python-yamcs-client/mdb/client/#yamcs.client.MDBClient
         self._robot_name = robot_name
         self._robots_RG = robot_RG
         self._yamcs_conf = yamcs_conf
+
+        self._yamsc_processor.create_command_history_subscription(on_data=self.tc_callback)
+
+
+    def tc_callback(self, rec):
+        print("TC:", rec)
+
 
     def start(self):
         # initially inteded to be in a for robot in robots loop, thus to have one thread for each robot
