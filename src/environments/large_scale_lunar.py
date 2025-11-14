@@ -168,6 +168,7 @@ class LargeScaleController(BaseEnv):
         """
 
         self.robotManager = robotManager
+        self.robotManager.start_TMTC()
         self.pose_tracker = list(self.robotManager.robots.values())[0].get_pose
 
     # ==============================================================================
