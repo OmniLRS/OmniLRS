@@ -20,28 +20,26 @@ class YamcsTMTC:
         robot_name,
         robot_RG
     ) -> None:
-        #TODO use configs
-        self._yamsc_client = YamcsClient('localhost:8090')
-        self._yamsc_processor = self._yamsc_client.get_processor(instance='workshop', processor='realtime')
-        self._mdb = self._yamsc_client.get_mdb(instance="workshop")  #NOTE https://docs.yamcs.org/python-yamcs-client/mdb/client/#yamcs.client.MDBClient
+        self._yamsc_client = YamcsClient(yamcs_conf["address"])
+        self._yamsc_processor = self._yamsc_client.get_processor(instance=yamcs_conf["instance"], processor=yamcs_conf["processor"])
+        self._mdb = self._yamsc_client.get_mdb(instance=yamcs_conf["instance"])  #NOTE https://docs.yamcs.org/python-yamcs-client/mdb/client/#yamcs.client.MDBClient
         self._robot_name = robot_name
         self._robots_RG = robot_RG
+        self._yamcs_conf = yamcs_conf
 
     def start(self):
-        #TODO take seconds to wait out of config
         # initially inteded to be in a for robot in robots loop, thus to have one thread for each robot
         # however, for the workshop use-case, the code was simplified to assume use of only one robot 
-        seconds = 3 #TODO get them from the config
         t = threading.Thread(
             target=self._yamcs_transmitter,
-            args=(self._robot_name, seconds),
+            args=(self._robot_name, self._yamcs_conf["interval_s"]),
             name="yamcs-TMTC-" + self._robot_name,
             daemon=True,
         )   
         t.start()
 
     def _yamcs_transmitter(self, robot_name, interval_s):
-        print("started transmitter for: " + robot_name)
+        print("started TMTC for: " + robot_name)
         try:
             while True:
                 self._transmit_ground_pose()
@@ -57,5 +55,5 @@ class YamcsTMTC:
         orientation = [round(x, 1) for x in orientation.tolist()]   # orientation = orientation.tolist()
         ground_pose_truth = {"position": {"x":position[0], "y":position[1], "z":position[2]}, 
                                 "orientation":{"w":orientation[0],"x":orientation[1], "y":orientation[2], "z":orientation[3] }}
-        self._yamsc_processor.set_parameter_value(f"/Rover/pose_ground_truth", ground_pose_truth)
+        self._yamsc_processor.set_parameter_value(self._yamcs_conf["topics"]["ground_pose_truth"], ground_pose_truth)
 

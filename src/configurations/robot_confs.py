@@ -38,6 +38,7 @@ class RobotManagerConf:
     max_robots: int = 5
     robots_root: str = "/Robots"
     parameters: List[RobotParameters] = field(default_factory=list)
+    yamcs_tmtc: Dict = field(default_factory=dict)
 
     def __post_init__(self):
         if self.parameters:
