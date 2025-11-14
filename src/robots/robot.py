@@ -34,6 +34,7 @@ import numpy as np
 from scipy.spatial.transform import Rotation as R
 
 from src.environments.utils import transform_orientation_into_xyz
+from src.robots.yamcs_TMTC import YamcsTMTC
 from yamcs.client import YamcsClient
 from yamcs.protobuf.yamcs_pb2 import Value, AggregateValue
 
@@ -63,7 +64,7 @@ class RobotManager:
         createXform(self.stage, self.robots_root)
         self.robots: Dict[str, Robot] = {}
         self.robots_RG: Dict[str, RobotRigidGroup] = {}
-        # self.yamcs_controller: RobotControllerYamcs
+        self.TMTC: YamcsTMTC
         self.num_robots = 0
 
     def preload_robot(
@@ -218,54 +219,10 @@ class RobotManager:
             warnings.warn("Robot does not exist. Ignoring request.")
             print("available robots: ", self.robots.keys())
 
-    def start_transmitting_yamcs(self):
-        #TODO connect to yamcs client
-        #TODO take seconds to wait out of config
-        #TODO define a transmitting message {robot_name, property, value}
-        #TODO extract yamsc client into a class with its own init and configs
-
-        self._yamsc_client = YamcsClient('localhost:8090')
-        self._yamsc_processor = self._yamsc_client.get_processor(instance='workshop', processor='realtime')
-        print("connected")
-        print(self.robots.keys())
-        print(self.robots_RG.keys())
-        for robot_name in self.robots.keys():
-            robot_name = robot_name.replace("/","")
-            mdb = self._yamsc_client.get_mdb(instance="workshop")  #NOTE https://docs.yamcs.org/python-yamcs-client/mdb/client/#yamcs.client.MDBClient
-            # pt = mdb.create_parameter_type(robot_name + "/position", eng_type="aggregate")
-            # mdb.create_parameter(f"/myproject/x", data_source="LOCAL")
-            # mdb.create_parameter(f"/myproject/{robot_name}/position/y", data_source="LOCAL")
-            # mdb.create_parameter(f"/myproject/{robot_name}/position/z", data_source="LOCAL")
-            t = threading.Thread(
-                target=self._yamcs_transmitter,
-                args=(robot_name, 3),
-                name="yamcs-transmitter-" + robot_name,
-                daemon=True,
-            )   
-            t.start()
-        print("ended")
-
-    #TODO maybe make a specific dict with the values that should be used by transmitters
-    def _yamcs_transmitter(self, robot_name, interval_s):
-        print("started transmitter for: " + robot_name)
-        try:
-            while True:
-                position, orientation = self.robots_RG[str(robot_name)].get_base_pose()
-                euler_orient = transform_orientation_into_xyz(orientation)
-                print(f"Robot: {robot_name}")
-                print(f"Position: {np.round(position,1)}")
-                print(f"Orientation: {np.round(orientation,1)}")
-                print(f"Euler: {np.round(euler_orient,1)}")
-                print("----")
-
-                # ground_pose_truth = {"position": {"x":round(float(position.tolist()[0]),1), "y":round(float(position.tolist()[0]),1), "z":round(float(position.tolist()[0]),1)}, 
-                        #   "orientation":{"w":round(orientation[0],1),"x":round(orientation[1],1), "y":round(orientation[2],1), "z":round(orientation[3],1)} }
-                ground_pose_truth = {"position": {"x":1.1, "y":1, "z":1}, "orientation":{"w":1,"x":1, "y":1, "z":1 }}
-                self._yamsc_processor.set_parameter_value(f"/Rover/pose_ground_truth", ground_pose_truth)
-
-                time.sleep(interval_s) #TODO: maybe change into simulation secs
-        finally:
-            print("ended transmitter for: " + robot_name)
+    def start_TMTC(self):
+        robot_name = list(self.robots.keys())[0].replace("/","") # assumes only 1 robot for workshop use
+        self.TMTC = YamcsTMTC("conf", robot_name, self.robots_RG)
+        self.TMTC.start()
 
 class Robot:
     """

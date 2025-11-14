@@ -126,7 +126,7 @@ class LunalabController(BaseEnv):
         """
 
         self.robotManager = robotManager
-        self.robotManager.start_transmitting_yamcs()
+        self.robotManager.start_TMTC()
 
     def get_lux_assets(self, prim: "Usd.Prim") -> List[Usd.Prim]:
         """
