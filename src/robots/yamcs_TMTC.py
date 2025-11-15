@@ -30,10 +30,28 @@ class YamcsTMTC:
 
         self._yamsc_processor.create_command_history_subscription(on_data=self.tc_callback)
 
+    def to_py(self, v):
+        # yamcs Value -> python value (covers float/int/string/bool)
+        # if your lib already gives plain python values, you can skip this.
+        return getattr(v, "value", v)
 
     def tc_callback(self, rec):
         print("TC:", rec)
+        # print("TC:", rec.command)
 
+        # args are attached on the FIRST record for this command
+        if getattr(rec, "args", None):
+            # rec.args may be a list of {name, value} or a dict depending on version
+            try:
+                args = {a.name: self.to_py(a.value) for a in rec.args}
+            except Exception:
+                args = rec.args  # already a dict on some versions
+            print("ARGS:", args)
+
+        # acks show up as the record evolves
+        if getattr(rec, "acknowledgments", None):
+            acks = {a.name: a.status for a in rec.acknowledgments}
+            print("ACKS:", acks)
 
     def start(self):
         # initially inteded to be in a for robot in robots loop, thus to have one thread for each robot
