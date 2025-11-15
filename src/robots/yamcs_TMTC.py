@@ -2,7 +2,7 @@ __author__ = "Aleksa Stanivuk"
 __status__ = "development"
 
 from src.environments.utils import transform_orientation_into_xyz
-from yamcs.client import YamcsClient
+from yamcs.client import YamcsClient, CommandHistory
 import threading
 import time
 import numpy as np
@@ -27,31 +27,33 @@ class YamcsTMTC:
         self._robot_name = robot_name
         self._robots_RG = robot_RG
         self._yamcs_conf = yamcs_conf
+        self._time_of_last_command = 0
 
-        self._yamsc_processor.create_command_history_subscription(on_data=self.tc_callback)
+        self._yamsc_processor.create_command_history_subscription(on_data=self._command_callback)
 
-    def to_py(self, v):
-        # yamcs Value -> python value (covers float/int/string/bool)
-        # if your lib already gives plain python values, you can skip this.
-        return getattr(v, "value", v)
+    def _command_callback(self, command:CommandHistory):
+        # CommandHistory info is available at: https://docs.yamcs.org/python-yamcs-client/tmtc/model/#yamcs.client.CommandHistory
+        #NOTE: it happens that the subscriber receives the same instance of command multiple times in a very short period of time
+        # however, desired behaviour is to execute the command only once
+        # since commands are executed by human operators, waiting for a small period of time (such as 0.5s) is enough to counter this issue
+        if time.time() - self._time_of_last_command < 0.5:
+            return
+        
+        name = command.name
+        arguments = command.all_assignments
+        if name == "/Rover/motor/drive_straight":
+            self._move_rover_straight(arguments["linear_velocity"], arguments["distance"]) 
+        # here add reactions to other commands
+        else:
+            print("Unknown comand.")
 
-    def tc_callback(self, rec):
-        print("TC:", rec)
-        # print("TC:", rec.command)
+    def _move_rover_straight(self, linear_velocity, distance):
+        print("linear velocity", linear_velocity)
+        print("distance", distance)
+        self._time_of_last_command = time.time()
 
-        # args are attached on the FIRST record for this command
-        if getattr(rec, "args", None):
-            # rec.args may be a list of {name, value} or a dict depending on version
-            try:
-                args = {a.name: self.to_py(a.value) for a in rec.args}
-            except Exception:
-                args = rec.args  # already a dict on some versions
-            print("ARGS:", args)
-
-        # acks show up as the record evolves
-        if getattr(rec, "acknowledgments", None):
-            acks = {a.name: a.status for a in rec.acknowledgments}
-            print("ACKS:", acks)
+    def _turn_rover(self, angular_velocity, distance):
+        pass
 
     def start(self):
         # initially inteded to be in a for robot in robots loop, thus to have one thread for each robot
