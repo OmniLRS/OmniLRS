@@ -59,7 +59,7 @@ class YamcsTMTC:
 
     def _drive_robot_straight(self, linear_velocity, distance):
         self._robot.drive_straight(linear_velocity)
-        travel_time = distance / linear_velocity
+        travel_time = distance / abs(linear_velocity)
         self._stop_rover_after_time(travel_time)
 
     def _stop_rover_after_time(self, travel_time):
