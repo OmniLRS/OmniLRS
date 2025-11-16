@@ -25,6 +25,7 @@ class RobotParameters:
     domain_id: int = field(default_factory=int)
     target_links: List[str] = field(default_factory=list)
     base_link: str = field(default_factory=str)
+    wheel_joints: Dict = field(default_factory=dict)
 
     def __post_init__(self):
         self.usd_path = os.path.join(os.getcwd(), self.usd_path)

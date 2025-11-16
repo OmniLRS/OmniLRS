@@ -6,6 +6,8 @@ from yamcs.client import YamcsClient, CommandHistory
 import threading
 import time
 import numpy as np
+from pxr import Gf, UsdGeom, Usd, UsdPhysics, Sdf
+import math
 
 class YamcsTMTC:
     """
@@ -18,7 +20,8 @@ class YamcsTMTC:
         self,
         yamcs_conf,
         robot_name,
-        robot_RG
+        robot_RG,
+        robot,
     ) -> None:
         self._yamsc_client = YamcsClient(yamcs_conf["address"])
         self._yamsc_processor = self._yamsc_client.get_processor(instance=yamcs_conf["instance"], processor=yamcs_conf["processor"])
@@ -28,6 +31,7 @@ class YamcsTMTC:
         self._robots_RG = robot_RG
         self._yamcs_conf = yamcs_conf
         self._time_of_last_command = 0
+        self._robot = robot
 
         self._yamsc_processor.create_command_history_subscription(on_data=self._command_callback)
 
@@ -48,9 +52,7 @@ class YamcsTMTC:
             print("Unknown comand.")
 
     def _move_rover_straight(self, linear_velocity, distance):
-        print("linear velocity", linear_velocity)
-        print("distance", distance)
-        self._time_of_last_command = time.time()
+        self._robot.drive(linear_velocity, distance)
 
     def _turn_rover(self, angular_velocity, distance):
         pass
