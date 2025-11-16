@@ -264,7 +264,6 @@ class Robot:
         self._wheel_joint_names = wheel_joints
         self._dofs = {} # dof = Degree of Freedom
 
-
     def get_root_rigid_body_path(self) -> None:
         """
         Get the root rigid body path of the robot.
@@ -373,9 +372,13 @@ class Robot:
             ],
         )
 
-    def drive(self, linear_speed, distance):
-        self._set_wheels_velocity(linear_speed, "left")
-        self._set_wheels_velocity(linear_speed, "right")
+    def drive_straight(self, linear_velocity):
+        self._set_wheels_velocity(linear_velocity, "left")
+        self._set_wheels_velocity(linear_velocity, "right")
+
+    def stop_drive(self):
+        self._set_wheels_velocity(0, "left")
+        self._set_wheels_velocity(0, "right")
 
     def _set_wheels_velocity(self, velocity, side:str):
         self._init_dofs()

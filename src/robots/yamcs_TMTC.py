@@ -8,6 +8,8 @@ import time
 import numpy as np
 from pxr import Gf, UsdGeom, Usd, UsdPhysics, Sdf
 import math
+import omni.timeline
+import omni.kit.app
 
 class YamcsTMTC:
     """
@@ -32,6 +34,10 @@ class YamcsTMTC:
         self._yamcs_conf = yamcs_conf
         self._time_of_last_command = 0
         self._robot = robot
+        self.timeline = omni.timeline.get_timeline_interface()
+        self._update_stream = omni.kit.app.get_app().get_update_event_stream()
+        self._drive_callback_sub = None
+        self._stop_time = None
 
         self._yamsc_processor.create_command_history_subscription(on_data=self._command_callback)
 
@@ -46,14 +52,42 @@ class YamcsTMTC:
         name = command.name
         arguments = command.all_assignments
         if name == "/Rover/motor/drive_straight":
-            self._move_rover_straight(arguments["linear_velocity"], arguments["distance"]) 
+            self._drive_robot_straight(arguments["linear_velocity"], arguments["distance"]) 
         # here add reactions to other commands
         else:
             print("Unknown comand.")
 
-    def _move_rover_straight(self, linear_velocity, distance):
-        self._robot.drive(linear_velocity, distance)
+    def _drive_robot_straight(self, linear_velocity, distance):
+        self._robot.drive_straight(linear_velocity)
+        travel_time = distance / linear_velocity
+        self._stop_rover_after_time(travel_time)
 
+    def _stop_rover_after_time(self, travel_time):
+        start_time = self.timeline.get_current_time()
+        self._stop_time = start_time + travel_time
+        
+        if self._drive_callback_sub is None:
+            self._drive_callback_sub = self._update_stream.create_subscription_to_pop(
+                self._stop_robot_callback,
+                name="RobotDriveStopCallback",
+            )
+
+    def _stop_robot_callback(self, e):
+        # callback function for stopping the robot
+        # checks every frame if simulaiton has reached the self._stop_time (calculated in the caller function)
+        if self._stop_time is None:
+            return
+
+        current_time = self.timeline.get_current_time()
+
+        if current_time >= self._stop_time:
+            self._robot.stop_drive()
+            self._stop_time = None
+
+            if self._drive_callback_sub is not None:
+                self._drive_callback_sub.unsubscribe()
+                self._drive_callback_sub = None
+    
     def _turn_rover(self, angular_velocity, distance):
         pass
 
