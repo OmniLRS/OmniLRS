@@ -6,8 +6,6 @@ __maintainer__ = "Antoine Richard"
 __email__ = "antoine.richard@uni.lu"
 __status__ = "development"
 
-import threading
-import time
 from typing import Dict, List, Tuple
 import numpy as np
 import warnings
@@ -16,27 +14,19 @@ import os
 import omni
 from isaacsim.core.api.world import World
 import omni.graph.core as og
-from isaacsim.core.utils.stage import add_reference_to_stage
-from isaacsim.core.utils.transformations import (
-    get_relative_transform,
-    pose_from_tf_matrix,
-)
 from isaacsim.core.utils.rotations import quat_to_rot_matrix
 from isaacsim.core.utils.nucleus import get_assets_root_path
 from omni.isaac.dynamic_control import _dynamic_control
 from isaacsim.core.prims import SingleRigidPrim, RigidPrim
-from pxr import Gf, UsdGeom, Usd
+from pxr import Gf, Usd
 
-from WorldBuilders.pxr_utils import createXform, createObject, setDefaultOps
+from WorldBuilders.pxr_utils import createXform, createObject
 from src.configurations.robot_confs import RobotManagerConf
-# from src.robots.robot_controller_yamcs import RobotControllerYamcs
 import numpy as np
 from scipy.spatial.transform import Rotation as R
 
 from src.environments.utils import transform_orientation_into_xyz
 from src.robots.yamcs_TMTC import YamcsTMTC
-from yamcs.client import YamcsClient
-from yamcs.protobuf.yamcs_pb2 import Value, AggregateValue
 
 
 class RobotManager:
@@ -220,9 +210,10 @@ class RobotManager:
             print("available robots: ", self.robots.keys())
 
     def start_TMTC(self):
-        robot_name = list(self.robots.keys())[0].replace("/","") # assumes only 1 robot for workshop use
-        self.TMTC = YamcsTMTC(self.RM_conf.yamcs_tmtc, robot_name, self.robots_RG)
-        self.TMTC.start()
+        if (self.RM_conf.yamcs_tmtc["enabled"]):
+            robot_name = list(self.robots.keys())[0].replace("/","") # assumes only 1 robot for workshop use
+            self.TMTC = YamcsTMTC(self.RM_conf.yamcs_tmtc, robot_name, self.robots_RG)
+            self.TMTC.start()
 
 class Robot:
     """
