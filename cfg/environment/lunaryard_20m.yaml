@@ -345,6 +345,9 @@ robots_settings:
     camera_interval_s: 5
     parameters:
       ground_pose_truth: "/Rover/pose_ground_truth"
+    commands:
+      drive_straight: "/Rover/motor/drive_straight"
+      drive_turn: "/Rover/motor/drive_turn"
 
 static_assets_settings:
   root_path: "/StaticAssets"

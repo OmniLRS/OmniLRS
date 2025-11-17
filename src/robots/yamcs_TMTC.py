@@ -48,9 +48,9 @@ class YamcsTMTC:
         arguments = command.all_assignments
         print(name)
         print(arguments)
-        if name == "/Rover/motor/drive_straight":
+        if name == self._yamcs_conf["commands"]["drive_straight"]:
             self._drive_robot_straight(arguments["linear_velocity"], arguments["distance"]) 
-        elif name == "/Rover/motor/drive_turn":
+        elif name == self._yamcs_conf["commands"]["drive_turn"]:
             self._turn_rover(arguments["angular_velocity"], arguments["angle"])
         # here add reactions to other commands
         else:
