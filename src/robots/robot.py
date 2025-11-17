@@ -78,7 +78,7 @@ class RobotManager:
                 self.add_RRG(
                     robot_parameter.robot_name,
                     robot_parameter.target_links,
-                    robot_parameter.pose_base_link,
+                    robot_parameter.base_link,
                     world,
                 )
 
@@ -107,7 +107,7 @@ class RobotManager:
                 self.add_RRG(
                     robot_parameter.robot_name,
                     robot_parameter.target_links,
-                    robot_parameter.pose_base_link,
+                    robot_parameter.base_link,
                     world,
                 )
 
@@ -456,7 +456,7 @@ class RobotRigidGroup:
             orientations[i, :] = orientation
         return positions, orientations
     
-    def get_base_pose(self) -> Tuple[list, list]:
+    def get_base_link_pose(self) -> Tuple[list, list]:
         """
         Returns a pair of value representing the robot's pose, and orientation respectively, based on the base_link.
 

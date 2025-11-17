@@ -93,7 +93,7 @@ robots_settings:
         orientation: [1, 0, 0, 0]
       domain_id: 0
       target_links: ["front_left_wheel_link", "front_right_wheel_link", "rear_left_wheel_link", "rear_right_wheel_link"]
-      pose_base_link: "base_link" # core link used to determine the position of the robot
+      base_link: "base_link" # core link used to determine the position of the robot
   yamcs_tmtc:
     enabled: True
     address: "localhost:8090"
@@ -102,7 +102,7 @@ robots_settings:
     interval_s: 3
     camera_interval_s: 5
     parameters:
-      ground_pose_truth: "/Rover/pose_ground_truth"
+      pose_of_base_link: "/Rover/pose_ground_truth"
     # -
     #   robot_name: jackal
     #   usd_path: assets/USD_Assets/robots/ros2_jackal_PhysX_vlp16_stereo.usd
