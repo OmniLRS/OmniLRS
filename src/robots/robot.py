@@ -241,6 +241,7 @@ class Robot:
         is_ROS2: bool = False,
         domain_id: int = 0,
         wheel_joints: Dict = {},
+
     ) -> None:
         """
         Args:
@@ -376,6 +377,26 @@ class Robot:
         self._set_wheels_velocity(linear_velocity, "left")
         self._set_wheels_velocity(linear_velocity, "right")
 
+    def drive_turn(self, wheel_speed):
+        print(wheel_speed)
+        if (wheel_speed > 0):
+            print("turns left")
+        else:
+            print("turns right")
+        self._set_wheels_velocity(-wheel_speed, "left")
+        self._set_wheels_velocity(wheel_speed, "right")
+
+    # def turn_left(self, wheel_speed):
+    #     print("turn left")
+    #     print(wheel_speed)
+    #     self._set_wheels_velocity(-wheel_speed, "left")
+    #     self._set_wheels_velocity(wheel_speed, "right")
+
+    # def turn_right(self, wheel_speed):
+    #     print("turn right")
+    #     self._set_wheels_velocity(wheel_speed, "left")
+    #     self._set_wheels_velocity(-wheel_speed, "right")
+
     def stop_drive(self):
         self._set_wheels_velocity(0, "left")
         self._set_wheels_velocity(0, "right")
@@ -396,7 +417,8 @@ class Robot:
         # thus not populating dofs correctly
         # therefore, it was implemented as singleton, and should be called at the begging of every commanding function
         #
-        # more about the use of dofs for robot movement can be read on: https://docs.isaacsim.omniverse.nvidia.com/5.0.0/python_scripting/robots_simulation.html#velocity-control
+        # more about the use of dofs for robot movement can be read on: 
+        # https://docs.isaacsim.omniverse.nvidia.com/5.0.0/python_scripting/robots_simulation.html#velocity-control
         if "left" in list(self._dofs.keys()):
             return # it means it is already initialized
         

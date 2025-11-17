@@ -49,18 +49,40 @@ class YamcsTMTC:
         if time.time() - self._time_of_last_command < 0.5:
             return
         
+        self._time_of_last_command = time.time()
+
         name = command.name
         arguments = command.all_assignments
+        print(name)
+        print(arguments)
         if name == "/Rover/motor/drive_straight":
             self._drive_robot_straight(arguments["linear_velocity"], arguments["distance"]) 
+        elif name == "/Rover/motor/drive_turn":
+            self._turn_rover(arguments["angular_velocity"], arguments["angle"])
         # here add reactions to other commands
         else:
             print("Unknown comand.")
 
     def _drive_robot_straight(self, linear_velocity, distance):
         self._robot.drive_straight(linear_velocity)
-        travel_time = distance / abs(linear_velocity)
-        self._stop_rover_after_time(travel_time)
+        drive_time = distance / abs(linear_velocity)
+        self._stop_rover_after_time(drive_time)
+
+    def _turn_rover(self, angular_velocity, angle):
+        # through experiment it was observed that the robot requries ~10% more time to turn to the desired angle 
+        # (maybe this number has to be set depending on a specific robot)
+        turn_time_adjustment_coef = 1.11
+        # similar for 2
+        wheel_speed_adjustment_coef = 2
+        print("turn rover")
+        print(angular_velocity)
+        print(angle)
+        robot_width = 2.85 * 2 # also 2 helped here
+        radians = math.radians(angular_velocity) 
+        wheel_speed = radians * (robot_width / 2)
+        turn_time = angle / abs(angular_velocity)
+        self._robot.drive_turn(wheel_speed * wheel_speed_adjustment_coef)
+        self._stop_rover_after_time(turn_time * turn_time_adjustment_coef)
 
     def _stop_rover_after_time(self, travel_time):
         start_time = self.timeline.get_current_time()
@@ -87,9 +109,6 @@ class YamcsTMTC:
             if self._drive_callback_sub is not None:
                 self._drive_callback_sub.unsubscribe()
                 self._drive_callback_sub = None
-    
-    def _turn_rover(self, angular_velocity, distance):
-        pass
 
     def start(self):
         # initially inteded to be in a for robot in robots loop, thus to have one thread for each robot
