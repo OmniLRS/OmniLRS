@@ -57,11 +57,18 @@ class YamcsTMTC:
             print("Unknown comand.")
 
     def _drive_robot_straight(self, linear_velocity, distance):
+        if linear_velocity == 0:
+            self._stop_robot()
+            return
+        
         self._robot.drive_straight(linear_velocity)
         drive_time = distance / abs(linear_velocity)
         self._stop_rover_after_time(drive_time)
 
     def _turn_rover(self, angular_velocity, angle):
+        if angular_velocity == 0:
+            self._stop_robot()
+            return
         # through experiment it was observed that the robot requries ~10% more time to turn to the desired angle 
         # (maybe this number has to be set depending on a specific robot)
         turn_time_adjustment_coef = 1.11
@@ -79,9 +86,11 @@ class YamcsTMTC:
         self._stop_time = start_time + travel_time
         
         if self._drive_callback_sub is None:
+            # the callback subscription gets overriten which enables continuous control over the robot
+            # (issuing new command, before the previous one is completed with no issues)
             self._drive_callback_sub = self._update_stream.create_subscription_to_pop(
                 self._stop_robot_callback,
-                name="RobotDriveStopCallback",
+                name="RobotDriveStopCallback", 
             )
 
     def _stop_robot_callback(self, e):
@@ -93,12 +102,15 @@ class YamcsTMTC:
         current_time = self.timeline.get_current_time()
 
         if current_time >= self._stop_time:
-            self._robot.stop_drive()
-            self._stop_time = None
+            self._stop_robot()
 
-            if self._drive_callback_sub is not None:
-                self._drive_callback_sub.unsubscribe()
-                self._drive_callback_sub = None
+    def _stop_robot(self):
+        self._robot.stop_drive()
+        self._stop_time = None
+
+        if self._drive_callback_sub is not None:
+            self._drive_callback_sub.unsubscribe()
+            self._drive_callback_sub = None
 
     def start(self):
         # initially inteded to be in a for robot in robots loop, thus to have one thread for each robot
