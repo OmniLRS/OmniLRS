@@ -414,7 +414,13 @@ class RobotRigidGroup:
 
     def get_pose(self) -> Tuple[np.ndarray, np.ndarray]:
         """
-        Returns the pose of target links.
+        Returns the pose (position and orientation) of target links in the global frame.
+
+        Notes:
+        - Orientations are quaternions in (w, x, y, z) format.
+        - The local coordinate system of each wheel rotates as the wheels rotate.
+          To ensure consistent orientations in the global frame, the pitch rotation
+          is removed. This aligns each wheel's local coordinate system with the global frame.
 
         Returns:
             positions (np.ndarray): The position of target links. (x, y, z)
@@ -426,12 +432,18 @@ class RobotRigidGroup:
         orientations = np.zeros((n_links, 4))
         for i, prim in enumerate(self.prims):
             position, orientation = prim.get_world_pose()
+
+            # Rearrange quaternion from (w, x, y, z) to (x, y, z, w) for scipy
             quaternion = [orientation[1], orientation[2], orientation[3], orientation[0]]
             rotation = R.from_quat(quaternion)
+
+            # Remove pitch rotation to align wheel's local frame with global frame
             pitch_angle = 2 * np.arctan2(rotation.as_quat()[1], rotation.as_quat()[3])
             pitch_correction_quat = [0, -np.sin(pitch_angle / 2), 0, np.cos(pitch_angle / 2)]
             inverse_pitch_rotation = R.from_quat(pitch_correction_quat)
             rotation_corrected = rotation * inverse_pitch_rotation
+
+            # Convert back to (w, x, y, z) and store results
             quaternion_corrected = rotation_corrected.as_quat()
             orientation_corrected = [quaternion_corrected[3], quaternion_corrected[0], quaternion_corrected[1], quaternion_corrected[2]]
             positions[i, :] = position
