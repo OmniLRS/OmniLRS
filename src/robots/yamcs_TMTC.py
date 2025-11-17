@@ -55,5 +55,5 @@ class YamcsTMTC:
         orientation = [round(x, 1) for x in orientation.tolist()]   # orientation = orientation.tolist()
         ground_pose_truth = {"position": {"x":position[0], "y":position[1], "z":position[2]}, 
                                 "orientation":{"w":orientation[0],"x":orientation[1], "y":orientation[2], "z":orientation[3] }}
-        self._yamsc_processor.set_parameter_value(self._yamcs_conf["topics"]["ground_pose_truth"], ground_pose_truth)
+        self._yamsc_processor.set_parameter_value(self._yamcs_conf["parameters"]["ground_pose_truth"], ground_pose_truth)
 
