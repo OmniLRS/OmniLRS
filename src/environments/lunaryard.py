@@ -177,7 +177,8 @@ class LunaryardController(BaseEnv):
 
     def add_robot_manager(self, robotManager: RobotManager) -> None:
         self.robotManager = robotManager
-        self.robotManager.start_TMTC()
+        if (self.robotManager.RM_conf.yamcs_tmtc["enabled"]):
+            self.robotManager.start_TMTC()
 
     def load_DEM(self) -> None:
         """
