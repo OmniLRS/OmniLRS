@@ -53,7 +53,8 @@ RUN /isaac-sim/python.sh -m pip install \
   gdown \
   em \
   lark \
-  yamcs-client
+  yamcs-client \
+  pandas
 
 RUN /isaac-sim/python.sh -m pip install gdal==$(gdal-config --version)
 

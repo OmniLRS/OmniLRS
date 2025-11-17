@@ -16,20 +16,14 @@ import os
 import omni
 from isaacsim.core.api.world import World
 import omni.graph.core as og
-from isaacsim.core.utils.stage import add_reference_to_stage
-from isaacsim.core.utils.transformations import (
-    get_relative_transform,
-    pose_from_tf_matrix,
-)
 from isaacsim.core.utils.rotations import quat_to_rot_matrix
 from isaacsim.core.utils.nucleus import get_assets_root_path
 from omni.isaac.dynamic_control import _dynamic_control
 from isaacsim.core.prims import SingleRigidPrim, RigidPrim
 from pxr import Gf, Usd
 
-from WorldBuilders.pxr_utils import createXform, createObject, setDefaultOps
+from WorldBuilders.pxr_utils import createXform, createObject
 from src.configurations.robot_confs import RobotManagerConf
-# from src.robots.robot_controller_yamcs import RobotControllerYamcs
 import numpy as np
 from scipy.spatial.transform import Rotation as R
 
@@ -86,7 +80,7 @@ class RobotManager:
                 self.add_RRG(
                     robot_parameter.robot_name,
                     robot_parameter.target_links,
-                    robot_parameter.base_link,
+                    robot_parameter.pose_base_link,
                     world,
                 )
 
@@ -116,7 +110,7 @@ class RobotManager:
                 self.add_RRG(
                     robot_parameter.robot_name,
                     robot_parameter.target_links,
-                    robot_parameter.base_link,
+                    robot_parameter.pose_base_link,
                     world,
                 )
 
@@ -164,7 +158,7 @@ class RobotManager:
         self,
         robot_name: str = None,
         target_links: List[str] = None,
-        base_link: str = None,
+        pose_base_link: str = None,
         world = None,
     ) -> None:
         """
@@ -179,7 +173,7 @@ class RobotManager:
             self.robots_root,
             robot_name,
             target_links,
-            base_link,
+            pose_base_link,
         )
         rrg.initialize(world)
         self.robots_RG[robot_name] = rrg
@@ -221,9 +215,10 @@ class RobotManager:
             print("available robots: ", self.robots.keys())
 
     def start_TMTC(self):
-        robot_name = list(self.robots.keys())[0].replace("/","") # assumes only 1 robot for workshop use
-        self.TMTC = YamcsTMTC(self.RM_conf.yamcs_tmtc, robot_name, self.robots_RG, self.robots["/" + str(robot_name)])
-        self.TMTC.start()
+        if (self.RM_conf.yamcs_tmtc["enabled"]):
+            robot_name = list(self.robots.keys())[0].replace("/","") # assumes only 1 robot for workshop use
+            self.TMTC = YamcsTMTC(self.RM_conf.yamcs_tmtc, robot_name, self.robots_RG, self.robots["/" + robot_name])
+            self.TMTC.start()
 
 class Robot:
     """
@@ -386,17 +381,6 @@ class Robot:
         self._set_wheels_velocity(-wheel_speed, "left")
         self._set_wheels_velocity(wheel_speed, "right")
 
-    # def turn_left(self, wheel_speed):
-    #     print("turn left")
-    #     print(wheel_speed)
-    #     self._set_wheels_velocity(-wheel_speed, "left")
-    #     self._set_wheels_velocity(wheel_speed, "right")
-
-    # def turn_right(self, wheel_speed):
-    #     print("turn right")
-    #     self._set_wheels_velocity(wheel_speed, "left")
-    #     self._set_wheels_velocity(-wheel_speed, "right")
-
     def stop_drive(self):
         self._set_wheels_velocity(0, "left")
         self._set_wheels_velocity(0, "right")
@@ -439,7 +423,7 @@ class RobotRigidGroup:
     It is used to retrieve world pose, and contact forces, or apply force/torque.
     """
 
-    def __init__(self, root_path: str = "/Robots", robot_name: str = None, target_links: List[str] = None, base_link:str=None):
+    def __init__(self, root_path: str = "/Robots", robot_name: str = None, target_links: List[str] = None, pose_base_link:str=None):
         """
         Args:
             root_path (str): The root path of the robots.
@@ -452,7 +436,7 @@ class RobotRigidGroup:
         self.target_links = target_links
         self.prims = []
         self.prim_views = []
-        self.base_link = base_link
+        self.pose_base_link = pose_base_link
         self.base_prim = None
 
     def initialize(self, world: World) -> None:
@@ -465,7 +449,7 @@ class RobotRigidGroup:
 
         world.reset()
         self._initialize_target_links()
-        self._initialize_base_link()
+        self._initialize_pose_base_link()
         world.reset()
 
         print("initialized")
@@ -477,8 +461,8 @@ class RobotRigidGroup:
                 self.prims.append(rigid_prim)
                 self.prim_views.append(rigid_prim_view)
 
-    def _initialize_base_link(self):
-        rigid_prim, rigid_prim_view = self._initialize_link(self.base_link)
+    def _initialize_pose_base_link(self):
+        rigid_prim, rigid_prim_view = self._initialize_link(self.pose_base_link)
         self.base_prim = rigid_prim
         print("initialized base link")
 
