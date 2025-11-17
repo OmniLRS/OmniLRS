@@ -126,7 +126,8 @@ class LunalabController(BaseEnv):
         """
 
         self.robotManager = robotManager
-        self.robotManager.start_TMTC()
+        if (self.robotManager.RM_conf.yamcs_tmtc["enabled"]):
+            self.robotManager.start_TMTC()
 
     def get_lux_assets(self, prim: "Usd.Prim") -> List[Usd.Prim]:
         """

@@ -168,7 +168,8 @@ class LargeScaleController(BaseEnv):
         """
 
         self.robotManager = robotManager
-        self.robotManager.start_TMTC()
+        if (self.robotManager.RM_conf.yamcs_tmtc["enabled"]):
+            self.robotManager.start_TMTC()
         self.pose_tracker = list(self.robotManager.robots.values())[0].get_pose
 
     # ==============================================================================

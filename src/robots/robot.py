@@ -210,10 +210,9 @@ class RobotManager:
             print("available robots: ", self.robots.keys())
 
     def start_TMTC(self):
-        if (self.RM_conf.yamcs_tmtc["enabled"]):
-            robot_name = list(self.robots.keys())[0].replace("/","") # assumes only 1 robot for workshop use
-            self.TMTC = YamcsTMTC(self.RM_conf.yamcs_tmtc, robot_name, self.robots_RG)
-            self.TMTC.start()
+        robot_name = list(self.robots.keys())[0].replace("/","") # assumes only 1 robot for workshop use
+        self.TMTC = YamcsTMTC(self.RM_conf.yamcs_tmtc, robot_name, self.robots_RG)
+        self.TMTC.start()
 
 class Robot:
     """
