@@ -362,7 +362,7 @@ class RobotRigidGroup:
     It is used to retrieve world pose, and contact forces, or apply force/torque.
     """
 
-    def __init__(self, root_path: str = "/Robots", robot_name: str = None, target_links: List[str] = None, pose_base_link:str=None):
+    def __init__(self, root_path: str = "/Robots", robot_name: str = None, target_links: List[str] = None, base_link:str=None):
         """
         Args:
             root_path (str): The root path of the robots.
@@ -375,7 +375,7 @@ class RobotRigidGroup:
         self.target_links = target_links
         self.prims = []
         self.prim_views = []
-        self.pose_base_link = pose_base_link
+        self.base_link = base_link
         self.base_prim = None
 
     def initialize(self, world: World) -> None:
@@ -388,7 +388,7 @@ class RobotRigidGroup:
 
         world.reset()
         self._initialize_target_links()
-        self._initialize_pose_base_link()
+        self._initialize_base_link()
         world.reset()
 
         print("initialized")
@@ -400,8 +400,8 @@ class RobotRigidGroup:
                 self.prims.append(rigid_prim)
                 self.prim_views.append(rigid_prim_view)
 
-    def _initialize_pose_base_link(self):
-        rigid_prim, rigid_prim_view = self._initialize_link(self.pose_base_link)
+    def _initialize_base_link(self):
+        rigid_prim, rigid_prim_view = self._initialize_link(self.base_link)
         self.base_prim = rigid_prim
         print("initialized base link")
 
@@ -455,7 +455,7 @@ class RobotRigidGroup:
             orientations[i, :] = orientation
         return positions, orientations
     
-    def get_base_link_pose(self) -> Tuple[list, list]:
+    def get_pose_of_base_link(self) -> Tuple[list, list]:
         """
         Returns a pair of value representing the robot's pose, and orientation respectively, based on the base_link.
 
