@@ -127,18 +127,17 @@ class YamcsTMTC:
         print("started TMTC for: " + robot_name)
         try:
             while True:
-                self._transmit_base_link_pose()
+                self._transmit_pose_of_base_link()
                 # add here further commands
                 time.sleep(interval_s) #TODO: change into simulation secs
         finally:
             print("ended transmitter for: " + robot_name)
 
-    def _transmit_base_link_pose(self):
-        position, orientation = self._robots_RG[str(self._robot_name)].get_base_link_pose()
+    def _transmit_pose_of_base_link(self):
+        position, orientation = self._robots_RG[str(self._robot_name)].get_pose_of_base_link()
         # euler_orient = transform_orientation_into_xyz(orientation)
         position = position.tolist()
         orientation = orientation.tolist()
         pose_of_base_link = {"position": {"x":position[0], "y":position[1], "z":position[2]}, 
                                 "orientation":{"w":orientation[0],"x":orientation[1], "y":orientation[2], "z":orientation[3] }}
         self._yamcs_processor.set_parameter_value(self._yamcs_conf["parameters"]["pose_of_base_link"], pose_of_base_link)
-
