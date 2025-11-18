@@ -381,7 +381,7 @@ class LunalabController(BaseEnv):
             position, orientation = rrg.get_pose()
             world_positions.append(position)
             world_orientations.append(orientation)
-            contact_forces.append(rrg.get_net_contact_forces() * 10)
+            contact_forces.append(rrg.get_net_contact_forces())
         world_positions = np.concatenate(world_positions, axis=0)
         world_orientations = np.concatenate(world_orientations, axis=0)
         contact_forces = np.concatenate(contact_forces, axis=0)
