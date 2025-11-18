@@ -51,7 +51,7 @@ class YamcsTMTC:
         if name == self._yamcs_conf["commands"]["drive_straight"]:
             self._drive_robot_straight(arguments["linear_velocity"], arguments["distance"]) 
         elif name == self._yamcs_conf["commands"]["drive_turn"]:
-            self._turn_rover(arguments["angular_velocity"], arguments["angle"])
+            self._drive_robot_turn(arguments["angular_velocity"], arguments["angle"])
         # here add reactions to other commands
         else:
             print("Unknown comand.")
@@ -63,9 +63,9 @@ class YamcsTMTC:
         
         self._robot.drive_straight(linear_velocity)
         drive_time = distance / abs(linear_velocity)
-        self._stop_rover_after_time(drive_time)
+        self._stop_robot_after_time(drive_time)
 
-    def _turn_rover(self, angular_velocity, angle):
+    def _drive_robot_turn(self, angular_velocity, angle):
         if angular_velocity == 0:
             self._stop_robot()
             return
@@ -79,15 +79,15 @@ class YamcsTMTC:
         wheel_speed = radians * (robot_width / 2)
         turn_time = angle / abs(angular_velocity)
         self._robot.drive_turn(wheel_speed * wheel_speed_adjustment_coef)
-        self._stop_rover_after_time(turn_time * turn_time_adjustment_coef)
+        self._stop_robot_after_time(turn_time * turn_time_adjustment_coef)
 
-    def _stop_rover_after_time(self, travel_time):
+    def _stop_robot_after_time(self, travel_time):
         start_time = self.timeline.get_current_time()
         self._stop_time = start_time + travel_time
         
         if self._drive_callback_sub is None:
-            # the callback subscription gets overriten which enables continuous control over the robot
-            # (issuing new command, before the previous one is completed with no issues)
+            # in case of receiving a command before the previous one was completed, the subscribed callback
+            # will remain, and will use the updated _stop_time
             self._drive_callback_sub = self._update_stream.create_subscription_to_pop(
                 self._stop_robot_callback,
                 name="RobotDriveStopCallback", 
