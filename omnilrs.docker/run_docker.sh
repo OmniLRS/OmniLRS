@@ -13,5 +13,7 @@ docker run --name isaac-sim-omnilrs-container -it --gpus all -e "ACCEPT_EULA=Y" 
 -v ~/docker/isaac-sim/logs:/root/.nvidia-omniverse/logs:rw \
 -v ~/docker/isaac-sim/data:/root/.local/share/ov/data:rw \
 -v ~/docker/isaac-sim/documents:/root/Documents:rw \
+-v /tmp/images_streaming:/tmp/images_streaming:rw \
+-v /tmp/images_oncommand:/tmp/images_oncommand:rw \
 -v bash_command_history:/commandhistory \
 isaac-sim-omnilrs:latest

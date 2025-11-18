@@ -184,6 +184,9 @@ robots_settings:
       wheel_joints:
         left: ["front_left_wheel", "rear_left_wheel"]
         right: ["front_right_wheel", "rear_right_wheel"]
+      camera:
+        prim_path: "/Robots/husky/base_link/thirdperson_view"
+        resolution: [640, 480]
   yamcs_tmtc:
     enabled: True
     address: "localhost:8090"

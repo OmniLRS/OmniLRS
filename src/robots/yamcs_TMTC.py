@@ -8,6 +8,9 @@ import time
 import math
 import omni.timeline
 import omni.kit.app
+from PIL import Image
+import numpy as np
+import os
 
 class YamcsTMTC:
     """
@@ -33,6 +36,7 @@ class YamcsTMTC:
         self._drive_callback_sub = None
         self._stop_time = None
         self._yamcs_processor.create_command_history_subscription(on_data=self._command_callback)
+        self._camera_handler = CameraViewTransmitHandler(self._yamcs_processor, self._robot, yamcs_conf["address"])
 
     def _command_callback(self, command:CommandHistory):
         # CommandHistory info is available at: https://docs.yamcs.org/python-yamcs-client/tmtc/model/#yamcs.client.CommandHistory
@@ -128,6 +132,7 @@ class YamcsTMTC:
         try:
             while True:
                 self._transmit_base_link_pose()
+                self._camera_handler.transmit_camera_view("images_streaming")
                 # add here further commands
                 time.sleep(interval_s) #TODO: change into simulation secs
         finally:
@@ -142,3 +147,45 @@ class YamcsTMTC:
                                 "orientation":{"w":orientation[0],"x":orientation[1], "y":orientation[2], "z":orientation[3] }}
         self._yamcs_processor.set_parameter_value(self._yamcs_conf["parameters"]["pose_of_base_link"], pose_of_base_link)
 
+class CameraViewTransmitHandler:
+    def __init__(self, yamcs_processor, robot, yamcs_address) -> None:
+        self._yamcs_processor = yamcs_processor
+        self._robot = robot
+        self._yamcs_address = yamcs_address
+        self._counter = {
+            "images_streaming":0,
+            "images_commanding":0,
+        }
+
+    def transmit_camera_view(self, bucket:str):
+        camera_view:Image = self._snap_camera_view_rgb()
+        image_name = self._save_image_locally(camera_view, bucket)
+        self._inform_yamcs(image_name, bucket)
+        self._counter[bucket] += 1
+
+    def _snap_camera_view_rgb(self) -> Image:
+        rgba_frame = self._robot.get_rgba_camera_view()
+        rgba_uint8 = rgba_frame.astype(np.uint8)
+        camera_view = Image.fromarray(rgba_uint8, "RGBA")
+
+        return camera_view
+    
+    def _save_image_locally(self, image, bucket) -> str:
+        n = self._counter[bucket]
+        image_name = f"{bucket}_{n:04d}.png"
+        IMG_DIR = f"/tmp/{bucket}"
+        os.makedirs(IMG_DIR, exist_ok=True)   # creates directory if missing
+        img_path = f"{IMG_DIR}/{image_name}" 
+        image.save(img_path)
+
+        return image_name
+
+    def _inform_yamcs(self, image_name, bucket):
+        url_storage = f"/storage/buckets/{bucket}/objects/{image_name}"
+        url_full = "http://" + self._yamcs_address + f"/api{url_storage}"
+        self._yamcs_processor.set_parameter_values({
+            f"/{bucket}/number": self._counter[bucket],
+            f"/{bucket}/name": image_name,
+            f"/{bucket}/url_storage": url_storage,
+            f"/{bucket}/url_full": url_full,
+        })

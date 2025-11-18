@@ -26,7 +26,8 @@ class RobotParameters:
     target_links: List[str] = field(default_factory=list)
     wheel_joints: Dict = field(default_factory=dict)
     base_link: str = field(default_factory=str)
-
+    camera: Dict = field(default_factory=dict)
+    
     def __post_init__(self):
         self.usd_path = os.path.join(os.getcwd(), self.usd_path)
         self.pose = Pose(**self.pose)

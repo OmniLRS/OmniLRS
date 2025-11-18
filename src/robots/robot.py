@@ -29,6 +29,7 @@ from scipy.spatial.transform import Rotation as R
 
 from src.environments.utils import transform_orientation_into_xyz
 from src.robots.yamcs_TMTC import YamcsTMTC
+from omni.isaac.sensor import Camera
 
 class RobotManager:
     """
@@ -76,6 +77,7 @@ class RobotManager:
                     robot_parameter.pose.orientation,
                     robot_parameter.domain_id,
                     robot_parameter.wheel_joints,
+                    robot_parameter.camera,
                 )
                 self.add_RRG(
                     robot_parameter.robot_name,
@@ -106,6 +108,7 @@ class RobotManager:
                     orientation,
                     robot_parameter.domain_id,
                     robot_parameter.wheel_joints,
+                    robot_parameter.camera,
                 )
                 self.add_RRG(
                     robot_parameter.robot_name,
@@ -122,6 +125,7 @@ class RobotManager:
         q: Tuple[float, float, float, float] = [0, 0, 0, 1],
         domain_id: int = None,
         wheel_joints: dict = {},
+        camera_conf :dict={},
     ) -> None:
         """
         Add a robot to the scene.
@@ -150,6 +154,7 @@ class RobotManager:
                     domain_id=domain_id,
                     robots_root=self.robots_root,
                     wheel_joints=wheel_joints,
+                    camera_conf=camera_conf,
                 )
                 self.robots[robot_name].load(p, q)
                 self.num_robots += 1
@@ -235,6 +240,7 @@ class Robot:
         is_ROS2: bool = False,
         domain_id: int = 0,
         wheel_joints: Dict = {},
+        camera_conf:Dict = {}
 
     ) -> None:
         """
@@ -258,6 +264,8 @@ class Robot:
         self.root_body_id = None
         self._wheel_joint_names = wheel_joints
         self._dofs = {} # dof = Degree of Freedom
+        self._camera_conf = camera_conf
+        self._camera = None
 
     def get_root_rigid_body_path(self) -> None:
         """
@@ -310,6 +318,18 @@ class Robot:
             rotation=Gf.Quatd(*orientation),
         )
         self.edit_graphs()
+        self._initialize_camera()
+        
+
+    def _initialize_camera(self) -> None:
+        # Camera is a wrapper, therefore it just wraps around the camera instance if it already exists
+        # otherwise it creates a new camera instance on the provided prim_path
+        self._camera = Camera(self._camera_conf["prim_path"], 
+                              resolution=(self._camera_conf["resolution"][0], self._camera_conf["resolution"][1]))
+        self._camera.initialize()
+
+    def get_rgba_camera_view(self) -> np.ndarray:
+        return self._camera.get_rgba()
 
     def get_pose(self) -> List[float]:
         """
