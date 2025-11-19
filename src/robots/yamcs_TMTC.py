@@ -40,6 +40,14 @@ class YamcsTMTC:
         self._stop_time = None
         self._yamcs_processor.create_command_history_subscription(on_data=self._command_callback)
         self._camera_handler = CameraViewTransmitHandler(self._yamcs_processor, self._robot, yamcs_conf["address"])
+        
+
+    def initialize_interval_trackers_and_callbacks(self):
+        self._interval_trackers = {}
+        self._interval_callbacks = {}
+
+        for interval_name in ["robot_stats", "camera_streaming"]:
+            self._interval_trackers[interval_name] = IntervalTracker()
 
     def _command_callback(self, command:CommandHistory):
         # CommandHistory info is available at: https://docs.yamcs.org/python-yamcs-client/tmtc/model/#yamcs.client.CommandHistory
@@ -151,6 +159,67 @@ class YamcsTMTC:
         pose_of_base_link = {"position": {"x":position[0], "y":position[1], "z":position[2]}, 
                                 "orientation":{"w":orientation[0],"x":orientation[1], "y":orientation[2], "z":orientation[3] }}
         self._yamcs_processor.set_parameter_value(self._yamcs_conf["parameters"]["pose_of_base_link"], pose_of_base_link)
+
+class IntervalsHandler:
+    def __init__(self):
+        self._intervals = {}
+        self.timeline = omni.timeline.get_timeline_interface()
+        self._update_stream = omni.kit.app.get_app().get_update_event_stream()
+
+    def add_new_interval(self, name, seconds:int, function, is_repeating):
+        if name in self._intervals:
+            raise ValueError(f"Interval '{name}' already exists")
+
+        interval = {
+            "seconds": seconds,
+            "next_time": self.timeline.get_current_time() + seconds,
+            "repeat": is_repeating,
+            "func": function,
+            "sub": None,
+        }
+
+        def callback(e, _interval=interval, _name=name):
+            now = self.timeline.get_current_time()
+            if now < interval["next_time"]:
+                return
+
+            interval["func"](*_interval["args"])
+
+            if _interval["repeat"]:
+                _interval["next_time"] = now + _interval["seconds"]
+            else:
+                if _interval["sub"] is not None:
+                    _interval["sub"].unsubscribe()
+                self._intervals.pop(_name, None)
+
+        interval["sub"] = self._update_stream.create_subscription_to_pop(
+                callback,
+                name= name + "_callback", 
+            ),
+
+        self._intervals[name] = interval
+
+    def update_next_time(self, interval_name):
+        if interval_name not in self._intervals:
+            raise ValueError(f"Interval '{interval_name}' does not exist")
+
+        interval = self._intervals[interval_name]
+        now = self.timeline.get_current_time()
+        interval["next_time"] = now + interval["seconds"]
+
+    def does_exist(self, interval_name):
+        return interval_name in self._intervals
+    
+    def remove_interval(self, interval_name):
+        if interval_name not in self._intervals:
+            raise ValueError(f"Interval '{interval_name}' does not exist")
+        
+        interval = self._intervals[interval_name]
+
+        if interval["sub"] is not None:
+            interval["sub"].unsubscribe()
+
+        self._intervals.pop(interval_name, None)
 
 class CameraViewTransmitHandler:
     IMAGES_ONCOMMAND = "images_oncommand"
