@@ -2,28 +2,115 @@ __author__ = "Aleksa Stanivuk"
 __status__ = "development"
 
 from src.environments.utils import transform_orientation_into_xyz
-from yamcs.client import YamcsClient
+from yamcs.client import YamcsClient, CommandHistory
 import threading
 import time
-import numpy as np
+import math
+import omni.timeline
+import omni.kit.app
 
 class YamcsTMTC:
     """
     YamcsTMTC class.
     It allows to control a robot instance, by receiving TCs from Yamcs and sending TM to Yamcs.
     """ 
-
     def __init__(
         self,
         yamcs_conf,
         robot_name,
-        robot_RG
+        robot_RG,
+        robot,
     ) -> None:
         self._yamcs_client = YamcsClient(yamcs_conf["address"])
         self._yamcs_processor = self._yamcs_client.get_processor(instance=yamcs_conf["instance"], processor=yamcs_conf["processor"])
         self._robot_name = robot_name
         self._robots_RG = robot_RG
         self._yamcs_conf = yamcs_conf
+        self._time_of_last_command = 0
+        self._robot = robot
+        self.timeline = omni.timeline.get_timeline_interface()
+        self._update_stream = omni.kit.app.get_app().get_update_event_stream()
+        self._drive_callback_sub = None
+        self._stop_time = None
+        self._yamcs_processor.create_command_history_subscription(on_data=self._command_callback)
+
+    def _command_callback(self, command:CommandHistory):
+        # CommandHistory info is available at: https://docs.yamcs.org/python-yamcs-client/tmtc/model/#yamcs.client.CommandHistory
+        #NOTE: it happens that the subscriber receives the same instance of command multiple times in a very short period of time
+        # however, desired behaviour is to execute the command only once
+        # since commands are executed by human operators, waiting for a small period of time (such as 0.5s) is enough to counter this issue
+        if time.time() - self._time_of_last_command < 0.5:
+            return
+        
+        self._time_of_last_command = time.time()
+
+        name = command.name
+        arguments = command.all_assignments
+        print(name)
+        print(arguments)
+        if name == self._yamcs_conf["commands"]["drive_straight"]:
+            self._drive_robot_straight(arguments["linear_velocity"], arguments["distance"]) 
+        elif name == self._yamcs_conf["commands"]["drive_turn"]:
+            self._drive_robot_turn(arguments["angular_velocity"], arguments["angle"])
+        # here add reactions to other commands
+        else:
+            print("Unknown comand.")
+
+    def _drive_robot_straight(self, linear_velocity, distance):
+        if linear_velocity == 0:
+            self._stop_robot()
+            return
+        
+        self._robot.drive_straight(linear_velocity)
+        drive_time = distance / abs(linear_velocity)
+        self._stop_robot_after_time(drive_time)
+
+    def _drive_robot_turn(self, angular_velocity, angle):
+        if angular_velocity == 0:
+            self._stop_robot()
+            return
+        # through experiment it was observed that the robot requries ~10% more time to turn to the desired angle 
+        # (maybe this number has to be set depending on a specific robot)
+        turn_time_adjustment_coef = 1.11
+        # similar for 2
+        wheel_speed_adjustment_coef = 2
+        robot_width = 2.85 * 2 # also 2 helped here
+        radians = math.radians(angular_velocity) 
+        wheel_speed = radians * (robot_width / 2)
+        turn_time = angle / abs(angular_velocity)
+        self._robot.drive_turn(wheel_speed * wheel_speed_adjustment_coef)
+        self._stop_robot_after_time(turn_time * turn_time_adjustment_coef)
+
+    def _stop_robot_after_time(self, travel_time):
+        start_time = self.timeline.get_current_time()
+        self._stop_time = start_time + travel_time
+        
+        if self._drive_callback_sub is None:
+            # in case of receiving a command before the previous one was completed, the subscribed callback
+            # will remain, and will use the updated _stop_time
+            self._drive_callback_sub = self._update_stream.create_subscription_to_pop(
+                self._stop_robot_callback,
+                name="RobotDriveStopCallback", 
+            )
+
+    def _stop_robot_callback(self, e):
+        # callback function for stopping the robot
+        # checks every frame if simulaiton has reached the self._stop_time (calculated in the caller function)
+        if self._stop_time is None:
+            return
+
+        current_time = self.timeline.get_current_time()
+
+        if current_time >= self._stop_time:
+            self._stop_robot()
+
+    def _stop_robot(self):
+        self._robot.stop_drive()
+        self._stop_time = None
+
+        if self._drive_callback_sub is not None:
+            self._drive_callback_sub.unsubscribe()
+            self._drive_callback_sub = None
 
     def start(self):
         # initially inteded to be in a for robot in robots loop, thus to have one thread for each robot

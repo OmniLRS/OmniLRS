@@ -6,6 +6,8 @@ __maintainer__ = "Antoine Richard"
 __email__ = "antoine.richard@uni.lu"
 __status__ = "development"
 
+import threading
+import time
 from typing import Dict, List, Tuple
 from scipy.spatial.transform import Rotation as R
 import numpy as np
@@ -28,7 +30,6 @@ from scipy.spatial.transform import Rotation as R
 
 from src.environments.utils import transform_orientation_into_xyz
 from src.robots.yamcs_TMTC import YamcsTMTC
-
 
 class RobotManager:
     """
@@ -75,6 +76,7 @@ class RobotManager:
                     robot_parameter.pose.position,
                     robot_parameter.pose.orientation,
                     robot_parameter.domain_id,
+                    robot_parameter.wheel_joints,
                 )
                 self.add_RRG(
                     robot_parameter.robot_name,
@@ -104,6 +106,7 @@ class RobotManager:
                     position,
                     orientation,
                     robot_parameter.domain_id,
+                    robot_parameter.wheel_joints,
                 )
                 self.add_RRG(
                     robot_parameter.robot_name,
@@ -119,6 +122,7 @@ class RobotManager:
         p: Tuple[float, float, float] = [0, 0, 0],
         q: Tuple[float, float, float, float] = [0, 0, 0, 1],
         domain_id: int = None,
+        wheel_joints: dict = {},
     ) -> None:
         """
         Add a robot to the scene.
@@ -146,6 +150,7 @@ class RobotManager:
                     is_ROS2=self.is_ROS2,
                     domain_id=domain_id,
                     robots_root=self.robots_root,
+                    wheel_joints=wheel_joints,
                 )
                 self.robots[robot_name].load(p, q)
                 self.num_robots += 1
@@ -212,7 +217,7 @@ class RobotManager:
 
     def start_TMTC(self):
         robot_name = list(self.robots.keys())[0].replace("/","") # assumes only 1 robot for workshop use
-        self.TMTC = YamcsTMTC(self.RM_conf.yamcs_tmtc, robot_name, self.robots_RG)
+        self.TMTC = YamcsTMTC(self.RM_conf.yamcs_tmtc, robot_name, self.robots_RG, self.robots["/" + robot_name])
         self.TMTC.start()
 
 class Robot:
@@ -230,6 +235,8 @@ class Robot:
         is_on_nucleus: bool = False,
         is_ROS2: bool = False,
         domain_id: int = 0,
+        wheel_joints: Dict = {},
+
     ) -> None:
         """
         Args:
@@ -250,6 +257,8 @@ class Robot:
         self.domain_id = int(domain_id)
         self.dc = _dynamic_control.acquire_dynamic_control_interface()
         self.root_body_id = None
+        self._wheel_joint_names = wheel_joints
+        self._dofs = {} # dof = Degree of Freedom
 
     def get_root_rigid_body_path(self) -> None:
         """
@@ -258,6 +267,9 @@ class Robot:
 
         art = self.dc.get_articulation(self.robot_path)
         self.root_body_id = self.dc.get_articulation_root_body(art)
+
+    def _get_art(self):
+        return self.dc.get_articulation(self.robot_path)
 
     def edit_graphs(self) -> None:
         """
@@ -356,6 +368,54 @@ class Robot:
             ],
         )
 
+    def drive_straight(self, linear_velocity):
+        self._set_wheels_velocity(linear_velocity, "left")
+        self._set_wheels_velocity(linear_velocity, "right")
+
+    def drive_turn(self, wheel_speed):
+        print(wheel_speed)
+        if (wheel_speed > 0):
+            print("turns left")
+        else:
+            print("turns right")
+        self._set_wheels_velocity(-wheel_speed, "left")
+        self._set_wheels_velocity(wheel_speed, "right")
+
+    def stop_drive(self):
+        self._set_wheels_velocity(0, "left")
+        self._set_wheels_velocity(0, "right")
+
+    def _set_wheels_velocity(self, velocity, side:str):
+        self._init_dofs()
+
+        if side not in ["left","right"]:
+            print("Wrong side param:", side, "Side can only be [left] or [right].")
+            return
+
+        for dof in self._dofs[side]:
+            self.dc.set_dof_velocity_target(dof, velocity)
+
+    def _init_dofs(self):
+        #NOTE idealy, this would be initialized inside load(),
+        # however, for an unknown reason art, and dc do not work well when invoked there
+        # thus not populating dofs correctly
+        # therefore, it was implemented as singleton, and should be called at the begging of every commanding function
+        #
+        # more about the use of dofs for robot movement can be read on: 
+        # https://docs.isaacsim.omniverse.nvidia.com/5.0.0/python_scripting/robots_simulation.html#velocity-control
+        if "left" in list(self._dofs.keys()):
+            return # it means it is already initialized
+        
+        self._dofs = {
+            "left": [],
+            "right": []
+        }
+        art = self._get_art()
+
+        for rover_side in ["left", "right"]:
+            for joint_name in self._wheel_joint_names[rover_side]:
+                dof = self.dc.find_articulation_dof(art, joint_name)
+                self._dofs[rover_side].append(dof)
 
 class RobotRigidGroup:
     """
