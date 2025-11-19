@@ -3,7 +3,6 @@ __status__ = "development"
 
 from src.environments.utils import transform_orientation_into_xyz
 from yamcs.client import YamcsClient, CommandHistory
-import threading
 import time
 import math
 import omni.timeline
