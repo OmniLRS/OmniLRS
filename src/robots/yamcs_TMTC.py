@@ -40,14 +40,7 @@ class YamcsTMTC:
         self._stop_time = None
         self._yamcs_processor.create_command_history_subscription(on_data=self._command_callback)
         self._camera_handler = CameraViewTransmitHandler(self._yamcs_processor, self._robot, yamcs_conf["address"])
-        
-
-    def initialize_interval_trackers_and_callbacks(self):
-        self._interval_trackers = {}
-        self._interval_callbacks = {}
-
-        for interval_name in ["robot_stats", "camera_streaming"]:
-            self._interval_trackers[interval_name] = IntervalTracker()
+        self._intervals_handler = IntervalsHandler()
 
     def _command_callback(self, command:CommandHistory):
         # CommandHistory info is available at: https://docs.yamcs.org/python-yamcs-client/tmtc/model/#yamcs.client.CommandHistory
@@ -69,6 +62,8 @@ class YamcsTMTC:
             self._drive_robot_turn(arguments["angular_velocity"], arguments["angle"])
         elif name == self._yamcs_conf["commands"]["camera_capture_high"]:
             self._camera_handler.transmit_camera_view(self.IMAGES_ONCOMMAND, "high")
+        elif name == self._yamcs_conf["commands"]["camera_streaming_on_off"]:
+            self._camera_handler.set_activity_of_camera_streaming(arguments["action"])
         # here add reactions to other commands
         else:
             print("Unknown comand.")
@@ -129,27 +124,12 @@ class YamcsTMTC:
             self._drive_callback_sub.unsubscribe()
             self._drive_callback_sub = None
 
-    def start(self):
-        # initially inteded to be in a for robot in robots loop, thus to have one thread for each robot
-        # however, for the workshop use-case, the code was simplified to assume use of only one robot 
-        t = threading.Thread(
-            target=self._yamcs_transmitter,
-            args=(self._robot_name, self._yamcs_conf["interval_s"]),
-            name="yamcs-TMTC-" + self._robot_name,
-            daemon=True,
-        )   
-        t.start()
-
-    def _yamcs_transmitter(self, robot_name, interval_s):
-        print("started TMTC for: " + robot_name)
-        try:
-            while True:
-                self._transmit_pose_of_base_link()
-                self._camera_handler.transmit_camera_view(self.IMAGES_STREAMING, "low")
-                # add here further commands
-                time.sleep(interval_s) #TODO: change into simulation secs
-        finally:
-            print("ended transmitter for: " + robot_name)
+    def start_streaming_data(self):
+        self._intervals_handler.add_new_interval("pose_of_base_link", self._yamcs_conf["intervals"]["robot_stats"], True,
+                                                 self._transmit_pose_of_base_link)
+        self._intervals_handler.add_new_interval("camera_streaming", self._yamcs_conf["intervals"]["camera_streaming"], True,
+                                                 self._camera_handler.transmit_camera_view, self.IMAGES_STREAMING, "low")
+        # here add further intervals and their funcitonalities
 
     def _transmit_pose_of_base_link(self):
         position, orientation = self._robots_RG[str(self._robot_name)].get_pose_of_base_link()
@@ -166,7 +146,7 @@ class IntervalsHandler:
         self.timeline = omni.timeline.get_timeline_interface()
         self._update_stream = omni.kit.app.get_app().get_update_event_stream()
 
-    def add_new_interval(self, name, seconds:int, function, is_repeating):
+    def add_new_interval(self, name, seconds:int, is_repeating, function, *f_args):
         if name in self._intervals:
             raise ValueError(f"Interval '{name}' already exists")
 
@@ -175,6 +155,7 @@ class IntervalsHandler:
             "next_time": self.timeline.get_current_time() + seconds,
             "repeat": is_repeating,
             "func": function,
+            "args": f_args,
             "sub": None,
         }
 
@@ -183,7 +164,7 @@ class IntervalsHandler:
             if now < interval["next_time"]:
                 return
 
-            interval["func"](*_interval["args"])
+            _interval["func"](*_interval["args"])
 
             if _interval["repeat"]:
                 _interval["next_time"] = now + _interval["seconds"]
@@ -198,6 +179,9 @@ class IntervalsHandler:
             ),
 
         self._intervals[name] = interval
+
+        if interval["repeat"]: # executes immediatelly upon initialization
+            interval["func"](*interval["args"])
 
     def update_next_time(self, interval_name):
         if interval_name not in self._intervals:

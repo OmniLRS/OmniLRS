@@ -222,7 +222,7 @@ class RobotManager:
     def start_TMTC(self):
         robot_name = list(self.robots.keys())[0].replace("/","") # assumes only 1 robot for workshop use
         self.TMTC = YamcsTMTC(self.RM_conf.yamcs_tmtc, robot_name, self.robots_RG, self.robots["/" + robot_name])
-        self.TMTC.start()
+        self.TMTC.start_streaming_data()
 
 class Robot:
     """
