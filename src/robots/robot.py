@@ -265,7 +265,7 @@ class Robot:
         self._wheel_joint_names = wheel_joints
         self._dofs = {} # dof = Degree of Freedom
         self._camera_conf = camera_conf
-        self._camera = None
+        self._cameras = {}
 
     def get_root_rigid_body_path(self) -> None:
         """
@@ -318,18 +318,20 @@ class Robot:
             rotation=Gf.Quatd(*orientation),
         )
         self.edit_graphs()
-        self._initialize_camera()
+        self._initialize_cameras()
         
-
-    def _initialize_camera(self) -> None:
+    def _initialize_cameras(self) -> None:
         # Camera is a wrapper, therefore it just wraps around the camera instance if it already exists
         # otherwise it creates a new camera instance on the provided prim_path
-        self._camera = Camera(self._camera_conf["prim_path"], 
-                              resolution=(self._camera_conf["resolution"][0], self._camera_conf["resolution"][1]))
-        self._camera.initialize()
+        resolutions = list(self._camera_conf["resolutions"].keys())
 
-    def get_rgba_camera_view(self) -> np.ndarray:
-        return self._camera.get_rgba()
+        for res in resolutions:
+            self._cameras[res] = Camera(self._camera_conf["prim_path"], 
+                                resolution=(self._camera_conf["resolutions"][res][0], self._camera_conf["resolutions"][res][1]))
+            self._cameras[res].initialize()
+
+    def get_rgba_camera_view(self, resolution) -> np.ndarray:
+        return self._cameras[resolution].get_rgba()
 
     def get_pose(self) -> List[float]:
         """
@@ -442,7 +444,7 @@ class RobotRigidGroup:
     It is used to retrieve world pose, and contact forces, or apply force/torque.
     """
 
-    def __init__(self, root_path: str = "/Robots", robot_name: str = None, target_links: List[str] = None, pose_base_link:str=None):
+    def __init__(self, root_path: str = "/Robots", robot_name: str = None, target_links: List[str] = None, base_link:str=None):
         """
         Args:
             root_path (str): The root path of the robots.
@@ -455,7 +457,7 @@ class RobotRigidGroup:
         self.target_links = target_links
         self.prims = []
         self.prim_views = []
-        self.pose_base_link = pose_base_link
+        self.base_link = base_link
         self.base_prim = None
 
     def initialize(self, world: World) -> None:
@@ -468,7 +470,7 @@ class RobotRigidGroup:
 
         world.reset()
         self._initialize_target_links()
-        self._initialize_pose_base_link()
+        self._initialize_base_link()
         world.reset()
 
         print("initialized")
@@ -480,8 +482,8 @@ class RobotRigidGroup:
                 self.prims.append(rigid_prim)
                 self.prim_views.append(rigid_prim_view)
 
-    def _initialize_pose_base_link(self):
-        rigid_prim, rigid_prim_view = self._initialize_link(self.pose_base_link)
+    def _initialize_base_link(self):
+        rigid_prim, rigid_prim_view = self._initialize_link(self.base_link)
         self.base_prim = rigid_prim
         print("initialized base link")
 
@@ -535,7 +537,7 @@ class RobotRigidGroup:
             orientations[i, :] = orientation
         return positions, orientations
     
-    def get_base_link_pose(self) -> Tuple[list, list]:
+    def get_pose_of_base_link(self) -> Tuple[list, list]:
         """
         Returns a pair of value representing the robot's pose, and orientation respectively, based on the base_link.
 
