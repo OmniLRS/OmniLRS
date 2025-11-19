@@ -34,10 +34,6 @@ class YamcsTMTC:
         self._yamcs_conf = yamcs_conf
         self._time_of_last_command = 0
         self._robot = robot
-        self.timeline = omni.timeline.get_timeline_interface()
-        self._update_stream = omni.kit.app.get_app().get_update_event_stream()
-        self._drive_callback_sub = None
-        self._stop_time = None
         self._yamcs_processor.create_command_history_subscription(on_data=self._command_callback)
         self._camera_handler = CameraViewTransmitHandler(self._yamcs_processor, self._robot, yamcs_conf["address"])
         self._intervals_handler = IntervalsHandler()
@@ -94,40 +90,20 @@ class YamcsTMTC:
         self._stop_robot_after_time(turn_time * turn_time_adjustment_coef)
 
     def _stop_robot_after_time(self, travel_time):
-        start_time = self.timeline.get_current_time()
-        self._stop_time = start_time + travel_time
-        
-        if self._drive_callback_sub is None:
-            # in case of receiving a command before the previous one was completed, the subscribed callback
-            # will remain, and will use the updated _stop_time
-            self._drive_callback_sub = self._update_stream.create_subscription_to_pop(
-                self._stop_robot_callback,
-                name="RobotDriveStopCallback", 
-            )
-
-    def _stop_robot_callback(self, e):
-        # callback function for stopping the robot
-        # checks every frame if simulaiton has reached the self._stop_time (calculated in the caller function)
-        if self._stop_time is None:
-            return
-
-        current_time = self.timeline.get_current_time()
-
-        if current_time >= self._stop_time:
-            self._stop_robot()
+        if self._intervals_handler.does_exist("stop_robot"):
+            self._intervals_handler.update_next_time("stop_robot", travel_time)
+        else:
+            self._intervals_handler.add_new_interval("stop_robot", travel_time, False, False,
+                                                 self._stop_robot)
 
     def _stop_robot(self):
         self._robot.stop_drive()
-        self._stop_time = None
-
-        if self._drive_callback_sub is not None:
-            self._drive_callback_sub.unsubscribe()
-            self._drive_callback_sub = None
+        self._intervals_handler.remove_interval("stop_robot")
 
     def start_streaming_data(self):
-        self._intervals_handler.add_new_interval("pose_of_base_link", self._yamcs_conf["intervals"]["robot_stats"], True,
+        self._intervals_handler.add_new_interval("pose_of_base_link", self._yamcs_conf["intervals"]["robot_stats"], True, True,
                                                  self._transmit_pose_of_base_link)
-        self._intervals_handler.add_new_interval("camera_streaming", self._yamcs_conf["intervals"]["camera_streaming"], True,
+        self._intervals_handler.add_new_interval("camera_streaming", self._yamcs_conf["intervals"]["camera_streaming"], True, True,
                                                  self._camera_handler.transmit_camera_view, self.IMAGES_STREAMING, "low")
         # here add further intervals and their funcitonalities
 
@@ -146,7 +122,7 @@ class IntervalsHandler:
         self.timeline = omni.timeline.get_timeline_interface()
         self._update_stream = omni.kit.app.get_app().get_update_event_stream()
 
-    def add_new_interval(self, name, seconds:int, is_repeating, function, *f_args):
+    def add_new_interval(self, name, seconds:int, is_repeating, execute_immediately, function, *f_args):
         if name in self._intervals:
             raise ValueError(f"Interval '{name}' already exists")
 
@@ -154,6 +130,7 @@ class IntervalsHandler:
             "seconds": seconds,
             "next_time": self.timeline.get_current_time() + seconds,
             "repeat": is_repeating,
+            "execute_immediately": execute_immediately,
             "func": function,
             "args": f_args,
             "sub": None,
@@ -176,27 +153,31 @@ class IntervalsHandler:
         interval["sub"] = self._update_stream.create_subscription_to_pop(
                 callback,
                 name= name + "_callback", 
-            ),
+            )
 
         self._intervals[name] = interval
 
-        if interval["repeat"]: # executes immediatelly upon initialization
+        if interval["execute_immediately"]: # makes sense for reapeating intervals, as not to have to wait for the first interval to pass before executing func
             interval["func"](*interval["args"])
 
-    def update_next_time(self, interval_name):
+    def update_next_time(self, interval_name, new_interval_time=None):
         if interval_name not in self._intervals:
             raise ValueError(f"Interval '{interval_name}' does not exist")
 
         interval = self._intervals[interval_name]
         now = self.timeline.get_current_time()
-        interval["next_time"] = now + interval["seconds"]
+
+        if new_interval_time is None:
+            interval["next_time"] = now + interval["seconds"]
+        else:
+            interval["next_time"] = now + new_interval_time
 
     def does_exist(self, interval_name):
         return interval_name in self._intervals
     
     def remove_interval(self, interval_name):
         if interval_name not in self._intervals:
-            raise ValueError(f"Interval '{interval_name}' does not exist")
+            return
         
         interval = self._intervals[interval_name]
 
