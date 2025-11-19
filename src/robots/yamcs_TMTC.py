@@ -11,6 +11,12 @@ import omni.kit.app
 from PIL import Image
 import numpy as np
 import os
+from enum import Enum
+
+class IntervalName(Enum):
+    CAMERA_STREAMING = "camera_streaming"
+    POSE_OF_BASE_LINK = "pose_of_base_link"
+    STOP_ROBOT = "stop_robot"
 
 class YamcsTMTC:
     """
@@ -59,7 +65,7 @@ class YamcsTMTC:
         elif name == self._yamcs_conf["commands"]["camera_capture_high"]:
             self._camera_handler.transmit_camera_view(self.IMAGES_ONCOMMAND, "high")
         elif name == self._yamcs_conf["commands"]["camera_streaming_on_off"]:
-            self._camera_handler.set_activity_of_camera_streaming(arguments["action"])
+            self._set_activity_of_camera_streaming(arguments["action"])
         # here add reactions to other commands
         else:
             print("Unknown comand.")
@@ -90,20 +96,20 @@ class YamcsTMTC:
         self._stop_robot_after_time(turn_time * turn_time_adjustment_coef)
 
     def _stop_robot_after_time(self, travel_time):
-        if self._intervals_handler.does_exist("stop_robot"):
-            self._intervals_handler.update_next_time("stop_robot", travel_time)
+        if self._intervals_handler.does_exist(IntervalName.STOP_ROBOT.value):
+            self._intervals_handler.update_next_time(IntervalName.STOP_ROBOT.value, travel_time)
         else:
-            self._intervals_handler.add_new_interval("stop_robot", travel_time, False, False,
+            self._intervals_handler.add_new_interval(IntervalName.STOP_ROBOT.value, travel_time, False, False,
                                                  self._stop_robot)
 
     def _stop_robot(self):
         self._robot.stop_drive()
-        self._intervals_handler.remove_interval("stop_robot")
+        self._intervals_handler.remove_interval(IntervalName.STOP_ROBOT.value)
 
     def start_streaming_data(self):
-        self._intervals_handler.add_new_interval("pose_of_base_link", self._yamcs_conf["intervals"]["robot_stats"], True, True,
+        self._intervals_handler.add_new_interval(IntervalName.POSE_OF_BASE_LINK.value, self._yamcs_conf["intervals"]["robot_stats"], True, True,
                                                  self._transmit_pose_of_base_link)
-        self._intervals_handler.add_new_interval("camera_streaming", self._yamcs_conf["intervals"]["camera_streaming"], True, True,
+        self._intervals_handler.add_new_interval(IntervalName.CAMERA_STREAMING.value, self._yamcs_conf["intervals"]["camera_streaming"], True, True,
                                                  self._camera_handler.transmit_camera_view, self.IMAGES_STREAMING, "low")
         # here add further intervals and their funcitonalities
 
@@ -115,6 +121,16 @@ class YamcsTMTC:
         pose_of_base_link = {"position": {"x":position[0], "y":position[1], "z":position[2]}, 
                                 "orientation":{"w":orientation[0],"x":orientation[1], "y":orientation[2], "z":orientation[3] }}
         self._yamcs_processor.set_parameter_value(self._yamcs_conf["parameters"]["pose_of_base_link"], pose_of_base_link)
+
+    def _set_activity_of_camera_streaming(self, action:str):
+        if action == "STOP":
+            self._intervals_handler.remove_interval(IntervalName.CAMERA_STREAMING.value)
+        elif action == "START":
+            if not self._intervals_handler.does_exist(IntervalName.CAMERA_STREAMING.value):
+                self._intervals_handler.add_new_interval(IntervalName.CAMERA_STREAMING.value, self._yamcs_conf["intervals"]["camera_streaming"], True, True,
+                                                 self._camera_handler.transmit_camera_view, self.IMAGES_STREAMING, "low")
+        else:
+            print("Unknown action")
 
 class IntervalsHandler:
     def __init__(self):
