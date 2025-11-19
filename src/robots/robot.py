@@ -9,6 +9,7 @@ __status__ = "development"
 import threading
 import time
 from typing import Dict, List, Tuple
+from scipy.spatial.transform import Rotation as R
 import numpy as np
 import warnings
 import os
@@ -446,6 +447,7 @@ class RobotRigidGroup:
             world (World): A Omni.isaac.core.world.World object.
         """
 
+        self.dt = world.get_physics_dt()
         world.reset()
         self._initialize_target_links()
         self._initialize_base_link()
@@ -499,7 +501,13 @@ class RobotRigidGroup:
 
     def get_pose(self) -> Tuple[np.ndarray, np.ndarray]:
         """
-        Returns the pose of target links.
+        Returns the pose (position and orientation) of target links in the global frame.
+
+        Notes:
+        - Orientations are quaternions in (w, x, y, z) format.
+        - The local coordinate system of each wheel rotates as the wheels rotate.
+          To ensure consistent orientations in the global frame, the pitch rotation
+          is removed. This aligns each wheel's local coordinate system with the global frame.
 
         Returns:
             positions (np.ndarray): The position of target links. (x, y, z)
@@ -511,8 +519,22 @@ class RobotRigidGroup:
         orientations = np.zeros((n_links, 4))
         for i, prim in enumerate(self.prims):
             position, orientation = prim.get_world_pose()
+
+            # Rearrange quaternion from (w, x, y, z) to (x, y, z, w) for scipy
+            quaternion = [orientation[1], orientation[2], orientation[3], orientation[0]]
+            rotation = R.from_quat(quaternion)
+
+            # Remove pitch rotation to align wheel's local frame with global frame
+            pitch_angle = 2 * np.arctan2(rotation.as_quat()[1], rotation.as_quat()[3])
+            pitch_correction_quat = [0, -np.sin(pitch_angle / 2), 0, np.cos(pitch_angle / 2)]
+            inverse_pitch_rotation = R.from_quat(pitch_correction_quat)
+            rotation_corrected = rotation * inverse_pitch_rotation
+
+            # Convert back to (w, x, y, z) and store results
+            quaternion_corrected = rotation_corrected.as_quat()
+            orientation_corrected = [quaternion_corrected[3], quaternion_corrected[0], quaternion_corrected[1], quaternion_corrected[2]]
             positions[i, :] = position
-            orientations[i, :] = orientation
+            orientations[i, :] = orientation_corrected
         return positions, orientations
     
     def get_pose_of_base_link(self) -> Tuple[list, list]:
@@ -556,7 +578,7 @@ class RobotRigidGroup:
         n_links = len(self.target_links)
         contact_forces = np.zeros((n_links, 3))
         for i, prim_view in enumerate(self.prim_views):
-            contact_force = prim_view.get_net_contact_forces().squeeze()
+            contact_force = prim_view.get_net_contact_forces(dt = self.dt).squeeze()
             contact_forces[i, :] = contact_force
         return contact_forces
 
