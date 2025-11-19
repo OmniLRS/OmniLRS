@@ -1,4 +1,6 @@
 from pxr import UsdGeom, Gf
+import numpy as np
+from scipy.spatial.transform import Rotation as R
 
 def set_xform_pose(xform, position, orientation):
         _set_xform_translate(xform, position)
@@ -32,3 +34,32 @@ def _set_xform_orientation(xform, orientation):
     else:
         q = Gf.Quatf(orientation[3], Gf.Vec3f(orientation[0], orientation[1], orientation[2]))
     orient_op.Set(q)
+
+def transform_orientation_into_xyz(orientation_wxyz):
+    """
+    This function is used for transforming prim's orientation, that is retrieved from the simulation, 
+    from [w, x, y, z] format (used by IsaacSim) into [x, y, z] (Euler transformation, human-readable).
+    The purpose of this is for testing, debugging, and human-readbility and understanding.
+    The discussion available at the following link may help in understanding: https://forums.developer.nvidia.com/t/obtain-the-position-and-orientation-information-of-the-isaac-sim-simulated-environment-for-jetbot/289362
+
+    The following transformations were also tried: 
+
+    1) considering orientation input as [x, y, z, w]
+        e_xyz_from_xyzw = R.from_quat(q).as_euler('xyz', degrees=True)
+        e_zyx_from_xyzw = R.from_quat(q).as_euler('zyx', degrees=True)
+    2) considering orientation input as [w, x, y, z]
+        q_xyzw_from_wxyz = np.array([q[1], q[2], q[3], q[0]])
+        e_xyz_from_wxyz = R.from_quat(q_xyzw_from_wxyz).as_euler('xyz', degrees=True)
+        e_zyx_from_wxyz = R.from_quat(q_xyzw_from_wxyz).as_euler('zyx', degrees=True)
+
+    NOTE:  .as_euler('xyz') gives different results than doing .as_euler('zyx) and then reordering the values
+
+    In case you are not receiving the expected results, make sure to proof check the format of your input, and the expected output. 
+    Otherwise, try using one of the previously tried approaches.
+    """
+    q = np.array(orientation_wxyz)
+    q_xyzw_from_wxyz = np.array([q[1], q[2], q[3], q[0]])
+    e_zyx_from_wxyz = R.from_quat(q_xyzw_from_wxyz).as_euler('zyx', degrees=True)
+    xyz_orient = [e_zyx_from_wxyz[2], e_zyx_from_wxyz[1], e_zyx_from_wxyz[0]]
+
+    return np.array(xyz_orient)
