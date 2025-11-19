@@ -201,6 +201,7 @@ robots_settings:
     commands:
       drive_straight: "/Rover/motor/drive_straight"
       drive_turn: "/Rover/motor/drive_turn"
+      camera_capture_high: "/Rover/camera/camera_capture_high"
 
 static_assets_settings:
   root_path: "/StaticAssets"

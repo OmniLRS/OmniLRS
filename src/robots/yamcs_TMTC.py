@@ -17,6 +17,9 @@ class YamcsTMTC:
     YamcsTMTC class.
     It allows to control a robot instance, by receiving TCs from Yamcs and sending TM to Yamcs.
     """ 
+    IMAGES_ONCOMMAND = "images_oncommand"
+    IMAGES_STREAMING = "images_streaming"
+
     def __init__(
         self,
         yamcs_conf,
@@ -56,6 +59,8 @@ class YamcsTMTC:
             self._drive_robot_straight(arguments["linear_velocity"], arguments["distance"]) 
         elif name == self._yamcs_conf["commands"]["drive_turn"]:
             self._drive_robot_turn(arguments["angular_velocity"], arguments["angle"])
+        elif name == self._yamcs_conf["commands"]["camera_capture_high"]:
+            self._camera_handler.transmit_camera_view(self.IMAGES_ONCOMMAND, "high")
         # here add reactions to other commands
         else:
             print("Unknown comand.")
@@ -132,7 +137,7 @@ class YamcsTMTC:
         try:
             while True:
                 self._transmit_pose_of_base_link()
-                self._camera_handler.transmit_camera_view("images_streaming", "low")
+                self._camera_handler.transmit_camera_view(self.IMAGES_STREAMING, "low")
                 # add here further commands
                 time.sleep(interval_s) #TODO: change into simulation secs
         finally:
@@ -148,13 +153,16 @@ class YamcsTMTC:
         self._yamcs_processor.set_parameter_value(self._yamcs_conf["parameters"]["pose_of_base_link"], pose_of_base_link)
 
 class CameraViewTransmitHandler:
+    IMAGES_ONCOMMAND = "images_oncommand"
+    IMAGES_STREAMING = "images_streaming"
+
     def __init__(self, yamcs_processor, robot, yamcs_address) -> None:
         self._yamcs_processor = yamcs_processor
         self._robot = robot
         self._yamcs_address = yamcs_address
         self._counter = {
-            "images_streaming":0,
-            "images_commanding":0,
+            self.IMAGES_STREAMING:0,
+            self.IMAGES_ONCOMMAND:0,
         }
 
     def transmit_camera_view(self, bucket:str, resolution:str):
