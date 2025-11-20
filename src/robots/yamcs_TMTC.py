@@ -22,8 +22,6 @@ class YamcsTMTC:
     YamcsTMTC class.
     It allows to control a robot instance, by receiving TCs from Yamcs and sending TM to Yamcs.
     """ 
-    IMAGES_ONCOMMAND = "images_oncommand"
-    IMAGES_STREAMING = "images_streaming"
 
     def __init__(
         self,
@@ -62,12 +60,12 @@ class YamcsTMTC:
         elif name == self._yamcs_conf["commands"]["drive_turn"]:
             self._drive_robot_turn(arguments["angular_velocity"], arguments["angle"])
         elif name == self._yamcs_conf["commands"]["camera_capture_high"]:
-            self._camera_handler.transmit_camera_view(self.IMAGES_ONCOMMAND, "high")
+            self._camera_handler.transmit_camera_view(CameraViewTransmitHandler.BUCKET_IMAGES_ONCOMMAND, "high")
         elif name == self._yamcs_conf["commands"]["camera_streaming_on_off"]:
             self._set_activity_of_camera_streaming(arguments["action"])
         # here add reactions to other commands
         else:
-            print("Unknown comand.")
+            print("Unknown comand:", name)
 
     def _drive_robot_straight(self, linear_velocity, distance):
         if linear_velocity == 0:
@@ -109,7 +107,7 @@ class YamcsTMTC:
         self._intervals_handler.add_new_interval(IntervalName.POSE_OF_BASE_LINK.value, self._yamcs_conf["intervals"]["robot_stats"], True, True,
                                                  self._transmit_pose_of_base_link)
         self._intervals_handler.add_new_interval(IntervalName.CAMERA_STREAMING.value, self._yamcs_conf["intervals"]["camera_streaming"], True, True,
-                                                 self._camera_handler.transmit_camera_view, self.IMAGES_STREAMING, "low")
+                                                 self._camera_handler.transmit_camera_view, CameraViewTransmitHandler.BUCKET_IMAGES_STREAMING, "low")
         # here add further intervals and their funcitonalities
 
     def _transmit_pose_of_base_link(self):
@@ -127,9 +125,9 @@ class YamcsTMTC:
         elif action == "START":
             if not self._intervals_handler.does_exist(IntervalName.CAMERA_STREAMING.value):
                 self._intervals_handler.add_new_interval(IntervalName.CAMERA_STREAMING.value, self._yamcs_conf["intervals"]["camera_streaming"], True, True,
-                                                 self._camera_handler.transmit_camera_view, self.IMAGES_STREAMING, "low")
+                                                 self._camera_handler.transmit_camera_view, CameraViewTransmitHandler.BUCKET_IMAGES_STREAMING, "low")
         else:
-            print("Unknown action")
+            print("Unknown action:", action)
 
 class IntervalsHandler:
     def __init__(self):
@@ -202,16 +200,16 @@ class IntervalsHandler:
         self._intervals.pop(interval_name, None)
 
 class CameraViewTransmitHandler:
-    IMAGES_ONCOMMAND = "images_oncommand"
-    IMAGES_STREAMING = "images_streaming"
+    BUCKET_IMAGES_ONCOMMAND = "images_oncommand"
+    BUCKET_IMAGES_STREAMING = "images_streaming"
 
     def __init__(self, yamcs_processor, robot, yamcs_address) -> None:
         self._yamcs_processor = yamcs_processor
         self._robot = robot
         self._yamcs_address = yamcs_address
         self._counter = {
-            self.IMAGES_STREAMING:0,
-            self.IMAGES_ONCOMMAND:0,
+            self.BUCKET_IMAGES_STREAMING:0,
+            self.BUCKET_IMAGES_ONCOMMAND:0,
         }
 
     def transmit_camera_view(self, bucket:str, resolution:str):
@@ -228,8 +226,7 @@ class CameraViewTransmitHandler:
         return camera_view
     
     def _save_image_locally(self, image, bucket) -> str:
-        n = self._counter[bucket]
-        image_name = f"{bucket}_{n:04d}.png"
+        image_name = f"{bucket}_{self._counter[bucket]:04d}.png"
         IMG_DIR = f"/tmp/{bucket}"
         os.makedirs(IMG_DIR, exist_ok=True)   # creates directory if missing
         img_path = f"{IMG_DIR}/{image_name}" 
