@@ -63,6 +63,8 @@ class YamcsTMTC:
             self._camera_handler.transmit_camera_view(CameraViewTransmitHandler.BUCKET_IMAGES_ONCOMMAND, "high")
         elif name == self._yamcs_conf["commands"]["camera_streaming_on_off"]:
             self._set_activity_of_camera_streaming(arguments["action"])
+        elif name == self._yamcs_conf["commands"]["camera_capture_depth"]:
+            self._camera_handler.transmit_camera_view(CameraViewTransmitHandler.BUCKET_IMAGES_ONCOMMAND, "high", "depth")
         # here add reactions to other commands
         else:
             print("Unknown comand:", name)
@@ -212,18 +214,46 @@ class CameraViewTransmitHandler:
             self.BUCKET_IMAGES_ONCOMMAND:0,
         }
 
-    def transmit_camera_view(self, bucket:str, resolution:str):
-        camera_view:Image = self._snap_camera_view_rgb(resolution)
+    def transmit_camera_view(self, bucket:str, resolution:str, type:str="rgb"):
+        camera_view:Image = None
+
+        if type == "depth":
+            camera_view:Image = self._snap_camera_view_depth(resolution)
+        else:
+            camera_view:Image = self._snap_camera_view_rgb(resolution)
+
         image_name = self._save_image_locally(camera_view, bucket)
         self._inform_yamcs(image_name, bucket)
         self._counter[bucket] += 1
 
     def _snap_camera_view_rgb(self, resolution:str) -> Image:
-        rgba_frame = self._robot.get_rgba_camera_view(resolution)
-        rgba_uint8 = rgba_frame.astype(np.uint8)
-        camera_view = Image.fromarray(rgba_uint8, "RGBA")
+        frame = self._robot.get_rgba_camera_view(resolution)
+        frame_uint8 = frame.astype(np.uint8)
+        camera_view = Image.fromarray(frame_uint8, "RGBA")
 
         return camera_view
+    
+    def _snap_camera_view_depth(self, resolution:str) -> Image:
+        frame = self._robot.get_depth_camera_view(resolution)
+        #NOTE this gives non-human readable png, while the below uncommented code transfers this into grayscale png
+        # camera_view = Image.fromarray(frame, "L")
+        # return camera_view
+    
+        depth = np.nan_to_num(frame, nan=0.0, posinf=0.0, neginf=0.0)
+
+        valid = depth > 0
+        if not np.any(valid):
+            return Image.fromarray(np.zeros_like(depth, dtype=np.uint8), "L")
+
+        near = np.percentile(depth[valid], 1)
+        far  = np.percentile(depth[valid], 99)
+
+        d = np.clip(depth, near, far)
+        d = (d - near) / (far - near + 1e-8)
+        d = (1.0 - d) * 255.0 
+        d_uint8 = d.astype(np.uint8)
+
+        return Image.fromarray(d_uint8, mode="L")
     
     def _save_image_locally(self, image, bucket) -> str:
         image_name = f"{bucket}_{self._counter[bucket]:04d}.png"

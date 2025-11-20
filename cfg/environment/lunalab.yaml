@@ -204,6 +204,7 @@ robots_settings:
       drive_turn: "/Rover/motor/drive_turn"
       camera_capture_high: "/Rover/camera/camera_capture_high"
       camera_streaming_on_off: "/Rover/camera/camera_streaming"
+      camera_capture_depth: "/Rover/camera/camera_capture_depth"
 
 static_assets_settings:
   root_path: "/StaticAssets"

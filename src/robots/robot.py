@@ -267,6 +267,7 @@ class Robot:
         self._dofs = {} # dof = Degree of Freedom
         self._camera_conf = camera_conf
         self._cameras = {}
+        self._depth_cameras = {}
 
     def get_root_rigid_body_path(self) -> None:
         """
@@ -331,8 +332,21 @@ class Robot:
                                 resolution=(self._camera_conf["resolutions"][res][0], self._camera_conf["resolutions"][res][1]))
             self._cameras[res].initialize()
 
+        for res in resolutions:
+            self._depth_cameras[res] = Camera(self._camera_conf["prim_path"], 
+                                resolution=(self._camera_conf["resolutions"][res][0], self._camera_conf["resolutions"][res][1]))
+            self._depth_cameras[res].initialize()
+            self._depth_cameras[res].add_distance_to_image_plane_to_frame()
+
     def get_rgba_camera_view(self, resolution) -> np.ndarray:
         return self._cameras[resolution].get_rgba()
+    
+    def get_depth_camera_view(self, resolution) -> np.ndarray:
+        """Returns depth image in meters as (H, W) float32 array."""
+        depth = self._depth_cameras[resolution].get_depth()
+        print("depth")
+        print(depth)
+        return depth
 
     def get_pose(self) -> List[float]:
         """
