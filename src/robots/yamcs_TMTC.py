@@ -44,7 +44,7 @@ class YamcsTMTC:
     def _command_callback(self, command:CommandHistory):
         # CommandHistory info is available at: https://docs.yamcs.org/python-yamcs-client/tmtc/model/#yamcs.client.CommandHistory
         #NOTE: it happens that the subscriber receives the same instance of command multiple times in a very short period of time
-        # however, desired behaviour is to execute the command only once
+        # however, desired behavior is to execute the command only once
         # since commands are executed by human operators, waiting for a small period of time (such as 0.5s) is enough to counter this issue
         if time.time() - self._time_of_last_command < 0.5:
             return
@@ -65,7 +65,7 @@ class YamcsTMTC:
             self._set_activity_of_camera_streaming(arguments["action"])
         # here add reactions to other commands
         else:
-            print("Unknown comand:", name)
+            print("Unknown command:", name)
 
     def _drive_robot_straight(self, linear_velocity, distance):
         if linear_velocity == 0:
@@ -80,7 +80,7 @@ class YamcsTMTC:
         if angular_velocity == 0:
             self._stop_robot()
             return
-        # through experiment it was observed that the robot requries ~10% more time to turn to the desired angle 
+        # through experiment it was observed that the robot requires ~10% more time to turn to the desired angle 
         # (maybe this number has to be set depending on a specific robot)
         turn_time_adjustment_coef = 1.11
         # similar for 2
@@ -108,7 +108,7 @@ class YamcsTMTC:
                                                  function=self._transmit_pose_of_base_link)
         self._intervals_handler.add_new_interval(name=IntervalName.CAMERA_STREAMING.value, seconds=self._yamcs_conf["intervals"]["camera_streaming"], is_repeating=True, execute_immediately=True,
                                                  function=self._camera_handler.transmit_camera_view, f_args=(CameraViewTransmitHandler.BUCKET_IMAGES_STREAMING, "low"))
-        # here add further intervals and their funcitonalities
+        # here add further intervals and their functionalities
 
     def _transmit_pose_of_base_link(self):
         position, orientation = self._robots_RG[str(self._robot_name)].get_pose_of_base_link()
@@ -170,7 +170,7 @@ class IntervalsHandler:
 
         self._intervals[name] = interval
 
-        if interval["execute_immediately"]: # makes sense for reapeating intervals, as not to have to wait for the first interval to pass before executing func
+        if interval["execute_immediately"]: # makes sense for repeating intervals, as not to have to wait for the first interval to pass before executing func
             interval["func"](*interval["args"])
 
     def update_next_time(self, interval_name, new_interval_time=None):
@@ -237,9 +237,11 @@ class CameraViewTransmitHandler:
     def _inform_yamcs(self, image_name, bucket):
         url_storage = f"/storage/buckets/{bucket}/objects/{image_name}"
         url_full = "http://" + self._yamcs_address + f"/api{url_storage}"
+        url_full_nginx = "https://52.69.177.254/yamcs" + f"/api{url_storage}"  # @TODO hardcoded nginx address for now
         self._yamcs_processor.set_parameter_values({
             f"/{bucket}/number": self._counter[bucket],
             f"/{bucket}/name": image_name,
             f"/{bucket}/url_storage": url_storage,
             f"/{bucket}/url_full": url_full,
+            f"/{bucket}/url_full_nginx": url_full_nginx,
         })
