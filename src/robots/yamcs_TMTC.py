@@ -96,18 +96,18 @@ class YamcsTMTC:
         if self._intervals_handler.does_exist(IntervalName.STOP_ROBOT.value):
             self._intervals_handler.update_next_time(IntervalName.STOP_ROBOT.value, travel_time)
         else:
-            self._intervals_handler.add_new_interval(IntervalName.STOP_ROBOT.value, travel_time, False, False,
-                                                 self._stop_robot)
+            self._intervals_handler.add_new_interval(name=IntervalName.STOP_ROBOT.value, seconds=travel_time, is_repeating=False, execute_immediately=False,
+                                                 function=self._stop_robot)
 
     def _stop_robot(self):
         self._robot.stop_drive()
         self._intervals_handler.remove_interval(IntervalName.STOP_ROBOT.value)
 
     def start_streaming_data(self):
-        self._intervals_handler.add_new_interval(IntervalName.POSE_OF_BASE_LINK.value, self._yamcs_conf["intervals"]["robot_stats"], True, True,
-                                                 self._transmit_pose_of_base_link)
-        self._intervals_handler.add_new_interval(IntervalName.CAMERA_STREAMING.value, self._yamcs_conf["intervals"]["camera_streaming"], True, True,
-                                                 self._camera_handler.transmit_camera_view, CameraViewTransmitHandler.BUCKET_IMAGES_STREAMING, "low")
+        self._intervals_handler.add_new_interval(name=IntervalName.POSE_OF_BASE_LINK.value, seconds=self._yamcs_conf["intervals"]["robot_stats"], is_repeating=True, execute_immediately=True,
+                                                 function=self._transmit_pose_of_base_link)
+        self._intervals_handler.add_new_interval(name=IntervalName.CAMERA_STREAMING.value, seconds=self._yamcs_conf["intervals"]["camera_streaming"], is_repeating=True, execute_immediately=True,
+                                                 function=self._camera_handler.transmit_camera_view, f_args=(CameraViewTransmitHandler.BUCKET_IMAGES_STREAMING, "low"))
         # here add further intervals and their funcitonalities
 
     def _transmit_pose_of_base_link(self):
@@ -124,8 +124,8 @@ class YamcsTMTC:
             self._intervals_handler.remove_interval(IntervalName.CAMERA_STREAMING.value)
         elif action == "START":
             if not self._intervals_handler.does_exist(IntervalName.CAMERA_STREAMING.value):
-                self._intervals_handler.add_new_interval(IntervalName.CAMERA_STREAMING.value, self._yamcs_conf["intervals"]["camera_streaming"], True, True,
-                                                 self._camera_handler.transmit_camera_view, CameraViewTransmitHandler.BUCKET_IMAGES_STREAMING, "low")
+                self._intervals_handler.add_new_interval(name=IntervalName.CAMERA_STREAMING.value, seconds=self._yamcs_conf["intervals"]["camera_streaming"], is_repeating=True, execute_immediately=True,
+                                                 function=self._camera_handler.transmit_camera_view, f_args=(CameraViewTransmitHandler.BUCKET_IMAGES_STREAMING, "low"))
         else:
             print("Unknown action:", action)
 
@@ -135,7 +135,7 @@ class IntervalsHandler:
         self.timeline = omni.timeline.get_timeline_interface()
         self._update_stream = omni.kit.app.get_app().get_update_event_stream()
 
-    def add_new_interval(self, name, seconds:int, is_repeating, execute_immediately, function, *f_args):
+    def add_new_interval(self, *, name: str, seconds: int, is_repeating: bool, execute_immediately: bool, function, f_args=()):
         if name in self._intervals:
             raise ValueError(f"Interval '{name}' already exists")
 
