@@ -30,6 +30,7 @@ from scipy.spatial.transform import Rotation as R
 
 from src.environments.utils import transform_orientation_into_xyz
 from src.robots.yamcs_TMTC import YamcsTMTC
+from omni.isaac.sensor import Camera
 
 class RobotManager:
     """
@@ -77,6 +78,7 @@ class RobotManager:
                     robot_parameter.pose.orientation,
                     robot_parameter.domain_id,
                     robot_parameter.wheel_joints,
+                    robot_parameter.camera,
                 )
                 self.add_RRG(
                     robot_parameter.robot_name,
@@ -107,6 +109,7 @@ class RobotManager:
                     orientation,
                     robot_parameter.domain_id,
                     robot_parameter.wheel_joints,
+                    robot_parameter.camera,
                 )
                 self.add_RRG(
                     robot_parameter.robot_name,
@@ -123,6 +126,7 @@ class RobotManager:
         q: Tuple[float, float, float, float] = [0, 0, 0, 1],
         domain_id: int = None,
         wheel_joints: dict = {},
+        camera_conf :dict={},
     ) -> None:
         """
         Add a robot to the scene.
@@ -151,6 +155,7 @@ class RobotManager:
                     domain_id=domain_id,
                     robots_root=self.robots_root,
                     wheel_joints=wheel_joints,
+                    camera_conf=camera_conf,
                 )
                 self.robots[robot_name].load(p, q)
                 self.num_robots += 1
@@ -218,7 +223,7 @@ class RobotManager:
     def start_TMTC(self):
         robot_name = list(self.robots.keys())[0].replace("/","") # assumes only 1 robot for workshop use
         self.TMTC = YamcsTMTC(self.RM_conf.yamcs_tmtc, robot_name, self.robots_RG, self.robots["/" + robot_name])
-        self.TMTC.start()
+        self.TMTC.start_streaming_data()
 
 class Robot:
     """
@@ -236,6 +241,7 @@ class Robot:
         is_ROS2: bool = False,
         domain_id: int = 0,
         wheel_joints: Dict = {},
+        camera_conf:Dict = {}
 
     ) -> None:
         """
@@ -259,6 +265,8 @@ class Robot:
         self.root_body_id = None
         self._wheel_joint_names = wheel_joints
         self._dofs = {} # dof = Degree of Freedom
+        self._camera_conf = camera_conf
+        self._cameras = {}
 
     def get_root_rigid_body_path(self) -> None:
         """
@@ -311,6 +319,20 @@ class Robot:
             rotation=Gf.Quatd(*orientation),
         )
         self.edit_graphs()
+        self._initialize_cameras()
+        
+    def _initialize_cameras(self) -> None:
+        # Camera is a wrapper, therefore it just wraps around the camera instance if it already exists
+        # otherwise it creates a new camera instance on the provided prim_path
+        resolutions = list(self._camera_conf["resolutions"].keys())
+
+        for res in resolutions:
+            self._cameras[res] = Camera(self._camera_conf["prim_path"], 
+                                resolution=(self._camera_conf["resolutions"][res][0], self._camera_conf["resolutions"][res][1]))
+            self._cameras[res].initialize()
+
+    def get_rgba_camera_view(self, resolution) -> np.ndarray:
+        return self._cameras[resolution].get_rgba()
 
     def get_pose(self) -> List[float]:
         """

@@ -184,18 +184,26 @@ robots_settings:
       wheel_joints:
         left: ["front_left_wheel", "rear_left_wheel"]
         right: ["front_right_wheel", "rear_right_wheel"]
+      camera:
+        prim_path: "/Robots/husky/base_link/thirdperson_view"
+        resolutions: 
+          low: [320, 240]
+          high: [1280, 720]
   yamcs_tmtc:
     enabled: True
     address: "localhost:8090"
     instance: "workshop"
     processor: "realtime"
-    interval_s: 3
-    camera_interval_s: 5
+    intervals:
+      robot_stats: 3
+      camera_streaming: 5
     parameters:
       pose_of_base_link: "/Rover/pose_ground_truth"
     commands:
       drive_straight: "/Rover/motor/drive_straight"
       drive_turn: "/Rover/motor/drive_turn"
+      camera_capture_high: "/Rover/camera/camera_capture_high"
+      camera_streaming_on_off: "/Rover/camera/camera_streaming"
 
 static_assets_settings:
   root_path: "/StaticAssets"
