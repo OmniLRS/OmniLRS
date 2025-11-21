@@ -60,11 +60,11 @@ class YamcsTMTC:
         elif name == self._yamcs_conf["commands"]["drive_turn"]:
             self._drive_robot_turn(arguments["angular_velocity"], arguments["angle"])
         elif name == self._yamcs_conf["commands"]["camera_capture_high"]:
-            self._camera_handler.transmit_camera_view(CameraViewTransmitHandler.BUCKET_IMAGES_ONCOMMAND, "high")
+            self._camera_handler.transmit_camera_view(CameraViewTransmitHandler.BUCKET_IMAGES_ONCOMMAND, "high", "rgb")
         elif name == self._yamcs_conf["commands"]["camera_streaming_on_off"]:
             self._set_activity_of_camera_streaming(arguments["action"])
         elif name == self._yamcs_conf["commands"]["camera_capture_depth"]:
-            self._camera_handler.transmit_camera_view(CameraViewTransmitHandler.BUCKET_IMAGES_ONCOMMAND, "high", "depth")
+            self._camera_handler.transmit_camera_view(CameraViewTransmitHandler.BUCKET_IMAGES_DEPTH, "high", "depth")
         # here add reactions to other commands
         else:
             print("Unknown comand:", name)
@@ -202,8 +202,9 @@ class IntervalsHandler:
         self._intervals.pop(interval_name, None)
 
 class CameraViewTransmitHandler:
-    BUCKET_IMAGES_ONCOMMAND = "images_oncommand"
     BUCKET_IMAGES_STREAMING = "images_streaming"
+    BUCKET_IMAGES_ONCOMMAND = "images_oncommand"
+    BUCKET_IMAGES_DEPTH = "images_depth"
 
     def __init__(self, yamcs_processor, robot, yamcs_address) -> None:
         self._yamcs_processor = yamcs_processor
@@ -212,6 +213,7 @@ class CameraViewTransmitHandler:
         self._counter = {
             self.BUCKET_IMAGES_STREAMING:0,
             self.BUCKET_IMAGES_ONCOMMAND:0,
+            self.BUCKET_IMAGES_DEPTH:0,
         }
 
     def transmit_camera_view(self, bucket:str, resolution:str, type:str="rgb"):
@@ -219,8 +221,11 @@ class CameraViewTransmitHandler:
 
         if type == "depth":
             camera_view:Image = self._snap_camera_view_depth(resolution)
-        else:
+        elif type == "rgb":
             camera_view:Image = self._snap_camera_view_rgb(resolution)
+        else:
+            print("in transmit_camera_view: unknown type:", type)
+            return
 
         image_name = self._save_image_locally(camera_view, bucket)
         self._inform_yamcs(image_name, bucket)
