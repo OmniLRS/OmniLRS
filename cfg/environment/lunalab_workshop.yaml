@@ -1,4 +1,4 @@
-name: Workshop
+name: Lunalab
 seed: 42
 physics_dt: 0.0333 # 30 Hz
 rendering_dt: 0.0333 # 30 Hz
