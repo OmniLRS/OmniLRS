@@ -32,6 +32,8 @@ from src.environments.utils import transform_orientation_into_xyz
 from src.robots.yamcs_TMTC import YamcsTMTC
 from omni.isaac.sensor import Camera
 
+from enum import Enum
+
 class RobotManager:
     """
     RobotManager class.
@@ -458,6 +460,7 @@ class Robot:
             for joint_name in self._wheel_joint_names[rover_side]:
                 dof = self.dc.find_articulation_dof(art, joint_name)
                 self._dofs[rover_side].append(dof)
+
 
 class RobotRigidGroup:
     """
