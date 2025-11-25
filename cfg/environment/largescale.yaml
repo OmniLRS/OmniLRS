@@ -102,21 +102,6 @@ robots_settings:
         resolutions: 
           low: [320, 240]
           high: [1280, 720]
-  yamcs_tmtc:
-    enabled: True
-    address: "localhost:8090"
-    instance: "workshop"
-    processor: "realtime"
-    intervals:
-      robot_stats: 3
-      camera_streaming: 5
-    parameters:
-      pose_of_base_link: "/Rover/pose_ground_truth"
-    commands:
-      drive_straight: "/Rover/motor/drive_straight"
-      drive_turn: "/Rover/motor/drive_turn"
-      camera_capture_high: "/Rover/camera/camera_capture_high"
-      camera_streaming_on_off: "/Rover/camera/camera_streaming"
     # -
     #   robot_name: jackal
     #   usd_path: assets/USD_Assets/robots/ros2_jackal_PhysX_vlp16_stereo.usd
