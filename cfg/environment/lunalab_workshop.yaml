@@ -185,11 +185,12 @@ robots_settings:
         left: ["front_left_wheel", "rear_left_wheel"]
         right: ["front_right_wheel", "rear_right_wheel"]
       camera:
-        prim_path: "/Robots/husky/base_link/thirdperson_view"
+        prim_path: "/Robots/husky/d455/RSD455/Camera_OmniVision_OV9782_Left"
         resolutions: 
           low: [320, 240]
-          high: [1280, 720]
+          high: [1440, 1080]
       imu_sensor_path: "/Robots/husky/d455/RSD455/Imu_Sensor"
+
   yamcs_tmtc:
     enabled: True
     address: "localhost:8090"

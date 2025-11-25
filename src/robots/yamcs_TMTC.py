@@ -335,9 +335,9 @@ class CameraViewTransmitHandler:
         url_full = "http://" + self._yamcs_address + f"/api{url_storage}"
         url_full_nginx = "https://52.69.177.254/yamcs" + f"/api{url_storage}"  # @TODO hardcoded nginx address for now
         self._yamcs_processor.set_parameter_values({
-            f"/{bucket}/number": self._counter[bucket],
-            f"/{bucket}/name": image_name,
-            f"/{bucket}/url_storage": url_storage,
-            f"/{bucket}/url_full": url_full,
-            f"/{bucket}/url_full_nginx": url_full_nginx,
+            f"/Rover/camera/{bucket}/number": self._counter[bucket],
+            f"/Rover/camera/{bucket}/name": image_name,
+            f"/Rover/camera/{bucket}/url_storage": url_storage,
+            f"/Rover/camera/{bucket}/url_full": url_full,
+            f"/Rover/camera/{bucket}/url_full_nginx": url_full_nginx,
         })
