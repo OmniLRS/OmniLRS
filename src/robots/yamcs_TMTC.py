@@ -171,8 +171,6 @@ class YamcsTMTC:
 
     def _transmit_go_nogo(self):
         go_nogo_state =  self._robot.subsystems.get_go_nogo_state().value
-        print("GO NOGO", go_nogo_state)
-        print("type:", type(go_nogo_state))
         self._yamcs_processor.set_parameter_value(self._yamcs_conf["parameters"]["go_nogo"], go_nogo_state)
 
     def _transmit_pose_of_base_link(self):
