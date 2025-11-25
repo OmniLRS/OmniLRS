@@ -202,12 +202,4 @@ robots_settings:
       domain_id: 0
       target_links: ["front_left_wheel_link", "front_right_wheel_link", "rear_left_wheel_link", "rear_right_wheel_link"]
       base_link: "base_link" # core link used to determine the position of the robot
-  yamcs_tmtc:
-    enabled: True
-    address: "localhost:8090"
-    instance: "workshop"
-    processor: "realtime"
-    interval_s: 3
-    camera_interval_s: 5
-    parameters:
-      ground_pose_truth: "/Rover/pose_ground_truth"
+
