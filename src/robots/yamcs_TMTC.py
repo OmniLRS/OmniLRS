@@ -2,6 +2,7 @@ __author__ = "Aleksa Stanivuk"
 __status__ = "development"
 
 from src.environments.utils import transform_orientation_into_xyz
+from src.robots.subsystems_manager import PowerState, SolarPanelState
 from yamcs.client import YamcsClient, CommandHistory
 import time
 import math
@@ -65,9 +66,35 @@ class YamcsTMTC:
             self._set_activity_of_camera_streaming(arguments["action"])
         elif name == self._yamcs_conf["commands"]["camera_capture_depth"]:
             self._camera_handler.transmit_camera_view(CameraViewTransmitHandler.BUCKET_IMAGES_DEPTH, "high", "depth")
+        elif name == self._yamcs_conf["commands"]["power_electronics"]:
+            self._handle_electronics(arguments["subsystem_id"], arguments["power_state"])
+        elif name == self._yamcs_conf["commands"]["solar_panel"]:
+            self._handle_solar_panel(arguments["deployment"])
         # here add reactions to other commands
         else:
             print("Unknown command:", name)
+
+    def _handle_solar_panel(self, new_state:SolarPanelState):
+        if new_state == SolarPanelState.STOWED:
+            self._robot.subsystems.stow_solar()
+        elif new_state == SolarPanelState.DEPLOYED:
+            self._robot.subsystems.deploy_solar()
+        else:
+            print("New state for solar panel is uknown:", new_state)
+
+        state = self._robot.subsystems.get_solar_state()
+        print(state)
+
+    def _handle_electronics(self, electronics:str, new_state:PowerState):
+        if new_state == PowerState.OFF:
+            self._robot.subsystems.turn_off(electronics)
+        elif new_state == PowerState.ON:
+            self._robot.subsystems.turn_on(electronics)
+        else:
+            print("New state for electronics is uknown:", new_state)
+
+        state = self._robot.subsystems.get_electronics_state(electronics)
+        print(state)
 
     def _drive_robot_straight(self, linear_velocity, distance):
         if linear_velocity == 0:

@@ -1,12 +1,12 @@
-from enum import Enum
+from enum import StrEnum
 
-class PowerState(Enum):
-    OFF = 0,
-    ON = 1,
+class PowerState(StrEnum):
+    OFF = "OFF",
+    ON = "ON",
 
-class SolarPanelState(Enum):
-    STOWED = 0,
-    DEPLOYED = 1,
+class SolarPanelState(StrEnum):
+    STOWED = "STOWED",
+    DEPLOYED = "DEPLOYED",
 
 class RobotSubsystemsManager:
     def __init__(self):

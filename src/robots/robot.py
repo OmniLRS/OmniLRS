@@ -29,6 +29,7 @@ import numpy as np
 from scipy.spatial.transform import Rotation as R
 
 from src.environments.utils import transform_orientation_into_xyz
+from src.robots.subsystems_manager import RobotSubsystemsManager
 from src.robots.yamcs_TMTC import YamcsTMTC
 from omni.isaac.sensor import Camera
 
@@ -270,6 +271,7 @@ class Robot:
         self._camera_conf = camera_conf
         self._cameras = {}
         self._depth_cameras = {}
+        self.subsystems = RobotSubsystemsManager()
 
     def get_root_rigid_body_path(self) -> None:
         """
