@@ -325,7 +325,10 @@ class Robot:
     def _initialize_cameras(self) -> None:
         # Camera is a wrapper, therefore it just wraps around the camera instance if it already exists
         # otherwise it creates a new camera instance on the provided prim_path
-        resolutions = list(self._camera_conf["resolutions"].keys())
+        if "resolutions" not in self._camera_conf:
+            return
+        
+        resolutions = list(self._camera_conf.get("resolutions").keys())
 
         for res in resolutions:
             self._cameras[res] = Camera(self._camera_conf["prim_path"], 
@@ -439,6 +442,9 @@ class Robot:
         #
         # more about the use of dofs for robot movement can be read on: 
         # https://docs.isaacsim.omniverse.nvidia.com/5.0.0/python_scripting/robots_simulation.html#velocity-control
+        if not self._wheel_joint_names:
+            return
+
         if "left" in list(self._dofs.keys()):
             return # it means it is already initialized
         
