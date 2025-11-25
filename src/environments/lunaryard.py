@@ -79,12 +79,19 @@ class LunaryardController(BaseEnv):
             robot_param=RobotParameter(),
             terrain_param=TerrainMechanicalParameter(),
         )
-        self.SAM = StaticAssetsManager(static_assets_settings)
-        self.MCM = MonitoringCamerasManager(monitoring_cameras_settings)
         self.dem = None
         self.mask = None
         self.scene_name = "/Lunaryard"
         self.deformation_conf = terrain_manager.moon_yard.deformation_engine
+
+        self.SAM = None
+        self.MCM = None
+
+        if static_assets_settings:
+            self.SAM = StaticAssetsManager(static_assets_settings)
+
+        if monitoring_cameras_settings:
+            self.MCM = MonitoringCamerasManager(monitoring_cameras_settings)
 
     def build_scene(self) -> None:
         """
@@ -172,8 +179,12 @@ class LunaryardController(BaseEnv):
         if self.enable_stellar_engine:
             self.SE.set_lat_lon(self.stage_settings.coordinates.latitude, self.stage_settings.coordinates.longitude)
             self.update_stellar_engine()
-        self.SAM.spawn()
-        self.MCM.spawn()
+
+        if self.SAM:
+            self.SAM.spawn()
+
+        if self.MCM:
+            self.MCM.spawn()
 
     def add_robot_manager(self, robotManager: RobotManager) -> None:
         self.robotManager = robotManager

@@ -64,12 +64,18 @@ class LunalabController(BaseEnv):
             robot_param=RobotParameter(),
             terrain_param=TerrainMechanicalParameter(),
         )
-        self.SAM = StaticAssetsManager(static_assets_settings)
-        self.MCM = MonitoringCamerasManager(monitoring_cameras_settings)
         self.dem = None
         self.mask = None
         self.scene_name = "/Lunalab"
         self.deformation_conf = terrain_manager.moon_yard.deformation_engine
+        self.SAM = None
+        self.MCM = None
+
+        if static_assets_settings:
+            self.SAM = StaticAssetsManager(static_assets_settings)
+
+        if monitoring_cameras_settings:
+            self.MCM = MonitoringCamerasManager(monitoring_cameras_settings)
 
     def build_scene(self) -> None:
         """
@@ -114,8 +120,12 @@ class LunalabController(BaseEnv):
         self.RM.build(self.dem, self.mask)
         # Loads the DEM and the mask
         self.switch_terrain(0)
-        self.SAM.spawn()
-        self.MCM.spawn()
+
+        if self.SAM:
+            self.SAM.spawn()
+
+        if self.MCM:
+            self.MCM.spawn()
 
     def add_robot_manager(self, robotManager: RobotManager) -> None:
         """

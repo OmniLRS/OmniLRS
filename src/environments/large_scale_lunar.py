@@ -66,11 +66,18 @@ class LargeScaleController(BaseEnv):
             self.enable_stellar_engine = True
         else:
             self.enable_stellar_engine = False
-        self.SAM = StaticAssetsManager(static_assets_settings)
-        self.MCM = MonitoringCamerasManager(monitoring_cameras_settings)
         self.dem = None
         self.mask = None
         self.scene_name = "/LargeScaleLunar"
+
+        self.SAM = None
+        self.MCM = None
+
+        if static_assets_settings:
+            self.SAM = StaticAssetsManager(static_assets_settings)
+
+        if monitoring_cameras_settings:
+            self.MCM = MonitoringCamerasManager(monitoring_cameras_settings)
 
     def build_scene(self) -> None:
         """
@@ -156,8 +163,12 @@ class LargeScaleController(BaseEnv):
         # Sets the sun using the stellar engine if enabled
         if self.enable_stellar_engine:
             self.SE.set_lat_lon(*self.LSTM.get_lat_lon())
-        self.SAM.spawn()
-        self.MCM.spawn()
+
+        if self.SAM:
+            self.SAM.spawn()
+
+        if self.MCM:
+            self.MCM.spawn()
 
     def add_robot_manager(self, robotManager: RobotManager) -> None:
         """

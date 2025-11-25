@@ -172,7 +172,8 @@ robots_settings:
     #   target_links: ["front_left_wheel_link", "front_right_wheel_link", "rear_left_wheel_link", "rear_right_wheel_link"]
     -
       robot_name: husky
-      usd_path: assets/USD_Assets/robots/ros2_husky_PhysX_vlp16.usd         
+      # usd_path: assets/USD_Assets/robots/ros2_husky_PhysX_vlp16.usd         
+      usd_path: assets/USD_Assets/robots/nograph_husky.usd       
       # usd_path: assets/USD_Assets/robots/ros2_husky_PhysX_vlp16_mono_depth_imu.usd 
       pose:
         position: [5.0, 5.0, 0.5]
@@ -180,3 +181,66 @@ robots_settings:
       domain_id: 0
       target_links: ["front_left_wheel_link", "front_right_wheel_link", "rear_left_wheel_link", "rear_right_wheel_link"]
       base_link: "base_link" # core link used to determine the position of the robot
+      wheel_joints:
+        left: ["front_left_wheel", "rear_left_wheel"]
+        right: ["front_right_wheel", "rear_right_wheel"]
+      camera:
+        prim_path: "/Robots/husky/base_link/thirdperson_view"
+        resolutions: 
+          low: [320, 240]
+          high: [1280, 720]
+  yamcs_tmtc:
+    enabled: True
+    address: "localhost:8090"
+    instance: "workshop"
+    processor: "realtime"
+    intervals:
+      robot_stats: 3
+      camera_streaming: 5
+    parameters:
+      pose_of_base_link: "/Rover/pose_ground_truth"
+    commands:
+      drive_straight: "/Rover/motor/drive_straight"
+      drive_turn: "/Rover/motor/drive_turn"
+      camera_capture_high: "/Rover/camera/camera_capture_high"
+      camera_streaming_on_off: "/Rover/camera/camera_streaming"
+      camera_capture_depth: "/Rover/camera/camera_capture_depth"
+
+static_assets_settings:
+  root_path: "/StaticAssets"
+  parameters:
+    - asset_name: rock1
+      usd_path: USD_Assets/rocks/lunalab_rocks/rock_1/rock1.usd
+      pose:
+        position: [5.0, 7.5, 0.0]
+        orientation: [1, 0, 0, 1]
+      collision: False
+
+    - asset_name: lander
+      usd_path: USD_Assets/rocks/lunalab_rocks/rock_2/rock2.usd
+      pose:
+        position: [5.0, 6.2, 0.0]
+        orientation: [0, 0, 0, 1] 
+      collision: True
+
+monitoring_cameras_settings:
+  root_path: "/MonitoringCameras"
+  camera_definitions:
+    - name: "corner"
+      pose:
+        position: [0.0, 0.0, 2.5]
+        orientation: [0.493, -0.302, -0.169, 0.796]
+      camera_params:
+        focal_length: 1.93
+        horizontal_aperture:  2.4
+        vertical_aperture: 1.8
+        fstop: 5.0
+        focus_distance: 10.0
+        clipping_range: [0.01, 1000000.0]
+      ros2:
+        enabled: False
+        topic: "/monitoring/corner"
+        frame_id: "corner_id"
+      type: "Rgb" # make sure to have correct naming - eg. Rgb ; Depth ; SemanticSegmentation ; InstanceSegmentation ; Normals
+      resolution: [1280, 720]  
+      # stream_frequency: 2.0 #  every 0.5s - in order to not overwhelm the network
