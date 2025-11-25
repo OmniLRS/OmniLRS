@@ -27,11 +27,11 @@ class RobotParameters:
     wheel_joints: Dict = field(default_factory=dict)
     base_link: str = field(default_factory=str)
     camera: Dict = field(default_factory=dict)
+    imu_sensor_path: str = field(default_factory=str)
 
     def __post_init__(self):
         self.usd_path = os.path.join(os.getcwd(), self.usd_path)
         self.pose = Pose(**self.pose)
-
 
 @dataclass
 class RobotManagerConf:

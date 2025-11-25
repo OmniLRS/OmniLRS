@@ -189,6 +189,7 @@ robots_settings:
         resolutions: 
           low: [320, 240]
           high: [1280, 720]
+      imu_sensor_path: "/Robots/husky/d455/RSD455/Imu_Sensor"
   yamcs_tmtc:
     enabled: True
     address: "localhost:8090"
@@ -201,6 +202,9 @@ robots_settings:
       pose_of_base_link: "/Rover/pose_ground_truth"
       camera_streaming_state: "/Rover/streaming_state"
       go_nogo: "/Rover/go_nogo"
+      imu_accelerometer: "/Rover/imu_accelerometer"
+      imu_gyroscope: "/Rover/imu_gyroscope"
+      imu_orientation: "/Rover/imu_orientation"
     commands:
       drive_straight: "/Rover/motor/drive_straight"
       drive_turn: "/Rover/motor/drive_turn"

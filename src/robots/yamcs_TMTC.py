@@ -12,6 +12,7 @@ from PIL import Image
 import numpy as np
 import os
 from enum import Enum
+from scipy.spatial.transform import Rotation as R
 
 class IntervalName(Enum):
     CAMERA_STREAMING = "camera_streaming"
@@ -152,8 +153,17 @@ class YamcsTMTC:
         #                                          function=self._transmit_camera_streaming_state)
         self._intervals_handler.add_new_interval(name=IntervalName.GO_NOGO.value, seconds=self._yamcs_conf["intervals"]["robot_stats"], is_repeating=True, execute_immediately=True,
                                                  function=self._transmit_go_nogo)
+        self._intervals_handler.add_new_interval(name="IMU readings", seconds=self._yamcs_conf["intervals"]["robot_stats"], is_repeating=True, execute_immediately=True,
+                                                 function=self._transmit_imu_readings)
         # here add further intervals and their functionalities
 
+    def _transmit_imu_readings(self):
+        imu_accelerometer, imu_gyroscope, orientation = self._robot.get_imu_readings()
+        self._yamcs_processor.set_parameter_value(self._yamcs_conf["parameters"]["imu_accelerometer"], imu_accelerometer)
+        self._yamcs_processor.set_parameter_value(self._yamcs_conf["parameters"]["imu_gyroscope"], imu_gyroscope)
+        self._yamcs_processor.set_parameter_value(self._yamcs_conf["parameters"]["imu_orientation"], orientation)
+
+        
     def _transmit_camera_streaming_state(self):
         #TODO update this depending on the param format
         is_camera_streaming = self._intervals_handler.does_exist(IntervalName.CAMERA_STREAMING.value)
