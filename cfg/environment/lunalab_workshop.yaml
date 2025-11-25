@@ -199,6 +199,8 @@ robots_settings:
       camera_streaming: 5
     parameters:
       pose_of_base_link: "/Rover/pose_ground_truth"
+      camera_streaming_state: "/Rover/streaming_state"
+      go_nogo: "/Rover/go_nogo"
     commands:
       drive_straight: "/Rover/motor/drive_straight"
       drive_turn: "/Rover/motor/drive_turn"
@@ -207,6 +209,7 @@ robots_settings:
       camera_capture_depth: "/Rover/camera/camera_capture_depth"
       solar_panel: "/Rover/system/deploy_solar_panel"
       power_electronics: "/Rover/power/power_electronics"
+      go_nogo: "/Rover/system/go_nogo_command"
 
 static_assets_settings:
   root_path: "/StaticAssets"

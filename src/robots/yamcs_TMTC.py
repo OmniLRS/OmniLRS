@@ -2,7 +2,7 @@ __author__ = "Aleksa Stanivuk"
 __status__ = "development"
 
 from src.environments.utils import transform_orientation_into_xyz
-from src.robots.subsystems_manager import PowerState, SolarPanelState
+from src.robots.subsystems_manager import GoNogoState, PowerState, SolarPanelState
 from yamcs.client import YamcsClient, CommandHistory
 import time
 import math
@@ -17,6 +17,8 @@ class IntervalName(Enum):
     CAMERA_STREAMING = "camera_streaming"
     POSE_OF_BASE_LINK = "pose_of_base_link"
     STOP_ROBOT = "stop_robot"
+    CAMERA_STREAMING_STATE = "camera_streaming_state"
+    GO_NOGO = "go_nogo"
 
 class YamcsTMTC:
     """
@@ -70,6 +72,8 @@ class YamcsTMTC:
             self._handle_electronics(arguments["subsystem_id"], arguments["power_state"])
         elif name == self._yamcs_conf["commands"]["solar_panel"]:
             self._handle_solar_panel(arguments["deployment"])
+        elif name == self._yamcs_conf["commands"]["go_nogo"]:
+            self._handle_go_nogo(arguments["decision"])
         # here add reactions to other commands
         else:
             print("Unknown command:", name)
@@ -82,9 +86,6 @@ class YamcsTMTC:
         else:
             print("New state for solar panel is uknown:", new_state)
 
-        state = self._robot.subsystems.get_solar_state()
-        print(state)
-
     def _handle_electronics(self, electronics:str, new_state:PowerState):
         if new_state == PowerState.OFF:
             self._robot.subsystems.turn_off(electronics)
@@ -93,7 +94,15 @@ class YamcsTMTC:
         else:
             print("New state for electronics is uknown:", new_state)
 
-        state = self._robot.subsystems.get_electronics_state(electronics)
+    def _handle_go_nogo(self, decision:str):
+        if decision not in ["GO", "NOGO"]:
+            print("New decision for GO / NOGO is uknown:", decision)
+            return
+        
+        decision = GoNogoState[decision]
+        self._robot.subsystems.set_go_nogo_state(decision)
+
+        state = self._robot.subsystems.get_go_nogo_state()
         print(state)
 
     def _drive_robot_straight(self, linear_velocity, distance):
@@ -137,7 +146,24 @@ class YamcsTMTC:
                                                  function=self._transmit_pose_of_base_link)
         self._intervals_handler.add_new_interval(name=IntervalName.CAMERA_STREAMING.value, seconds=self._yamcs_conf["intervals"]["camera_streaming"], is_repeating=True, execute_immediately=True,
                                                  function=self._camera_handler.transmit_camera_view, f_args=(CameraViewTransmitHandler.BUCKET_IMAGES_STREAMING, "low"))
+        self._is_camera_streaming_on = True
+        # TODO add this when parameter path fixed
+        # self._intervals_handler.add_new_interval(name=IntervalName.CAMERA_STREAMING_STATE.value, seconds=self._yamcs_conf["intervals"]["robot_stats"], is_repeating=True, execute_immediately=True,
+        #                                          function=self._transmit_camera_streaming_state)
+        self._intervals_handler.add_new_interval(name=IntervalName.GO_NOGO.value, seconds=self._yamcs_conf["intervals"]["robot_stats"], is_repeating=True, execute_immediately=True,
+                                                 function=self._transmit_go_nogo)
         # here add further intervals and their functionalities
+
+    def _transmit_camera_streaming_state(self):
+        #TODO update this depending on the param format
+        is_camera_streaming = self._intervals_handler.does_exist(IntervalName.CAMERA_STREAMING.value)
+        self._yamcs_processor.set_parameter_value(self._yamcs_conf["parameters"]["camera_streaming_state"], is_camera_streaming)
+
+    def _transmit_go_nogo(self):
+        go_nogo_state =  self._robot.subsystems.get_go_nogo_state().value
+        print("GO NOGO", go_nogo_state)
+        print("type:", type(go_nogo_state))
+        self._yamcs_processor.set_parameter_value(self._yamcs_conf["parameters"]["go_nogo"], go_nogo_state)
 
     def _transmit_pose_of_base_link(self):
         position, orientation = self._robots_RG[str(self._robot_name)].get_pose_of_base_link()
