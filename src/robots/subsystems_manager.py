@@ -1,5 +1,10 @@
 from enum import StrEnum, Enum
 
+from src.robots.RadioModel import RadioModel
+from src.robots.ThermalModel import ThermalModel
+from src.robots.PowerModel import PowerModel
+
+
 class PowerState(StrEnum):
     OFF = "OFF",
     ON = "ON",
@@ -13,7 +18,19 @@ class GoNogoState(Enum):
     GO = 1
     # UNDEF = "Other"
 
+class ObcState(Enum):
+    OFF = 0
+    BOOT = 1
+    IDLE = 2
+    CAMERA = 3
+    MOTOR = 4
+    SAFE = 5
+    ERROR = 6
+
 class RobotSubsystemsManager:
+    SUN_POSITION = (10.0, 5.0, 7.5)
+    LANDER_POSITION = (0.0, 0.0, 0.0)
+
     def __init__(self):
         self._electronics_power_state = {
             "CAMERA": PowerState.OFF,
@@ -23,7 +40,34 @@ class RobotSubsystemsManager:
             "RADIO": PowerState.OFF,
         }
         self._solar_panel_state = SolarPanelState.STOWED
-        self.go_nogo_state = GoNogoState.NOGO
+        self._go_nogo_state = GoNogoState.NOGO
+        self._obc_state = ObcState.IDLE
+        self._radio:RadioModel = RadioModel()
+        self._thermal:ThermalModel = ThermalModel()
+        self._power:PowerModel = PowerModel()
+
+    def calculate_rssi(self, robot_position):
+        self._radio.rover_position = robot_position
+        rssi = self._radio.rssi()
+
+        return rssi
+    
+    def calculate_temperature(self, robot_position, interval_s):
+        self._thermal.rover_position = robot_position
+        self._thermal.sun_position = self.SUN_POSITION
+        self._thermal.step(interval_s)
+        t = self._thermal.temperatures()
+
+        return t
+    
+    def calculate_power_status(self, robot_position, device_states, interval_s):
+        self._power.set_device_states(device_states)
+        self._power.set_sun_position(self.SUN_POSITION)
+        self._power.set_rover_position(robot_position)
+        self._power.step(interval_s)
+        status = self._power.status()
+   
+        return status
 
     def turn_on(self, electronics:str):
         if electronics not in self._electronics_power_state:
@@ -45,6 +89,9 @@ class RobotSubsystemsManager:
             return
 
         return self._electronics_power_state[electronics]
+    
+    def get_electronics_states(self):
+        return self._electronics_power_state
 
     def deploy_solar(self):
         self._solar_panel_state = SolarPanelState.DEPLOYED
@@ -56,8 +103,20 @@ class RobotSubsystemsManager:
         return self._solar_panel_state
     
     def set_go_nogo_state(self, new_state:GoNogoState):
-        self.go_nogo_state = new_state
+        self._go_nogo_state = new_state
 
     def get_go_nogo_state(self):
-        return self.go_nogo_state
+        return self._go_nogo_state
+
+    def get_obc_state(self):
+        return self._obc_state
+    
+    def set_obc_to_camera(self):
+        self._obc_state = ObcState.CAMERA
+
+    def set_obc_to_motor(self):
+        self._obc_state = ObcState.MOTOR
+
+    def set_obc_to_idle(self):
+        self._obc_state = ObcState.IDLE
  

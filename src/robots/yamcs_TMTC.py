@@ -155,14 +155,54 @@ class YamcsTMTC:
                                                  function=self._transmit_go_nogo)
         self._intervals_handler.add_new_interval(name="IMU readings", seconds=self._yamcs_conf["intervals"]["robot_stats"], is_repeating=True, execute_immediately=True,
                                                  function=self._transmit_imu_readings)
+        self._intervals_handler.add_new_interval(name="OBC state", seconds=self._yamcs_conf["intervals"]["robot_stats"], is_repeating=True, execute_immediately=True,
+                                                 function=self._transmit_obc_state)
+        self._intervals_handler.add_new_interval(name="Radio rssi", seconds=self._yamcs_conf["intervals"]["robot_stats"], is_repeating=True, execute_immediately=True,
+                                                 function=self._transmit_radio_signal_info)
+        self._intervals_handler.add_new_interval(name="Thermal info", seconds=self._yamcs_conf["intervals"]["robot_stats"], is_repeating=True, execute_immediately=True,
+                                                 function=self._transmit_thermal_info, f_args=[self._yamcs_conf["intervals"]["robot_stats"]])
+        # self._intervals_handler.add_new_interval(name="Power status", seconds=self._yamcs_conf["intervals"]["robot_stats"], is_repeating=True, execute_immediately=True,
+                                                #  function=self._transmit_power_info, f_args=[self._yamcs_conf["intervals"]["robot_stats"]])
         # here add further intervals and their functionalities
+
+    def _transmit_radio_signal_info(self):
+        robot_position, orientation = self._robots_RG[str(self._robot_name)].get_pose_of_base_link()
+        rssi = self._robot.subsystems.calculate_rssi(robot_position)
+        self._yamcs_processor.set_parameter_value(self._yamcs_conf["parameters"]["rssi"], int(rssi))
+
+    def _transmit_thermal_info(self, interval_s):
+        robot_position, orientation = self._robots_RG[str(self._robot_name)].get_pose_of_base_link()
+        temperatures = self._robot.subsystems.calculate_temperature(robot_position, interval_s)
+
+        self._yamcs_processor.set_parameter_value(self._yamcs_conf["parameters"]["temperature_front"], temperatures['+X'])
+        self._yamcs_processor.set_parameter_value(self._yamcs_conf["parameters"]["temperature_back"], temperatures['-X'])
+        self._yamcs_processor.set_parameter_value(self._yamcs_conf["parameters"]["temperature_left"], temperatures['+Y'])
+        self._yamcs_processor.set_parameter_value(self._yamcs_conf["parameters"]["temperature_right"], temperatures['-Y'])
+        self._yamcs_processor.set_parameter_value(self._yamcs_conf["parameters"]["temperature_top"], temperatures['+Z'])
+        self._yamcs_processor.set_parameter_value(self._yamcs_conf["parameters"]["temperature_bottom"], temperatures['-Z'])
+        self._yamcs_processor.set_parameter_value(self._yamcs_conf["parameters"]["temperature_elec_box"], temperatures['interior'])
+
+    def _transmit_power_info(self, interval_s):
+        robot_position, orientation = self._robots_RG[str(self._robot_name)].get_pose_of_base_link()
+        device_states = self._robot.subsystems.get_electronics_states()
+        power_status = self._robot.subsystems.calculate_power_status(robot_position, device_states, interval_s)
+
+        print("power_status:")
+        print(power_status)
+
+        self._yamcs_processor.set_parameter_value(self._yamcs_conf["parameters"]["battery_charge"], power_status['battery_percentage_measured'])
+        self._yamcs_processor.set_parameter_value(self._yamcs_conf["parameters"]["batter_voltage"], power_status['battery_voltage_measured'])
+        self._yamcs_processor.set_parameter_value(self._yamcs_conf["parameters"]["total_current_in"], power_status['solar_input_current_measured'])
+
+    def _transmit_obc_state(self):
+        obc_state = self._robot.subsystems.get_obc_state()
+        self._yamcs_processor.set_parameter_value(self._yamcs_conf["parameters"]["obc_state"], obc_state.value)
 
     def _transmit_imu_readings(self):
         imu_accelerometer, imu_gyroscope, orientation = self._robot.get_imu_readings()
         self._yamcs_processor.set_parameter_value(self._yamcs_conf["parameters"]["imu_accelerometer"], imu_accelerometer)
         self._yamcs_processor.set_parameter_value(self._yamcs_conf["parameters"]["imu_gyroscope"], imu_gyroscope)
         self._yamcs_processor.set_parameter_value(self._yamcs_conf["parameters"]["imu_orientation"], orientation)
-
         
     def _transmit_camera_streaming_state(self):
         #TODO update this depending on the param format
