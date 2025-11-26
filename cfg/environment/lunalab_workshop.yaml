@@ -218,6 +218,7 @@ robots_settings:
       battery_charge: "/Rover/battery_charge"
       batter_voltage: "/Rover/battery_voltage"
       total_current_in: "/Rover/total_current_in"
+      motor_current: "/Rover/motor_current"
     commands:
       drive_straight: "/Rover/motor/drive_straight"
       drive_turn: "/Rover/motor/drive_turn"

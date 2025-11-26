@@ -2,7 +2,7 @@ __author__ = "Aleksa Stanivuk"
 __status__ = "development"
 
 from src.environments.utils import transform_orientation_into_xyz
-from src.robots.subsystems_manager import GoNogoState, PowerState, SolarPanelState
+from src.robots.subsystems_manager import GoNogoState, ObcState, PowerState, SolarPanelState
 from yamcs.client import YamcsClient, CommandHistory
 import time
 import math
@@ -140,6 +140,7 @@ class YamcsTMTC:
         self._stop_robot_after_time(turn_time * turn_time_adjustment_coef)
 
     def _stop_robot_after_time(self, travel_time):
+        self._robot.subsystems.set_obc_to_motor()
         if self._intervals_handler.does_exist(IntervalName.STOP_ROBOT.value):
             self._intervals_handler.update_next_time(IntervalName.STOP_ROBOT.value, travel_time)
         else:
@@ -148,6 +149,7 @@ class YamcsTMTC:
 
     def _stop_robot(self):
         self._robot.stop_drive()
+        self._robot.subsystems.set_obc_to_idle()
         self._intervals_handler.remove_interval(IntervalName.STOP_ROBOT.value)
 
     def start_streaming_data(self):
@@ -171,7 +173,18 @@ class YamcsTMTC:
                                                  function=self._transmit_thermal_info, f_args=[self._yamcs_conf["intervals"]["robot_stats"]])
         self._intervals_handler.add_new_interval(name="Power status", seconds=self._yamcs_conf["intervals"]["robot_stats"], is_repeating=True, execute_immediately=True,
                                                  function=self._transmit_power_info, f_args=[self._yamcs_conf["intervals"]["robot_stats"]])
+        self._intervals_handler.add_new_interval(name="Motor activity", seconds=self._yamcs_conf["intervals"]["robot_stats"], is_repeating=True, execute_immediately=True,
+                                                 function=self._transmit_motor_activity)
         # here add further intervals and their functionalities
+
+    def _transmit_motor_activity(self):
+        obc_state = self._robot.subsystems.get_obc_state()
+        motor_values = [0,0,0,0,0,0]
+
+        if (obc_state == ObcState.MOTOR):
+            motor_values = [1,1,1,1,1,1]
+        
+        self._yamcs_processor.set_parameter_value(self._yamcs_conf["parameters"]["motor_current"], motor_values)
 
     def _transmit_radio_signal_info(self):
         robot_position, orientation = self._robots_RG[str(self._robot_name)].get_pose_of_base_link()
@@ -193,9 +206,6 @@ class YamcsTMTC:
     def _transmit_power_info(self, interval_s):
         robot_position, orientation = self._robots_RG[str(self._robot_name)].get_pose_of_base_link()
         power_status = self._robot.subsystems.calculate_power_status(robot_position, interval_s)
-
-        print("power_status:")
-        print(power_status)
 
         self._yamcs_processor.set_parameter_value(self._yamcs_conf["parameters"]["battery_charge"], int(power_status['battery_percentage_measured']))
         self._yamcs_processor.set_parameter_value(self._yamcs_conf["parameters"]["batter_voltage"], power_status['battery_voltage_measured'])
