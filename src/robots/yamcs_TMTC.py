@@ -64,11 +64,11 @@ class YamcsTMTC:
         elif name == self._yamcs_conf["commands"]["drive_turn"]:
             self._drive_robot_turn(arguments["angular_velocity"], arguments["angle"])
         elif name == self._yamcs_conf["commands"]["camera_capture_high"]:
-            self._camera_handler.transmit_camera_view(CameraViewTransmitHandler.BUCKET_IMAGES_ONCOMMAND, "high", "rgb")
+            self.handle_high_res_capture()
         elif name == self._yamcs_conf["commands"]["camera_streaming_on_off"]:
             self._set_activity_of_camera_streaming(arguments["action"])
         elif name == self._yamcs_conf["commands"]["camera_capture_depth"]:
-            self._camera_handler.transmit_camera_view(CameraViewTransmitHandler.BUCKET_IMAGES_DEPTH, "high", "depth")
+            self.handle_depth_capture()
         elif name == self._yamcs_conf["commands"]["power_electronics"]:
             self._handle_electronics(arguments["subsystem_id"], arguments["power_state"])
         elif name == self._yamcs_conf["commands"]["solar_panel"]:
@@ -78,6 +78,14 @@ class YamcsTMTC:
         # here add reactions to other commands
         else:
             print("Unknown command:", name)
+
+    def handle_high_res_capture(self):
+        self._camera_handler.transmit_camera_view(CameraViewTransmitHandler.BUCKET_IMAGES_ONCOMMAND, "high", "rgb")
+        # self._robot.subsystems.set_obc_to_camera()
+
+    def handle_depth_capture(self):
+        self._camera_handler.transmit_camera_view(CameraViewTransmitHandler.BUCKET_IMAGES_DEPTH, "high", "depth")
+
 
     def _handle_solar_panel(self, new_state:SolarPanelState):
         if new_state == SolarPanelState.STOWED:
@@ -161,8 +169,8 @@ class YamcsTMTC:
                                                  function=self._transmit_radio_signal_info)
         self._intervals_handler.add_new_interval(name="Thermal info", seconds=self._yamcs_conf["intervals"]["robot_stats"], is_repeating=True, execute_immediately=True,
                                                  function=self._transmit_thermal_info, f_args=[self._yamcs_conf["intervals"]["robot_stats"]])
-        # self._intervals_handler.add_new_interval(name="Power status", seconds=self._yamcs_conf["intervals"]["robot_stats"], is_repeating=True, execute_immediately=True,
-                                                #  function=self._transmit_power_info, f_args=[self._yamcs_conf["intervals"]["robot_stats"]])
+        self._intervals_handler.add_new_interval(name="Power status", seconds=self._yamcs_conf["intervals"]["robot_stats"], is_repeating=True, execute_immediately=True,
+                                                 function=self._transmit_power_info, f_args=[self._yamcs_conf["intervals"]["robot_stats"]])
         # here add further intervals and their functionalities
 
     def _transmit_radio_signal_info(self):
@@ -184,13 +192,12 @@ class YamcsTMTC:
 
     def _transmit_power_info(self, interval_s):
         robot_position, orientation = self._robots_RG[str(self._robot_name)].get_pose_of_base_link()
-        device_states = self._robot.subsystems.get_electronics_states()
-        power_status = self._robot.subsystems.calculate_power_status(robot_position, device_states, interval_s)
+        power_status = self._robot.subsystems.calculate_power_status(robot_position, interval_s)
 
         print("power_status:")
         print(power_status)
 
-        self._yamcs_processor.set_parameter_value(self._yamcs_conf["parameters"]["battery_charge"], power_status['battery_percentage_measured'])
+        self._yamcs_processor.set_parameter_value(self._yamcs_conf["parameters"]["battery_charge"], int(power_status['battery_percentage_measured']))
         self._yamcs_processor.set_parameter_value(self._yamcs_conf["parameters"]["batter_voltage"], power_status['battery_voltage_measured'])
         self._yamcs_processor.set_parameter_value(self._yamcs_conf["parameters"]["total_current_in"], power_status['solar_input_current_measured'])
 

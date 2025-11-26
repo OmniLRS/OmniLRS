@@ -216,7 +216,7 @@ robots_settings:
       temperature_bottom: "/Rover/temperature_bottom"
       temperature_elec_box: "/Rover/temperature_elec_box"
       battery_charge: "/Rover/battery_charge"
-      batter_voltage: "/Rover/batter_voltage"
+      batter_voltage: "/Rover/battery_voltage"
       total_current_in: "/Rover/total_current_in"
     commands:
       drive_straight: "/Rover/motor/drive_straight"

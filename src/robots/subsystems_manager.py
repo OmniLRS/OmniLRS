@@ -46,6 +46,27 @@ class RobotSubsystemsManager:
         self._thermal:ThermalModel = ThermalModel()
         self._power:PowerModel = PowerModel()
 
+    def map_into_currents(self):
+        mapped = {
+            "current_draw_obc": True,
+            "current_draw_motor_controller": self.is_turned_on("MOTOR_CONTROLLER"),
+            "current_draw_neutron_spectrometer": self.is_turned_on("NEUTRON_SPECTROMETER"),
+            "current_draw_apxs": self.is_turned_on("APXS"),
+            "current_draw_camera": self.is_turned_on("CAMERA"),
+            "current_draw_radio": self.is_turned_on("RADIO"),
+            "current_draw_eps": True,
+        }
+
+        print(mapped)
+
+        return mapped
+    
+    def is_turned_on(self, electronic):
+        if self._electronics_power_state[electronic] == PowerState.ON:
+            return True
+        
+        return False
+
     def calculate_rssi(self, robot_position):
         self._radio.rover_position = robot_position
         rssi = self._radio.rssi()
@@ -60,8 +81,8 @@ class RobotSubsystemsManager:
 
         return t
     
-    def calculate_power_status(self, robot_position, device_states, interval_s):
-        self._power.set_device_states(device_states)
+    def calculate_power_status(self, robot_position, interval_s):
+        self._power.set_device_states(self.map_into_currents())
         self._power.set_sun_position(self.SUN_POSITION)
         self._power.set_rover_position(robot_position)
         self._power.step(interval_s)
