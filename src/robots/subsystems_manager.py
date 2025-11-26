@@ -138,6 +138,9 @@ class RobotSubsystemsManager:
     def set_obc_to_motor(self):
         self._obc_state = ObcState.MOTOR
 
+    def set_obc(self, state:ObcState):
+        self._obc_state = state
+
     def set_obc_to_idle(self):
         self._obc_state = ObcState.IDLE
  

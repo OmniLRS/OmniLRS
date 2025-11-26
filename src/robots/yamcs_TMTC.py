@@ -15,11 +15,11 @@ from enum import Enum
 from scipy.spatial.transform import Rotation as R
 
 class IntervalName(Enum):
+    # use for intervals that are repeatedly created or removed
     CAMERA_STREAMING = "camera_streaming"
-    POSE_OF_BASE_LINK = "pose_of_base_link"
     STOP_ROBOT = "stop_robot"
     CAMERA_STREAMING_STATE = "camera_streaming_state"
-    GO_NOGO = "go_nogo"
+    OBC_STATE = "obc_state"
 
 class YamcsTMTC:
     """
@@ -81,11 +81,28 @@ class YamcsTMTC:
 
     def handle_high_res_capture(self):
         self._camera_handler.transmit_camera_view(CameraViewTransmitHandler.BUCKET_IMAGES_ONCOMMAND, "high", "rgb")
-        # self._robot.subsystems.set_obc_to_camera()
+        self._set_obc_state(ObcState.CAMERA, 10)
 
     def handle_depth_capture(self):
         self._camera_handler.transmit_camera_view(CameraViewTransmitHandler.BUCKET_IMAGES_DEPTH, "high", "depth")
+        self._set_obc_state(ObcState.CAMERA, 10)
 
+    # def _set_obc_to_idle_after_time(self, time=10):
+    #     if self._intervals_handler.does_exist(IntervalName.OBC_STATE.value):
+    #         self._intervals_handler.update_next_time(IntervalName.OBC_STATE.value, time)
+    #     else:
+    #         self._intervals_handler.add_new_interval(name=IntervalName.STOP_ROBOT.value, seconds=time, is_repeating=False, execute_immediately=False,
+    #                                              function=self.self._robot.subsystems.set_obc, f_args=[ObcState.IDLE])
+
+    def _set_obc_state(self, state:ObcState, set_to_idle_after=0):
+        if self._intervals_handler.does_exist(IntervalName.OBC_STATE.value):
+            self._intervals_handler.remove_interval(IntervalName.OBC_STATE.value)
+
+        self._robot.subsystems.set_obc(state)
+
+        if set_to_idle_after != 0:
+            self._intervals_handler.add_new_interval(name=IntervalName.OBC_STATE.value, seconds=set_to_idle_after, is_repeating=False, execute_immediately=False,
+                                                 function=self._robot.subsystems.set_obc, f_args=[ObcState.IDLE])
 
     def _handle_solar_panel(self, new_state:SolarPanelState):
         if new_state == SolarPanelState.STOWED:
@@ -140,7 +157,7 @@ class YamcsTMTC:
         self._stop_robot_after_time(turn_time * turn_time_adjustment_coef)
 
     def _stop_robot_after_time(self, travel_time):
-        self._robot.subsystems.set_obc_to_motor()
+        self._set_obc_state(ObcState.MOTOR, travel_time)
         if self._intervals_handler.does_exist(IntervalName.STOP_ROBOT.value):
             self._intervals_handler.update_next_time(IntervalName.STOP_ROBOT.value, travel_time)
         else:
@@ -149,11 +166,10 @@ class YamcsTMTC:
 
     def _stop_robot(self):
         self._robot.stop_drive()
-        self._robot.subsystems.set_obc_to_idle()
         self._intervals_handler.remove_interval(IntervalName.STOP_ROBOT.value)
 
     def start_streaming_data(self):
-        self._intervals_handler.add_new_interval(name=IntervalName.POSE_OF_BASE_LINK.value, seconds=self._yamcs_conf["intervals"]["robot_stats"], is_repeating=True, execute_immediately=True,
+        self._intervals_handler.add_new_interval(name="Pose of base link", seconds=self._yamcs_conf["intervals"]["robot_stats"], is_repeating=True, execute_immediately=True,
                                                  function=self._transmit_pose_of_base_link)
         self._intervals_handler.add_new_interval(name=IntervalName.CAMERA_STREAMING.value, seconds=self._yamcs_conf["intervals"]["camera_streaming"], is_repeating=True, execute_immediately=True,
                                                  function=self._camera_handler.transmit_camera_view, f_args=(CameraViewTransmitHandler.BUCKET_IMAGES_STREAMING, "low"))
@@ -161,7 +177,7 @@ class YamcsTMTC:
         # TODO add this when parameter path fixed
         # self._intervals_handler.add_new_interval(name=IntervalName.CAMERA_STREAMING_STATE.value, seconds=self._yamcs_conf["intervals"]["robot_stats"], is_repeating=True, execute_immediately=True,
         #                                          function=self._transmit_camera_streaming_state)
-        self._intervals_handler.add_new_interval(name=IntervalName.GO_NOGO.value, seconds=self._yamcs_conf["intervals"]["robot_stats"], is_repeating=True, execute_immediately=True,
+        self._intervals_handler.add_new_interval(name="GO_NOGO", seconds=self._yamcs_conf["intervals"]["robot_stats"], is_repeating=True, execute_immediately=True,
                                                  function=self._transmit_go_nogo)
         self._intervals_handler.add_new_interval(name="IMU readings", seconds=self._yamcs_conf["intervals"]["robot_stats"], is_repeating=True, execute_immediately=True,
                                                  function=self._transmit_imu_readings)
