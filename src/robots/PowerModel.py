@@ -8,18 +8,18 @@ from typing import Dict, Mapping, Sequence, Tuple
 
 import numpy as np
 
-
-DEVICE_CURRENT_BOUNDS: Dict[str, Tuple[float, float]] = {
-	"current_draw_obc": (0.0, 2.0),
-	"current_draw_motor_controller": (0.0, 1.0),
-	"current_draw_neutron_spectrometer": (0.0, 1.5),
-	"current_draw_apxs": (0.0, 1.0),
-	"current_draw_camera": (0.0, 1.5),
-	"current_draw_radio": (0.0, 3.0),
-	"current_draw_eps": (0.0, 0.8),
+# Device settings: yamcs parameter name (keys) and power draw bounds in Watts (values)
+DEVICE_SETTINGS: Dict[str, Tuple[float, float]] = {
+	"current_draw_obc": (0.0, 7.5),
+	"current_draw_motor_controller": (0.0, 2.0),
+	"current_draw_neutron_spectrometer": (0.0, 10.0),
+	"current_draw_apxs": (0.0, 10.0),
+	"current_draw_camera": (0.0, 5.0),
+	"current_draw_radio": (0.0, 5.0),
+	"current_draw_eps": (0.0, 1.0),
 }
 
-
+# Battery voltage curve as (percentage, voltage) points
 BATTERY_VOLTAGE_CURVE: Tuple[Tuple[float, float], ...] = (
 	(0.0, 11.0),
 	(0.1, 12.0),
@@ -32,7 +32,8 @@ BATTERY_VOLTAGE_CURVE: Tuple[Tuple[float, float], ...] = (
 )
 
 SOLAR_PANEL_NORMAL = np.array((0.0, -1.0, 0.0))
-
+BATTERY_CAPACITY_WH = 30.0  # Watt-hours
+SOLAR_PANEL_MAX_POWER = 30.0  # Watts
 
 def _clamp(value: float, lower: float, upper: float) -> float:
 	return max(lower, min(upper, value))
@@ -45,28 +46,33 @@ class PowerModel:
         inputs / computation / outputs are clearly separated for easy use.
     """
 
-	battery_capacity_ah: float = 2.0
-	battery_charge_ah: float = 2.0
-	solar_panel_max_current: float = 2.0
-	device_current_bounds: Mapping[str, Tuple[float, float]] = field(
-		default_factory=lambda: dict(DEVICE_CURRENT_BOUNDS)
+	battery_capacity_wh: float = BATTERY_CAPACITY_WH     
+	battery_charge_wh: float = BATTERY_CAPACITY_WH      
+	solar_panel_max_power: float = SOLAR_PANEL_MAX_POWER
+ 
+	device_power_settings: Mapping[str, Tuple[float, float]] = field(
+		default_factory=lambda: dict(DEVICE_SETTINGS)
 	)
 	device_states: Dict[str, bool] = field(default_factory=dict)
+
 	device_current_noise_std: float = 0.05
 	battery_percentage_noise_std: float = 0.5
 	battery_voltage_noise_std: float = 0.05
 	solar_input_noise_std: float = 0.05
+ 
 	rover_position: Tuple[float, float, float] = (0.0, 0.0, 0.0)
 	sun_position: Tuple[float, float, float] = (0.0, -10.0, 0.0)
-	solar_input_current: float = 0.0
+	solar_input_power: float = 0.0
+	battery_voltage_v: float = BATTERY_VOLTAGE_CURVE[-1][1]
 
 	def __post_init__(self) -> None:
-		for name in self.device_current_bounds:
+		for name in self.device_power_settings:
 			self.device_states.setdefault(name, False)
-		self.battery_charge_ah = _clamp(self.battery_charge_ah, 0.0, self.battery_capacity_ah)
+		self.battery_charge_wh = _clamp(self.battery_charge_wh, 0.0, self.battery_capacity_wh)
+		self._update_battery_voltage()
 
 	def set_device_state(self, name: str, state: bool) -> None:
-		if name not in self.device_current_bounds:
+		if name not in self.device_power_settings:
 			raise KeyError(f"Unknown device '{name}'")
 		self.device_states[name] = state
 
@@ -84,21 +90,22 @@ class PowerModel:
 		for name in self.device_states:
 			self.device_states[name] = state
 
-	def _device_current(self, name: str) -> float:
-		lo, hi = self.device_current_bounds[name]
+	def _device_power(self, name: str) -> float:
+		lo, hi = self.device_power_settings[name]
 		return hi if self.device_states[name] else lo
 
-	def total_load_current(self) -> float:
-		return sum(self._device_current(name) for name in self.device_states)
+	def total_load_power(self) -> float:
+		return sum(self._device_power(name) for name in self.device_states)
 
 	def step(self, dt: float) -> None:
 		"""Advance the battery state by *dt* seconds."""
 
 		view_factor = self.compute_view_factor(self.rover_position, self.sun_position)
-		self.solar_input_current = self.solar_panel_max_current * view_factor
-		net_current = self.solar_input_current - self.total_load_current()
-		self.battery_charge_ah += net_current * (dt / 3600.0)
-		self.battery_charge_ah = _clamp(self.battery_charge_ah, 0.0, self.battery_capacity_ah)
+		self.solar_input_power = self.solar_panel_max_power * view_factor
+		net_power = self.solar_input_power - self.total_load_power()
+		self.battery_charge_wh += net_power * (dt / 3600.0)
+		self.battery_charge_wh = _clamp(self.battery_charge_wh, 0.0, self.battery_capacity_wh)
+		self._update_battery_voltage()
 
 	def compute_view_factor(
 		self,
@@ -115,20 +122,30 @@ class PowerModel:
 		return float(_clamp(float(np.dot(unit, SOLAR_PANEL_NORMAL)), 0.0, 1.0))
 
 	def battery_percentage(self) -> float:
-		return 100.0 * self.battery_charge_ah / self.battery_capacity_ah
+		if self.battery_capacity_wh <= 0.0:
+			return 0.0
+		return 100.0 * self.battery_charge_wh / self.battery_capacity_wh
 
 	def battery_voltage(self) -> float:
-		fraction = _clamp(self.battery_percentage() / 100.0, 0.0, 1.0)
+		return self.battery_voltage_v
+
+	def _update_battery_voltage(self) -> None:
+		if self.battery_capacity_wh <= 0.0:
+			self.battery_voltage_v = BATTERY_VOLTAGE_CURVE[0][1]
+			return
+		fraction = _clamp(self.battery_charge_wh / self.battery_capacity_wh, 0.0, 1.0)
 		curve = BATTERY_VOLTAGE_CURVE
 		for idx in range(1, len(curve)):
 			p_hi, v_hi = curve[idx]
 			if fraction <= p_hi:
 				p_lo, v_lo = curve[idx - 1]
 				if p_hi == p_lo:
-					return v_hi
+					self.battery_voltage_v = v_hi
+					return
 				slope = (v_hi - v_lo) / (p_hi - p_lo)
-				return v_lo + slope * (fraction - p_lo)
-		return curve[-1][1]
+				self.battery_voltage_v = v_lo + slope * (fraction - p_lo)
+				return
+		self.battery_voltage_v = curve[-1][1]
 
 	def measured_battery_percentage(self) -> float:
 		value = self.battery_percentage()
@@ -145,32 +162,39 @@ class PowerModel:
 		return _clamp(value + random.gauss(0.0, self.battery_voltage_noise_std), min_v, max_v)
 
 	def measured_device_currents(self) -> Dict[str, float]:
-		"""Return measured device currents with additive noise."""
+		"""Return measured device currents (A) derived from power draw."""
 
-		currents = {name: self._device_current(name) for name in self.device_states}
+		voltage = max(self.battery_voltage_v, 1e-3)
+		currents = {
+			name: self._device_power(name) / voltage
+			for name in self.device_states
+		}
 		if self.device_current_noise_std <= 0.0:
+			currents["total_current_out"] = sum(currents.values())
 			return currents
-		return {
+		currents = {
 			name: max(0.0, value + random.gauss(0.0, self.device_current_noise_std))
 			for name, value in currents.items()
 		}
+		currents["total_current_out"] = sum(
+			value for name, value in currents.items() if name != "total_current_out"
+		)
+		return currents
 
 	def measured_solar_input_current(self) -> float:
-		value = max(0.0, self.solar_input_current)
-		if self.solar_input_noise_std <= 0.0:
-			return value
-		return _clamp(
-			value + random.gauss(0.0, self.solar_input_noise_std),
-			0.0,
-			self.solar_panel_max_current,
-		)
+		power = max(0.0, self.solar_input_power)
+		if self.solar_input_noise_std > 0.0:
+			power = _clamp(
+				power + random.gauss(0.0, self.solar_input_noise_std),
+				0.0,
+				self.solar_panel_max_power,
+			)
+		voltage = max(self.battery_voltage_v, 1e-3)
+		return power / voltage
   
 	def status(self) -> Dict[str, float | Dict[str, float]]:
 		status: Dict[str, float | Dict[str, float]] = {
-			"battery_charge_ah": self.battery_charge_ah,
-			"battery_percentage": self.battery_percentage(),
-			"battery_voltage": self.battery_voltage(),
-			"net_current": self.solar_input_current - self.total_load_current(),
+			"net_power": self.solar_input_power - self.total_load_power(),
 			"solar_input_current_measured": self.measured_solar_input_current(),
 			"battery_percentage_measured": self.measured_battery_percentage(),
 			"battery_voltage_measured": self.measured_battery_voltage(),
@@ -198,7 +222,6 @@ def run_power_profile_test(
 			sun_position: Tuple[float, float, float],
 			rover_delta: Tuple[float, float, float],
 		) -> None:
-     
 		steps = int(duration / dt)
 		active_states = {name: devices_on for name in model.device_states}
 		rover_pos = np.asarray(model.rover_position, dtype=float)
@@ -214,17 +237,17 @@ def run_power_profile_test(
 
 			# get results
 			status = model.status()
-   
-            # for the plots
+
+			# for the plots
 			times.append(times[-1] + dt)
 			percentages.append(status["battery_percentage_measured"])
 			voltages.append(status["battery_voltage_measured"])
 			solar_currents.append(status["solar_input_current_measured"])
 			rover_pos = rover_pos + np.asarray(rover_delta, dtype=float)
 
-    # step 1 all devices on, sun above
+	# phase 1 all devices on, sun above
 	simulate(on_duration, True, (0.0, -10.0, 0.0), (0.02, 0.0, 0.0))
-    # step 2 all devices off, sun above
+	# phase 2 all devices off, sun above
 	simulate(off_duration, False, (0.0, -10.0, 0.0), (0.02, 0.0, 0.0))
 	return times, percentages, voltages, solar_currents
 
