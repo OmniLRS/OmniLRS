@@ -8,11 +8,14 @@ import time
 import math
 import omni.timeline
 import omni.kit.app
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFont
 import numpy as np
 import os
 from enum import Enum
 from scipy.spatial.transform import Rotation as R
+
+from pathlib import Path
+
 
 class IntervalName(Enum):
     # use for intervals that are repeatedly created or removed
@@ -42,8 +45,10 @@ class YamcsTMTC:
         self._time_of_last_command = 0
         self._robot = robot
         self._yamcs_processor.create_command_history_subscription(on_data=self._command_callback)
-        self._camera_handler = CameraViewTransmitHandler(self._yamcs_processor, self._robot, yamcs_conf["address"])
+        self._helper = HandlerHelper(self._yamcs_processor, yamcs_conf["address"])
+        self._camera_handler = CameraViewTransmitHandler(self._yamcs_processor, self._robot, yamcs_conf["address"], self._helper)
         self._intervals_handler = IntervalsHandler()
+        self._payload_handler = PayloadHandler(self._helper)
 
     def _command_callback(self, command:CommandHistory):
         # CommandHistory info is available at: https://docs.yamcs.org/python-yamcs-client/tmtc/model/#yamcs.client.CommandHistory
@@ -75,6 +80,8 @@ class YamcsTMTC:
             self._handle_solar_panel(arguments["deployment"])
         elif name == self._yamcs_conf["commands"]["go_nogo"]:
             self._handle_go_nogo(arguments["decision"])
+        elif name == self._yamcs_conf["commands"]["capture_apxs"]:
+            self._payload_handler._snap_apxs()
         # here add reactions to other commands
         else:
             print("Unknown command:", name)
@@ -352,7 +359,7 @@ class CameraViewTransmitHandler:
     BUCKET_IMAGES_ONCOMMAND = "images_oncommand"
     BUCKET_IMAGES_DEPTH = "images_depth"
 
-    def __init__(self, yamcs_processor, robot, yamcs_address) -> None:
+    def __init__(self, yamcs_processor, robot, yamcs_address, helper) -> None:
         self._yamcs_processor = yamcs_processor
         self._robot = robot
         self._yamcs_address = yamcs_address
@@ -361,6 +368,7 @@ class CameraViewTransmitHandler:
             self.BUCKET_IMAGES_ONCOMMAND:0,
             self.BUCKET_IMAGES_DEPTH:0,
         }
+        self._helper = helper
 
     def transmit_camera_view(self, bucket:str, resolution:str, type:str="rgb"):
         camera_view:Image = None
@@ -373,8 +381,9 @@ class CameraViewTransmitHandler:
             print("in transmit_camera_view: unknown type:", type)
             return
 
-        image_name = self._save_image_locally(camera_view, bucket)
-        self._inform_yamcs(image_name, bucket)
+        image_name = self._helper.save_image_locally(camera_view, bucket, self._counter[bucket])
+        print(image_name)
+        self._helper.inform_yamcs(image_name, "camera", bucket, self._counter[bucket])
         self._counter[bucket] += 1
 
     def _snap_camera_view_rgb(self, resolution:str) -> Image:
@@ -406,8 +415,15 @@ class CameraViewTransmitHandler:
 
         return Image.fromarray(d_uint8, mode="L")
     
-    def _save_image_locally(self, image, bucket) -> str:
-        image_name = f"{bucket}_{self._counter[bucket]:04d}.png"
+class HandlerHelper:
+    URL_FULL_NGINX = "https://52.69.177.254/yamcs"
+
+    def __init__(self, yamcs_processor, yamcs_address):
+        self._yamcs_processor = yamcs_processor
+        self._yamcs_address = yamcs_address
+
+    def save_image_locally(self, image, bucket, counter_number) -> str:
+        image_name = f"{bucket}_{counter_number:04d}.png"
         IMG_DIR = f"/tmp/{bucket}"
         os.makedirs(IMG_DIR, exist_ok=True)   # creates directory if missing
         img_path = f"{IMG_DIR}/{image_name}" 
@@ -415,14 +431,67 @@ class CameraViewTransmitHandler:
 
         return image_name
 
-    def _inform_yamcs(self, image_name, bucket):
+    def inform_yamcs(self, image_name, path_prefix, bucket, counter_number):
         url_storage = f"/storage/buckets/{bucket}/objects/{image_name}"
         url_full = "http://" + self._yamcs_address + f"/api{url_storage}"
-        url_full_nginx = "https://52.69.177.254/yamcs" + f"/api{url_storage}"  # @TODO hardcoded nginx address for now
+        url_full_nginx = self.URL_FULL_NGINX + f"/api{url_storage}"  # @TODO hardcoded nginx address for now
         self._yamcs_processor.set_parameter_values({
-            f"/Rover/camera/{bucket}/number": self._counter[bucket],
-            f"/Rover/camera/{bucket}/name": image_name,
-            f"/Rover/camera/{bucket}/url_storage": url_storage,
-            f"/Rover/camera/{bucket}/url_full": url_full,
-            f"/Rover/camera/{bucket}/url_full_nginx": url_full_nginx,
+            f"/Rover/{path_prefix}/{bucket}/number": counter_number,
+            f"/Rover/{path_prefix}/{bucket}/name": image_name,
+            f"/Rover/{path_prefix}/{bucket}/url_storage": url_storage,
+            f"/Rover/{path_prefix}/{bucket}/url_full": url_full,
+            f"/Rover/{path_prefix}/{bucket}/url_full_nginx": url_full_nginx,
         })
+
+class PayloadHandler:
+
+    BUCKET_IMAGES_APXS = "images_apxs"
+    APXS_WIDTH = 1440
+    APXS_HEIGHT = 1080
+    APXS_SAMPLES_DIR = "/workspace/omnilrs/assets/images/"
+    APXS_FONT = ImageFont.load_default(APXS_HEIGHT//15) 
+
+    def __init__(self, helper:HandlerHelper):
+        self._helper = helper
+        self._counter = {
+            self.BUCKET_IMAGES_APXS:0,
+        }
+
+    def _snap_apxs(self):
+        image_name = f"{self.BUCKET_IMAGES_APXS}_{self._counter[self.BUCKET_IMAGES_APXS]}.png"
+
+        if self._counter[self.BUCKET_IMAGES_APXS] == 0:
+            apxs_background_path = os.path.join(self.APXS_SAMPLES_DIR, 'APXS_nodata.png')
+        else:
+            apxs_background_path = os.path.join(self.APXS_SAMPLES_DIR, 'APXS_measurement.png')
+
+        # if os.path.exists(apxs_background_path):
+        #     print("File exists:", apxs_background_path)
+        # else:
+        #     print("FILE NOT FOUND:", apxs_background_path)
+
+        print(apxs_background_path)
+        img = Image.open(apxs_background_path) #.convert('RGB').resize((self.APXS_WIDTH, self.APXS_HEIGHT))
+        # draw = ImageDraw.Draw(img)
+        # self._draw_text(draw, text=image_name, fill="black", position='top-right')
+        image_name = self._helper.save_image_locally(img, self.BUCKET_IMAGES_APXS, self._counter[self.BUCKET_IMAGES_APXS])
+        print("image name", image_name)
+        self._helper.inform_yamcs(image_name, "payload", self.BUCKET_IMAGES_APXS, self._counter[self.BUCKET_IMAGES_APXS])
+        self._counter[self.BUCKET_IMAGES_APXS] += 1
+    
+    def _draw_text(self, draw: ImageDraw.ImageDraw, text: str, fill, position: str = "center"):
+        bbox = draw.textbbox((0, 0), text, font=self.APXS_FONT)
+        text_width = bbox[2] - bbox[0]
+        text_height = bbox[3] - bbox[1]
+
+        if position == "center":
+            x = (self.APXS_WIDTH - text_width) // 2
+            y = (self.APXS_HEIGHT - text_height) // 2
+        elif position == "top-right":
+            margin = 40
+            x = self.APXS_WIDTH - text_width - margin
+            y = margin
+        else:
+            x, y = position
+
+        draw.text((x, y), text, fill=fill, font=self.APXS_FONT)

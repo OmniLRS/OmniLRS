@@ -236,6 +236,7 @@ robots_settings:
       solar_panel: "/Rover/system/deploy_solar_panel"
       power_electronics: "/Rover/power/power_electronics"
       go_nogo: "/Rover/system/go_nogo_command"
+      capture_apxs: "/Rover/payload/payload_capture_apxs"
 
 static_assets_settings:
   root_path: "/StaticAssets"
