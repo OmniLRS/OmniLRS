@@ -227,6 +227,14 @@ class YamcsTMTC:
         self._yamcs_processor.set_parameter_value(self._yamcs_conf["parameters"]["batter_voltage"], power_status['battery_voltage_measured'])
         self._yamcs_processor.set_parameter_value(self._yamcs_conf["parameters"]["total_current_in"], power_status['solar_input_current_measured'])
 
+        self._yamcs_processor.set_parameter_value(self._yamcs_conf["parameters"]["current_draw_obc"], power_status["device_currents_measured"]['current_draw_obc'])
+        self._yamcs_processor.set_parameter_value(self._yamcs_conf["parameters"]["current_draw_motor_controller"], power_status["device_currents_measured"]['current_draw_motor_controller'])
+        self._yamcs_processor.set_parameter_value(self._yamcs_conf["parameters"]["current_draw_neutron_spectrometer"], power_status["device_currents_measured"]['current_draw_neutron_spectrometer'])
+        self._yamcs_processor.set_parameter_value(self._yamcs_conf["parameters"]["current_draw_apxs"], power_status["device_currents_measured"]['current_draw_apxs'])
+        self._yamcs_processor.set_parameter_value(self._yamcs_conf["parameters"]["current_draw_camera"], power_status["device_currents_measured"]['current_draw_camera'])
+        self._yamcs_processor.set_parameter_value(self._yamcs_conf["parameters"]["current_draw_radio"], power_status["device_currents_measured"]['current_draw_radio'])
+        self._yamcs_processor.set_parameter_value(self._yamcs_conf["parameters"]["current_draw_eps"], power_status["device_currents_measured"]['current_draw_eps'])
+
     def _transmit_obc_state(self):
         obc_state = self._robot.subsystems.get_obc_state()
         self._yamcs_processor.set_parameter_value(self._yamcs_conf["parameters"]["obc_state"], obc_state.value)
