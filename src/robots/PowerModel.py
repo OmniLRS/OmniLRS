@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import random
+from collections.abc import Mapping as MappingABC, Sequence as SequenceABC
 from dataclasses import dataclass, field
-from typing import Dict, Mapping, Sequence, Tuple
+from typing import Any, Dict, Mapping, Sequence, Tuple
 
 import numpy as np
 
@@ -64,10 +65,10 @@ class PowerModel:
 	)
 	device_states: Dict[str, bool] = field(default_factory=dict)
 
-	device_current_noise_std: float = 0.05
+	device_current_noise_std: float = 0.02
 	battery_percentage_noise_std: float = 0.5
 	battery_voltage_noise_std: float = 0.05
-	solar_input_noise_std: float = 0.05
+	solar_input_noise_std: float = 0.1
  
 	rover_position: Tuple[float, float, float] = (0.0, 0.0, 0.0)
 	sun_position: Tuple[float, float, float] = (0.0, -10.0, 0.0)
@@ -172,14 +173,10 @@ class PowerModel:
 
 	def measured_battery_percentage(self) -> float:
 		value = self.battery_percentage()
-		if self.battery_percentage_noise_std <= 0.0:
-			return value
 		return _clamp(value + random.gauss(0.0, self.battery_percentage_noise_std), 0.0, 100.0)
 
 	def measured_battery_voltage(self) -> float:
 		value = self.battery_voltage()
-		if self.battery_voltage_noise_std <= 0.0:
-			return value
 		min_v = BATTERY_VOLTAGE_CURVE[0][1]
 		max_v = BATTERY_VOLTAGE_CURVE[-1][1]
 		return _clamp(value + random.gauss(0.0, self.battery_voltage_noise_std), min_v, max_v)
@@ -192,8 +189,6 @@ class PowerModel:
 			name: self._device_power(name) / voltage
 			for name in self.device_states
 		}
-		if self.device_current_noise_std <= 0.0:
-			return currents
 		currents = {
 			name: max(0.0, value + random.gauss(0.0, self.device_current_noise_std))
 			for name, value in currents.items()
@@ -204,8 +199,6 @@ class PowerModel:
 		voltage = max(self.battery_voltage_v, 1e-3)
 		base_current = (self.motor_power_w / voltage) if self.motor_state else 0.0
 		currents = [base_current for _ in range(self.motor_count)]
-		if self.device_current_noise_std <= 0.0:
-			return currents
 		return [
 			max(0.0, value + random.gauss(0.0, self.device_current_noise_std))
 			for value in currents
@@ -213,12 +206,11 @@ class PowerModel:
 
 	def measured_solar_input_current(self) -> float:
 		power = max(0.0, self.solar_input_power)
-		if self.solar_input_noise_std > 0.0:
-			power = _clamp(
-				power + random.gauss(0.0, self.solar_input_noise_std),
-				0.0,
-				self.solar_panel_max_power,
-			)
+		power = _clamp(
+			power + random.gauss(0.0, self.solar_input_noise_std),
+			0.0,
+			self.solar_panel_max_power,
+		)
 		voltage = max(self.battery_voltage_v, 1e-3)
 		return power / voltage
   
@@ -242,7 +234,13 @@ def run_power_profile_test(
 		on_duration: float = 800.0,
 		off_duration: float = 800.0,
 		dt: float = 1.0,
-	) -> Tuple[Sequence[float], Sequence[float], Sequence[float], Sequence[float]]:
+	) -> Tuple[
+		Sequence[float],
+		Sequence[float],
+		Sequence[float],
+		Sequence[float],
+		Dict[str, Sequence[float]],
+	]:
     
 	model = PowerModel()
 	times = [0.0]
@@ -250,6 +248,9 @@ def run_power_profile_test(
 	percentages = [status["battery_percentage_measured"]]
 	voltages = [status["battery_voltage_measured"]]
 	solar_currents = [status["solar_input_current_measured"]]
+	current_series: Dict[str, list[float]] = {}
+	for label, value in _extract_current_samples(status).items():
+		current_series.setdefault(label, []).append(value)
 	model.set_rover_position((0.0, 0.0, 0.0))
 	model.set_solar_panel_state("deployed")
 
@@ -281,24 +282,33 @@ def run_power_profile_test(
 			percentages.append(status["battery_percentage_measured"])
 			voltages.append(status["battery_voltage_measured"])
 			solar_currents.append(status["solar_input_current_measured"])
+			for label, value in _extract_current_samples(status).items():
+				series = current_series.setdefault(label, [0.0] * (len(times) - 1))
+				while len(series) < len(times) - 1:
+					series.append(0.0)
+				series.append(value)
+			for label, series in current_series.items():
+				if len(series) < len(times):
+					series.append(series[-1] if series else 0.0)
 			rover_pos = rover_pos + np.asarray(rover_delta, dtype=float)
 
 	# phase 1 all devices on, sun above
 	simulate(on_duration, True, (0.0, -10.0, 0.0), (0.02, 0.0, 0.0))
 	# phase 2 all devices off, sun above
 	simulate(off_duration, False, (0.0, -10.0, 0.0), (0.02, 0.0, 0.0))
-	return times, percentages, voltages, solar_currents
+	return times, percentages, voltages, solar_currents, current_series
 
 def _plot_battery_profile(
 		times: Sequence[float],
 		percentages: Sequence[float],
 		voltages: Sequence[float],
 		solar_currents: Sequence[float],
+		current_series: Mapping[str, Sequence[float]],
 		filename: str = "power_model_battery.png",
 	) -> str:
 	from matplotlib import pyplot as plt  # type: ignore[import]
 
-	fig, (ax_top, ax_bottom) = plt.subplots(2, 1, figsize=(10, 7), sharex=True)
+	fig, (ax_top, ax_mid, ax_bottom) = plt.subplots(3, 1, figsize=(10, 10), sharex=True)
 
 	line_soc, = ax_top.plot(times, percentages, label="Battery %", color="tab:blue")
 	ax_top.set_ylabel("Battery [%]", color="tab:blue")
@@ -311,22 +321,45 @@ def _plot_battery_profile(
 	ax_voltage.tick_params(axis="y", labelcolor="tab:red")
 	ax_top.legend([line_soc, line_voltage], ["Battery %", "Voltage"], loc="upper right")
 
-	line_solar, = ax_bottom.plot(times, solar_currents, label="Solar Current", color="tab:green")
-	ax_bottom.set_xlabel("Time [s]")
-	ax_bottom.set_ylabel("Current [A]")
-	ax_bottom.grid(True, alpha=0.3)
-	ax_bottom.legend(loc="upper right")
+	line_solar, = ax_mid.plot(times, solar_currents, label="Solar Current", color="tab:green")
+	ax_mid.set_ylabel("Solar Current [A]")
+	ax_mid.grid(True, alpha=0.3)
+	ax_mid.legend(loc="upper right")
 
-	fig.suptitle("Battery State and Solar Input Over Time")
+	for label, values in current_series.items():
+		ax_bottom.plot(times, values, label=label)
+	ax_bottom.set_xlabel("Time [s]")
+	ax_bottom.set_ylabel("Currents [A]")
+	ax_bottom.grid(True, alpha=0.3)
+	ax_bottom.legend(loc="upper right", ncol=2)
+
+	fig.suptitle("Battery, Solar Input, and Currents Over Time")
 	fig.tight_layout()
 	fig.savefig(filename)
 	plt.close(fig)
 	return filename
 
+def _extract_current_samples(status: Mapping[str, Any]) -> Dict[str, float]:
+	currents: Dict[str, float] = {}
+	for key, value in status.items():
+		if "current" not in key:
+			continue
+		if key == "total_current_out_measured":  # skipit
+			continue
+		if isinstance(value, MappingABC):
+			for subkey, subvalue in value.items():
+				currents[subkey] = float(subvalue)
+		elif isinstance(value, SequenceABC) and not isinstance(value, (str, bytes, bytearray)):
+			for idx, item in enumerate(value):
+				currents[f"{key}_{idx}"] = float(item)
+		else:
+			currents[key] = float(value)
+	return currents
+
 
 def main() -> None:
-	times, percentages, voltages, solar_currents = run_power_profile_test()
-	output = _plot_battery_profile(times, percentages, voltages, solar_currents)
+	times, percentages, voltages, solar_currents, current_series = run_power_profile_test()
+	output = _plot_battery_profile(times, percentages, voltages, solar_currents, current_series)
 	print(f"Power model plot saved to {output}")
 
 
