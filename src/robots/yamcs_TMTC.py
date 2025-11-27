@@ -191,6 +191,8 @@ class YamcsTMTC:
                                                  function=self._transmit_power_info, f_args=[self._yamcs_conf["intervals"]["robot_stats"]])
         self._intervals_handler.add_new_interval(name="Motor activity", seconds=self._yamcs_conf["intervals"]["robot_stats"], is_repeating=True, execute_immediately=True,
                                                  function=self._transmit_motor_activity)
+        self._intervals_handler.add_new_interval(name="Neutron count", seconds=self._yamcs_conf["intervals"]["robot_stats"], is_repeating=True, execute_immediately=True,
+                                                 function=self._transmit_neutroun_count, f_args=[self._yamcs_conf["intervals"]["robot_stats"]])
         # here add further intervals and their functionalities
 
     def _transmit_motor_activity(self):
@@ -222,11 +224,9 @@ class YamcsTMTC:
     def _transmit_power_info(self, interval_s):
         robot_position, orientation = self._robots_RG[str(self._robot_name)].get_pose_of_base_link()
         power_status = self._robot.subsystems.calculate_power_status(robot_position, interval_s)
-
         self._yamcs_processor.set_parameter_value(self._yamcs_conf["parameters"]["battery_charge"], int(power_status['battery_percentage_measured']))
         self._yamcs_processor.set_parameter_value(self._yamcs_conf["parameters"]["batter_voltage"], power_status['battery_voltage_measured'])
         self._yamcs_processor.set_parameter_value(self._yamcs_conf["parameters"]["total_current_in"], power_status['solar_input_current_measured'])
-
         self._yamcs_processor.set_parameter_value(self._yamcs_conf["parameters"]["current_draw_obc"], power_status["device_currents_measured"]['current_draw_obc'])
         self._yamcs_processor.set_parameter_value(self._yamcs_conf["parameters"]["current_draw_motor_controller"], power_status["device_currents_measured"]['current_draw_motor_controller'])
         self._yamcs_processor.set_parameter_value(self._yamcs_conf["parameters"]["current_draw_neutron_spectrometer"], power_status["device_currents_measured"]['current_draw_neutron_spectrometer'])
@@ -234,6 +234,10 @@ class YamcsTMTC:
         self._yamcs_processor.set_parameter_value(self._yamcs_conf["parameters"]["current_draw_camera"], power_status["device_currents_measured"]['current_draw_camera'])
         self._yamcs_processor.set_parameter_value(self._yamcs_conf["parameters"]["current_draw_radio"], power_status["device_currents_measured"]['current_draw_radio'])
         self._yamcs_processor.set_parameter_value(self._yamcs_conf["parameters"]["current_draw_eps"], power_status["device_currents_measured"]['current_draw_eps'])
+
+    def _transmit_neutroun_count(self, interval_s):
+        neutron_counts = self._robot.subsystems.get_neutron_count(interval_s)
+        self._yamcs_processor.set_parameter_value(self._yamcs_conf["parameters"]["neutron_counts"], neutron_counts)
 
     def _transmit_obc_state(self):
         obc_state = self._robot.subsystems.get_obc_state()

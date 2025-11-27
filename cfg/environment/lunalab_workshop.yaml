@@ -226,6 +226,7 @@ robots_settings:
       current_draw_camera: "/Rover/current_draw_camera"
       current_draw_radio: "/Rover/current_draw_radio"
       current_draw_eps: "/Rover/current_draw_eps"
+      neutron_counts: "/Rover/neutron_counts"
     commands:
       drive_straight: "/Rover/motor/drive_straight"
       drive_turn: "/Rover/motor/drive_turn"

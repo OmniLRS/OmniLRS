@@ -3,7 +3,7 @@ from enum import StrEnum, Enum
 from src.robots.RadioModel import RadioModel
 from src.robots.ThermalModel import ThermalModel
 from src.robots.PowerModel import PowerModel
-
+import math
 
 class PowerState(StrEnum):
     OFF = "OFF",
@@ -45,6 +45,7 @@ class RobotSubsystemsManager:
         self._radio:RadioModel = RadioModel()
         self._thermal:ThermalModel = ThermalModel()
         self._power:PowerModel = PowerModel()
+        self._neutron_spectrometer = NeutronSpectrometerSimulator()
 
     def map_into_currents(self):
         mapped = {
@@ -57,7 +58,7 @@ class RobotSubsystemsManager:
             "current_draw_eps": True,
         }
 
-        print(mapped)
+        # print(mapped)
 
         return mapped
     
@@ -143,4 +144,31 @@ class RobotSubsystemsManager:
 
     def set_obc_to_idle(self):
         self._obc_state = ObcState.IDLE
- 
+
+    def get_neutron_count(self, interval_s):
+        return self._neutron_spectrometer.get_next_count(interval_s)
+
+
+class NeutronSpectrometerSimulator():
+    
+    def __init__(self):
+        self._t = 0
+        self._neutron_gen_values = {
+            "min":0,
+            "max":5000,
+            "period": 20,
+            "offset": 0,
+        }
+
+    def get_next_count(self, interval_s):
+        generated_value = self._generate_sine_value(self._t, self._neutron_gen_values["min"], self._neutron_gen_values["max"], self._neutron_gen_values["period"], self._neutron_gen_values["offset"])
+        self._t += interval_s
+        
+        return int(generated_value)
+    
+    def _generate_sine_value(self, t, min_val, max_val, period, offset):
+        """Generate a sine wave value at time t with given parameters."""
+        omega = 2 * math.pi / period
+        amplitude = (max_val - min_val) / 2
+        center = (max_val + min_val) / 2
+        return center + amplitude * math.sin(omega * (t + offset))
