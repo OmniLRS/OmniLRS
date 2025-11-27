@@ -35,8 +35,10 @@ SOLAR_PANEL_NORMALS = {
 	"deployed": np.array((0.0, -1.0, 0.0)),
 	"stowed": np.array((0.0, 0.0, 1.0)),
 }
-BATTERY_CAPACITY_WH = 30.0  # Watt-hours
+BATTERY_CAPACITY_WH = 60.0  # Watt-hours
 SOLAR_PANEL_MAX_POWER = 30.0  # Watts
+MOTOR_COUNT = 6
+MOTOR_POWER_W = 10.0
 
 def _clamp(value: float, lower: float, upper: float) -> float:
 	return max(lower, min(upper, value))
@@ -53,6 +55,9 @@ class PowerModel:
 	battery_charge_wh: float = BATTERY_CAPACITY_WH      
 	solar_panel_max_power: float = SOLAR_PANEL_MAX_POWER
 	solar_panel_state: str = "stowed"
+	motor_state: bool = False
+	motor_count: int = MOTOR_COUNT
+	motor_power_w: float = MOTOR_POWER_W
  
 	device_power_settings: Mapping[str, Tuple[float, float]] = field(
 		default_factory=lambda: dict(DEVICE_SETTINGS)
@@ -99,6 +104,9 @@ class PowerModel:
 			raise ValueError(f"Unknown solar panel state '{state}'")
 		self.solar_panel_state = state
 
+	def set_motor_state(self, state: bool) -> None:
+		self.motor_state = state
+
 	def _current_panel_normal(self) -> np.ndarray:
 		return SOLAR_PANEL_NORMALS.get(self.solar_panel_state, SOLAR_PANEL_NORMALS["deployed"])
 
@@ -107,7 +115,9 @@ class PowerModel:
 		return hi if self.device_states[name] else lo
 
 	def total_load_power(self) -> float:
-		return sum(self._device_power(name) for name in self.device_states)
+		device_power = sum(self._device_power(name) for name in self.device_states)
+		motor_power = self.motor_power_w * self.motor_count if self.motor_state else 0.0
+		return device_power + motor_power
 
 	def step(self, dt: float) -> None:
 		"""Advance the battery state by *dt* seconds."""
@@ -183,16 +193,23 @@ class PowerModel:
 			for name in self.device_states
 		}
 		if self.device_current_noise_std <= 0.0:
-			currents["total_current_out"] = sum(currents.values())
 			return currents
 		currents = {
 			name: max(0.0, value + random.gauss(0.0, self.device_current_noise_std))
 			for name, value in currents.items()
 		}
-		currents["total_current_out"] = sum(
-			value for name, value in currents.items() if name != "total_current_out"
-		)
 		return currents
+
+	def measured_motor_currents(self) -> Sequence[float]:
+		voltage = max(self.battery_voltage_v, 1e-3)
+		base_current = (self.motor_power_w / voltage) if self.motor_state else 0.0
+		currents = [base_current for _ in range(self.motor_count)]
+		if self.device_current_noise_std <= 0.0:
+			return currents
+		return [
+			max(0.0, value + random.gauss(0.0, self.device_current_noise_std))
+			for value in currents
+		]
 
 	def measured_solar_input_current(self) -> float:
 		power = max(0.0, self.solar_input_power)
@@ -205,14 +222,19 @@ class PowerModel:
 		voltage = max(self.battery_voltage_v, 1e-3)
 		return power / voltage
   
-	def status(self) -> Dict[str, float | Dict[str, float]]:
-		status: Dict[str, float | Dict[str, float]] = {
+	def status(self) -> Dict[str, float | Dict[str, float] | Sequence[float]]:
+		motor_currents = self.measured_motor_currents()
+		device_currents = self.measured_device_currents()
+		total_current_out = sum(device_currents.values()) + sum(motor_currents)
+		status: Dict[str, float | Dict[str, float] | Sequence[float]] = {
 			"net_power": self.solar_input_power - self.total_load_power(),
 			"solar_input_current_measured": self.measured_solar_input_current(),
 			"battery_percentage_measured": self.measured_battery_percentage(),
 			"battery_voltage_measured": self.measured_battery_voltage(),
+			"motor_currents_measured": motor_currents,
+			"total_current_out_measured": total_current_out,
 		}
-		status["device_currents_measured"] = self.measured_device_currents()
+		status["device_currents_measured"] = device_currents
 		return status
 
 
@@ -243,6 +265,7 @@ def run_power_profile_test(
 
 		for _ in range(steps):
 			# set inputs
+			model.set_motor_state(devices_on)
 			model.set_device_states(active_states)
 			model.set_sun_position(sun_position)
 			model.set_rover_position(tuple(rover_pos))
