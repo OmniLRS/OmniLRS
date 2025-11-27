@@ -31,7 +31,10 @@ BATTERY_VOLTAGE_CURVE: Tuple[Tuple[float, float], ...] = (
 	(1.0, 16.8),
 )
 
-SOLAR_PANEL_NORMAL = np.array((0.0, -1.0, 0.0))
+SOLAR_PANEL_NORMALS = {
+	"deployed": np.array((0.0, -1.0, 0.0)),
+	"stowed": np.array((0.0, 0.0, 1.0)),
+}
 BATTERY_CAPACITY_WH = 30.0  # Watt-hours
 SOLAR_PANEL_MAX_POWER = 30.0  # Watts
 
@@ -49,6 +52,7 @@ class PowerModel:
 	battery_capacity_wh: float = BATTERY_CAPACITY_WH     
 	battery_charge_wh: float = BATTERY_CAPACITY_WH      
 	solar_panel_max_power: float = SOLAR_PANEL_MAX_POWER
+	solar_panel_state: str = "stowed"
  
 	device_power_settings: Mapping[str, Tuple[float, float]] = field(
 		default_factory=lambda: dict(DEVICE_SETTINGS)
@@ -90,6 +94,14 @@ class PowerModel:
 		for name in self.device_states:
 			self.device_states[name] = state
 
+	def set_solar_panel_state(self, state: str) -> None:
+		if state not in SOLAR_PANEL_NORMALS:
+			raise ValueError(f"Unknown solar panel state '{state}'")
+		self.solar_panel_state = state
+
+	def _current_panel_normal(self) -> np.ndarray:
+		return SOLAR_PANEL_NORMALS.get(self.solar_panel_state, SOLAR_PANEL_NORMALS["deployed"])
+
 	def _device_power(self, name: str) -> float:
 		lo, hi = self.device_power_settings[name]
 		return hi if self.device_states[name] else lo
@@ -119,7 +131,8 @@ class PowerModel:
 		if magnitude == 0.0:
 			return 0.0
 		unit = vector / magnitude
-		return float(_clamp(float(np.dot(unit, SOLAR_PANEL_NORMAL)), 0.0, 1.0))
+		panel_normal = self._current_panel_normal()
+		return float(_clamp(float(np.dot(unit, panel_normal)), 0.0, 1.0))
 
 	def battery_percentage(self) -> float:
 		if self.battery_capacity_wh <= 0.0:
@@ -208,6 +221,7 @@ def run_power_profile_test(
 		off_duration: float = 800.0,
 		dt: float = 1.0,
 	) -> Tuple[Sequence[float], Sequence[float], Sequence[float], Sequence[float]]:
+    
 	model = PowerModel()
 	times = [0.0]
 	status = model.status()
@@ -215,6 +229,7 @@ def run_power_profile_test(
 	voltages = [status["battery_voltage_measured"]]
 	solar_currents = [status["solar_input_current_measured"]]
 	model.set_rover_position((0.0, 0.0, 0.0))
+	model.set_solar_panel_state("deployed")
 
 	def simulate(
 			duration: float,
@@ -250,9 +265,6 @@ def run_power_profile_test(
 	# phase 2 all devices off, sun above
 	simulate(off_duration, False, (0.0, -10.0, 0.0), (0.02, 0.0, 0.0))
 	return times, percentages, voltages, solar_currents
-
-
-
 
 def _plot_battery_profile(
 		times: Sequence[float],
