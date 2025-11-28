@@ -54,10 +54,6 @@ class RobotSubsystemsManager:
         self._update_positions()
 
     def _update_positions(self):
-        # sun = get_prim_at_path(self.SUN_PATH)
-        # lander = get_prim_at_path(self.LANDER_PATH)
-        sun_path = "/" + get_moon_env_name() + "/Sun/sun"
-        print(sun_path)
         self._sun_pos, rot = get_world_pose("/" + get_moon_env_name() + "/Sun/sun") # self.SUN_POSITION
         self._lander_pos, rot = get_world_pose(self.LANDER_PATH) #  self.LANDER_POSITION
         print("sun", self._sun_pos)

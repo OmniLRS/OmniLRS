@@ -406,7 +406,7 @@ class CameraViewTransmitHandler:
             return Image.fromarray(np.zeros_like(depth, dtype=np.uint8), "L")
 
         near = np.percentile(depth[valid], 1)
-        far  = np.percentile(depth[valid], 99)
+        far  = np.percentile(depth[valid], 20)
 
         d = np.clip(depth, near, far)
         d = (d - near) / (far - near + 1e-8)
