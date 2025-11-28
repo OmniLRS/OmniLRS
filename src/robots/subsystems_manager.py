@@ -1,5 +1,6 @@
 from enum import StrEnum, Enum
 
+from src.environments.utils import get_moon_env_name
 from src.robots.RadioModel import RadioModel
 from src.robots.ThermalModel import ThermalModel
 from src.robots.PowerModel import PowerModel
@@ -33,7 +34,6 @@ class ObcState(Enum):
 class RobotSubsystemsManager:
     SUN_POSITION = (10.0, 5.0, 7.5)
     LANDER_POSITION = (0.0, 0.0, 0.0)
-    SUN_PATH = "/Lunaryard/Sun/sun"
     LANDER_PATH = "/StaticAssets/lander"
 
     def __init__(self):
@@ -56,7 +56,9 @@ class RobotSubsystemsManager:
     def _update_positions(self):
         # sun = get_prim_at_path(self.SUN_PATH)
         # lander = get_prim_at_path(self.LANDER_PATH)
-        self._sun_pos, rot = get_world_pose(self.SUN_PATH) # self.SUN_POSITION
+        sun_path = "/" + get_moon_env_name() + "/Sun/sun"
+        print(sun_path)
+        self._sun_pos, rot = get_world_pose("/" + get_moon_env_name() + "/Sun/sun") # self.SUN_POSITION
         self._lander_pos, rot = get_world_pose(self.LANDER_PATH) #  self.LANDER_POSITION
         print("sun", self._sun_pos)
         print("lander", self._lander_pos)
