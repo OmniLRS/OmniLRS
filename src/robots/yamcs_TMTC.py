@@ -476,6 +476,13 @@ class PayloadHandler:
         # self._draw_text(draw, text=image_name, fill="black", position='top-right')
         image_name = self._helper.save_image_locally(img, self.BUCKET_IMAGES_APXS, self._counter[self.BUCKET_IMAGES_APXS])
         print("image name", image_name)
+
+        saved_image = f"/tmp/{self.BUCKET_IMAGES_APXS}/{image_name}"
+        if os.path.exists(saved_image):
+            print("File exists:", saved_image)
+        else:
+            print("FILE NOT FOUND:", saved_image)
+            
         self._helper.inform_yamcs(image_name, "payload", self.BUCKET_IMAGES_APXS, self._counter[self.BUCKET_IMAGES_APXS])
         self._counter[self.BUCKET_IMAGES_APXS] += 1
     

@@ -4,6 +4,9 @@ from src.robots.RadioModel import RadioModel
 from src.robots.ThermalModel import ThermalModel
 from src.robots.PowerModel import PowerModel
 import math
+from omni.isaac.core.utils.prims import get_prim_at_path
+# from omni.isaac.core.utils.transformations import get_world_pose
+from isaacsim.core.utils.xforms import get_world_pose
 
 class PowerState(StrEnum):
     OFF = "OFF",
@@ -30,6 +33,8 @@ class ObcState(Enum):
 class RobotSubsystemsManager:
     SUN_POSITION = (10.0, 5.0, 7.5)
     LANDER_POSITION = (0.0, 0.0, 0.0)
+    SUN_PATH = "/Lunaryard/Sun/sun"
+    LANDER_PATH = "/StaticAssets/lander"
 
     def __init__(self):
         self._electronics_power_state = {
@@ -46,6 +51,22 @@ class RobotSubsystemsManager:
         self._thermal:ThermalModel = ThermalModel()
         self._power:PowerModel = PowerModel()
         self._neutron_spectrometer = NeutronSpectrometerSimulator()
+        self._update_positions()
+
+    def _update_positions(self):
+        # sun = get_prim_at_path(self.SUN_PATH)
+        # lander = get_prim_at_path(self.LANDER_PATH)
+        self._sun_pos, rot = get_world_pose(self.SUN_PATH) # self.SUN_POSITION
+        self._lander_pos, rot = get_world_pose(self.LANDER_PATH) #  self.LANDER_POSITION
+        print("sun", self._sun_pos)
+        print("lander", self._lander_pos)
+
+    def update_positions_before(func):
+        # definition of a decorator
+        def wrapper(self, *args, **kwargs):
+            self._update_positions()
+            return func(self, *args, **kwargs)
+        return wrapper
 
     def map_into_currents(self):
         mapped = {
@@ -68,23 +89,27 @@ class RobotSubsystemsManager:
         
         return False
 
+    @update_positions_before
     def calculate_rssi(self, robot_position):
         self._radio.rover_position = robot_position
+        self._radio.lander_position = self._lander_pos
         rssi = self._radio.rssi()
 
         return rssi
     
+    @update_positions_before
     def calculate_temperature(self, robot_position, interval_s):
         self._thermal.rover_position = robot_position
-        self._thermal.sun_position = self.SUN_POSITION
+        self._thermal.sun_position = self._sun_pos
         self._thermal.step(interval_s)
         t = self._thermal.temperatures()
 
         return t
     
+    @update_positions_before
     def calculate_power_status(self, robot_position, interval_s):
         self._power.set_device_states(self.map_into_currents())
-        self._power.set_sun_position(self.SUN_POSITION)
+        self._power.set_sun_position(self._sun_pos)
         self._power.set_rover_position(robot_position)
         self._power.step(interval_s)
         status = self._power.status()
@@ -147,7 +172,6 @@ class RobotSubsystemsManager:
 
     def get_neutron_count(self, interval_s):
         return self._neutron_spectrometer.get_next_count(interval_s)
-
 
 class NeutronSpectrometerSimulator():
     

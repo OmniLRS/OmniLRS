@@ -240,6 +240,14 @@ robots_settings:
       batter_voltage: "/Rover/battery_voltage"
       total_current_in: "/Rover/total_current_in"
       motor_current: "/Rover/motor_current"
+      current_draw_obc: "/Rover/current_draw_obc"
+      current_draw_motor_controller: "/Rover/current_draw_motor_controller"
+      current_draw_neutron_spectrometer: "/Rover/current_draw_neutron_spectrometer"
+      current_draw_apxs: "/Rover/current_draw_apxs"
+      current_draw_camera: "/Rover/current_draw_camera"
+      current_draw_radio: "/Rover/current_draw_radio"
+      current_draw_eps: "/Rover/current_draw_eps"
+      neutron_counts: "/Rover/neutron_counts"
     commands:
       drive_straight: "/Rover/motor/drive_straight"
       drive_turn: "/Rover/motor/drive_turn"
@@ -249,6 +257,7 @@ robots_settings:
       solar_panel: "/Rover/system/deploy_solar_panel"
       power_electronics: "/Rover/power/power_electronics"
       go_nogo: "/Rover/system/go_nogo_command"
+      capture_apxs: "/Rover/payload/payload_capture_apxs"
 
 static_assets_settings:
   root_path: "/StaticAssets"
