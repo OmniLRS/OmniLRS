@@ -140,15 +140,22 @@ class YamcsTMTC:
         if angular_velocity == 0:
             self._stop_robot()
             return
+        
+        print("dimensions", self._robot.dimensions)
+        robot_width = self._robot.dimensions["width"]
+        wheel_speed_adjustment_coef = 19
+        turn_time_adjustment_coef = 1
         # through experiment it was observed that the robot requires ~10% more time to turn to the desired angle 
         # (maybe this number has to be set depending on a specific robot)
-        turn_time_adjustment_coef = 1.11
-        # similar for 2
-        wheel_speed_adjustment_coef = 2
-        robot_width = 2.85 * 2 # also 2 helped here
+        # turn_time_adjustment_coef = 1.11
+        # # similar for 2
+        # wheel_speed_adjustment_coef = 2
+        # robot_width = 2.85 * 2 # also 2 helped here
         radians = math.radians(angular_velocity) 
         wheel_speed = radians * (robot_width / 2)
         turn_time = angle / abs(angular_velocity)
+        print("wheel_speed", wheel_speed)
+        print("adjusted", wheel_speed * wheel_speed_adjustment_coef)
         self._robot.drive_turn(wheel_speed * wheel_speed_adjustment_coef)
         self._stop_robot_after_time(turn_time * turn_time_adjustment_coef)
 

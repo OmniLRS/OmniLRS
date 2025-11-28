@@ -83,6 +83,7 @@ class RobotManager:
                     robot_parameter.wheel_joints,
                     robot_parameter.camera,
                     robot_parameter.imu_sensor_path,
+                    robot_parameter.dimensions,
                 )
                 self.add_RRG(
                     robot_parameter.robot_name,
@@ -115,6 +116,7 @@ class RobotManager:
                     robot_parameter.wheel_joints,
                     robot_parameter.camera,
                     robot_parameter.imu_sensor_path,
+                    robot_parameter.dimensions,
                 )
                 self.add_RRG(
                     robot_parameter.robot_name,
@@ -133,6 +135,7 @@ class RobotManager:
         wheel_joints: dict = {},
         camera_conf :dict={},
         imu_sensor_path:str="",
+        dimensions:dict={},
     ) -> None:
         """
         Add a robot to the scene.
@@ -163,6 +166,7 @@ class RobotManager:
                     wheel_joints=wheel_joints,
                     camera_conf=camera_conf,
                     imu_sensor_path=imu_sensor_path,
+                    dimensions=dimensions
                 )
                 self.robots[robot_name].load(p, q)
                 self.num_robots += 1
@@ -249,7 +253,8 @@ class Robot:
         domain_id: int = 0,
         wheel_joints: Dict = {},
         camera_conf:Dict = {},
-        imu_sensor_path:str = ""
+        imu_sensor_path:str = "",
+        dimensions:dict = {},
 
     ) -> None:
         """
@@ -279,6 +284,7 @@ class Robot:
         self.subsystems = RobotSubsystemsManager()
         self._imu_sensor_interface = _sensor.acquire_imu_sensor_interface()
         self._imu_sensor_path:str = imu_sensor_path
+        self.dimensions = dimensions
 
     def get_root_rigid_body_path(self) -> None:
         """
@@ -527,6 +533,7 @@ class RobotRigidGroup:
     def _initialize_target_links(self):
         if len(self.target_links) > 0:
             for target_link in self.target_links:
+                print(target_link)
                 rigid_prim, rigid_prim_view = self._initialize_link(target_link)
                 self.prims.append(rigid_prim)
                 self.prim_views.append(rigid_prim_view)
