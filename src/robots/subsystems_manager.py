@@ -6,7 +6,6 @@ from src.robots.ThermalModel import ThermalModel
 from src.robots.PowerModel import PowerModel
 import math
 from omni.isaac.core.utils.prims import get_prim_at_path
-# from omni.isaac.core.utils.transformations import get_world_pose
 from isaacsim.core.utils.xforms import get_world_pose
 
 class PowerState(StrEnum):

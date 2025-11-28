@@ -13,7 +13,6 @@ import numpy as np
 import os
 from enum import Enum
 from scipy.spatial.transform import Rotation as R
-
 from pathlib import Path
 
 
@@ -93,13 +92,6 @@ class YamcsTMTC:
     def handle_depth_capture(self):
         self._camera_handler.transmit_camera_view(CameraViewTransmitHandler.BUCKET_IMAGES_DEPTH, "high", "depth")
         self._set_obc_state(ObcState.CAMERA, 10)
-
-    # def _set_obc_to_idle_after_time(self, time=10):
-    #     if self._intervals_handler.does_exist(IntervalName.OBC_STATE.value):
-    #         self._intervals_handler.update_next_time(IntervalName.OBC_STATE.value, time)
-    #     else:
-    #         self._intervals_handler.add_new_interval(name=IntervalName.STOP_ROBOT.value, seconds=time, is_repeating=False, execute_immediately=False,
-    #                                              function=self.self._robot.subsystems.set_obc, f_args=[ObcState.IDLE])
 
     def _set_obc_state(self, state:ObcState, set_to_idle_after=0):
         if self._intervals_handler.does_exist(IntervalName.OBC_STATE.value):
@@ -194,20 +186,9 @@ class YamcsTMTC:
                                                  function=self._transmit_thermal_info, f_args=[self._yamcs_conf["intervals"]["robot_stats"]])
         self._intervals_handler.add_new_interval(name="Power status", seconds=self._yamcs_conf["intervals"]["robot_stats"], is_repeating=True, execute_immediately=True,
                                                  function=self._transmit_power_info, f_args=[self._yamcs_conf["intervals"]["robot_stats"]])
-        self._intervals_handler.add_new_interval(name="Motor activity", seconds=self._yamcs_conf["intervals"]["robot_stats"], is_repeating=True, execute_immediately=True,
-                                                 function=self._transmit_motor_activity)
         self._intervals_handler.add_new_interval(name="Neutron count", seconds=self._yamcs_conf["intervals"]["robot_stats"], is_repeating=True, execute_immediately=True,
                                                  function=self._transmit_neutroun_count, f_args=[self._yamcs_conf["intervals"]["robot_stats"]])
         # here add further intervals and their functionalities
-
-    def _transmit_motor_activity(self):
-        obc_state = self._robot.subsystems.get_obc_state()
-        motor_values = [0,0,0,0,0,0]
-
-        if (obc_state == ObcState.MOTOR):
-            motor_values = [1,1,1,1,1,1]
-        
-        # self._yamcs_processor.set_parameter_value(self._yamcs_conf["parameters"]["motor_current"], motor_values)
 
     def _transmit_radio_signal_info(self):
         robot_position, orientation = self._robots_RG[str(self._robot_name)].get_pose_of_base_link()
