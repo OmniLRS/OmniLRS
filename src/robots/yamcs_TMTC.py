@@ -105,11 +105,11 @@ class YamcsTMTC:
         if self._intervals_handler.does_exist(IntervalName.OBC_STATE.value):
             self._intervals_handler.remove_interval(IntervalName.OBC_STATE.value)
 
-        self._robot.subsystems.set_obc(state)
+        self._robot.subsystems.set_obc_state(state)
 
         if set_to_idle_after != 0:
             self._intervals_handler.add_new_interval(name=IntervalName.OBC_STATE.value, seconds=set_to_idle_after, is_repeating=False, execute_immediately=False,
-                                                 function=self._robot.subsystems.set_obc, f_args=[ObcState.IDLE])
+                                                 function=self._robot.subsystems.set_obc_state, f_args=[ObcState.IDLE])
 
     def _handle_solar_panel(self, new_state:SolarPanelState):
         if new_state == SolarPanelState.STOWED:
@@ -117,26 +117,23 @@ class YamcsTMTC:
         elif new_state == SolarPanelState.DEPLOYED:
             self._robot.subsystems.deploy_solar()
         else:
-            print("New state for solar panel is uknown:", new_state)
+            print("New state for solar panel is unknown:", new_state)
 
     def _handle_electronics(self, electronics:str, new_state:PowerState):
-        if new_state == PowerState.OFF:
-            self._robot.subsystems.turn_off(electronics)
-        elif new_state == PowerState.ON:
-            self._robot.subsystems.turn_on(electronics)
-        else:
-            print("New state for electronics is uknown:", new_state)
+        if new_state not in [PowerState.ON.value, PowerState.OFF.value]:
+            print("New decision for PowerState of electronics is unknown:", new_state)
+            return
+        
+        new_state = PowerState[new_state]
+        self._robot.subsystems.set_electronics_state(electronics, new_state)
 
     def _handle_go_nogo(self, decision:str):
-        if decision not in ["GO", "NOGO"]:
-            print("New decision for GO / NOGO is uknown:", decision)
+        if decision not in [GoNogoState.GO.name, GoNogoState.NOGO.name]:
+            print("New decision for GO / NOGO is unknown:", decision)
             return
         
         decision = GoNogoState[decision]
         self._robot.subsystems.set_go_nogo_state(decision)
-
-        state = self._robot.subsystems.get_go_nogo_state()
-        print(state)
 
     def _drive_robot_straight(self, linear_velocity, distance):
         if linear_velocity == 0:
@@ -173,6 +170,7 @@ class YamcsTMTC:
 
     def _stop_robot(self):
         self._robot.stop_drive()
+        self._set_obc_state(ObcState.IDLE)
         self._intervals_handler.remove_interval(IntervalName.STOP_ROBOT.value)
 
     def start_streaming_data(self):
@@ -232,7 +230,7 @@ class YamcsTMTC:
         robot_position, orientation = self._robots_RG[str(self._robot_name)].get_pose_of_base_link()
         power_status = self._robot.subsystems.calculate_power_status(robot_position, interval_s)
         self._yamcs_processor.set_parameter_value(self._yamcs_conf["parameters"]["battery_charge"], int(power_status['battery_percentage_measured']))
-        self._yamcs_processor.set_parameter_value(self._yamcs_conf["parameters"]["batter_voltage"], power_status['battery_voltage_measured'])
+        self._yamcs_processor.set_parameter_value(self._yamcs_conf["parameters"]["battery_voltage"], power_status['battery_voltage_measured'])
         self._yamcs_processor.set_parameter_value(self._yamcs_conf["parameters"]["total_current_in"], power_status['solar_input_current_measured'])
         self._yamcs_processor.set_parameter_value(self._yamcs_conf["parameters"]["current_draw_obc"], power_status["device_currents_measured"]['current_draw_obc'])
         self._yamcs_processor.set_parameter_value(self._yamcs_conf["parameters"]["current_draw_motor_controller"], power_status["device_currents_measured"]['current_draw_motor_controller'])

@@ -114,19 +114,12 @@ class RobotSubsystemsManager:
    
         return status
 
-    def turn_on(self, electronics:str):
+    def set_electronics_state(self, electronics:str, state:PowerState):
         if electronics not in self._electronics_power_state:
             print("Invalid electronics naming: ", electronics)
             return
 
-        self._electronics_power_state[electronics] = PowerState.ON
-
-    def turn_off(self, electronics:str):
-        if electronics not in self._electronics_power_state:
-            print("Invalid electronics naming: ", electronics)
-            return
-
-        self._electronics_power_state[electronics] = PowerState.OFF
+        self._electronics_power_state[electronics] = state
 
     def get_electronics_state(self, electronics:str):
         if electronics not in self._electronics_power_state:
@@ -155,18 +148,9 @@ class RobotSubsystemsManager:
 
     def get_obc_state(self):
         return self._obc_state
-    
-    def set_obc_to_camera(self):
-        self._obc_state = ObcState.CAMERA
 
-    def set_obc_to_motor(self):
-        self._obc_state = ObcState.MOTOR
-
-    def set_obc(self, state:ObcState):
+    def set_obc_state(self, state:ObcState):
         self._obc_state = state
-
-    def set_obc_to_idle(self):
-        self._obc_state = ObcState.IDLE
 
     def get_neutron_count(self, interval_s):
         return self._neutron_spectrometer.get_next_count(interval_s)
