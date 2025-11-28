@@ -34,6 +34,7 @@ class RobotSubsystemsManager:
     SUN_POSITION = (10.0, 5.0, 7.5)
     LANDER_POSITION = (0.0, 0.0, 0.0)
     LANDER_PATH = "/StaticAssets/lander"
+    USE_DYNAMIC_SUN = False # Lunalab has no sun prim
 
     def __init__(self):
         self._electronics_power_state = {
@@ -53,7 +54,10 @@ class RobotSubsystemsManager:
         self._update_positions()
 
     def _update_positions(self):
-        self._sun_pos, rot = get_world_pose("/" + get_moon_env_name() + "/Sun/sun") # self.SUN_POSITION
+        if self.USE_DYNAMIC_SUN:
+            self._sun_pos, rot = get_world_pose("/" + get_moon_env_name() + "/Sun/sun") # self.SUN_POSITION
+        else: 
+            self._sun_pos = self.SUN_POSITION
         self._lander_pos, rot = get_world_pose(self.LANDER_PATH) #  self.LANDER_POSITION
         print("sun", self._sun_pos)
         print("lander", self._lander_pos)
