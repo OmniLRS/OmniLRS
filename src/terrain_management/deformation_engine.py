@@ -684,70 +684,82 @@ class DeformationEngine:
 
     def get_deformation_depth(self, normal_forces: np.ndarray) -> None:
         """
-        Calculate deformation depth from force distribution.
-        Args:
-            normal_forces (np.ndarray): contact force fields (n,)
-        ===
-        num_points = n * num_point_sample
+        Compute soil deformation depth from:
+        - force-based sinkage
+        - slip-based sinkage
+        - accumulated trace deformation
+
+        Updates:
+            - self.sinkage_force : force-based sinkage (flattened)
+            - self.sinkage_slip  : slip-based sinkage (flattened)
+            - self.trace         : accumulated deformation trace (flattened)
         """
-        # Depth deformation due to contact force
+        # --- Force-based deformation from regression model ---
         amplitude, mean_value = self.force_depth_regression_model(normal_forces)
         sinkage_force = np.ones(self.boundary_dist.shape) * mean_value[:, None]
 
-        # Depth deformation due to slip
-        #slip = - 0.033558 * np.abs(self.slip_ratio)
-        #slip = - 0.033558 * np.abs(self.slip_ratio) * np.maximum(self.angular_velocity, self.actual_velocity)
+        # --- Slip-based deformation (empirical model) ---
         slip = - 0.033558 * np.abs(self.slip_ratio) * np.maximum(0.5+0.5*self.angular_velocity, 0.5+0.5*self.actual_velocity)
         sinkage_slip = slip[:, None] * np.ones(self.boundary_dist.shape)
         
-        # Trace deformation
+        # --- Trace deformation (soil pushed along wheel path) ---
         trace = amplitude[:, None] / 2.0 * self.depth_dist[None, :] * (1.0-np.abs(np.mean(self.slip_ratio)))
+
+        # Convert wheel motion to cell shift (30 Hz sim rate)
         self.cell_counter += self.actual_velocity / (30 * self.terrain_resolution)  # 30 ... timesteps per second for 30 Hz (dt)
         n_cells_to_roll = int(self.cell_counter)
+
+        # Roll trace deformation according to wheel travel
         trace_wheels = [row.flatten() for row in trace]
         rearranged_trace = [np.reshape(row, (-1, self.footprint_profile_height), order='C') for row in trace_wheels]
         rolled_rearranged_trace = [np.roll(row, shift=-n_cells_to_roll, axis=1) for row in rearranged_trace]
         rolled_rearranged_array = np.vstack(rolled_rearranged_trace)
         trace_restored = np.reshape(rolled_rearranged_array, trace.shape)
 
+        # Store flattened results
         self.sinkage_force = sinkage_force.reshape(-1)
         self.sinkage_slip = sinkage_slip.reshape(-1)
         self.trace = trace_restored.reshape(-1)
 
-    def get_slip_ratio(self, linear_velocity: np.ndarray, angular_velocity: np.ndarray, epsilon=5e-2) -> np.ndarray:
+    def get_slip_ratio(self, linear_velocity: np.ndarray, angular_velocity: np.ndarray, epsilon=1e-2) -> None:
         """
         Calculate slip ratio.
+
         Args:
             linear_velocity (np.ndarray): linear velocity of robot's links (n, 3)
             angular_velocity (np.ndarray): angular velocity of robot's links (n, 3)
-        Returns:
-            slip_ratio (np.ndarray): slip ratio (n,)
         """
         r = 0.105  # Wheel radius
-        epsilon = 1e-2
 
         # Extract actual and commanded velocities per wheel
         actual_velocity = linear_velocity[:, 0]  # shape: (4,)
         commanded_velocity = angular_velocity[:, 1] * r  # shape: (4,)
-        self.angular_velocity = np.abs(np.mean(angular_velocity[:, 1])) * r # Store angular velocity for later use
-        self.actual_velocity = np.abs(np.mean(actual_velocity))  # Store actual velocity for later use
+
+        # Store robot-level mean velocities
+        self.angular_velocity = np.abs(np.mean(angular_velocity[:, 1])) * r
+        self.actual_velocity = np.abs(np.mean(actual_velocity))
+
         abs_actual = np.abs(actual_velocity)
         abs_commanded = np.abs(commanded_velocity)
 
         slip_ratio = np.zeros(4)
-        # Case 1: both velocities near zero → no motion
+
+        # # --- Case 1: stationary (both velocities near zero → no motion)
         mask_stationary = (abs_actual < epsilon) & (abs_commanded < epsilon)
         slip_ratio[mask_stationary] = 0.0
-        # Case 2: traction (wheel spinning faster than motion)
+        
+        # --- Case 2: slipping (wheel speed faster than robot motion)
         mask_slip = (abs_actual <= abs_commanded) & ~mask_stationary
         slip_ratio[mask_slip] = 1 - (actual_velocity[mask_slip] / commanded_velocity[mask_slip])
-        # Case 3: braking (wheel slower than motion)
+
+        # --- Case 3: skidding (wheel speed slower than robot motion)
         mask_skid = (abs_actual > abs_commanded)
         slip_ratio[mask_skid] = commanded_velocity[mask_skid] / actual_velocity[mask_skid] - 1
-        # Optional: clip extreme values
+
+        # Clip extreme values for stability
         slip_ratio = np.clip(slip_ratio, -1.0, 1.0)
 
-        self.slip_ratio = slip_ratio  # or return it if you prefer
+        self.slip_ratio = slip_ratio
 
     def deform(
         self,
@@ -762,32 +774,54 @@ class DeformationEngine:
         normal_forces: np.ndarray,
     ) -> Tuple[np.ndarray]:
         """
+        Apply wheel-induced terrain deformation to a DEM grid.
+
         Args:
-            DEM (np.ndarray): DEM to deform
-            body_transforms (np.ndarray): projected coordinates of robot's link (n, 4, 4)
-            normal_forces (np.ndarray): (dynamic) contact forces applied on robot's link (n, 3)
-            ---
-            n is the number of wheels.
+            DEM (np.ndarray): The digital elevation map to deform.
+            num_pass (np.ndarray): Per-pixel counter of how many times wheels have passed.
+            depth_memory (np.ndarray): Memory of accumulated sinkage at each pixel.
+            trace_memory (np.ndarray): Memory of accumulated trace deformation at each pixel.
+            world_positions (np.ndarray): World positions of wheel contact points (n, 3).
+            world_orientations (np.ndarray): World orientations of wheels as quaternions or matrices (n, ...).
+            linear_velocities (np.ndarray): Linear velocity vectors for each wheel (n, 3).
+            angular_velocities (np.ndarray): Angular velocity vectors for each wheel (n, 3).
+            normal_forces (np.ndarray): Contact forces applied to each wheel (n,).
+
         Returns:
-            DEM (np.ndarray): deformed DEM
-            num_pass (np.ndarray): number of passes on each pixel
+            tuple:
+                DEM (np.ndarray): Updated terrain elevation map.
+                num_pass (np.ndarray): Updated pass counter.
+                depth_memory (np.ndarray): Updated depth memory.
+                trace_memory (np.ndarray): Updated trace memory.    
+        Notes:
+            n = number of wheels / contact points.
         """
+        # --- 1) Compute footprint & wheel kinematics 
         self.get_footprint_profile_in_global(world_positions, world_orientations)
         self.get_slip_ratio(linear_velocities, angular_velocities)
         self.get_deformation_depth(normal_forces)
 
+        # --- 2) Apply deformation at each footprint cell
         for i, profile_point in enumerate(self.profile_global):
+            # Convert world (x, y) into DEM array indices
             x = int(profile_point[0])
             y = int(self.sim_height - profile_point[1])
-            # Depth Deformation
+
+            # --- Depth/Sinkage deformation (total predicted sinkage from force + slip)
             depth = self.sinkage_force[i] + self.sinkage_slip[i]
+
+            # Apply only additional sinkage beyond what is already in memory
             depth_apply = min(0, depth - depth_memory[y, x])
             DEM[y, x] += depth_apply                                    
             depth_memory[y, x] += depth_apply
-            # Trace Deformation
+
+            # --- Trace deformation
             DEM[y, x] += - trace_memory[y, x] + self.trace[i]
             trace_memory[y, x] = self.trace[i]
+
+            # Count wheel pass
             num_pass[y, x] += 1
+
         return DEM, num_pass, depth_memory, trace_memory
 
 

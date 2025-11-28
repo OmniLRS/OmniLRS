@@ -1,12 +1,11 @@
 name: Lunaryard
 seed: 42 #42
 
-#physics_dt: 0.016666 # 60 Hz
-#rendering_dt: 0.016667 # 60 Hz
-
 ### NOTE: OmniLRS crashes upon restarting (pause&play) when rendering dt is same as physics dt
 physics_dt: 0.0333 # 30 Hz
 rendering_dt: 0.0334 # 30 Hz
+#physics_dt: 0.016666 # 60 Hz
+#rendering_dt: 0.016667 # 60 Hz
 
 enforce_realtime: true
 
@@ -252,8 +251,8 @@ terrain_manager:
     crater_distribution:
       x_size: ${....lunaryard_settings.lab_length}
       y_size: ${....lunaryard_settings.lab_width}
-      densities: [0.025, 0.05, 0.5]
-      #densities: [0.0, 0.0, 0.0]    # FLAT ENVIRONMENT
+      densities: [0.025, 0.05, 0.5]   # WITH CRATERS
+      #densities: [0.0, 0.0, 0.0]    # WITHOUT CRATERS
       radius: [[1.5,2.5],[0.75,1.5],[0.25,0.5]]
       num_repeat: 1
       seed: ${....seed}
@@ -262,10 +261,8 @@ terrain_manager:
       x_size: ${....lunaryard_settings.lab_length}
       y_size: ${....lunaryard_settings.lab_width}
       resolution: ${....lunaryard_settings.resolution}
-      #max_elevation: 0.000001 # FLAT ENVIRONMENT
-      max_elevation: 1.5
-      #min_elevation: -0.000001 #-1.5 #- #  #-0.5 #  -1.2  -2.2   # EDIT -0.5
-      min_elevation: -1.5
+      max_elevation: 1.5  # FLAT ENVIRONMENT: set to 0.000001
+      min_elevation: -1.5 # FLAT ENVIRONMENT: set to -0.000001
       z_scale: .5
       seed: ${....seed}
     
@@ -315,11 +312,11 @@ robots_settings:
   robots_root: "/Robots"
   parameters:
     -
-      robot_name: ex1                                             # EDIT
-      usd_path: assets/USD_Assets/robots/ex1.usd           # EDIT
-      pose:                                                       # EDIT                    
-        position: [3.0, 3.0, 0.5468]                             # EDIT      
-        orientation: [1, 0, 0, 0]                                 # EDIT     
-      domain_id: 0                                                # EDIT     
-      target_links: ["ex1/left_front_wheel_link", "ex1/left_rear_wheel_link", "ex1/right_front_wheel_link", "ex1/right_rear_wheel_link"]
-      visual_links: ["ex1/left_front_wheel_link_visual", "ex1/left_rear_wheel_link_visual", "ex1/right_front_wheel_link_visual", "ex1/right_rear_wheel_link_visual"]
+      robot_name: ex1
+      usd_path: assets/USD_Assets/robots/ex1.usd
+      pose:                   
+        position: [3.0, 3.0, 0.5468]     
+        orientation: [1, 0, 0, 0]    
+      domain_id: 0     
+      target_links: ["ex1/left_front_wheel_link", "ex1/left_rear_wheel_link", "ex1/right_front_wheel_link", "ex1/right_rear_wheel_link"]                              # wheel links for physics interaction
+      visual_links: ["ex1/left_front_wheel_link_visual", "ex1/left_rear_wheel_link_visual", "ex1/right_front_wheel_link_visual", "ex1/right_rear_wheel_link_visual"]  # wheel links for visual rendering
