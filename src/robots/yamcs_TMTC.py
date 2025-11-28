@@ -207,7 +207,7 @@ class YamcsTMTC:
         if (obc_state == ObcState.MOTOR):
             motor_values = [1,1,1,1,1,1]
         
-        self._yamcs_processor.set_parameter_value(self._yamcs_conf["parameters"]["motor_current"], motor_values)
+        # self._yamcs_processor.set_parameter_value(self._yamcs_conf["parameters"]["motor_current"], motor_values)
 
     def _transmit_radio_signal_info(self):
         robot_position, orientation = self._robots_RG[str(self._robot_name)].get_pose_of_base_link()
@@ -228,7 +228,8 @@ class YamcsTMTC:
 
     def _transmit_power_info(self, interval_s):
         robot_position, orientation = self._robots_RG[str(self._robot_name)].get_pose_of_base_link()
-        power_status = self._robot.subsystems.calculate_power_status(robot_position, interval_s)
+        obc_state = self._robot.subsystems.get_obc_state()
+        power_status = self._robot.subsystems.calculate_power_status(robot_position, interval_s, obc_state)
         self._yamcs_processor.set_parameter_value(self._yamcs_conf["parameters"]["battery_charge"], int(power_status['battery_percentage_measured']))
         self._yamcs_processor.set_parameter_value(self._yamcs_conf["parameters"]["battery_voltage"], power_status['battery_voltage_measured'])
         self._yamcs_processor.set_parameter_value(self._yamcs_conf["parameters"]["total_current_in"], power_status['solar_input_current_measured'])
@@ -239,6 +240,7 @@ class YamcsTMTC:
         self._yamcs_processor.set_parameter_value(self._yamcs_conf["parameters"]["current_draw_camera"], power_status["device_currents_measured"]['current_draw_camera'])
         self._yamcs_processor.set_parameter_value(self._yamcs_conf["parameters"]["current_draw_radio"], power_status["device_currents_measured"]['current_draw_radio'])
         self._yamcs_processor.set_parameter_value(self._yamcs_conf["parameters"]["current_draw_eps"], power_status["device_currents_measured"]['current_draw_eps'])
+        self._yamcs_processor.set_parameter_value(self._yamcs_conf["parameters"]["motor_current"], power_status['motor_currents_measured'])
 
     def _transmit_neutroun_count(self, interval_s):
         neutron_counts = self._robot.subsystems.get_neutron_count(interval_s)

@@ -105,10 +105,11 @@ class RobotSubsystemsManager:
         return t
     
     @update_positions_before
-    def calculate_power_status(self, robot_position, interval_s):
+    def calculate_power_status(self, robot_position, interval_s, obc_state):
         self._power.set_device_states(self.map_into_currents())
         self._power.set_sun_position(self._sun_pos)
         self._power.set_rover_position(robot_position)
+        self._power.set_motor_state(obc_state == ObcState.MOTOR) 
         self._power.step(interval_s)
         status = self._power.status()
    
