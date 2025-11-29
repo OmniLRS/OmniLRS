@@ -84,6 +84,7 @@ class RobotManager:
                     robot_parameter.camera,
                     robot_parameter.imu_sensor_path,
                     robot_parameter.dimensions,
+                    robot_parameter.turn_speed_coef,
                 )
                 self.add_RRG(
                     robot_parameter.robot_name,
@@ -117,6 +118,7 @@ class RobotManager:
                     robot_parameter.camera,
                     robot_parameter.imu_sensor_path,
                     robot_parameter.dimensions,
+                    robot_parameter.turn_speed_coef,
                 )
                 self.add_RRG(
                     robot_parameter.robot_name,
@@ -136,6 +138,7 @@ class RobotManager:
         camera_conf :dict={},
         imu_sensor_path:str="",
         dimensions:dict={},
+        turn_speed_coef:float=1,
     ) -> None:
         """
         Add a robot to the scene.
@@ -166,7 +169,8 @@ class RobotManager:
                     wheel_joints=wheel_joints,
                     camera_conf=camera_conf,
                     imu_sensor_path=imu_sensor_path,
-                    dimensions=dimensions
+                    dimensions=dimensions,
+                    turn_speed_coef=turn_speed_coef,
                 )
                 self.robots[robot_name].load(p, q)
                 self.num_robots += 1
@@ -255,6 +259,7 @@ class Robot:
         camera_conf:Dict = {},
         imu_sensor_path:str = "",
         dimensions:dict = {},
+        turn_speed_coef:float=1,
 
     ) -> None:
         """
@@ -285,6 +290,7 @@ class Robot:
         self._imu_sensor_interface = _sensor.acquire_imu_sensor_interface()
         self._imu_sensor_path:str = imu_sensor_path
         self.dimensions = dimensions
+        self.turn_speed_coef = turn_speed_coef
 
     def get_root_rigid_body_path(self) -> None:
         """
