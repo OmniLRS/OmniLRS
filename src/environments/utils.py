@@ -2,6 +2,15 @@ from pxr import UsdGeom, Gf
 import numpy as np
 from scipy.spatial.transform import Rotation as R
 
+MOON_ENVIRONMENT_NAME = ""
+
+def set_moon_env_name(name):
+    global MOON_ENVIRONMENT_NAME
+    MOON_ENVIRONMENT_NAME = name
+
+def get_moon_env_name():
+    return MOON_ENVIRONMENT_NAME
+
 def set_xform_pose(xform, position, orientation):
         _set_xform_translate(xform, position)
         _set_xform_orientation(xform, orientation)
@@ -63,3 +72,5 @@ def transform_orientation_into_xyz(orientation_wxyz):
     xyz_orient = [e_zyx_from_wxyz[2], e_zyx_from_wxyz[1], e_zyx_from_wxyz[0]]
 
     return np.array(xyz_orient)
+
+

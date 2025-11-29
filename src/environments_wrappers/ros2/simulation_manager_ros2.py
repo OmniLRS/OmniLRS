@@ -15,6 +15,7 @@ import logging
 import omni
 import time
 
+from src.environments.utils import set_moon_env_name
 from src.environments_wrappers.ros2.largescale_ros2 import ROS_LargeScaleManager
 from src.environments_wrappers.ros2.lunaryard_ros2 import ROS_LunaryardManager
 from src.environments_wrappers.ros2.robot_manager_ros2 import ROS_RobotManager
@@ -154,6 +155,9 @@ class ROS2_SimulationManager:
             physics_dt=cfg["environment"]["physics_dt"],
             rendering_dt=cfg["environment"]["rendering_dt"],
         )
+
+        set_moon_env_name(cfg["environment"]["name"])
+
         PSM = PhysicsSceneManager(cfg["physics"]["physics_scene"])
         for i in range(100):
             self.world.step(render=True)
