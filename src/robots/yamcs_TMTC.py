@@ -30,7 +30,7 @@ class YamcsTMTC:
     It allows to control a robot instance, by receiving TCs from Yamcs and sending TM to Yamcs.
     """ 
 
-    MIN_VELOCITY = 0.5
+    MIN_VELOCITY = 0.2
 
     def __init__(
         self,
