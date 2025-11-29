@@ -42,6 +42,9 @@ MOTOR_COUNT = 6
 MOTOR_POWER_W = 10.0
 REGULATED_BUS_VOLTAGE = 5.0  # Volts
 DC_DC_EFFICIENCY = 0.95  # 95% efficient battery -> 5V conversion
+DEVICE_HEALTH_NOMINAL = "NOMINAL"
+DEVICE_HEALTH_FAULT = "FAULT"
+DEVICE_FAULT_EXTRA_POWER = 2.5  # Watts added when device is faulted
 
 def _clamp(value: float, lower: float, upper: float) -> float:
 	return max(lower, min(upper, value))
@@ -66,6 +69,7 @@ class PowerModel:
 		default_factory=lambda: dict(DEVICE_SETTINGS)
 	)
 	device_states: Dict[str, bool] = field(default_factory=dict)
+	device_health: Dict[str, str] = field(default_factory=dict)
 
 	device_current_noise_std: float = 0.02
 	battery_percentage_noise_std: float = 0.5
@@ -80,6 +84,7 @@ class PowerModel:
 	def __post_init__(self) -> None:
 		for name in self.device_power_settings:
 			self.device_states.setdefault(name, False)
+			self.device_health.setdefault(name, DEVICE_HEALTH_NOMINAL)
 		self.battery_charge_wh = _clamp(self.battery_charge_wh, 0.0, self.battery_capacity_wh)
 		self._update_battery_voltage()
 
@@ -91,6 +96,14 @@ class PowerModel:
 	def set_device_states(self, states: Mapping[str, bool]) -> None:
 		for name, state in states.items():
 			self.set_device_state(name, state)
+
+	def set_device_health(self, health_status: Mapping[str, str]) -> None:
+		for name, status in health_status.items():
+			if name not in self.device_power_settings:
+				raise KeyError(f"Unknown device '{name}'")
+			if status not in (DEVICE_HEALTH_NOMINAL, DEVICE_HEALTH_FAULT):
+				raise ValueError(f"Invalid health '{status}' for device '{name}'")
+			self.device_health[name] = status
 
 	def set_rover_position(self, position: Tuple[float, float, float]) -> None:
 		self.rover_position = position
@@ -115,13 +128,18 @@ class PowerModel:
 
 	def _device_power(self, name: str) -> float:
 		lo, hi = self.device_power_settings[name]
-		return hi if self.device_states[name] else lo
+		if self.device_states[name] == False:
+			return lo
+		elif self.device_health.get(name, DEVICE_HEALTH_NOMINAL) == DEVICE_HEALTH_FAULT:
+			return hi + DEVICE_FAULT_EXTRA_POWER
+		else:
+			return hi
 
 	def total_load_power(self) -> float:
 		regulated_load = sum(self._device_power(name) for name in self.device_states)
-		dc_dc_losses = regulated_load * (1.0 - DC_DC_EFFICIENCY)
+		battery_power_for_regulated = regulated_load / DC_DC_EFFICIENCY
 		motor_power = self.motor_power_w * self.motor_count if self.motor_state else 0.0
-		return regulated_load + dc_dc_losses + motor_power
+		return battery_power_for_regulated + motor_power
 
 	def step(self, dt: float) -> None:
 		"""Advance the battery state by *dt* seconds."""
@@ -253,6 +271,8 @@ def run_power_profile_test(
 		current_series.setdefault(label, []).append(value)
 	model.set_rover_position((0.0, 0.0, 0.0))
 	model.set_solar_panel_state("stowed")
+	devices_health = {name: DEVICE_HEALTH_NOMINAL for name in model.device_states}
+	model.set_device_health(devices_health)
 
 	def simulate(
 			duration: float,
@@ -266,11 +286,13 @@ def run_power_profile_test(
 
 		for _ in range(steps):
 			# set inputs
-			model.set_motor_state(devices_on)
-			model.set_device_states(active_states)
-			model.set_sun_position(sun_position)
 			model.set_rover_position(tuple(rover_pos))
+			model.set_motor_state(devices_on)
+			model.set_sun_position(sun_position)
+			model.set_device_states(active_states)
 			if _ > steps // 2:
+				devices_health["current_draw_motor_controller"] = DEVICE_HEALTH_FAULT
+				model.set_device_health(devices_health)
 				model.set_solar_panel_state("deployed")
 
 			# perform computation
