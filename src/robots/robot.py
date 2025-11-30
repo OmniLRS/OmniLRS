@@ -6,6 +6,7 @@ __maintainer__ = "Antoine Richard"
 __email__ = "antoine.richard@uni.lu"
 __status__ = "development"
 
+import math
 import threading
 import time
 from typing import Dict, List, Tuple
