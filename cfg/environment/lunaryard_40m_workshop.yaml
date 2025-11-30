@@ -212,6 +212,7 @@ robots_settings:
       dimensions:
         width: 1.6 # m
         length: 1.5
+      pos_relative_to_prim: "/StaticAssets/lander"
       wheel_joints:
         left: ["wheel_fl", "wheel_ml", "wheel_bl"]
         right: ["wheel_fr", "wheel_mr", "wheel_br"]
@@ -232,7 +233,6 @@ robots_settings:
       camera_streaming: 5
     parameters:
       pose_of_base_link: "/Rover/pose_ground_truth"
-      # camera_streaming_state: "/Rover/streaming_state"
       go_nogo: "/Rover/go_nogo"
       imu_accelerometer: "/Rover/imu_accelerometer"
       imu_gyroscope: "/Rover/imu_gyroscope"

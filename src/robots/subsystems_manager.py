@@ -41,10 +41,10 @@ class Electronics(Enum):
 class RobotSubsystemsManager:
     SUN_POSITION = (10.0, 5.0, 7.5)
     LANDER_POSITION = (0.0, 0.0, 0.0)
-    LANDER_PATH = "/StaticAssets/lander"
     USE_DYNAMIC_SUN = get_moon_env_name() == "Lunalab" # Lunalab has no sun prim
 
-    def __init__(self):
+    def __init__(self, pos_relative_to_prim):
+        self.LANDER_PATH = pos_relative_to_prim
         self._electronics_power_state = {
             Electronics.CAMERA.value: PowerState.OFF,
             Electronics.MOTOR_CONTROLLER.value: PowerState.ON,
@@ -59,6 +59,12 @@ class RobotSubsystemsManager:
         self._thermal:ThermalModel = ThermalModel()
         self._power:PowerModel = PowerModel()
         self._neutron_spectrometer = NeutronSpectrometerSimulator()
+
+        if (pos_relative_to_prim != ""):
+            self._lander_pos, rot = get_world_pose(self.LANDER_PATH) #  self.LANDER_POSITION
+        else:
+            self._lander_pos = (0.0, 0.0, 0.0)
+
         self._update_positions()
 
     def _update_positions(self):
@@ -66,11 +72,11 @@ class RobotSubsystemsManager:
             self._sun_pos, rot = get_world_pose("/" + get_moon_env_name() + "/Sun/sun") # self.SUN_POSITION
         else: 
             self._sun_pos = self.SUN_POSITION
-        self._lander_pos, rot = get_world_pose(self.LANDER_PATH) #  self.LANDER_POSITION
-        print("sun", self._sun_pos)
-        print("lander", self._lander_pos)
 
-    def update_positions_before(func):
+    def get_lander_position(self):
+        return self._lander_pos
+
+    def _update_positions_before(func):
         # definition of a decorator
         def wrapper(self, *args, **kwargs):
             self._update_positions()
@@ -98,7 +104,7 @@ class RobotSubsystemsManager:
         
         return False
 
-    @update_positions_before
+    @_update_positions_before
     def calculate_rssi(self, robot_position):
         self._radio.rover_position = robot_position
         self._radio.lander_position = self._lander_pos
@@ -106,7 +112,7 @@ class RobotSubsystemsManager:
 
         return rssi
     
-    @update_positions_before
+    @_update_positions_before
     def calculate_temperature(self, robot_position, interval_s):
         self._thermal.rover_position = robot_position
         self._thermal.sun_position = self._sun_pos
@@ -115,7 +121,7 @@ class RobotSubsystemsManager:
 
         return t
     
-    @update_positions_before
+    @_update_positions_before
     def calculate_power_status(self, robot_position, interval_s, obc_state):
         self._power.set_device_states(self.map_into_currents())
         self._power.set_sun_position(self._sun_pos)

@@ -26,6 +26,7 @@ class RobotParameters:
     target_links: List[str] = field(default_factory=list)
     wheel_joints: Dict = field(default_factory=dict)
     base_link: str = field(default_factory=str)
+    pos_relative_to_prim: str = field(default_factory=str)
     camera: Dict = field(default_factory=dict)
     imu_sensor_path: str = field(default_factory=str)
     dimensions: dict = field(default_factory=dict)

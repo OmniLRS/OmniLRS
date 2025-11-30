@@ -85,6 +85,7 @@ class RobotManager:
                     robot_parameter.imu_sensor_path,
                     robot_parameter.dimensions,
                     robot_parameter.turn_speed_coef,
+                    robot_parameter.pos_relative_to_prim,
                 )
                 self.add_RRG(
                     robot_parameter.robot_name,
@@ -119,6 +120,7 @@ class RobotManager:
                     robot_parameter.imu_sensor_path,
                     robot_parameter.dimensions,
                     robot_parameter.turn_speed_coef,
+                    robot_parameter.pos_relative_to_prim,
                 )
                 self.add_RRG(
                     robot_parameter.robot_name,
@@ -139,6 +141,7 @@ class RobotManager:
         imu_sensor_path:str="",
         dimensions:dict={},
         turn_speed_coef:float=1,
+        pos_relative_to_prim:str="",
     ) -> None:
         """
         Add a robot to the scene.
@@ -171,6 +174,7 @@ class RobotManager:
                     imu_sensor_path=imu_sensor_path,
                     dimensions=dimensions,
                     turn_speed_coef=turn_speed_coef,
+                    pos_relative_to_prim=pos_relative_to_prim,
                 )
                 self.robots[robot_name].load(p, q)
                 self.num_robots += 1
@@ -260,6 +264,7 @@ class Robot:
         imu_sensor_path:str = "",
         dimensions:dict = {},
         turn_speed_coef:float=1,
+        pos_relative_to_prim:str = "",
 
     ) -> None:
         """
@@ -286,11 +291,11 @@ class Robot:
         self._camera_conf = camera_conf
         self._cameras = {}
         self._depth_cameras = {}
-        self.subsystems = RobotSubsystemsManager()
-        self._imu_sensor_interface = _sensor.acquire_imu_sensor_interface()
-        self._imu_sensor_path:str = imu_sensor_path
         self.dimensions = dimensions
         self.turn_speed_coef = turn_speed_coef
+        self.subsystems = RobotSubsystemsManager(pos_relative_to_prim)
+        self._imu_sensor_interface = _sensor.acquire_imu_sensor_interface()
+        self._imu_sensor_path:str = imu_sensor_path
 
     def get_root_rigid_body_path(self) -> None:
         """
