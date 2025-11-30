@@ -41,13 +41,13 @@ class Electronics(Enum):
 class RobotSubsystemsManager:
     SUN_POSITION = (10.0, 5.0, 7.5)
     LANDER_POSITION = (0.0, 0.0, 0.0)
-    USE_DYNAMIC_SUN = False # Lunalab has no sun prim
+    USE_DYNAMIC_SUN = get_moon_env_name() == "Lunalab" # Lunalab has no sun prim
 
     def __init__(self, pos_relative_to_prim):
         self.LANDER_PATH = pos_relative_to_prim
         self._electronics_power_state = {
             Electronics.CAMERA.value: PowerState.OFF,
-            Electronics.MOTOR_CONTROLLER.value: PowerState.ON,
+            Electronics.MOTOR_CONTROLLER.value: PowerState.OFF,
             Electronics.NEUTRON_SPECTROMETER.value: PowerState.OFF,
             Electronics.APXS.value: PowerState.OFF,
             Electronics.RADIO.value: PowerState.ON,
@@ -72,7 +72,6 @@ class RobotSubsystemsManager:
             self._sun_pos, rot = get_world_pose("/" + get_moon_env_name() + "/Sun/sun") # self.SUN_POSITION
         else: 
             self._sun_pos = self.SUN_POSITION
-        print("sun", self._sun_pos)
 
     def get_lander_position(self):
         return self._lander_pos
@@ -155,11 +154,8 @@ class RobotSubsystemsManager:
     def get_electronics_states(self):
         return self._electronics_power_state
 
-    def deploy_solar(self):
-        self._solar_panel_state = SolarPanelState.DEPLOYED
-
-    def stow_solar(self):
-        self._solar_panel_state = SolarPanelState.STOWED
+    def set_solar_panel_state(self, state:SolarPanelState):
+        self._solar_panel_state = state
 
     def get_solar_state(self):
         return self._solar_panel_state

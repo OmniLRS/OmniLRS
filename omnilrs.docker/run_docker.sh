@@ -15,6 +15,7 @@ docker run --name isaac-sim-omnilrs-container -it --gpus all -e "ACCEPT_EULA=Y" 
 -v ~/docker/isaac-sim/documents:/root/Documents:rw \
 -v /tmp/images_streaming:/tmp/images_streaming:rw \
 -v /tmp/images_oncommand:/tmp/images_oncommand:rw \
+-v /tmp/images_apxs:/tmp/images_apxs:rw \
 -v /tmp/images_depth:/tmp/images_depth:rw \
 -v /tmp/images_apxs:/tmp/images_apxs:rw \
 -v /tmp/images_monitoring:/tmp/images_monitoring:rw \

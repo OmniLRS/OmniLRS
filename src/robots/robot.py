@@ -6,6 +6,7 @@ __maintainer__ = "Antoine Richard"
 __email__ = "antoine.richard@uni.lu"
 __status__ = "development"
 
+import math
 import threading
 import time
 from typing import Dict, List, Tuple
@@ -83,7 +84,10 @@ class RobotManager:
                     robot_parameter.wheel_joints,
                     robot_parameter.camera,
                     robot_parameter.imu_sensor_path,
+                    robot_parameter.dimensions,
+                    robot_parameter.turn_speed_coef,
                     robot_parameter.pos_relative_to_prim,
+                    robot_parameter.solar_panel_joint,
                 )
                 self.add_RRG(
                     robot_parameter.robot_name,
@@ -116,7 +120,10 @@ class RobotManager:
                     robot_parameter.wheel_joints,
                     robot_parameter.camera,
                     robot_parameter.imu_sensor_path,
+                    robot_parameter.dimensions,
+                    robot_parameter.turn_speed_coef,
                     robot_parameter.pos_relative_to_prim,
+                    robot_parameter.solar_panel_joint,
                 )
                 self.add_RRG(
                     robot_parameter.robot_name,
@@ -135,7 +142,10 @@ class RobotManager:
         wheel_joints: dict = {},
         camera_conf :dict={},
         imu_sensor_path:str="",
+        dimensions:dict={},
+        turn_speed_coef:float=1,
         pos_relative_to_prim:str="",
+        solar_panel_joint:str="",
     ) -> None:
         """
         Add a robot to the scene.
@@ -166,7 +176,10 @@ class RobotManager:
                     wheel_joints=wheel_joints,
                     camera_conf=camera_conf,
                     imu_sensor_path=imu_sensor_path,
+                    dimensions=dimensions,
+                    turn_speed_coef=turn_speed_coef,
                     pos_relative_to_prim=pos_relative_to_prim,
+                    solar_panel_joint=solar_panel_joint,
                 )
                 self.robots[robot_name].load(p, q)
                 self.num_robots += 1
@@ -254,7 +267,10 @@ class Robot:
         wheel_joints: Dict = {},
         camera_conf:Dict = {},
         imu_sensor_path:str = "",
+        dimensions:dict = {},
+        turn_speed_coef:float=1,
         pos_relative_to_prim:str = "",
+        solar_panel_joint:str = "",
 
     ) -> None:
         """
@@ -281,10 +297,13 @@ class Robot:
         self._camera_conf = camera_conf
         self._cameras = {}
         self._depth_cameras = {}
+        self.dimensions = dimensions
+        self.turn_speed_coef = turn_speed_coef
         self.subsystems = RobotSubsystemsManager(pos_relative_to_prim)
         self._imu_sensor_interface = _sensor.acquire_imu_sensor_interface()
         self._imu_sensor_path:str = imu_sensor_path
-        # self._pos_relative_to_prim:str = pos_relative_to_prim
+        self._solar_panel_joint = solar_panel_joint
+        self._solar_panel_dof = None
 
     def get_root_rigid_body_path(self) -> None:
         """
@@ -491,6 +510,19 @@ class Robot:
                 dof = self.dc.find_articulation_dof(art, joint_name)
                 self._dofs[rover_side].append(dof)
 
+    def _init_solar_panel_dof(self):
+        if self._solar_panel_dof == None and self._solar_panel_joint != "":
+            art = self._get_art()
+            self._solar_panel_dof = self.dc.find_articulation_dof(art, self._solar_panel_joint)
+
+    def deploy_solar_panel(self):
+        self._init_solar_panel_dof()
+        self.dc.set_dof_position_target(self._solar_panel_dof, math.radians(0))
+
+    def stow_solar_panel(self):
+        self._init_solar_panel_dof()
+        self.dc.set_dof_position_target(self._solar_panel_dof, math.radians(-80))
+
 
 class RobotRigidGroup:
     """
@@ -533,6 +565,7 @@ class RobotRigidGroup:
     def _initialize_target_links(self):
         if len(self.target_links) > 0:
             for target_link in self.target_links:
+                print(target_link)
                 rigid_prim, rigid_prim_view = self._initialize_link(target_link)
                 self.prims.append(rigid_prim)
                 self.prim_views.append(rigid_prim_view)

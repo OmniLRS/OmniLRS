@@ -194,25 +194,36 @@ robots_settings:
     #   target_links: ["front_left_wheel_link", "front_right_wheel_link", "rear_left_wheel_link", "rear_right_wheel_link"]
 
     -
-      robot_name: husky
-      usd_path: assets/USD_Assets/robots/nograph_husky.usd       
-      # usd_path: assets/USD_Assets/robots/ros2_husky_PhysX_vlp16_mono_depth_imu.usd 
+      robot_name: pragyaan
+      usd_path: assets/USD_Assets/robots/pragyaan/nograph_pragyaan.usd  
       pose:
-        position: [5.0, 5.0, 0.5]
-        orientation: [1, 0, 0, 0]
+        position: [5.0, 5.0, 0.8]
+        orientation: [0.5, 0.5, 0.5, 0.5]
       domain_id: 0
-      target_links: ["front_left_wheel_link", "front_right_wheel_link", "rear_left_wheel_link", "rear_right_wheel_link"]
+      target_links: [
+        "Mobility/Wheel_front_left",
+        "Mobility/Wheel_front_right",
+        "Mobility/Wheel_middle_left",
+        "Mobility/Wheel_middle_right",
+        "Mobility/Wheel_back_left",
+        "Mobility/Wheel_back_right"
+      ]
       base_link: "base_link" # core link used to determine the position of the robot
+      dimensions:
+        width: 1.6 # m
+        length: 1.5
       pos_relative_to_prim: "/StaticAssets/lander"
       wheel_joints:
-        left: ["front_left_wheel", "rear_left_wheel"]
-        right: ["front_right_wheel", "rear_right_wheel"]
+        left: ["wheel_fl", "wheel_ml", "wheel_bl"]
+        right: ["wheel_fr", "wheel_mr", "wheel_br"]
       camera:
-        prim_path: "/Robots/husky/d455/RSD455/Camera_OmniVision_OV9782_Left"
+        prim_path: "/Robots/pragyaan/Body/body_main/depth_cam"
         resolutions: 
           low: [320, 240]
           high: [1440, 1080]
-      imu_sensor_path: "/Robots/husky/d455/RSD455/Imu_Sensor"
+      imu_sensor_path: "/Robots/pragyaan/base_link/Imu_Sensor"
+      turn_speed_coef: 19
+      solar_panel_joint: "RevoluteJoint"
   yamcs_tmtc:
     enabled: True
     address: "localhost:8090"
@@ -223,7 +234,6 @@ robots_settings:
       camera_streaming: 5
     parameters:
       pose_of_base_link: "/Rover/pose_ground_truth"
-      # camera_streaming_state: "/Rover/streaming_state"
       go_nogo: "/Rover/go_nogo"
       imu_accelerometer: "/Rover/imu_accelerometer"
       imu_gyroscope: "/Rover/imu_gyroscope"
