@@ -21,6 +21,7 @@ class IntervalName(Enum):
     CAMERA_STREAMING = "camera_streaming"
     STOP_ROBOT = "stop_robot"
     OBC_STATE = "obc_state"
+    NEUTRON_COUNT = "neutron_count"
 
 class YamcsTMTC:
     """
@@ -127,6 +128,8 @@ class YamcsTMTC:
 
         if electronics == Electronics.CAMERA.value:
             self._set_activity_of_camera_streaming("START") if new_state == PowerState.ON else self._set_activity_of_camera_streaming("STOP")
+        elif electronics == Electronics.NEUTRON_SPECTROMETER.value:
+            self._set_activity_of_neutron_streaming(new_state)
 
     def _handle_go_nogo(self, decision:str):
         if decision not in [GoNogoState.GO.name, GoNogoState.NOGO.name]:
@@ -195,8 +198,9 @@ class YamcsTMTC:
                                                  function=self._transmit_thermal_info, f_args=[self._yamcs_conf["intervals"]["robot_stats"]])
         self._intervals_handler.add_new_interval(name="Power status", seconds=self._yamcs_conf["intervals"]["robot_stats"], is_repeating=True, execute_immediately=True,
                                                  function=self._transmit_power_info, f_args=[self._yamcs_conf["intervals"]["robot_stats"]])
-        self._intervals_handler.add_new_interval(name="Neutron count", seconds=self._yamcs_conf["intervals"]["robot_stats"], is_repeating=True, execute_immediately=True,
-                                                 function=self._transmit_neutroun_count, f_args=[self._yamcs_conf["intervals"]["robot_stats"]])
+        #NOTE Not starting neutrons streaming automatically since now it has to be turned ON / OFF
+        # self._intervals_handler.add_new_interval(name="Neutron count", seconds=self._yamcs_conf["intervals"]["robot_stats"], is_repeating=True, execute_immediately=True,
+        #                                          function=self._transmit_neutroun_count, f_args=[self._yamcs_conf["intervals"]["robot_stats"]])
         # here add further intervals and their functionalities
 
     def _transmit_radio_signal_info(self):
@@ -273,6 +277,14 @@ class YamcsTMTC:
                                                  function=self._camera_handler.transmit_camera_view, f_args=(CameraViewTransmitHandler.BUCKET_IMAGES_STREAMING, "low"))
         else:
             print("Unknown action:", action)
+
+    def _set_activity_of_neutron_streaming(self, power_state:PowerState):
+        if power_state == PowerState.OFF:
+            self._intervals_handler.remove_interval(IntervalName.NEUTRON_COUNT.value)
+        elif power_state == PowerState.ON:
+            if not self._intervals_handler.does_exist(IntervalName.NEUTRON_COUNT.value):
+                self._intervals_handler.add_new_interval(name=IntervalName.NEUTRON_COUNT.value, seconds=self._yamcs_conf["intervals"]["camera_streaming"], is_repeating=True, execute_immediately=False,
+                                                 function=self._transmit_neutroun_count, f_args=[self._yamcs_conf["intervals"]["robot_stats"]])
 
 class IntervalsHandler:
     def __init__(self):
