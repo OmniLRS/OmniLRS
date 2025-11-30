@@ -258,6 +258,7 @@ robots_settings:
       power_electronics: "/Rover/power/power_electronics"
       go_nogo: "/Rover/system/go_nogo_command"
       capture_apxs: "/Rover/payload/payload_capture_apxs"
+      admin_batter_percentage: "/Admin/admin_set_battery_percentage"
 
 static_assets_settings:
   root_path: "/StaticAssets"

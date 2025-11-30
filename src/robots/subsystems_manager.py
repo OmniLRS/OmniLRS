@@ -117,6 +117,11 @@ class RobotSubsystemsManager:
         status = self._power.status()
    
         return status
+    
+    def set_battery_perc(self, battery_perc):
+        capacity = self._power.battery_capacity_wh
+        new_charge = battery_perc / 100 * capacity
+        self._power.battery_charge_wh = new_charge
 
     def set_electronics_state(self, electronics:str, state:PowerState):
         if electronics not in self._electronics_power_state:

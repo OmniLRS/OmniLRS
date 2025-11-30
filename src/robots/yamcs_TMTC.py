@@ -81,9 +81,14 @@ class YamcsTMTC:
             self._handle_go_nogo(arguments["decision"])
         elif name == self._yamcs_conf["commands"]["capture_apxs"]:
             self._payload_handler._snap_apxs()
+        elif name == self._yamcs_conf["commands"]["admin_batter_percentage"]:
+            self._handle_batter_perc_change(arguments["battery_percentage"])
         # here add reactions to other commands
         else:
             print("Unknown command:", name)
+
+    def _handle_batter_perc_change(self, battery_percentage:int):
+        self._robot.subsystems.set_battery_perc(battery_percentage)
 
     def handle_high_res_capture(self):
         self._camera_handler.transmit_camera_view(CameraViewTransmitHandler.BUCKET_IMAGES_ONCOMMAND, "high", "rgb")
