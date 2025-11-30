@@ -116,13 +116,16 @@ class YamcsTMTC:
             self._intervals_handler.add_new_interval(name=IntervalName.OBC_STATE.value, seconds=set_to_idle_after, is_repeating=False, execute_immediately=False,
                                                  function=self._robot.subsystems.set_obc_state, f_args=[ObcState.IDLE])
 
-    def _handle_solar_panel(self, new_state:SolarPanelState):
-        if new_state == SolarPanelState.STOWED:
-            self._robot.subsystems.stow_solar()
-        elif new_state == SolarPanelState.DEPLOYED:
-            self._robot.subsystems.deploy_solar()
+    def _handle_solar_panel(self, command:str):
+        if command == "DEPLOY":
+            self._robot.subsystems.set_solar_panel_state(SolarPanelState.DEPLOYED)
+            self._robot.deploy_solar_panel()
+        elif command == "STOW":
+            self._robot.subsystems.set_solar_panel_state(SolarPanelState.STOWED)
+            self._robot.stow_solar_panel()
         else:
-            print("New state for solar panel is unknown:", new_state)
+            print("Command for solar panel is unknown:", command)
+            return
 
     def _handle_electronics_on_off(self, electronics:str, new_state:PowerState):
         if new_state not in [PowerState.ON.value, PowerState.OFF.value]:

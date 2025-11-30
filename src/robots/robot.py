@@ -86,6 +86,7 @@ class RobotManager:
                     robot_parameter.dimensions,
                     robot_parameter.turn_speed_coef,
                     robot_parameter.pos_relative_to_prim,
+                    robot_parameter.solar_panel_joint,
                 )
                 self.add_RRG(
                     robot_parameter.robot_name,
@@ -121,6 +122,7 @@ class RobotManager:
                     robot_parameter.dimensions,
                     robot_parameter.turn_speed_coef,
                     robot_parameter.pos_relative_to_prim,
+                    robot_parameter.solar_panel_joint,
                 )
                 self.add_RRG(
                     robot_parameter.robot_name,
@@ -142,6 +144,7 @@ class RobotManager:
         dimensions:dict={},
         turn_speed_coef:float=1,
         pos_relative_to_prim:str="",
+        solar_panel_joint:str="",
     ) -> None:
         """
         Add a robot to the scene.
@@ -175,6 +178,7 @@ class RobotManager:
                     dimensions=dimensions,
                     turn_speed_coef=turn_speed_coef,
                     pos_relative_to_prim=pos_relative_to_prim,
+                    solar_panel_joint=solar_panel_joint,
                 )
                 self.robots[robot_name].load(p, q)
                 self.num_robots += 1
@@ -265,6 +269,7 @@ class Robot:
         dimensions:dict = {},
         turn_speed_coef:float=1,
         pos_relative_to_prim:str = "",
+        solar_panel_joint:str = "",
 
     ) -> None:
         """
@@ -296,6 +301,8 @@ class Robot:
         self.subsystems = RobotSubsystemsManager(pos_relative_to_prim)
         self._imu_sensor_interface = _sensor.acquire_imu_sensor_interface()
         self._imu_sensor_path:str = imu_sensor_path
+        self._solar_panel_joint = solar_panel_joint
+        self._solar_panel_dof = None
 
     def get_root_rigid_body_path(self) -> None:
         """
@@ -501,6 +508,19 @@ class Robot:
             for joint_name in self._wheel_joint_names[rover_side]:
                 dof = self.dc.find_articulation_dof(art, joint_name)
                 self._dofs[rover_side].append(dof)
+
+    def _init_solar_panel_dof(self):
+        if self._solar_panel_dof == None and self._solar_panel_joint != "":
+            art = self._get_art()
+            self._solar_panel_dof = self.dc.find_articulation_dof(art, self._solar_panel_joint)
+
+    def deploy_solar_panel(self):
+        self._init_solar_panel_dof()
+        self.dc.set_dof_position_target(self._solar_panel_dof, math.radians(0))
+
+    def stow_solar_panel(self):
+        self._init_solar_panel_dof()
+        self.dc.set_dof_position_target(self._solar_panel_dof, math.radians(-80))
 
 
 class RobotRigidGroup:

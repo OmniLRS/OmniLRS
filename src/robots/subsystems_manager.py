@@ -154,11 +154,8 @@ class RobotSubsystemsManager:
     def get_electronics_states(self):
         return self._electronics_power_state
 
-    def deploy_solar(self):
-        self._solar_panel_state = SolarPanelState.DEPLOYED
-
-    def stow_solar(self):
-        self._solar_panel_state = SolarPanelState.STOWED
+    def set_solar_panel_state(self, state:SolarPanelState):
+        self._solar_panel_state = state
 
     def get_solar_state(self):
         return self._solar_panel_state

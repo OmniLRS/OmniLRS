@@ -31,6 +31,7 @@ class RobotParameters:
     imu_sensor_path: str = field(default_factory=str)
     dimensions: dict = field(default_factory=dict)
     turn_speed_coef: float = field(default_factory=float)
+    solar_panel_joint: str = field(default_factory=str)
 
     def __post_init__(self):
         self.usd_path = os.path.join(os.getcwd(), self.usd_path)
