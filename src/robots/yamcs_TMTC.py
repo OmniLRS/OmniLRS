@@ -20,7 +20,6 @@ class IntervalName(Enum):
     # use for intervals that are repeatedly created or removed
     CAMERA_STREAMING = "camera_streaming"
     STOP_ROBOT = "stop_robot"
-    CAMERA_STREAMING_STATE = "camera_streaming_state"
     OBC_STATE = "obc_state"
 
 class YamcsTMTC:
@@ -176,9 +175,8 @@ class YamcsTMTC:
         self._intervals_handler.add_new_interval(name=IntervalName.CAMERA_STREAMING.value, seconds=self._yamcs_conf["intervals"]["camera_streaming"], is_repeating=True, execute_immediately=True,
                                                  function=self._camera_handler.transmit_camera_view, f_args=(CameraViewTransmitHandler.BUCKET_IMAGES_STREAMING, "low"))
         self._is_camera_streaming_on = True
-        # TODO add this when parameter path fixed
-        # self._intervals_handler.add_new_interval(name=IntervalName.CAMERA_STREAMING_STATE.value, seconds=self._yamcs_conf["intervals"]["robot_stats"], is_repeating=True, execute_immediately=True,
-        #                                          function=self._transmit_camera_streaming_state)
+        self._intervals_handler.add_new_interval(name="camera streaming state", seconds=self._yamcs_conf["intervals"]["robot_stats"], is_repeating=True, execute_immediately=True,
+                                                 function=self._transmit_camera_streaming_state)
         self._intervals_handler.add_new_interval(name="GO_NOGO", seconds=self._yamcs_conf["intervals"]["robot_stats"], is_repeating=True, execute_immediately=True,
                                                  function=self._transmit_go_nogo)
         self._intervals_handler.add_new_interval(name="IMU readings", seconds=self._yamcs_conf["intervals"]["robot_stats"], is_repeating=True, execute_immediately=True,
@@ -243,9 +241,9 @@ class YamcsTMTC:
         self._yamcs_processor.set_parameter_value(self._yamcs_conf["parameters"]["imu_orientation"], orientation)
         
     def _transmit_camera_streaming_state(self):
-        #TODO update this depending on the param format
         is_camera_streaming = self._intervals_handler.does_exist(IntervalName.CAMERA_STREAMING.value)
-        self._yamcs_processor.set_parameter_value(self._yamcs_conf["parameters"]["camera_streaming_state"], is_camera_streaming)
+        state = PowerState.ON if is_camera_streaming else PowerState.OFF
+        self._yamcs_processor.set_parameter_value(self._yamcs_conf["parameters"]["camera_streaming_state"], state)
 
     def _transmit_go_nogo(self):
         go_nogo_state =  self._robot.subsystems.get_go_nogo_state().value
