@@ -13,8 +13,8 @@ import numpy as np
 DEVICE_SETTINGS: Dict[str, Tuple[float, float]] = {
 	"current_draw_obc": (0.0, 7.5),
 	"current_draw_motor_controller": (0.0, 2.0),
-	"current_draw_neutron_spectrometer": (0.0, 10.0),
-	"current_draw_apxs": (0.0, 10.0),
+	"current_draw_neutron_spectrometer": (0.0, 9),
+	"current_draw_apxs": (0.0, 9),
 	"current_draw_camera": (0.0, 5.0),
 	"current_draw_radio": (0.0, 5.0),
 	"current_draw_eps": (0.0, 1.0),
@@ -40,6 +40,11 @@ BATTERY_CAPACITY_WH = 60.0  # Watt-hours
 SOLAR_PANEL_MAX_POWER = 30.0  # Watts
 MOTOR_COUNT = 6
 MOTOR_POWER_W = 10.0
+REGULATED_BUS_VOLTAGE = 5.0  # Volts
+DC_DC_EFFICIENCY = 0.95  # 95% efficient battery -> 5V conversion
+DEVICE_HEALTH_NOMINAL = "NOMINAL"
+DEVICE_HEALTH_FAULT = "FAULT"
+DEVICE_FAULT_EXTRA_POWER = 2.5  # Watts added when device is faulted
 
 def _clamp(value: float, lower: float, upper: float) -> float:
 	return max(lower, min(upper, value))
@@ -64,6 +69,7 @@ class PowerModel:
 		default_factory=lambda: dict(DEVICE_SETTINGS)
 	)
 	device_states: Dict[str, bool] = field(default_factory=dict)
+	device_health: Dict[str, str] = field(default_factory=dict)
 
 	device_current_noise_std: float = 0.02
 	battery_percentage_noise_std: float = 0.5
@@ -78,6 +84,7 @@ class PowerModel:
 	def __post_init__(self) -> None:
 		for name in self.device_power_settings:
 			self.device_states.setdefault(name, False)
+			self.device_health.setdefault(name, DEVICE_HEALTH_NOMINAL)
 		self.battery_charge_wh = _clamp(self.battery_charge_wh, 0.0, self.battery_capacity_wh)
 		self._update_battery_voltage()
 
@@ -89,6 +96,14 @@ class PowerModel:
 	def set_device_states(self, states: Mapping[str, bool]) -> None:
 		for name, state in states.items():
 			self.set_device_state(name, state)
+
+	def set_device_health(self, health_status: Mapping[str, str]) -> None:
+		for name, status in health_status.items():
+			if name not in self.device_power_settings:
+				raise KeyError(f"Unknown device '{name}'")
+			if status not in (DEVICE_HEALTH_NOMINAL, DEVICE_HEALTH_FAULT):
+				raise ValueError(f"Invalid health '{status}' for device '{name}'")
+			self.device_health[name] = status
 
 	def set_rover_position(self, position: Tuple[float, float, float]) -> None:
 		self.rover_position = position
@@ -113,12 +128,18 @@ class PowerModel:
 
 	def _device_power(self, name: str) -> float:
 		lo, hi = self.device_power_settings[name]
-		return hi if self.device_states[name] else lo
+		if self.device_states[name] == False:
+			return lo
+		elif self.device_health.get(name, DEVICE_HEALTH_NOMINAL) == DEVICE_HEALTH_FAULT:
+			return hi + DEVICE_FAULT_EXTRA_POWER
+		else:
+			return hi
 
 	def total_load_power(self) -> float:
-		device_power = sum(self._device_power(name) for name in self.device_states)
+		regulated_load = sum(self._device_power(name) for name in self.device_states)
+		battery_power_for_regulated = regulated_load / DC_DC_EFFICIENCY
 		motor_power = self.motor_power_w * self.motor_count if self.motor_state else 0.0
-		return device_power + motor_power
+		return battery_power_for_regulated + motor_power
 
 	def step(self, dt: float) -> None:
 		"""Advance the battery state by *dt* seconds."""
@@ -183,12 +204,10 @@ class PowerModel:
 
 	def measured_device_currents(self) -> Dict[str, float]:
 		"""Return measured device currents (A) derived from power draw."""
-
-		voltage = max(self.battery_voltage_v, 1e-3)
-		currents = {
-			name: self._device_power(name) / voltage
-			for name in self.device_states
-		}
+		currents = {}
+		for name in self.device_states:
+			device_power_w = self._device_power(name)
+			currents[name] = device_power_w / REGULATED_BUS_VOLTAGE
 		currents = {
 			name: max(0.0, value + random.gauss(0.0, self.device_current_noise_std))
 			for name, value in currents.items()
@@ -205,9 +224,8 @@ class PowerModel:
 		]
 
 	def measured_solar_input_current(self) -> float:
-		power = max(0.0, self.solar_input_power)
 		power = _clamp(
-			power + random.gauss(0.0, self.solar_input_noise_std),
+			self.solar_input_power + random.gauss(0.0, self.solar_input_noise_std),
 			0.0,
 			self.solar_panel_max_power,
 		)
@@ -252,7 +270,9 @@ def run_power_profile_test(
 	for label, value in _extract_current_samples(status).items():
 		current_series.setdefault(label, []).append(value)
 	model.set_rover_position((0.0, 0.0, 0.0))
-	model.set_solar_panel_state("deployed")
+	model.set_solar_panel_state("stowed")
+	devices_health = {name: DEVICE_HEALTH_NOMINAL for name in model.device_states}
+	model.set_device_health(devices_health)
 
 	def simulate(
 			duration: float,
@@ -266,10 +286,14 @@ def run_power_profile_test(
 
 		for _ in range(steps):
 			# set inputs
-			model.set_motor_state(devices_on)
-			model.set_device_states(active_states)
-			model.set_sun_position(sun_position)
 			model.set_rover_position(tuple(rover_pos))
+			model.set_motor_state(devices_on)
+			model.set_sun_position(sun_position)
+			model.set_device_states(active_states)
+			if _ > steps // 2:
+				devices_health["current_draw_motor_controller"] = DEVICE_HEALTH_FAULT
+				model.set_device_health(devices_health)
+				model.set_solar_panel_state("deployed")
 
 			# perform computation
 			model.step(dt)
@@ -292,10 +316,10 @@ def run_power_profile_test(
 					series.append(series[-1] if series else 0.0)
 			rover_pos = rover_pos + np.asarray(rover_delta, dtype=float)
 
-	# phase 1 all devices on, sun above
-	simulate(on_duration, True, (0.0, -10.0, 0.0), (0.02, 0.0, 0.0))
-	# phase 2 all devices off, sun above
-	simulate(off_duration, False, (0.0, -10.0, 0.0), (0.02, 0.0, 0.0))
+	# phase 1 all devices on, sun low horizon, rover moving forward
+	simulate(on_duration, True, (0.0, -1000.0, 10.0), (0.5, 0.0, 0.0))
+	# phase 2 all devices off, sun low horizon, rover moving forward
+	simulate(off_duration, False, (0.0, -1000.0, 10.0), (0.5, 0.0, 0.0))
 	return times, percentages, voltages, solar_currents, current_series
 
 def _plot_battery_profile(

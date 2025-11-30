@@ -11,16 +11,16 @@ lunaryard_settings:
   lab_width: 40.0
   resolution: 0.02
   coordinates:
-    latitude: 46.8
-    longitude: -26.3
+    latitude: -84.8
+    longitude: 29.2
 
 stellar_engine_settings:
   start_date:
-    year: 2024
-    month: 5
-    day: 1
-    hour: 12
-    minute: 50
+    year: 2025
+    month: 3
+    day: 7
+    hour: 1
+    minute: 01
   time_scale: 1
   update_interval: 600
 
@@ -160,7 +160,7 @@ terrain_manager:
     is_lab: True
 
   root_path: /Lunaryard
-  texture_path: /Lunaryard/Looks/Basalt
+  texture_path: /Lunaryard/Looks/LunarRegolith8k
   dems_path: Terrains/Lunaryard
   mesh_position: [0, 0, 0]
   mesh_orientation: [0, 0, 0, 1] # Quaternion x,y,z,w
