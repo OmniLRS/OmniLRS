@@ -203,6 +203,7 @@ robots_settings:
       domain_id: 0
       target_links: ["front_left_wheel_link", "front_right_wheel_link", "rear_left_wheel_link", "rear_right_wheel_link"]
       base_link: "base_link" # core link used to determine the position of the robot
+      pos_relative_to_prim: "/StaticAssets/lander"
       wheel_joints:
         left: ["front_left_wheel", "rear_left_wheel"]
         right: ["front_right_wheel", "rear_right_wheel"]
