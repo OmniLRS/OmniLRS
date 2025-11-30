@@ -260,6 +260,7 @@ robots_settings:
       go_nogo: "/Rover/system/go_nogo_command"
       capture_apxs: "/Rover/payload/payload_capture_apxs"
       admin_batter_percentage: "/Admin/admin_set_battery_percentage"
+      admin_water_detection: "/Admin/admin_water_detection"
 
 static_assets_settings:
   root_path: "/StaticAssets"

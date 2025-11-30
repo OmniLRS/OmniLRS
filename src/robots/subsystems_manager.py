@@ -7,6 +7,7 @@ from src.robots.PowerModel import PowerModel
 import math
 from omni.isaac.core.utils.prims import get_prim_at_path
 from isaacsim.core.utils.xforms import get_world_pose
+import random
 
 class PowerState(StrEnum):
     OFF = "OFF",
@@ -46,10 +47,10 @@ class RobotSubsystemsManager:
     def __init__(self):
         self._electronics_power_state = {
             Electronics.CAMERA.value: PowerState.OFF,
-            Electronics.MOTOR_CONTROLLER.value: PowerState.OFF,
+            Electronics.MOTOR_CONTROLLER.value: PowerState.ON,
             Electronics.NEUTRON_SPECTROMETER.value: PowerState.OFF,
             Electronics.APXS.value: PowerState.OFF,
-            Electronics.RADIO.value: PowerState.OFF,
+            Electronics.RADIO.value: PowerState.ON,
         }
         self._solar_panel_state = SolarPanelState.STOWED
         self._go_nogo_state = GoNogoState.NOGO
@@ -169,7 +170,11 @@ class RobotSubsystemsManager:
         self._obc_state = state
 
     def get_neutron_count(self, interval_s):
-        return self._neutron_spectrometer.get_next_count(interval_s)
+        # return self._neutron_spectrometer.get_next_count(interval_s)
+        return self._neutron_spectrometer.get_next_count()
+    
+    def set_is_near_water(self, is_near):
+        self._neutron_spectrometer.is_near_water = is_near
 
 class NeutronSpectrometerSimulator():
     
@@ -181,12 +186,23 @@ class NeutronSpectrometerSimulator():
             "period": 20,
             "offset": 0,
         }
+        self.is_near_water:bool = False
+        self._std_neutron = 10
 
-    def get_next_count(self, interval_s):
-        generated_value = self._generate_sine_value(self._t, self._neutron_gen_values["min"], self._neutron_gen_values["max"], self._neutron_gen_values["period"], self._neutron_gen_values["offset"])
-        self._t += interval_s
+    #NOTE left this old implementation until confirmed the new implementation is correct
+    # def get_next_count(self, interval_s):
+    #     generated_value = self._generate_sine_value(self._t, self._neutron_gen_values["min"], self._neutron_gen_values["max"], self._neutron_gen_values["period"], self._neutron_gen_values["offset"])
+    #     self._t += interval_s
         
-        return int(generated_value)
+    #     return int(generated_value)
+    
+    def get_next_count(self):
+        if self.is_near_water:
+            count =  max(0, 50 + random.gauss(0.0, self._std_neutron))
+        else:
+            count = max(0, 200 + random.gauss(0.0, self._std_neutron))
+
+        return int(count)
     
     def _generate_sine_value(self, t, min_val, max_val, period, offset):
         """Generate a sine wave value at time t with given parameters."""

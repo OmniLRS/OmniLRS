@@ -83,6 +83,8 @@ class YamcsTMTC:
             self._payload_handler._snap_apxs(self._robot.subsystems.get_electronics_state(Electronics.APXS.value))
         elif name == self._yamcs_conf["commands"]["admin_batter_percentage"]:
             self._handle_batter_perc_change(arguments["battery_percentage"])
+        elif name == self._yamcs_conf["commands"]["admin_water_detection"]:
+            self._robot.subsystems.set_is_near_water(arguments["trigger_water_detection"])
         # here add reactions to other commands
         else:
             print("Unknown command:", name)
@@ -187,7 +189,6 @@ class YamcsTMTC:
         #NOTE Not starting camera streaming automatically since now Camera has to be turned ON / OFF
         # self._intervals_handler.add_new_interval(name=IntervalName.CAMERA_STREAMING.value, seconds=self._yamcs_conf["intervals"]["camera_streaming"], is_repeating=True, execute_immediately=True,
         #                                          function=self._camera_handler.transmit_camera_view, f_args=(CameraViewTransmitHandler.BUCKET_IMAGES_STREAMING, "low"))
-        self._is_camera_streaming_on = True
         self._intervals_handler.add_new_interval(name="camera streaming state", seconds=self._yamcs_conf["intervals"]["robot_stats"], is_repeating=True, execute_immediately=True,
                                                  function=self._transmit_camera_streaming_state)
         self._intervals_handler.add_new_interval(name="GO_NOGO", seconds=self._yamcs_conf["intervals"]["robot_stats"], is_repeating=True, execute_immediately=True,
@@ -401,10 +402,6 @@ class CameraViewTransmitHandler:
     
     def _snap_camera_view_depth(self, resolution:str) -> Image:
         frame = self._robot.get_depth_camera_view(resolution)
-        #NOTE this gives non-human readable png, while the below uncommented code transfers this into grayscale png
-        # camera_view = Image.fromarray(frame, "L")
-        # return camera_view
-    
         depth = np.nan_to_num(frame, nan=0.0, posinf=0.0, neginf=0.0)
 
         valid = depth > 0
