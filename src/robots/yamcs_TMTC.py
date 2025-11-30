@@ -2,7 +2,7 @@ __author__ = "Aleksa Stanivuk"
 __status__ = "development"
 
 from src.environments.utils import transform_orientation_into_xyz
-from src.robots.subsystems_manager import GoNogoState, ObcState, PowerState, SolarPanelState
+from src.robots.subsystems_manager import Electronics, GoNogoState, ObcState, PowerState, SolarPanelState
 from yamcs.client import YamcsClient, CommandHistory
 import time
 import math
@@ -73,7 +73,7 @@ class YamcsTMTC:
         elif name == self._yamcs_conf["commands"]["camera_capture_depth"]:
             self.handle_depth_capture()
         elif name == self._yamcs_conf["commands"]["power_electronics"]:
-            self._handle_electronics(arguments["subsystem_id"], arguments["power_state"])
+            self._handle_electronics_on_off(arguments["subsystem_id"], arguments["power_state"])
         elif name == self._yamcs_conf["commands"]["solar_panel"]:
             self._handle_solar_panel(arguments["deployment"])
         elif name == self._yamcs_conf["commands"]["go_nogo"]:
@@ -90,12 +90,14 @@ class YamcsTMTC:
         self._robot.subsystems.set_battery_perc(battery_percentage)
 
     def handle_high_res_capture(self):
-        self._camera_handler.transmit_camera_view(CameraViewTransmitHandler.BUCKET_IMAGES_ONCOMMAND, "high", "rgb")
-        self._set_obc_state(ObcState.CAMERA, 10)
+        if (self._robot.subsystems.get_electronics_state(Electronics.CAMERA.value) == PowerState.ON):
+            self._camera_handler.transmit_camera_view(CameraViewTransmitHandler.BUCKET_IMAGES_ONCOMMAND, "high", "rgb")
+            self._set_obc_state(ObcState.CAMERA, 10)
 
     def handle_depth_capture(self):
-        self._camera_handler.transmit_camera_view(CameraViewTransmitHandler.BUCKET_IMAGES_DEPTH, "high", "depth")
-        self._set_obc_state(ObcState.CAMERA, 10)
+        if (self._robot.subsystems.get_electronics_state(Electronics.CAMERA.value) == PowerState.ON):
+            self._camera_handler.transmit_camera_view(CameraViewTransmitHandler.BUCKET_IMAGES_DEPTH, "high", "depth")
+            self._set_obc_state(ObcState.CAMERA, 10)
 
     def _set_obc_state(self, state:ObcState, set_to_idle_after=0):
         if self._intervals_handler.does_exist(IntervalName.OBC_STATE.value):
@@ -115,13 +117,16 @@ class YamcsTMTC:
         else:
             print("New state for solar panel is unknown:", new_state)
 
-    def _handle_electronics(self, electronics:str, new_state:PowerState):
+    def _handle_electronics_on_off(self, electronics:str, new_state:PowerState):
         if new_state not in [PowerState.ON.value, PowerState.OFF.value]:
             print("New decision for PowerState of electronics is unknown:", new_state)
             return
         
         new_state = PowerState[new_state]
         self._robot.subsystems.set_electronics_state(electronics, new_state)
+
+        if electronics == Electronics.CAMERA.value:
+            self._set_activity_of_camera_streaming("START") if new_state == PowerState.ON else self._set_activity_of_camera_streaming("STOP")
 
     def _handle_go_nogo(self, decision:str):
         if decision not in [GoNogoState.GO.name, GoNogoState.NOGO.name]:
@@ -172,8 +177,9 @@ class YamcsTMTC:
     def start_streaming_data(self):
         self._intervals_handler.add_new_interval(name="Pose of base link", seconds=self._yamcs_conf["intervals"]["robot_stats"], is_repeating=True, execute_immediately=True,
                                                  function=self._transmit_pose_of_base_link)
-        self._intervals_handler.add_new_interval(name=IntervalName.CAMERA_STREAMING.value, seconds=self._yamcs_conf["intervals"]["camera_streaming"], is_repeating=True, execute_immediately=True,
-                                                 function=self._camera_handler.transmit_camera_view, f_args=(CameraViewTransmitHandler.BUCKET_IMAGES_STREAMING, "low"))
+        #NOTE Not starting camera streaming automatically since now Camera has to be turned ON / OFF
+        # self._intervals_handler.add_new_interval(name=IntervalName.CAMERA_STREAMING.value, seconds=self._yamcs_conf["intervals"]["camera_streaming"], is_repeating=True, execute_immediately=True,
+        #                                          function=self._camera_handler.transmit_camera_view, f_args=(CameraViewTransmitHandler.BUCKET_IMAGES_STREAMING, "low"))
         self._is_camera_streaming_on = True
         self._intervals_handler.add_new_interval(name="camera streaming state", seconds=self._yamcs_conf["intervals"]["robot_stats"], is_repeating=True, execute_immediately=True,
                                                  function=self._transmit_camera_streaming_state)
@@ -263,7 +269,7 @@ class YamcsTMTC:
             self._intervals_handler.remove_interval(IntervalName.CAMERA_STREAMING.value)
         elif action == "START":
             if not self._intervals_handler.does_exist(IntervalName.CAMERA_STREAMING.value):
-                self._intervals_handler.add_new_interval(name=IntervalName.CAMERA_STREAMING.value, seconds=self._yamcs_conf["intervals"]["camera_streaming"], is_repeating=True, execute_immediately=True,
+                self._intervals_handler.add_new_interval(name=IntervalName.CAMERA_STREAMING.value, seconds=self._yamcs_conf["intervals"]["camera_streaming"], is_repeating=True, execute_immediately=False,
                                                  function=self._camera_handler.transmit_camera_view, f_args=(CameraViewTransmitHandler.BUCKET_IMAGES_STREAMING, "low"))
         else:
             print("Unknown action:", action)

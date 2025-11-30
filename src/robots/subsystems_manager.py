@@ -30,6 +30,13 @@ class ObcState(Enum):
     SAFE = 5
     ERROR = 6
 
+class Electronics(Enum):
+    CAMERA = "CAMERA"
+    MOTOR_CONTROLLER = "MOTOR_CONTROLLER"
+    NEUTRON_SPECTROMETER = "NEUTRON_SPECTROMETER"
+    APXS = "APXS"
+    RADIO = "RADIO"
+
 class RobotSubsystemsManager:
     SUN_POSITION = (10.0, 5.0, 7.5)
     LANDER_POSITION = (0.0, 0.0, 0.0)
@@ -38,11 +45,11 @@ class RobotSubsystemsManager:
 
     def __init__(self):
         self._electronics_power_state = {
-            "CAMERA": PowerState.OFF,
-            "MOTOR_CONTROLLER": PowerState.OFF,
-            "NEUTRON_SPECTROMETER": PowerState.OFF,
-            "APXS": PowerState.OFF,
-            "RADIO": PowerState.OFF,
+            Electronics.CAMERA.value: PowerState.OFF,
+            Electronics.MOTOR_CONTROLLER.value: PowerState.OFF,
+            Electronics.NEUTRON_SPECTROMETER.value: PowerState.OFF,
+            Electronics.APXS.value: PowerState.OFF,
+            Electronics.RADIO.value: PowerState.OFF,
         }
         self._solar_panel_state = SolarPanelState.STOWED
         self._go_nogo_state = GoNogoState.NOGO
@@ -72,11 +79,11 @@ class RobotSubsystemsManager:
     def map_into_currents(self):
         mapped = {
             "current_draw_obc": True,
-            "current_draw_motor_controller": self.is_turned_on("MOTOR_CONTROLLER"),
-            "current_draw_neutron_spectrometer": self.is_turned_on("NEUTRON_SPECTROMETER"),
-            "current_draw_apxs": self.is_turned_on("APXS"),
-            "current_draw_camera": self.is_turned_on("CAMERA"),
-            "current_draw_radio": self.is_turned_on("RADIO"),
+            "current_draw_motor_controller": self.is_turned_on(Electronics.MOTOR_CONTROLLER.value),
+            "current_draw_neutron_spectrometer": self.is_turned_on(Electronics.NEUTRON_SPECTROMETER.value),
+            "current_draw_apxs": self.is_turned_on(Electronics.APXS.value),
+            "current_draw_camera": self.is_turned_on(Electronics.CAMERA.value),
+            "current_draw_radio": self.is_turned_on(Electronics.RADIO.value),
             "current_draw_eps": True,
         }
 
