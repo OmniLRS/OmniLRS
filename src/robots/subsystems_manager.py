@@ -66,11 +66,15 @@ class RobotSubsystemsManager:
             self._sun_pos, rot = get_world_pose("/" + get_moon_env_name() + "/Sun/sun") # self.SUN_POSITION
         else: 
             self._sun_pos = self.SUN_POSITION
+        #NOTE QUESTION: Should lander position be updated? will its position ever change during the simulation?
         self._lander_pos, rot = get_world_pose(self.LANDER_PATH) #  self.LANDER_POSITION
         print("sun", self._sun_pos)
         print("lander", self._lander_pos)
 
-    def update_positions_before(func):
+    def get_lander_position(self):
+        return self._lander_pos
+
+    def _update_positions_before(func):
         # definition of a decorator
         def wrapper(self, *args, **kwargs):
             self._update_positions()
@@ -98,7 +102,7 @@ class RobotSubsystemsManager:
         
         return False
 
-    @update_positions_before
+    @_update_positions_before
     def calculate_rssi(self, robot_position):
         self._radio.rover_position = robot_position
         self._radio.lander_position = self._lander_pos
@@ -106,7 +110,7 @@ class RobotSubsystemsManager:
 
         return rssi
     
-    @update_positions_before
+    @_update_positions_before
     def calculate_temperature(self, robot_position, interval_s):
         self._thermal.rover_position = robot_position
         self._thermal.sun_position = self._sun_pos
@@ -115,7 +119,7 @@ class RobotSubsystemsManager:
 
         return t
     
-    @update_positions_before
+    @_update_positions_before
     def calculate_power_status(self, robot_position, interval_s, obc_state):
         self._power.set_device_states(self.map_into_currents())
         self._power.set_sun_position(self._sun_pos)

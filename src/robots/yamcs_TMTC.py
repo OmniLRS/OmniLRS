@@ -109,6 +109,7 @@ class YamcsTMTC:
         self._robot.subsystems.set_obc_state(state)
 
         if set_to_idle_after != 0:
+            # for states that should switch back to idle after a duration
             self._intervals_handler.add_new_interval(name=IntervalName.OBC_STATE.value, seconds=set_to_idle_after, is_repeating=False, execute_immediately=False,
                                                  function=self._robot.subsystems.set_obc_state, f_args=[ObcState.IDLE])
 
@@ -266,6 +267,8 @@ class YamcsTMTC:
 
     def _transmit_pose_of_base_link(self):
         position, orientation = self._robots_RG[str(self._robot_name)].get_pose_of_base_link()
+        lander_pos = self._robot.subsystems.get_lander_position()
+        position = position - lander_pos
         # euler_orient = transform_orientation_into_xyz(orientation)
         position = position.tolist()
         orientation = orientation.tolist()
