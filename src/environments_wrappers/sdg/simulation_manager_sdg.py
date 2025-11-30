@@ -11,7 +11,7 @@ from src.environments_wrappers.sdg.lunalab_sdg import SDG_Lunalab
 from src.configurations.auto_labeling_confs import AutoLabelingConf, CameraConf
 from src.labeling.auto_label import AutonomousLabeling
 
-from omni.isaac.core import World
+from isaacsim.core.api.world import World
 from typing import Union
 import omni
 
@@ -62,6 +62,9 @@ class SDG_SimulationManager:
         self.AL = AutonomousLabeling(self.generation_settings)
         self.AL.load()
         self.count = 0
+        # Randomize once to setup the camera mixer
+        self.LC.randomize()
+
 
     def run_simulation(self) -> None:
         """

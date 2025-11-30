@@ -1,0 +1,268 @@
+name: Lunaryard
+seed: 42
+# physics_dt: 0.01667 # 60 Hz
+physics_dt: 0.0333 # 30 Hz
+rendering_dt: 0.0333 # 30 Hz
+enforce_realtime: true
+
+# Stage settings, only edit if you know what you are doing.
+lunaryard_settings:
+  lab_length: 40.0
+  lab_width: 40.0
+  resolution: 0.02
+  coordinates:
+    latitude: -84.8
+    longitude: 29.2
+
+stellar_engine_settings:
+  start_date:
+    year: 2025
+    month: 3
+    day: 7
+    hour: 1
+    minute: 01
+  time_scale: 1
+  update_interval: 600
+
+sun_settings:
+  intensity: 1750.0
+  angle: 0.53
+  diffuse_multiplier: 1.0
+  specular_multiplier: 1.0
+  color: [1.0, 1.0, 1.0]
+  temperature: 6500.0
+  azimuth: 180.0
+  elevation: 45.0
+
+# Rocks sampling parameters.
+rocks_settings:
+  enable: False
+  instancers_path: /Lunaryard/Rocks
+  rocks_settings:
+    medium_rocks:
+      seed: ${....seed}
+      collections: ["apollo_rocks"] # Where to get the rock models from.
+      use_point_instancer: True # If True, the rocks will be instanced using the PointInstancer.
+                                # If False, it will use the custom instancer that works for SDG.
+      requests: # A list of request used to distribute the rocks.
+        req_pos_xy: # The name does not matter.
+          attribute: Position
+          axes: ["x", "y"]
+          layer:
+            name: Image
+            # data: Is loaded automatically from the DEM.
+            mpp_resolution: ${.......lunaryard_settings.resolution}
+            output_space: 2
+          sampler:
+            name: ThomasCluster
+            randomization_space: 2
+            lambda_parent: 0.15
+            lambda_daughter: 20
+            sigma: 1.5
+            seed: ${.......seed}
+
+        req_pos_z:
+          attribute: Position
+          axes: ["z"]
+          layer:
+            name: Image
+            output_space: 1
+          sampler:
+            name: Image
+            randomization_space: 1
+            # resolution: Resolution is infered automatically from the loaded DEM.
+            # data: Is loaded automatically from the DEM.
+            mpp_resolution: ${.......lunaryard_settings.resolution}
+
+        req_random_z_rot:
+          attribute: Orientation
+          axes: ["x", "y", "z", "w"]
+          layer:
+            name: RollPitchYaw
+            rmax: 0
+            rmin: 0
+            pmax: 0
+            pmin: 0
+            ymax: 6.28318530718
+            ymin: 0
+          sampler:
+            name: Uniform
+            randomization_space: 3
+            seed: ${.......seed}
+
+        req_scale:
+          attribute: Scale
+          axes: ["xyz"]
+          layer:
+            name: Line
+            xmin: 1.0
+            xmax: 2.0
+          sampler:
+            name: Uniform
+            randomization_space: 1
+            seed: ${.......seed}
+
+terrain_manager:
+  moon_yard:
+    crater_generator:
+      profiles_path: assets/Terrains/crater_spline_profiles.pkl
+      min_xy_ratio: 0.85
+      max_xy_ratio: 1.0
+      resolution: ${....lunaryard_settings.resolution}
+      pad_size: 500
+      random_rotation: True
+      z_scale: 0.2
+      seed: ${....seed}
+
+    crater_distribution:
+      x_size: ${....lunaryard_settings.lab_length}
+      y_size: ${....lunaryard_settings.lab_width}
+      densities: [0.025, 0.05, 0.5]
+      radius: [[1.5,2.5],[0.75,1.5],[0.25,0.5]]
+      num_repeat: 0
+      seed: ${....seed}
+
+    base_terrain_generator:
+      x_size: ${....lunaryard_settings.lab_length}
+      y_size: ${....lunaryard_settings.lab_width}
+      resolution: ${....lunaryard_settings.resolution}
+      max_elevation: 0.5
+      min_elevation: -0.5
+      z_scale: 0.8
+      seed: ${....seed}
+    
+    deformation_engine:
+      enable: False
+      delay: 2.0
+      terrain_width: ${....lunaryard_settings.lab_width}
+      terrain_height: ${....lunaryard_settings.lab_length}
+      terrain_resolution: ${....lunaryard_settings.resolution}
+      footprint:
+        width: 0.25
+        height: 0.2
+      deform_constrain:
+        x_deform_offset: 0.0
+        y_deform_offset: 0.0
+        deform_decay_ratio: 0.01
+      boundary_distribution: 
+        distribution: trapezoidal
+        angle_of_repose: 1.047 #pi/3
+      depth_distribution:
+        distribution: sinusoidal
+        wave_frequency: 4.14 # num_grouser/pi
+      force_depth_regression:
+        amplitude_slope: 0.00006
+        amplitude_intercept: 0.008
+        mean_slope: -0.00046
+        mean_intercept: -0.0013
+
+    is_yard: False
+    is_lab: True
+
+  root_path: /Lunaryard
+  texture_path: /Lunaryard/Looks/LunarRegolith8k
+  dems_path: Terrains/Lunaryard
+  mesh_position: [0, 0, 0]
+  mesh_orientation: [0, 0, 0, 1] # Quaternion x,y,z,w
+  mesh_scale: [1, 1, 1]
+  sim_length: ${..lunaryard_settings.lab_length}
+  sim_width: ${..lunaryard_settings.lab_width}
+  resolution: ${..lunaryard_settings.resolution}
+
+robots_settings:
+  uses_nucleus: False
+  is_ROS2: True
+  max_robots: 5
+  robots_root: "/Robots"
+  parameters:
+    # -
+    #   robot_name: ex1
+    #   usd_path: assets/USD_Assets/robots/ex1.usd
+    #   pose:
+    #     position: [10.0, 10.0, 0.5]
+    #     orientation: [0, 0, 0, 1]
+    #   domain_id: 0
+    #   target_links: ["left_front_wheel_link", "left_rear_wheel_link", "right_front_wheel_link", "right_rear_wheel_link"]
+    
+    # -
+    #   robot_name: jackal
+    #   usd_path: assets/USD_Assets/robots/jackal.usd
+    #   pose:
+    #     position: [5.0, 5.0, 0.5]
+    #     orientation: [1, 0, 0, 0]
+    #   domain_id: 0
+    #   target_links: ["front_left_wheel_link", "front_right_wheel_link", "rear_left_wheel_link", "rear_right_wheel_link"]
+
+    -
+      robot_name: husky
+      usd_path: assets/USD_Assets/robots/nograph_husky.usd       
+      # usd_path: assets/USD_Assets/robots/ros2_husky_PhysX_vlp16_mono_depth_imu.usd 
+      pose:
+        position: [5.0, 5.0, 0.5]
+        orientation: [1, 0, 0, 0]
+      domain_id: 0
+      target_links: ["front_left_wheel_link", "front_right_wheel_link", "rear_left_wheel_link", "rear_right_wheel_link"]
+      base_link: "base_link" # core link used to determine the position of the robot
+      wheel_joints:
+        left: ["front_left_wheel", "rear_left_wheel"]
+        right: ["front_right_wheel", "rear_right_wheel"]
+      camera:
+        prim_path: "/Robots/husky/d455/RSD455/Camera_OmniVision_OV9782_Left"
+        resolutions: 
+          low: [320, 240]
+          high: [1440, 1080]
+  yamcs_tmtc:
+    enabled: True
+    address: "localhost:8090"
+    instance: "workshop"
+    processor: "realtime"
+    intervals:
+      robot_stats: 3
+      camera_streaming: 5
+    parameters:
+      pose_of_base_link: "/Rover/pose_ground_truth"
+    commands:
+      drive_straight: "/Rover/motor/drive_straight"
+      drive_turn: "/Rover/motor/drive_turn"
+      camera_capture_high: "/Rover/camera/camera_capture_high"
+      camera_streaming_on_off: "/Rover/camera/camera_streaming"
+      camera_capture_depth: "/Rover/camera/camera_capture_depth"
+
+static_assets_settings:
+  root_path: "/StaticAssets"
+  parameters:
+    - asset_name: rock1
+      usd_path: USD_Assets/rocks/lunalab_rocks/rock_1/rock1.usd
+      pose:
+        position: [5.0, 7.5, 0.0]
+        orientation: [1, 0, 0, 1]
+      collision: False
+
+    - asset_name: lander
+      usd_path: USD_Assets/common/lander/Vikram/Vikram.usd
+      pose:
+        position: [1.25, 2., 0.05]
+        orientation: [0.70711, 0. , 0., 0.70711]   # w/x/y/z
+      collision: False
+
+monitoring_cameras_settings:
+  root_path: "/MonitoringCameras"
+  camera_definitions:
+    - name: "corner"
+      pose:
+        position: [0.0, 0.0, 2.5]
+        orientation: [0.493, -0.302, -0.169, 0.796]
+      camera_params:
+        focal_length: 1.93
+        horizontal_aperture:  2.4
+        vertical_aperture: 1.8
+        fstop: 5.0
+        focus_distance: 10.0
+        clipping_range: [0.01, 1000000.0]
+      ros2:
+        enabled: False
+        topic: "/monitoring/corner"
+        frame_id: "corner_id"
+      type: "Rgb" # make sure to have correct naming - eg. Rgb ; Depth ; SemanticSegmentation ; InstanceSegmentation ; Normals
+      resolution: [1280, 720]  
+      # stream_frequency: 2.0 #  every 0.5s - in order to not overwhelm the network

@@ -29,20 +29,4 @@ echo "Installing Python packages for default Python"
 python3 -m pip --upgrade pip
 python3 -m pip install gdown black gdal==$version
 
-# Download the assets from Google Drive
-echo "Downloading assets from Google Drive"
-source ~/.bashrc
-gdown 1XuFlDRELPQmjJFLP1E54IOhRiFn5iM_7
-unzip -qq assets_v6.zip
-rm assets_v6.zip
-gdown 1sXrsT7ZdA3VslMREBtjo6-Ou1-v8-8dI
-unzip lunar_rocks.zip -d assets/USD_Assets/rocks
-rm lunar_rocks.zip
 
-# Download the DEMs of the lunar southpole and format them.
-echo "Downloading DEMs of the lunar southpole and formatting them"
-./scripts/get_dems.sh
-./scripts/extract_dems_override.sh
-# Get Ephemeris data
-echo "Getting Ephemeris data"
-./scripts/get_ephemeris_data.sh

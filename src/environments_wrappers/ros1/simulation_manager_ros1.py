@@ -8,7 +8,7 @@ __status__ = "development"
 
 from typing import Union
 
-from omni.isaac.core import World
+from isaacsim.core.api.world import World
 import omni
 
 from src.environments_wrappers.ros1.largescale_ros1 import ROS_LargeScaleManager
@@ -98,15 +98,22 @@ class ROS1_SimulationManager:
         # However, unlike ROS2, I have yet to find the limit of topics you can subscribe to.
         # Penny for your thoughts "Josh".
         self.ROSLabManager = ROS1_LMF(cfg)
-        self.terrain_manager_conf: TerrainManagerConf = cfg["environment"]["terrain_manager"]
-        self.render_deform_inv = self.terrain_manager_conf.moon_yard.deformation_engine.render_deform_inv
-        self.enable_deformation = self.terrain_manager_conf.moon_yard.deformation_engine.enable
+        if "terrain_manager" in cfg["environment"].keys():
+            self.terrain_manager_conf: TerrainManagerConf = cfg["environment"]["terrain_manager"]
+            self.deform_delay = self.terrain_manager_conf.moon_yard.deformation_engine.delay
+            self.enable_deformation = self.terrain_manager_conf.moon_yard.deformation_engine.enable
+        else:
+            self.enable_deformation = False
         self.world.reset()
 
         # Preload the assets
-        self.ROSLabManager.RM.preload_robot(self.world)
+        if cfg["environment"]["name"] == "LargeScale":
+            height, quat = self.ROSLabManager.LC.get_height_and_normal((0.0, 0.0, 0.0))
+            self.ROSLabManager.RM.preload_robot_at_pose(self.world, (0, 0, height + 0.5), (1, 0, 0, 0))
+        else:
+            self.ROSLabManager.RM.preload_robot(self.world)
         self.ROSLabManager.LC.add_robot_manager(self.ROSLabManager.RM)
-
+        
         for _ in range(100):
             self.world.step(render=False)
         self.world.reset()

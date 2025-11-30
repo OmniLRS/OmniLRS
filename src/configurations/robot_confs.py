@@ -24,6 +24,9 @@ class RobotParameters:
     pose: Pose = field(default_factory=dict)
     domain_id: int = field(default_factory=int)
     target_links: List[str] = field(default_factory=list)
+    wheel_joints: Dict = field(default_factory=dict)
+    base_link: str = field(default_factory=str)
+    camera: Dict = field(default_factory=dict)
 
     def __post_init__(self):
         self.usd_path = os.path.join(os.getcwd(), self.usd_path)
@@ -37,6 +40,7 @@ class RobotManagerConf:
     max_robots: int = 5
     robots_root: str = "/Robots"
     parameters: List[RobotParameters] = field(default_factory=list)
+    yamcs_tmtc: Dict = field(default_factory=dict)
 
     def __post_init__(self):
         if self.parameters:

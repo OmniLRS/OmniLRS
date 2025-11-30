@@ -9,11 +9,13 @@ __status__ = "development"
 from typing import List, Tuple, Dict
 import numpy as np
 
-from omni.isaac.core.utils.stage import open_stage, add_reference_to_stage
+from isaacsim.core.utils.stage import open_stage, add_reference_to_stage
 import omni
 
 from pxr import UsdGeom, UsdLux, Gf, Usd
 
+from src.environments.monitoring_cameras_manager import MonitoringCamerasManager
+from src.environments.static_assets_manager import StaticAssetsManager
 from src.physics.terramechanics_parameters import RobotParameter, TerrainMechanicalParameter
 from src.terrain_management.large_scale_terrain.pxr_utils import set_xform_ops
 from src.configurations.procedural_terrain_confs import TerrainManagerConf
@@ -35,6 +37,8 @@ class LunalabController(BaseEnv):
         lunalab_settings: LunalabConf = None,
         rocks_settings: Dict = None,
         terrain_manager: TerrainManagerConf = None,
+        static_assets_settings: Dict = None,
+        monitoring_cameras_settings: Dict = None,
         **kwargs,
     ) -> None:
         """
@@ -64,6 +68,14 @@ class LunalabController(BaseEnv):
         self.mask = None
         self.scene_name = "/Lunalab"
         self.deformation_conf = terrain_manager.moon_yard.deformation_engine
+        self.SAM = None
+        self.MCM = None
+
+        if static_assets_settings:
+            self.SAM = StaticAssetsManager(static_assets_settings)
+
+        if monitoring_cameras_settings:
+            self.MCM = MonitoringCamerasManager(monitoring_cameras_settings)
 
     def build_scene(self) -> None:
         """
@@ -109,6 +121,12 @@ class LunalabController(BaseEnv):
         # Loads the DEM and the mask
         self.switch_terrain(0)
 
+        if self.SAM:
+            self.SAM.spawn()
+
+        if self.MCM:
+            self.MCM.spawn()
+
     def add_robot_manager(self, robotManager: RobotManager) -> None:
         """
         Adds the robot manager to the environment.
@@ -118,6 +136,8 @@ class LunalabController(BaseEnv):
         """
 
         self.robotManager = robotManager
+        if self.robotManager.RM_conf.yamcs_tmtc.get("enabled", False):
+            self.robotManager.start_TMTC()
 
     def get_lux_assets(self, prim: "Usd.Prim") -> List[Usd.Prim]:
         """
@@ -373,7 +393,7 @@ class LunalabController(BaseEnv):
             position, orientation = rrg.get_pose()
             world_positions.append(position)
             world_orientations.append(orientation)
-            contact_forces.append(rrg.get_net_contact_forces() * 10)
+            contact_forces.append(rrg.get_net_contact_forces())
         world_positions = np.concatenate(world_positions, axis=0)
         world_orientations = np.concatenate(world_orientations, axis=0)
         contact_forces = np.concatenate(contact_forces, axis=0)

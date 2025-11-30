@@ -77,43 +77,41 @@ class TerrainManager:
 
     def fetchPreGeneratedDEMs(self) -> None:
         """
-        fetches the path to the pre-generated DEMs and masks from the given path.
-        To load the DEMs and masks, the paths must contain the following files:
-            - Folder1:
-                - DEM.npy
-                - mask.npy
-            - Folder2:
-                - DEM.npy
-                - mask.npy
-            - ...
-
-        Args:
-            dems_path (str): path to the folders containing the DEMs and masks.
+        Fetches the paths to the pre-generated DEMs and masks from the configured path.
+        To load the DEMs and masks, the following subfolders and files structure is required:
+            self._dems_path:
+                - Folder1:
+                    - dem.npy
+                    - mask.npy
+                - Folder2:
+                    - dem.npy
+                    - mask.npy
+                - ...
 
         Raises:
-            AssertionError: if dems_path is not a directory.
-            AssertionError: if dems_path contains files other than folders.
-            AssertionError: if a folder does not contain DEM.npy.
+            AssertionError: if self._dems_path is not a directory.
+            AssertionError: if a subfolder does not contain dem.npy.
         """
 
         assert os.path.isdir(self._dems_path), "dems_path must be a directory."
 
-        for folder in os.listdir(self._dems_path):
-            assert os.path.isdir(os.path.join(self._dems_path, folder)), "dems_path must contain only folders."
-            dem_path = os.path.join(self._dems_path, folder, "dem.npy")
-            mask_path = os.path.join(self._dems_path, folder, "mask.npy")
-            assert os.path.isfile(dem_path), "dem.npy not found in folder."
+        for f in os.listdir(self._dems_path):
+            if not os.path.isdir(os.path.join(self._dems_path, f)):
+                continue
+            dem_path = os.path.join(self._dems_path, f, "dem.npy")
+            mask_path = os.path.join(self._dems_path, f, "mask.npy")
+            assert os.path.isfile(dem_path), f"dem.npy not found in folder {f}."
             if not os.path.isfile(mask_path):
-                warnings.warn("Mask not found.")
+                warnings.warn(f"mask.npy not found in folder {f}.")
                 mask_path = None
-            self._dems[folder] = [dem_path, mask_path]
+            self._dems[f] = [dem_path, mask_path]
 
     def loadDEMAndMask(self, name: str) -> None:
         """
         Loads the DEM and mask from the given paths.
 
         Args:
-            name (str): the name matching the dictionaty entry.
+            name (str): the name matching the dictionary entry.
 
         Raises:
             AssertionError: if the name is not found in the dictionary.
@@ -372,10 +370,10 @@ class TerrainManager:
 
 if __name__ == "__main__":
     import omni
-    from omni.isaac.kit import SimulationApp
+    from isaacsim import SimulationApp
 
     simulation_app = SimulationApp({"headless": False})
-    from omni.isaac.core import World
+    from isaacsim.core.api.world import World
 
     world = World(stage_units_in_meters=1.0)
     T = TerrainManager()

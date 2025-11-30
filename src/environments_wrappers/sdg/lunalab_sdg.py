@@ -11,7 +11,7 @@ from scipy.spatial.transform import Rotation as SSTR
 import numpy as np
 
 # Once the sim is started load isaac libs (including ROS)
-from omni.isaac.core import World
+from isaacsim.core.api.world import World
 from pxr import Gf
 import omni
 
@@ -165,10 +165,10 @@ class SDG_Lunalab(LunalabController):
         self.randomizeCamera()
 
     def randomize(self) -> None:
-        self.randomizeProjector()
-        self.randomizeCamera()
         if self.counter % 100 == 0:
             self.randomize_rocks()
         if self.counter % 1000 == 0:
             self.switchTerrain(-1)
+        self.randomizeProjector()
+        self.randomizeCamera()
         self.counter += 1

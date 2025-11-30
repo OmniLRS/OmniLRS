@@ -6,28 +6,31 @@ __maintainer__ = "Antoine Richard"
 __email__ = "antoine.richard@uni.lu"
 __status__ = "development"
 
+import threading
+import time
 from typing import Dict, List, Tuple
+from scipy.spatial.transform import Rotation as R
 import numpy as np
 import warnings
 import os
 
 import omni
-from omni.isaac.core.world import World
+from isaacsim.core.api.world import World
 import omni.graph.core as og
-from omni.isaac.core.utils.stage import add_reference_to_stage
-from omni.isaac.core.utils.transformations import (
-    get_relative_transform,
-    pose_from_tf_matrix,
-)
-from omni.isaac.core.utils.rotations import quat_to_rot_matrix
-from omni.isaac.core.utils.nucleus import get_assets_root_path
+from isaacsim.core.utils.rotations import quat_to_rot_matrix
+from isaacsim.core.utils.nucleus import get_assets_root_path
 from omni.isaac.dynamic_control import _dynamic_control
-from omni.isaac.core.prims import RigidPrim, RigidPrimView
-from pxr import Gf, UsdGeom, Usd
+from isaacsim.core.prims import SingleRigidPrim, RigidPrim
+from pxr import Gf, Usd
 
-from WorldBuilders.pxr_utils import createXform, createObject, setDefaultOps
+from WorldBuilders.pxr_utils import createXform, createObject
 from src.configurations.robot_confs import RobotManagerConf
+import numpy as np
+from scipy.spatial.transform import Rotation as R
 
+from src.environments.utils import transform_orientation_into_xyz
+from src.robots.yamcs_TMTC import YamcsTMTC
+from omni.isaac.sensor import Camera
 
 class RobotManager:
     """
@@ -54,6 +57,7 @@ class RobotManager:
         createXform(self.stage, self.robots_root)
         self.robots: Dict[str, Robot] = {}
         self.robots_RG: Dict[str, RobotRigidGroup] = {}
+        self.TMTC: YamcsTMTC
         self.num_robots = 0
 
     def preload_robot(
@@ -73,10 +77,13 @@ class RobotManager:
                     robot_parameter.pose.position,
                     robot_parameter.pose.orientation,
                     robot_parameter.domain_id,
+                    robot_parameter.wheel_joints,
+                    robot_parameter.camera,
                 )
                 self.add_RRG(
                     robot_parameter.robot_name,
                     robot_parameter.target_links,
+                    robot_parameter.base_link,
                     world,
                 )
 
@@ -101,10 +108,13 @@ class RobotManager:
                     position,
                     orientation,
                     robot_parameter.domain_id,
+                    robot_parameter.wheel_joints,
+                    robot_parameter.camera,
                 )
                 self.add_RRG(
                     robot_parameter.robot_name,
                     robot_parameter.target_links,
+                    robot_parameter.base_link,
                     world,
                 )
 
@@ -115,6 +125,8 @@ class RobotManager:
         p: Tuple[float, float, float] = [0, 0, 0],
         q: Tuple[float, float, float, float] = [0, 0, 0, 1],
         domain_id: int = None,
+        wheel_joints: dict = {},
+        camera_conf :dict={},
     ) -> None:
         """
         Add a robot to the scene.
@@ -142,6 +154,8 @@ class RobotManager:
                     is_ROS2=self.is_ROS2,
                     domain_id=domain_id,
                     robots_root=self.robots_root,
+                    wheel_joints=wheel_joints,
+                    camera_conf=camera_conf,
                 )
                 self.robots[robot_name].load(p, q)
                 self.num_robots += 1
@@ -150,7 +164,8 @@ class RobotManager:
         self,
         robot_name: str = None,
         target_links: List[str] = None,
-        world=None,
+        pose_base_link: str = None,
+        world = None,
     ) -> None:
         """
         Add a robot rigid group to the scene.
@@ -164,6 +179,7 @@ class RobotManager:
             self.robots_root,
             robot_name,
             target_links,
+            pose_base_link,
         )
         rrg.initialize(world)
         self.robots_RG[robot_name] = rrg
@@ -204,6 +220,10 @@ class RobotManager:
             warnings.warn("Robot does not exist. Ignoring request.")
             print("available robots: ", self.robots.keys())
 
+    def start_TMTC(self):
+        robot_name = list(self.robots.keys())[0].replace("/","") # assumes only 1 robot for workshop use
+        self.TMTC = YamcsTMTC(self.RM_conf.yamcs_tmtc, robot_name, self.robots_RG, self.robots["/" + robot_name])
+        self.TMTC.start_streaming_data()
 
 class Robot:
     """
@@ -220,6 +240,9 @@ class Robot:
         is_on_nucleus: bool = False,
         is_ROS2: bool = False,
         domain_id: int = 0,
+        wheel_joints: Dict = {},
+        camera_conf:Dict = {}
+
     ) -> None:
         """
         Args:
@@ -240,6 +263,11 @@ class Robot:
         self.domain_id = int(domain_id)
         self.dc = _dynamic_control.acquire_dynamic_control_interface()
         self.root_body_id = None
+        self._wheel_joint_names = wheel_joints
+        self._dofs = {} # dof = Degree of Freedom
+        self._camera_conf = camera_conf
+        self._cameras = {}
+        self._depth_cameras = {}
 
     def get_root_rigid_body_path(self) -> None:
         """
@@ -248,6 +276,9 @@ class Robot:
 
         art = self.dc.get_articulation(self.robot_path)
         self.root_body_id = self.dc.get_articulation_root_body(art)
+
+    def _get_art(self):
+        return self.dc.get_articulation(self.robot_path)
 
     def edit_graphs(self) -> None:
         """
@@ -289,6 +320,36 @@ class Robot:
             rotation=Gf.Quatd(*orientation),
         )
         self.edit_graphs()
+        self._initialize_cameras()
+        
+    def _initialize_cameras(self) -> None:
+        # Camera is a wrapper, therefore it just wraps around the camera instance if it already exists
+        # otherwise it creates a new camera instance on the provided prim_path
+        if "resolutions" not in self._camera_conf:
+            return
+        
+        resolutions = list(self._camera_conf.get("resolutions").keys())
+
+        for res in resolutions:
+            self._cameras[res] = Camera(self._camera_conf["prim_path"], 
+                                resolution=(self._camera_conf["resolutions"][res][0], self._camera_conf["resolutions"][res][1]))
+            self._cameras[res].initialize()
+
+        for res in resolutions:
+            self._depth_cameras[res] = Camera(self._camera_conf["prim_path"], 
+                                resolution=(self._camera_conf["resolutions"][res][0], self._camera_conf["resolutions"][res][1]))
+            self._depth_cameras[res].initialize()
+            self._depth_cameras[res].add_distance_to_image_plane_to_frame()
+
+    def get_rgba_camera_view(self, resolution) -> np.ndarray:
+        return self._cameras[resolution].get_rgba()
+    
+    def get_depth_camera_view(self, resolution) -> np.ndarray:
+        """Returns depth image in meters as (H, W) float32 array."""
+        depth = self._depth_cameras[resolution].get_depth()
+        print("depth")
+        print(depth)
+        return depth
 
     def get_pose(self) -> List[float]:
         """
@@ -346,6 +407,57 @@ class Robot:
             ],
         )
 
+    def drive_straight(self, linear_velocity):
+        self._set_wheels_velocity(linear_velocity, "left")
+        self._set_wheels_velocity(linear_velocity, "right")
+
+    def drive_turn(self, wheel_speed):
+        print(wheel_speed)
+        if (wheel_speed > 0):
+            print("turns left")
+        else:
+            print("turns right")
+        self._set_wheels_velocity(-wheel_speed, "left")
+        self._set_wheels_velocity(wheel_speed, "right")
+
+    def stop_drive(self):
+        self._set_wheels_velocity(0, "left")
+        self._set_wheels_velocity(0, "right")
+
+    def _set_wheels_velocity(self, velocity, side:str):
+        self._init_dofs()
+
+        if side not in ["left","right"]:
+            print("Wrong side param:", side, "Side can only be [left] or [right].")
+            return
+
+        for dof in self._dofs[side]:
+            self.dc.set_dof_velocity_target(dof, velocity)
+
+    def _init_dofs(self):
+        #NOTE idealy, this would be initialized inside load(),
+        # however, for an unknown reason art, and dc do not work well when invoked there
+        # thus not populating dofs correctly
+        # therefore, it was implemented as singleton, and should be called at the begging of every commanding function
+        #
+        # more about the use of dofs for robot movement can be read on: 
+        # https://docs.isaacsim.omniverse.nvidia.com/5.0.0/python_scripting/robots_simulation.html#velocity-control
+        if not self._wheel_joint_names:
+            return
+
+        if "left" in list(self._dofs.keys()):
+            return # it means it is already initialized
+        
+        self._dofs = {
+            "left": [],
+            "right": []
+        }
+        art = self._get_art()
+
+        for rover_side in ["left", "right"]:
+            for joint_name in self._wheel_joint_names[rover_side]:
+                dof = self.dc.find_articulation_dof(art, joint_name)
+                self._dofs[rover_side].append(dof)
 
 class RobotRigidGroup:
     """
@@ -353,7 +465,7 @@ class RobotRigidGroup:
     It is used to retrieve world pose, and contact forces, or apply force/torque.
     """
 
-    def __init__(self, root_path: str = "/Robots", robot_name: str = None, target_links: List[str] = None):
+    def __init__(self, root_path: str = "/Robots", robot_name: str = None, target_links: List[str] = None, base_link:str=None):
         """
         Args:
             root_path (str): The root path of the robots.
@@ -366,6 +478,8 @@ class RobotRigidGroup:
         self.target_links = target_links
         self.prims = []
         self.prim_views = []
+        self.base_link = base_link
+        self.base_prim = None
 
     def initialize(self, world: World) -> None:
         """
@@ -375,22 +489,39 @@ class RobotRigidGroup:
             world (World): A Omni.isaac.core.world.World object.
         """
 
+        self.dt = world.get_physics_dt()
         world.reset()
+        self._initialize_target_links()
+        self._initialize_base_link()
+        world.reset()
+
+        print("initialized")
+
+    def _initialize_target_links(self):
         if len(self.target_links) > 0:
             for target_link in self.target_links:
-                rigid_prim = RigidPrim(
-                    prim_path=os.path.join(self.root_path, self.robot_name, target_link),
-                    name=f"{self.robot_name}/{target_link}",
-                )
-                rigid_prim_view = RigidPrimView(
-                    prim_paths_expr=os.path.join(self.root_path, self.robot_name, target_link),
-                    name=f"{self.robot_name}/{target_link}_view",
-                    track_contact_forces=True,
-                )
-                rigid_prim_view.initialize()
+                rigid_prim, rigid_prim_view = self._initialize_link(target_link)
                 self.prims.append(rigid_prim)
                 self.prim_views.append(rigid_prim_view)
-        world.reset()
+
+    def _initialize_base_link(self):
+        rigid_prim, rigid_prim_view = self._initialize_link(self.base_link)
+        self.base_prim = rigid_prim
+        print("initialized base link")
+
+    def _initialize_link(self, link):
+        rigid_prim = SingleRigidPrim(
+            prim_path=os.path.join(self.root_path, self.robot_name, link),
+            name=f"{self.robot_name}/{link}",
+        )
+        rigid_prim_view = RigidPrim(
+            prim_paths_expr=os.path.join(self.root_path, self.robot_name, link),
+            name=f"{self.robot_name}/{link}_view",
+            track_contact_forces=True,
+        )
+        rigid_prim_view.initialize()
+
+        return rigid_prim, rigid_prim_view
 
     def get_world_poses(self) -> np.ndarray:
         """
@@ -412,7 +543,13 @@ class RobotRigidGroup:
 
     def get_pose(self) -> Tuple[np.ndarray, np.ndarray]:
         """
-        Returns the pose of target links.
+        Returns the pose (position and orientation) of target links in the global frame.
+
+        Notes:
+        - Orientations are quaternions in (w, x, y, z) format.
+        - The local coordinate system of each wheel rotates as the wheels rotate.
+          To ensure consistent orientations in the global frame, the pitch rotation
+          is removed. This aligns each wheel's local coordinate system with the global frame.
 
         Returns:
             positions (np.ndarray): The position of target links. (x, y, z)
@@ -424,9 +561,35 @@ class RobotRigidGroup:
         orientations = np.zeros((n_links, 4))
         for i, prim in enumerate(self.prims):
             position, orientation = prim.get_world_pose()
+
+            # Rearrange quaternion from (w, x, y, z) to (x, y, z, w) for scipy
+            quaternion = [orientation[1], orientation[2], orientation[3], orientation[0]]
+            rotation = R.from_quat(quaternion)
+
+            # Remove pitch rotation to align wheel's local frame with global frame
+            pitch_angle = 2 * np.arctan2(rotation.as_quat()[1], rotation.as_quat()[3])
+            pitch_correction_quat = [0, -np.sin(pitch_angle / 2), 0, np.cos(pitch_angle / 2)]
+            inverse_pitch_rotation = R.from_quat(pitch_correction_quat)
+            rotation_corrected = rotation * inverse_pitch_rotation
+
+            # Convert back to (w, x, y, z) and store results
+            quaternion_corrected = rotation_corrected.as_quat()
+            orientation_corrected = [quaternion_corrected[3], quaternion_corrected[0], quaternion_corrected[1], quaternion_corrected[2]]
             positions[i, :] = position
-            orientations[i, :] = orientation
+            orientations[i, :] = orientation_corrected
         return positions, orientations
+    
+    def get_pose_of_base_link(self) -> Tuple[list, list]:
+        """
+        Returns a pair of value representing the robot's pose, and orientation respectively, based on the base_link.
+
+        Returns:
+            position (np.ndarray): The position of base link. (x, y, z)
+            orientation (np.ndarray): The orientation of base link. (x, y, z, w)
+        """
+        position, orientation = self.base_prim.get_world_pose()
+
+        return position, orientation
 
     def get_velocities(self) -> Tuple[np.ndarray, np.ndarray]:
         """
@@ -457,7 +620,7 @@ class RobotRigidGroup:
         n_links = len(self.target_links)
         contact_forces = np.zeros((n_links, 3))
         for i, prim_view in enumerate(self.prim_views):
-            contact_force = prim_view.get_net_contact_forces().squeeze()
+            contact_force = prim_view.get_net_contact_forces(dt = self.dt).squeeze()
             contact_forces[i, :] = contact_force
         return contact_forces
 

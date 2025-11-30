@@ -1,5 +1,5 @@
 name: Lunalab
-seed: 42  
+seed: 42
 physics_dt: 0.0333 # 30 Hz
 rendering_dt: 0.0333 # 30 Hz
 enforce_realtime: true
@@ -19,7 +19,7 @@ rocks_settings:
       use_point_instancer: True # If True, the rocks will be instanced using the PointInstancer.
                                 # If False, it will use the custom instancer that works for SDG.
       requests: # A list of request used to distribute the rocks.
-        req_pos_xy: 
+        req_pos_xy:
           attribute: Position
           axes: ["x", "y"]
           layer:
@@ -105,7 +105,7 @@ terrain_manager:
       min_elevation: -0.025
       z_scale: 1.0
       seed: ${....seed}
-    
+
     deformation_engine:
       enable: False
       delay: 2.0
@@ -119,10 +119,10 @@ terrain_manager:
         x_deform_offset: 0.0
         y_deform_offset: 0.0
         deform_decay_ratio: 0.01
-      boundary_distribution: 
+      boundary_distribution:
         distribution: trapezoidal
         angle_of_repose: 1.047 #pi/3
-      depth_distribution: 
+      depth_distribution:
         distribution: trapezoidal
         wave_frequency: 4.14 # num_grouser/pi (no slip)
       force_depth_regression:
@@ -144,6 +144,8 @@ terrain_manager:
   sim_width: ${..lunalab_settings.lab_width}
   resolution: ${..lunalab_settings.resolution}
 
+# feel free to modify which robots to spawn
+# see the commented out examples
 robots_settings:
   uses_nucleus: False
   is_ROS2: True
@@ -152,18 +154,29 @@ robots_settings:
   parameters:
     # -
     #   robot_name: ex1
-    #   usd_path: assets/USD_Assets/robots/ex1.usd
+    #   usd_path: assets/USD_Assets/robots/ex1.usd   # by the Space Robotics Laboratory of Tohoku University
     #   pose:
     #     position: [1.0, 1.0, 0.5]
     #     orientation: [1, 0, 0, 0]
     #   domain_id: 0
     #   target_links: ["left_front_wheel_link", "left_rear_wheel_link", "right_front_wheel_link", "right_rear_wheel_link"]
-    
+
+    # -
+    #   robot_name: jackal
+    #   # usd_path: assets/USD_Assets/robots/ros2_jackal_PhysX_vlp16_stereo.usd
+    #   usd_path: assets/USD_Assets/robots/ros2_jackal_PhysX_vlp16.usd
+    #   pose:
+    #     position: [5.0, 5.0, 0.5]
+    #     orientation: [1, 0, 0, 0]
+    #   domain_id: 0
+    #   target_links: ["front_left_wheel_link", "front_right_wheel_link", "rear_left_wheel_link", "rear_right_wheel_link"]
     -
       robot_name: husky
-      usd_path: assets/USD_Assets/robots/ros2_husky_PhysX_vlp16.usd
+      usd_path: assets/USD_Assets/robots/ros2_husky_PhysX_vlp16.usd         
+      # usd_path: assets/USD_Assets/robots/ros2_husky_PhysX_vlp16_mono_depth_imu.usd 
       pose:
         position: [5.0, 5.0, 0.5]
         orientation: [1, 0, 0, 0]
       domain_id: 0
       target_links: ["front_left_wheel_link", "front_right_wheel_link", "rear_left_wheel_link", "rear_right_wheel_link"]
+      base_link: "base_link" # core link used to determine the position of the robot

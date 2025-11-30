@@ -1,9 +1,5 @@
 #!/bin/bash
 
-# Get the WorldBuilder submodule
-git submodule init
-git submodule update
-
 # Build the Docker image
 SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" &>/dev/null && pwd)"
 PROJECT_DIR="$(dirname "${SCRIPT_DIR}")"

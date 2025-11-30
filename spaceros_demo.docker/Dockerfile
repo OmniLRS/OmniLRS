@@ -1,4 +1,4 @@
-FROM osrf/space-ros:latest
+FROM osrf/space-ros:humble-2024.10.0
 
 RUN mkdir -p "${HOME_DIR}/spaceros/demo/src"
 WORKDIR "${HOME_DIR}/spaceros/demo/src"
@@ -14,7 +14,7 @@ RUN source /ros_entrypoint.sh -- && \
     colcon build --merge-install --symlink-install \
     --build-base "${DEMO_SPACEROS_WS_PATH}/build" \
     --install-base "${DEMO_SPACEROS_WS_PATH}/install" && \
-    rm -rf ./log 
+    rm -rf ./log
 
 WORKDIR "${HOME_DIR}"
 

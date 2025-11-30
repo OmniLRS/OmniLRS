@@ -7,18 +7,20 @@ __email__ = "antoine.richard@uni.lu"
 __status__ = "development"
 
 from scipy.spatial.transform import Rotation as SSTR
-from typing import List, Tuple
+from typing import Dict, List, Tuple
 import numpy as np
 import math
 import os
 
-from omni.isaac.core.utils.stage import add_reference_to_stage
+from isaacsim.core.utils.stage import add_reference_to_stage
 import omni
 
 from pxr import UsdLux, Gf, Usd
 
+from src.environments.monitoring_cameras_manager import MonitoringCamerasManager
+from src.environments.static_assets_manager import StaticAssetsManager
 from src.terrain_management.large_scale_terrain_manager import LargeScaleTerrainManager
-from src.terrain_management.large_scale_terrain.pxr_utils import set_xform_ops
+from src.terrain_management.large_scale_terrain.pxr_utils import set_xform_ops, set_texture_path
 from src.configurations.stellar_engine_confs import StellarEngineConf, SunConf
 from src.configurations.environments import LargeScaleTerrainConf
 from src.stellar.stellar_engine import StellarEngine
@@ -38,6 +40,8 @@ class LargeScaleController(BaseEnv):
         stellar_engine_settings: StellarEngineConf = None,
         sun_settings: SunConf = None,
         is_simulation_alive: callable = lambda: True,
+        static_assets_settings: Dict = None,
+        monitoring_cameras_settings: Dict = None,
         **kwargs,
     ) -> None:
         """
@@ -65,6 +69,15 @@ class LargeScaleController(BaseEnv):
         self.dem = None
         self.mask = None
         self.scene_name = "/LargeScaleLunar"
+
+        self.SAM = None
+        self.MCM = None
+
+        if static_assets_settings:
+            self.SAM = StaticAssetsManager(static_assets_settings)
+
+        if monitoring_cameras_settings:
+            self.MCM = MonitoringCamerasManager(monitoring_cameras_settings)
 
     def build_scene(self) -> None:
         """
@@ -98,6 +111,9 @@ class LargeScaleController(BaseEnv):
         # Creates the earth
         self._earth_prim = self.stage.DefinePrim(os.path.join(self.scene_name, "Earth"), "Xform")
         self._earth_prim.GetReferences().AddReference(self.stage_settings.earth_usd_path)
+        earth_texture_path = os.path.abspath("assets/Textures/Earth/earth_color_with_clouds.tif")
+        material_path = f"{self.stage_settings.earth_path}/Looks/OmniPBR"
+        set_texture_path(self.stage, material_path, "Shader", earth_texture_path)
         dist = self.stage_settings.earth_distance * self.stage_settings.earth_scale
         px = math.cos(math.radians(self.stage_settings.earth_azimuth)) * dist
         py = math.sin(math.radians(self.stage_settings.earth_azimuth)) * dist
@@ -148,6 +164,12 @@ class LargeScaleController(BaseEnv):
         if self.enable_stellar_engine:
             self.SE.set_lat_lon(*self.LSTM.get_lat_lon())
 
+        if self.SAM:
+            self.SAM.spawn()
+
+        if self.MCM:
+            self.MCM.spawn()
+
     def add_robot_manager(self, robotManager: RobotManager) -> None:
         """
         Adds the robot manager to the environment.
@@ -157,6 +179,8 @@ class LargeScaleController(BaseEnv):
         """
 
         self.robotManager = robotManager
+        if self.robotManager.RM_conf.yamcs_tmtc.get("enabled", False):
+            self.robotManager.start_TMTC()
         self.pose_tracker = list(self.robotManager.robots.values())[0].get_pose
 
     # ==============================================================================

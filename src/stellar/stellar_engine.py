@@ -12,6 +12,7 @@ from skyfield.api import PlanetaryConstants, load
 from typing import Tuple
 import datetime
 import math
+import logging
 
 
 class StellarEngine:
@@ -74,9 +75,10 @@ class StellarEngine:
         Args:
             date (float): The current time of the observer. The given is given in seconds in the UTC time zone.
         """
-
+        self.last_update = datetime.datetime.fromtimestamp(date, datetime.timezone.utc) #added fix
         self.current_time = datetime.datetime.fromtimestamp(date, datetime.timezone.utc)
         self.t = self.ts.from_datetime(self.current_time)
+        logging.debug(f"StellarEngine: current time set to {self.current_time} and date set to {date}")
 
     def set_time_scale(self, time_scale: float) -> None:
         """
@@ -164,13 +166,18 @@ class StellarEngine:
             bool: True if the time was updated, False otherwise.
         """
         self.current_time += datetime.timedelta(seconds=dt * self.cfg.time_scale)
-
+        # logging.debug(
+        #     f"StellarEngine: current time is {self.current_time} (dt = {dt * self.cfg.time_scale}s)"
+        # )
         time_delta = self.current_time - self.last_update
         update = False
         if time_delta.total_seconds() >= self.cfg.update_interval:
             self.last_update = self.current_time
             self.t = self.ts.from_datetime(self.current_time)
             update = True
+            logging.debug(
+                f"StellarEngine: updated time to {self.current_time} (dt = {time_delta.total_seconds()}s)"
+            )
 
         return update
 
