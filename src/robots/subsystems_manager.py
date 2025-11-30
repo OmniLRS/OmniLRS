@@ -47,7 +47,7 @@ class RobotSubsystemsManager:
         self.LANDER_PATH = pos_relative_to_prim
         self._electronics_power_state = {
             Electronics.CAMERA.value: PowerState.OFF,
-            Electronics.MOTOR_CONTROLLER.value: PowerState.ON,
+            Electronics.MOTOR_CONTROLLER.value: PowerState.OFF,
             Electronics.NEUTRON_SPECTROMETER.value: PowerState.OFF,
             Electronics.APXS.value: PowerState.OFF,
             Electronics.RADIO.value: PowerState.ON,

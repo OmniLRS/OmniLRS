@@ -139,6 +139,10 @@ class YamcsTMTC:
         elif electronics == Electronics.RADIO.value:
             #TODO
             pass
+        elif electronics == Electronics.MOTOR_CONTROLLER.value:
+            if (new_state == PowerState.OFF):
+                self._stop_robot()
+            pass
 
     def _handle_go_nogo(self, decision:str):
         if decision not in [GoNogoState.GO.name, GoNogoState.NOGO.name]:
@@ -149,6 +153,9 @@ class YamcsTMTC:
         self._robot.subsystems.set_go_nogo_state(decision)
 
     def _drive_robot_straight(self, linear_velocity, distance):
+        if not self._is_robot_able_to_drive():
+            return
+        
         if linear_velocity == 0 or distance == 0:
             self._stop_robot()
             return
@@ -206,6 +213,9 @@ class YamcsTMTC:
         return linear_velocity, distance
 
     def _drive_robot_turn(self, angular_velocity, angle):
+        if not self._is_robot_able_to_drive():
+            return
+
         if angular_velocity == 0 or angle == 0:
             self._stop_robot()
             return
@@ -214,6 +224,12 @@ class YamcsTMTC:
         turn_time = angle / abs(angular_velocity)
         self._robot.drive_turn(turn_speed)
         self._stop_robot_after_time(turn_time)
+
+    def _is_robot_able_to_drive(self):
+        motor_state:PowerState = self._robot.subsystems.get_electronics_state(Electronics.MOTOR_CONTROLLER.value)
+        go_state:GoNogoState = self._robot.subsystems.get_go_nogo_state()
+
+        return go_state == GoNogoState.GO and motor_state == PowerState.ON  
 
     def _calculate_turn_speed(self, angular_velocity):
         robot_width = self._robot.dimensions["width"]
