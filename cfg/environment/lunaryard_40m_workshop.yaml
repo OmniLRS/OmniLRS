@@ -203,6 +203,7 @@ robots_settings:
       domain_id: 0
       target_links: ["front_left_wheel_link", "front_right_wheel_link", "rear_left_wheel_link", "rear_right_wheel_link"]
       base_link: "base_link" # core link used to determine the position of the robot
+      pos_relative_to_prim: "/StaticAssets/lander"
       wheel_joints:
         left: ["front_left_wheel", "rear_left_wheel"]
         right: ["front_right_wheel", "rear_right_wheel"]
@@ -211,6 +212,7 @@ robots_settings:
         resolutions: 
           low: [320, 240]
           high: [1440, 1080]
+      imu_sensor_path: "/Robots/husky/d455/RSD455/Imu_Sensor"
   yamcs_tmtc:
     enabled: True
     address: "localhost:8090"
@@ -221,12 +223,45 @@ robots_settings:
       camera_streaming: 5
     parameters:
       pose_of_base_link: "/Rover/pose_ground_truth"
+      # camera_streaming_state: "/Rover/streaming_state"
+      go_nogo: "/Rover/go_nogo"
+      imu_accelerometer: "/Rover/imu_accelerometer"
+      imu_gyroscope: "/Rover/imu_gyroscope"
+      imu_orientation: "/Rover/imu_orientation"
+      obc_state: "/Rover/obc_state"
+      rssi: "/Rover/radio_rssi"
+      temperature_front: "/Rover/temperature_front"
+      temperature_back: "/Rover/temperature_back"
+      temperature_left: "/Rover/temperature_left"
+      temperature_right: "/Rover/temperature_right"
+      temperature_top: "/Rover/temperature_top"
+      temperature_bottom: "/Rover/temperature_bottom"
+      temperature_elec_box: "/Rover/temperature_elec_box"
+      battery_charge: "/Rover/battery_charge"
+      battery_voltage: "/Rover/battery_voltage"
+      total_current_in: "/Rover/total_current_in"
+      motor_current: "/Rover/motor_current"
+      current_draw_obc: "/Rover/current_draw_obc"
+      current_draw_motor_controller: "/Rover/current_draw_motor_controller"
+      current_draw_neutron_spectrometer: "/Rover/current_draw_neutron_spectrometer"
+      current_draw_apxs: "/Rover/current_draw_apxs"
+      current_draw_camera: "/Rover/current_draw_camera"
+      current_draw_radio: "/Rover/current_draw_radio"
+      current_draw_eps: "/Rover/current_draw_eps"
+      neutron_counts: "/Rover/neutron_counts"
+      camera_streaming_state: "/Rover/camera/images_streaming/state"
     commands:
       drive_straight: "/Rover/motor/drive_straight"
       drive_turn: "/Rover/motor/drive_turn"
       camera_capture_high: "/Rover/camera/camera_capture_high"
       camera_streaming_on_off: "/Rover/camera/camera_streaming"
       camera_capture_depth: "/Rover/camera/camera_capture_depth"
+      solar_panel: "/Rover/system/deploy_solar_panel"
+      power_electronics: "/Rover/power/power_electronics"
+      go_nogo: "/Rover/system/go_nogo_command"
+      capture_apxs: "/Rover/payload/payload_capture_apxs"
+      admin_batter_percentage: "/Admin/admin_set_battery_percentage"
+      admin_water_detection: "/Admin/admin_water_detection"
 
 static_assets_settings:
   root_path: "/StaticAssets"

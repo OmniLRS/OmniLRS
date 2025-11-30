@@ -29,8 +29,11 @@ import numpy as np
 from scipy.spatial.transform import Rotation as R
 
 from src.environments.utils import transform_orientation_into_xyz
+from src.robots.subsystems_manager import RobotSubsystemsManager
 from src.robots.yamcs_TMTC import YamcsTMTC
 from omni.isaac.sensor import Camera
+
+from isaacsim.sensors.physics import _sensor
 
 class RobotManager:
     """
@@ -79,6 +82,8 @@ class RobotManager:
                     robot_parameter.domain_id,
                     robot_parameter.wheel_joints,
                     robot_parameter.camera,
+                    robot_parameter.imu_sensor_path,
+                    robot_parameter.pos_relative_to_prim,
                 )
                 self.add_RRG(
                     robot_parameter.robot_name,
@@ -110,6 +115,8 @@ class RobotManager:
                     robot_parameter.domain_id,
                     robot_parameter.wheel_joints,
                     robot_parameter.camera,
+                    robot_parameter.imu_sensor_path,
+                    robot_parameter.pos_relative_to_prim,
                 )
                 self.add_RRG(
                     robot_parameter.robot_name,
@@ -127,6 +134,8 @@ class RobotManager:
         domain_id: int = None,
         wheel_joints: dict = {},
         camera_conf :dict={},
+        imu_sensor_path:str="",
+        pos_relative_to_prim:str="",
     ) -> None:
         """
         Add a robot to the scene.
@@ -156,6 +165,8 @@ class RobotManager:
                     robots_root=self.robots_root,
                     wheel_joints=wheel_joints,
                     camera_conf=camera_conf,
+                    imu_sensor_path=imu_sensor_path,
+                    pos_relative_to_prim=pos_relative_to_prim,
                 )
                 self.robots[robot_name].load(p, q)
                 self.num_robots += 1
@@ -241,7 +252,9 @@ class Robot:
         is_ROS2: bool = False,
         domain_id: int = 0,
         wheel_joints: Dict = {},
-        camera_conf:Dict = {}
+        camera_conf:Dict = {},
+        imu_sensor_path:str = "",
+        pos_relative_to_prim:str = "",
 
     ) -> None:
         """
@@ -268,6 +281,10 @@ class Robot:
         self._camera_conf = camera_conf
         self._cameras = {}
         self._depth_cameras = {}
+        self.subsystems = RobotSubsystemsManager(pos_relative_to_prim)
+        self._imu_sensor_interface = _sensor.acquire_imu_sensor_interface()
+        self._imu_sensor_path:str = imu_sensor_path
+        # self._pos_relative_to_prim:str = pos_relative_to_prim
 
     def get_root_rigid_body_path(self) -> None:
         """
@@ -350,6 +367,20 @@ class Robot:
         print("depth")
         print(depth)
         return depth
+    
+    def get_imu_readings(self):
+        # https://docs.isaacsim.omniverse.nvidia.com/4.5.0/sensors/isaacsim_sensors_physics_imu.html#reading-sensor-output
+        sensor_reading = self._imu_sensor_interface.get_sensor_reading(self._imu_sensor_path, use_latest_data = True, read_gravity = True)
+        linear_acceleration = {"ax": sensor_reading.lin_acc_x, "ay": sensor_reading.lin_acc_y, "az": sensor_reading.lin_acc_z}
+        angular_velocity = {"gx":sensor_reading.ang_vel_x, "gy":sensor_reading.ang_vel_y, "gz":sensor_reading.ang_vel_z} 
+        
+        orientation = sensor_reading.orientation # w, x, y, z
+        xyz_orientation = transform_orientation_into_xyz(orientation) 
+        orientation = {"roll":float(xyz_orientation[0]), "pitch":float(xyz_orientation[1]), "yaw":float(xyz_orientation[2])}
+
+        # print(linear_acceleration, angular_velocity, orientation)
+        return linear_acceleration, angular_velocity, orientation
+
 
     def get_pose(self) -> List[float]:
         """
@@ -361,6 +392,7 @@ class Robot:
             self.get_root_rigid_body_path()
         pose = self.dc.get_rigid_body_pose(self.root_body_id)
         return pose.p, pose.r
+    
 
     def set_reset_pose(self, position: np.ndarray, orientation: np.ndarray) -> None:
         """
@@ -458,6 +490,7 @@ class Robot:
             for joint_name in self._wheel_joint_names[rover_side]:
                 dof = self.dc.find_articulation_dof(art, joint_name)
                 self._dofs[rover_side].append(dof)
+
 
 class RobotRigidGroup:
     """
