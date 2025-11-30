@@ -15,16 +15,16 @@ lunaryard_settings:
   lab_width: 100.0
   resolution: 0.04
   coordinates:
-    latitude: 46.8
-    longitude: -26.3
+    latitude: -84.8
+    longitude: 29.2
 
 stellar_engine_settings:
   start_date:
-    year: 2024
-    month: 5
-    day: 21
-    hour: 5
-    minute: 1
+    year: 2025
+    month: 3
+    day: 7
+    hour: 0
+    minute: 0
   time_scale: 1
   update_interval: 600
 
@@ -452,9 +452,9 @@ terrain_manager:
       x_size: ${....lunaryard_settings.lab_length}
       y_size: ${....lunaryard_settings.lab_width}
       resolution: ${....lunaryard_settings.resolution}
-      max_elevation: 1.0
-      min_elevation: -1.0
-      z_scale: 1.0
+      max_elevation: 0.25
+      min_elevation: -0.25
+      z_scale: 5.0
       seed: ${....seed}
     
     deformation_engine:
@@ -487,7 +487,7 @@ terrain_manager:
     is_lab: False
 
   root_path: /Lunaryard
-  texture_path: /Looks/LunarRegolith8k
+  texture_path: /Lunaryard/Looks/LunarRegolith8k
   dems_path: Terrains/Lunaryard
   mesh_position: [0, 0, 0]
   mesh_orientation: [0, 0, 0, 1] # Quaternion x,y,z,w
@@ -502,11 +502,29 @@ robots_settings:
   max_robots: 5
   robots_root: "/Robots"
   parameters:  
+    # -
+    #   robot_name: viper
+    #   usd_path: assets/USD_Assets/robots/viper_lidar_only.usd
+    #   pose:
+    #     position: [5.0, 5.0, 0.5]
+    #     orientation: [1, 0, 0, 0]
+    #   domain_id: 0
+    #   target_links: ["front_left_wheel_link", "front_right_wheel_link", "rear_left_wheel_link", "rear_right_wheel_link"]
     -
-      robot_name: viper
-      usd_path: assets/USD_Assets/robots/viper_lidar_only.usd
+      robot_name: husky
+      usd_path: assets/USD_Assets/robots/nograph_husky.usd       
+      # usd_path: assets/USD_Assets/robots/ros2_husky_PhysX_vlp16_mono_depth_imu.usd 
       pose:
         position: [5.0, 5.0, 0.5]
         orientation: [1, 0, 0, 0]
       domain_id: 0
+      base_link: "base_link" # core link used to determine the position of the robot
+      wheel_joints:
+        left: ["front_left_wheel", "rear_left_wheel"]
+        right: ["front_right_wheel", "rear_right_wheel"]
+      camera:
+        prim_path: "/Robots/husky/d455/RSD455/Camera_OmniVision_OV9782_Left"
+        resolutions: 
+          low: [320, 240]
+          high: [1440, 1080]
       target_links: ["front_left_wheel_link", "front_right_wheel_link", "rear_left_wheel_link", "rear_right_wheel_link"]
