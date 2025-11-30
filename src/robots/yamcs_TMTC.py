@@ -136,12 +136,11 @@ class YamcsTMTC:
             self._set_activity_of_camera_streaming("START") if new_state == PowerState.ON else self._set_activity_of_camera_streaming("STOP")
         elif electronics == Electronics.NEUTRON_SPECTROMETER.value:
             self._set_activity_of_neutron_streaming(new_state)
-        elif electronics == Electronics.RADIO.value:
-            #TODO
-            pass
         elif electronics == Electronics.MOTOR_CONTROLLER.value:
             if (new_state == PowerState.OFF):
                 self._stop_robot()
+        elif electronics == Electronics.RADIO.value:
+            #TODO
             pass
 
     def _handle_go_nogo(self, decision:str):
@@ -151,6 +150,9 @@ class YamcsTMTC:
         
         decision = GoNogoState[decision]
         self._robot.subsystems.set_go_nogo_state(decision)
+
+        if (decision == GoNogoState.NOGO):
+                self._stop_robot()
 
     def _drive_robot_straight(self, linear_velocity, distance):
         if not self._is_robot_able_to_drive():
