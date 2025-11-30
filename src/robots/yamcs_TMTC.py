@@ -80,7 +80,7 @@ class YamcsTMTC:
         elif name == self._yamcs_conf["commands"]["go_nogo"]:
             self._handle_go_nogo(arguments["decision"])
         elif name == self._yamcs_conf["commands"]["capture_apxs"]:
-            self._payload_handler._snap_apxs()
+            self._payload_handler._snap_apxs(self._robot.subsystems.get_electronics_state(Electronics.APXS.value))
         elif name == self._yamcs_conf["commands"]["admin_batter_percentage"]:
             self._handle_batter_perc_change(arguments["battery_percentage"])
         # here add reactions to other commands
@@ -130,6 +130,9 @@ class YamcsTMTC:
             self._set_activity_of_camera_streaming("START") if new_state == PowerState.ON else self._set_activity_of_camera_streaming("STOP")
         elif electronics == Electronics.NEUTRON_SPECTROMETER.value:
             self._set_activity_of_neutron_streaming(new_state)
+        elif electronics == Electronics.RADIO.value:
+            #TODO
+            pass
 
     def _handle_go_nogo(self, decision:str):
         if decision not in [GoNogoState.GO.name, GoNogoState.NOGO.name]:
@@ -178,6 +181,7 @@ class YamcsTMTC:
         self._intervals_handler.remove_interval(IntervalName.STOP_ROBOT.value)
 
     def start_streaming_data(self):
+        self._payload_handler._snap_apxs() # snaps initial blank apxs reading
         self._intervals_handler.add_new_interval(name="Pose of base link", seconds=self._yamcs_conf["intervals"]["robot_stats"], is_repeating=True, execute_immediately=True,
                                                  function=self._transmit_pose_of_base_link)
         #NOTE Not starting camera streaming automatically since now Camera has to be turned ON / OFF
@@ -459,32 +463,20 @@ class PayloadHandler:
             self.BUCKET_IMAGES_APXS:0,
         }
 
-    def _snap_apxs(self):
-        image_name = f"{self.BUCKET_IMAGES_APXS}_{self._counter[self.BUCKET_IMAGES_APXS]}.png"
+    def _snap_apxs(self, apxs_power_state:PowerState=PowerState.OFF):
+        image_name = f"{self.BUCKET_IMAGES_APXS}_{self._counter[self.BUCKET_IMAGES_APXS]}"
 
         if self._counter[self.BUCKET_IMAGES_APXS] == 0:
             apxs_background_path = os.path.join(self.APXS_SAMPLES_DIR, 'APXS_nodata.png')
-        else:
+        elif self._counter[self.BUCKET_IMAGES_APXS] > 0 and apxs_power_state == PowerState.ON:
             apxs_background_path = os.path.join(self.APXS_SAMPLES_DIR, 'APXS_measurement.png')
-
-        # if os.path.exists(apxs_background_path):
-        #     print("File exists:", apxs_background_path)
-        # else:
-        #     print("FILE NOT FOUND:", apxs_background_path)
-
-        print(apxs_background_path)
-        img = Image.open(apxs_background_path) #.convert('RGB').resize((self.APXS_WIDTH, self.APXS_HEIGHT))
-        # draw = ImageDraw.Draw(img)
-        # self._draw_text(draw, text=image_name, fill="black", position='top-right')
-        image_name = self._helper.save_image_locally(img, self.BUCKET_IMAGES_APXS, self._counter[self.BUCKET_IMAGES_APXS])
-        print("image name", image_name)
-
-        saved_image = f"/tmp/{self.BUCKET_IMAGES_APXS}/{image_name}"
-        if os.path.exists(saved_image):
-            print("File exists:", saved_image)
         else:
-            print("FILE NOT FOUND:", saved_image)
-            
+            return
+
+        img = Image.open(apxs_background_path).convert('RGB').resize((self.APXS_WIDTH, self.APXS_HEIGHT))
+        draw = ImageDraw.Draw(img)
+        self._draw_text(draw, text=image_name, fill="black", position='top-right')
+        image_name = self._helper.save_image_locally(img, self.BUCKET_IMAGES_APXS, self._counter[self.BUCKET_IMAGES_APXS])
         self._helper.inform_yamcs(image_name, "payload", self.BUCKET_IMAGES_APXS, self._counter[self.BUCKET_IMAGES_APXS])
         self._counter[self.BUCKET_IMAGES_APXS] += 1
     
