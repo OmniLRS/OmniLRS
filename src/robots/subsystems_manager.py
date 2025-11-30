@@ -7,6 +7,7 @@ from src.robots.PowerModel import PowerModel
 import math
 from omni.isaac.core.utils.prims import get_prim_at_path
 from isaacsim.core.utils.xforms import get_world_pose
+import random
 
 class PowerState(StrEnum):
     OFF = "OFF",
@@ -30,6 +31,13 @@ class ObcState(Enum):
     SAFE = 5
     ERROR = 6
 
+class Electronics(Enum):
+    CAMERA = "CAMERA"
+    MOTOR_CONTROLLER = "MOTOR_CONTROLLER"
+    NEUTRON_SPECTROMETER = "NEUTRON_SPECTROMETER"
+    APXS = "APXS"
+    RADIO = "RADIO"
+
 class RobotSubsystemsManager:
     SUN_POSITION = (10.0, 5.0, 7.5)
     LANDER_POSITION = (0.0, 0.0, 0.0)
@@ -38,11 +46,11 @@ class RobotSubsystemsManager:
 
     def __init__(self):
         self._electronics_power_state = {
-            "CAMERA": PowerState.OFF,
-            "MOTOR_CONTROLLER": PowerState.OFF,
-            "NEUTRON_SPECTROMETER": PowerState.OFF,
-            "APXS": PowerState.OFF,
-            "RADIO": PowerState.OFF,
+            Electronics.CAMERA.value: PowerState.OFF,
+            Electronics.MOTOR_CONTROLLER.value: PowerState.ON,
+            Electronics.NEUTRON_SPECTROMETER.value: PowerState.OFF,
+            Electronics.APXS.value: PowerState.OFF,
+            Electronics.RADIO.value: PowerState.ON,
         }
         self._solar_panel_state = SolarPanelState.STOWED
         self._go_nogo_state = GoNogoState.NOGO
@@ -72,11 +80,11 @@ class RobotSubsystemsManager:
     def map_into_currents(self):
         mapped = {
             "current_draw_obc": True,
-            "current_draw_motor_controller": self.is_turned_on("MOTOR_CONTROLLER"),
-            "current_draw_neutron_spectrometer": self.is_turned_on("NEUTRON_SPECTROMETER"),
-            "current_draw_apxs": self.is_turned_on("APXS"),
-            "current_draw_camera": self.is_turned_on("CAMERA"),
-            "current_draw_radio": self.is_turned_on("RADIO"),
+            "current_draw_motor_controller": self.is_turned_on(Electronics.MOTOR_CONTROLLER.value),
+            "current_draw_neutron_spectrometer": self.is_turned_on(Electronics.NEUTRON_SPECTROMETER.value),
+            "current_draw_apxs": self.is_turned_on(Electronics.APXS.value),
+            "current_draw_camera": self.is_turned_on(Electronics.CAMERA.value),
+            "current_draw_radio": self.is_turned_on(Electronics.RADIO.value),
             "current_draw_eps": True,
         }
 
@@ -117,6 +125,11 @@ class RobotSubsystemsManager:
         status = self._power.status()
    
         return status
+    
+    def set_battery_perc(self, battery_perc):
+        capacity = self._power.battery_capacity_wh
+        new_charge = battery_perc / 100 * capacity
+        self._power.battery_charge_wh = new_charge
 
     def set_electronics_state(self, electronics:str, state:PowerState):
         if electronics not in self._electronics_power_state:
@@ -157,7 +170,11 @@ class RobotSubsystemsManager:
         self._obc_state = state
 
     def get_neutron_count(self, interval_s):
-        return self._neutron_spectrometer.get_next_count(interval_s)
+        # return self._neutron_spectrometer.get_next_count(interval_s)
+        return self._neutron_spectrometer.get_next_count()
+    
+    def set_is_near_water(self, is_near):
+        self._neutron_spectrometer.is_near_water = is_near
 
 class NeutronSpectrometerSimulator():
     
@@ -169,12 +186,23 @@ class NeutronSpectrometerSimulator():
             "period": 20,
             "offset": 0,
         }
+        self.is_near_water:bool = False
+        self._std_neutron = 10
 
-    def get_next_count(self, interval_s):
-        generated_value = self._generate_sine_value(self._t, self._neutron_gen_values["min"], self._neutron_gen_values["max"], self._neutron_gen_values["period"], self._neutron_gen_values["offset"])
-        self._t += interval_s
+    #NOTE left this old implementation until confirmed the new implementation is correct
+    # def get_next_count(self, interval_s):
+    #     generated_value = self._generate_sine_value(self._t, self._neutron_gen_values["min"], self._neutron_gen_values["max"], self._neutron_gen_values["period"], self._neutron_gen_values["offset"])
+    #     self._t += interval_s
         
-        return int(generated_value)
+    #     return int(generated_value)
+    
+    def get_next_count(self):
+        if self.is_near_water:
+            count =  max(0, 50 + random.gauss(0.0, self._std_neutron))
+        else:
+            count = max(0, 200 + random.gauss(0.0, self._std_neutron))
+
+        return int(count)
     
     def _generate_sine_value(self, t, min_val, max_val, period, offset):
         """Generate a sine wave value at time t with given parameters."""

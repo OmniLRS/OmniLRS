@@ -2,7 +2,7 @@ __author__ = "Aleksa Stanivuk"
 __status__ = "development"
 
 from src.environments.utils import transform_orientation_into_xyz
-from src.robots.subsystems_manager import GoNogoState, ObcState, PowerState, SolarPanelState
+from src.robots.subsystems_manager import Electronics, GoNogoState, ObcState, PowerState, SolarPanelState
 from yamcs.client import YamcsClient, CommandHistory
 import time
 import math
@@ -20,9 +20,9 @@ class IntervalName(Enum):
     # use for intervals that are repeatedly created or removed
     CAMERA_STREAMING = "camera_streaming"
     STOP_ROBOT = "stop_robot"
-    CAMERA_STREAMING_STATE = "camera_streaming_state"
     OBC_STATE = "obc_state"
     CONTROLLED_DRIVE = "controlled_drive"
+    NEUTRON_COUNT = "neutron_count"
 
 class YamcsTMTC:
     """
@@ -77,24 +77,33 @@ class YamcsTMTC:
         elif name == self._yamcs_conf["commands"]["camera_capture_depth"]:
             self.handle_depth_capture()
         elif name == self._yamcs_conf["commands"]["power_electronics"]:
-            self._handle_electronics(arguments["subsystem_id"], arguments["power_state"])
+            self._handle_electronics_on_off(arguments["subsystem_id"], arguments["power_state"])
         elif name == self._yamcs_conf["commands"]["solar_panel"]:
             self._handle_solar_panel(arguments["deployment"])
         elif name == self._yamcs_conf["commands"]["go_nogo"]:
             self._handle_go_nogo(arguments["decision"])
         elif name == self._yamcs_conf["commands"]["capture_apxs"]:
-            self._payload_handler._snap_apxs()
+            self._payload_handler._snap_apxs(self._robot.subsystems.get_electronics_state(Electronics.APXS.value))
+        elif name == self._yamcs_conf["commands"]["admin_batter_percentage"]:
+            self._handle_batter_perc_change(arguments["battery_percentage"])
+        elif name == self._yamcs_conf["commands"]["admin_water_detection"]:
+            self._robot.subsystems.set_is_near_water(arguments["trigger_water_detection"])
         # here add reactions to other commands
         else:
             print("Unknown command:", name)
 
+    def _handle_batter_perc_change(self, battery_percentage:int):
+        self._robot.subsystems.set_battery_perc(battery_percentage)
+
     def handle_high_res_capture(self):
-        self._camera_handler.transmit_camera_view(CameraViewTransmitHandler.BUCKET_IMAGES_ONCOMMAND, "high", "rgb")
-        self._set_obc_state(ObcState.CAMERA, 10)
+        if (self._robot.subsystems.get_electronics_state(Electronics.CAMERA.value) == PowerState.ON):
+            self._camera_handler.transmit_camera_view(CameraViewTransmitHandler.BUCKET_IMAGES_ONCOMMAND, "high", "rgb")
+            self._set_obc_state(ObcState.CAMERA, 10)
 
     def handle_depth_capture(self):
-        self._camera_handler.transmit_camera_view(CameraViewTransmitHandler.BUCKET_IMAGES_DEPTH, "high", "depth")
-        self._set_obc_state(ObcState.CAMERA, 10)
+        if (self._robot.subsystems.get_electronics_state(Electronics.CAMERA.value) == PowerState.ON):
+            self._camera_handler.transmit_camera_view(CameraViewTransmitHandler.BUCKET_IMAGES_DEPTH, "high", "depth")
+            self._set_obc_state(ObcState.CAMERA, 10)
 
     def _set_obc_state(self, state:ObcState, set_to_idle_after=0):
         if self._intervals_handler.does_exist(IntervalName.OBC_STATE.value):
@@ -114,13 +123,21 @@ class YamcsTMTC:
         else:
             print("New state for solar panel is unknown:", new_state)
 
-    def _handle_electronics(self, electronics:str, new_state:PowerState):
+    def _handle_electronics_on_off(self, electronics:str, new_state:PowerState):
         if new_state not in [PowerState.ON.value, PowerState.OFF.value]:
             print("New decision for PowerState of electronics is unknown:", new_state)
             return
         
         new_state = PowerState[new_state]
         self._robot.subsystems.set_electronics_state(electronics, new_state)
+
+        if electronics == Electronics.CAMERA.value:
+            self._set_activity_of_camera_streaming("START") if new_state == PowerState.ON else self._set_activity_of_camera_streaming("STOP")
+        elif electronics == Electronics.NEUTRON_SPECTROMETER.value:
+            self._set_activity_of_neutron_streaming(new_state)
+        elif electronics == Electronics.RADIO.value:
+            #TODO
+            pass
 
     def _handle_go_nogo(self, decision:str):
         if decision not in [GoNogoState.GO.name, GoNogoState.NOGO.name]:
@@ -219,14 +236,14 @@ class YamcsTMTC:
         self._set_obc_state(ObcState.IDLE)
 
     def start_streaming_data(self):
+        self._payload_handler._snap_apxs() # snaps initial blank apxs reading
         self._intervals_handler.add_new_interval(name="Pose of base link", seconds=self._yamcs_conf["intervals"]["robot_stats"], is_repeating=True, execute_immediately=True,
                                                  function=self._transmit_pose_of_base_link)
-        self._intervals_handler.add_new_interval(name=IntervalName.CAMERA_STREAMING.value, seconds=self._yamcs_conf["intervals"]["camera_streaming"], is_repeating=True, execute_immediately=True,
-                                                 function=self._camera_handler.transmit_camera_view, f_args=(CameraViewTransmitHandler.BUCKET_IMAGES_STREAMING, "low"))
-        self._is_camera_streaming_on = True
-        # TODO add this when parameter path fixed
-        # self._intervals_handler.add_new_interval(name=IntervalName.CAMERA_STREAMING_STATE.value, seconds=self._yamcs_conf["intervals"]["robot_stats"], is_repeating=True, execute_immediately=True,
-        #                                          function=self._transmit_camera_streaming_state)
+        #NOTE Not starting camera streaming automatically since now Camera has to be turned ON / OFF
+        # self._intervals_handler.add_new_interval(name=IntervalName.CAMERA_STREAMING.value, seconds=self._yamcs_conf["intervals"]["camera_streaming"], is_repeating=True, execute_immediately=True,
+        #                                          function=self._camera_handler.transmit_camera_view, f_args=(CameraViewTransmitHandler.BUCKET_IMAGES_STREAMING, "low"))
+        self._intervals_handler.add_new_interval(name="camera streaming state", seconds=self._yamcs_conf["intervals"]["robot_stats"], is_repeating=True, execute_immediately=True,
+                                                 function=self._transmit_camera_streaming_state)
         self._intervals_handler.add_new_interval(name="GO_NOGO", seconds=self._yamcs_conf["intervals"]["robot_stats"], is_repeating=True, execute_immediately=True,
                                                  function=self._transmit_go_nogo)
         self._intervals_handler.add_new_interval(name="IMU readings", seconds=self._yamcs_conf["intervals"]["robot_stats"], is_repeating=True, execute_immediately=True,
@@ -239,8 +256,9 @@ class YamcsTMTC:
                                                  function=self._transmit_thermal_info, f_args=[self._yamcs_conf["intervals"]["robot_stats"]])
         self._intervals_handler.add_new_interval(name="Power status", seconds=self._yamcs_conf["intervals"]["robot_stats"], is_repeating=True, execute_immediately=True,
                                                  function=self._transmit_power_info, f_args=[self._yamcs_conf["intervals"]["robot_stats"]])
-        self._intervals_handler.add_new_interval(name="Neutron count", seconds=self._yamcs_conf["intervals"]["robot_stats"], is_repeating=True, execute_immediately=True,
-                                                 function=self._transmit_neutroun_count, f_args=[self._yamcs_conf["intervals"]["robot_stats"]])
+        #NOTE Not starting neutrons streaming automatically since now it has to be turned ON / OFF
+        # self._intervals_handler.add_new_interval(name="Neutron count", seconds=self._yamcs_conf["intervals"]["robot_stats"], is_repeating=True, execute_immediately=True,
+        #                                          function=self._transmit_neutroun_count, f_args=[self._yamcs_conf["intervals"]["robot_stats"]])
         # here add further intervals and their functionalities
 
     def _transmit_radio_signal_info(self):
@@ -291,9 +309,9 @@ class YamcsTMTC:
         self._yamcs_processor.set_parameter_value(self._yamcs_conf["parameters"]["imu_orientation"], orientation)
         
     def _transmit_camera_streaming_state(self):
-        #TODO update this depending on the param format
         is_camera_streaming = self._intervals_handler.does_exist(IntervalName.CAMERA_STREAMING.value)
-        self._yamcs_processor.set_parameter_value(self._yamcs_conf["parameters"]["camera_streaming_state"], is_camera_streaming)
+        state = PowerState.ON if is_camera_streaming else PowerState.OFF
+        self._yamcs_processor.set_parameter_value(self._yamcs_conf["parameters"]["camera_streaming_state"], state)
 
     def _transmit_go_nogo(self):
         go_nogo_state =  self._robot.subsystems.get_go_nogo_state().value
@@ -313,10 +331,18 @@ class YamcsTMTC:
             self._intervals_handler.remove_interval(IntervalName.CAMERA_STREAMING.value)
         elif action == "START":
             if not self._intervals_handler.does_exist(IntervalName.CAMERA_STREAMING.value):
-                self._intervals_handler.add_new_interval(name=IntervalName.CAMERA_STREAMING.value, seconds=self._yamcs_conf["intervals"]["camera_streaming"], is_repeating=True, execute_immediately=True,
+                self._intervals_handler.add_new_interval(name=IntervalName.CAMERA_STREAMING.value, seconds=self._yamcs_conf["intervals"]["camera_streaming"], is_repeating=True, execute_immediately=False,
                                                  function=self._camera_handler.transmit_camera_view, f_args=(CameraViewTransmitHandler.BUCKET_IMAGES_STREAMING, "low"))
         else:
             print("Unknown action:", action)
+
+    def _set_activity_of_neutron_streaming(self, power_state:PowerState):
+        if power_state == PowerState.OFF:
+            self._intervals_handler.remove_interval(IntervalName.NEUTRON_COUNT.value)
+        elif power_state == PowerState.ON:
+            if not self._intervals_handler.does_exist(IntervalName.NEUTRON_COUNT.value):
+                self._intervals_handler.add_new_interval(name=IntervalName.NEUTRON_COUNT.value, seconds=self._yamcs_conf["intervals"]["camera_streaming"], is_repeating=True, execute_immediately=False,
+                                                 function=self._transmit_neutroun_count, f_args=[self._yamcs_conf["intervals"]["robot_stats"]])
 
 class IntervalsHandler:
     def __init__(self):
@@ -430,10 +456,6 @@ class CameraViewTransmitHandler:
     
     def _snap_camera_view_depth(self, resolution:str) -> Image:
         frame = self._robot.get_depth_camera_view(resolution)
-        #NOTE this gives non-human readable png, while the below uncommented code transfers this into grayscale png
-        # camera_view = Image.fromarray(frame, "L")
-        # return camera_view
-    
         depth = np.nan_to_num(frame, nan=0.0, posinf=0.0, neginf=0.0)
 
         valid = depth > 0
@@ -492,32 +514,20 @@ class PayloadHandler:
             self.BUCKET_IMAGES_APXS:0,
         }
 
-    def _snap_apxs(self):
-        image_name = f"{self.BUCKET_IMAGES_APXS}_{self._counter[self.BUCKET_IMAGES_APXS]}.png"
+    def _snap_apxs(self, apxs_power_state:PowerState=PowerState.OFF):
+        image_name = f"{self.BUCKET_IMAGES_APXS}_{self._counter[self.BUCKET_IMAGES_APXS]}"
 
         if self._counter[self.BUCKET_IMAGES_APXS] == 0:
             apxs_background_path = os.path.join(self.APXS_SAMPLES_DIR, 'APXS_nodata.png')
-        else:
+        elif self._counter[self.BUCKET_IMAGES_APXS] > 0 and apxs_power_state == PowerState.ON:
             apxs_background_path = os.path.join(self.APXS_SAMPLES_DIR, 'APXS_measurement.png')
-
-        # if os.path.exists(apxs_background_path):
-        #     print("File exists:", apxs_background_path)
-        # else:
-        #     print("FILE NOT FOUND:", apxs_background_path)
-
-        print(apxs_background_path)
-        img = Image.open(apxs_background_path) #.convert('RGB').resize((self.APXS_WIDTH, self.APXS_HEIGHT))
-        # draw = ImageDraw.Draw(img)
-        # self._draw_text(draw, text=image_name, fill="black", position='top-right')
-        image_name = self._helper.save_image_locally(img, self.BUCKET_IMAGES_APXS, self._counter[self.BUCKET_IMAGES_APXS])
-        print("image name", image_name)
-
-        saved_image = f"/tmp/{self.BUCKET_IMAGES_APXS}/{image_name}"
-        if os.path.exists(saved_image):
-            print("File exists:", saved_image)
         else:
-            print("FILE NOT FOUND:", saved_image)
-            
+            return
+
+        img = Image.open(apxs_background_path).convert('RGB').resize((self.APXS_WIDTH, self.APXS_HEIGHT))
+        draw = ImageDraw.Draw(img)
+        self._draw_text(draw, text=image_name, fill="black", position='top-right')
+        image_name = self._helper.save_image_locally(img, self.BUCKET_IMAGES_APXS, self._counter[self.BUCKET_IMAGES_APXS])
         self._helper.inform_yamcs(image_name, "payload", self.BUCKET_IMAGES_APXS, self._counter[self.BUCKET_IMAGES_APXS])
         self._counter[self.BUCKET_IMAGES_APXS] += 1
     

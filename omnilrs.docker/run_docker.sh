@@ -17,5 +17,6 @@ docker run --name isaac-sim-omnilrs-container -it --gpus all -e "ACCEPT_EULA=Y" 
 -v /tmp/images_oncommand:/tmp/images_oncommand:rw \
 -v /tmp/images_apxs:/tmp/images_apxs:rw \
 -v /tmp/images_depth:/tmp/images_depth:rw \
+-v /tmp/images_apxs:/tmp/images_apxs:rw \
 -v bash_command_history:/commandhistory \
 isaac-sim-omnilrs:latest
