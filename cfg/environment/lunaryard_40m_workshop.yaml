@@ -230,8 +230,8 @@ robots_settings:
     instance: "workshop"
     processor: "realtime"
     intervals:
-      robot_stats: 3
-      camera_streaming: 5
+      robot_stats: 1
+      camera_streaming: 2
     parameters:
       pose_of_base_link: "/Rover/pose_ground_truth"
       go_nogo: "/Rover/go_nogo"
