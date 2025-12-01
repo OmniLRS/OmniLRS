@@ -288,6 +288,8 @@ class YamcsTMTC:
                                                  function=self._transmit_thermal_info, f_args=[self._yamcs_conf["intervals"]["robot_stats"]])
         self._intervals_handler.add_new_interval(name="Power status", seconds=self._yamcs_conf["intervals"]["robot_stats"], is_repeating=True, execute_immediately=True,
                                                  function=self._transmit_power_info, f_args=[self._yamcs_conf["intervals"]["robot_stats"]])
+        self._intervals_handler.add_new_interval(name="OBC metrics", seconds=self._yamcs_conf["intervals"]["robot_stats"], is_repeating=True, execute_immediately=True,
+                                                 function=self._transmit_obc_metrics)
         self._intervals_handler.add_new_interval(name="Solar panel state", seconds=self._yamcs_conf["intervals"]["robot_stats"], is_repeating=True, execute_immediately=True,
                                                  function=self._transmit_solar_panel_state)
         # here add further intervals and their functionalities
@@ -296,6 +298,20 @@ class YamcsTMTC:
         state:SolarPanelState = self._robot.subsystems.get_solar_panel_state()
         self._yamcs_processor.set_parameter_value(self._yamcs_conf["parameters"]["solar_panel_state"], state.value)
 
+    def _transmit_obc_metrics(self):
+        obc_state = self._robot.subsystems.get_obc_state()
+        self._robot.subsystems.input_obc_state(obc_state)
+
+        cpu_usage = int(self._robot.subsystems.get_obc_cpu_usage())
+        ram_usage = int(self._robot.subsystems.get_obc_ram_usage())
+        disk_usage = int(self._robot.subsystems.get_obc_disk_usage())
+        uptime = self._robot.subsystems.get_obc_uptime()
+
+        self._yamcs_processor.set_parameter_value(self._yamcs_conf["parameters"]["obc_cpu_usage"], cpu_usage)
+        self._yamcs_processor.set_parameter_value(self._yamcs_conf["parameters"]["obc_ram_usage"], ram_usage)
+        self._yamcs_processor.set_parameter_value(self._yamcs_conf["parameters"]["obc_disk_usage"], disk_usage)
+        self._yamcs_processor.set_parameter_value(self._yamcs_conf["parameters"]["obc_uptime"], uptime)
+        
     def _transmit_radio_signal_info(self):
         robot_position, orientation = self._robots_RG[str(self._robot_name)].get_pose_of_base_link()
         rssi = self._robot.subsystems.calculate_rssi(robot_position)
