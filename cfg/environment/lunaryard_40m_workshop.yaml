@@ -250,6 +250,7 @@ robots_settings:
       battery_charge: "/Rover/battery_charge"
       battery_voltage: "/Rover/battery_voltage"
       total_current_in: "/Rover/total_current_in"
+      total_current_out: "/Rover/total_current_out"
       motor_current: "/Rover/motor_current"
       current_draw_obc: "/Rover/current_draw_obc"
       current_draw_motor_controller: "/Rover/current_draw_motor_controller"
