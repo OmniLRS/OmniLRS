@@ -357,6 +357,9 @@ class Robot:
         )
         self.edit_graphs()
         self._initialize_cameras()
+
+    def get_streaming_cam_resolution(self):
+        return (self._camera_conf["resolutions"]["low"][0], self._camera_conf["resolutions"]["low"][1])
         
     def _initialize_cameras(self) -> None:
         # Camera is a wrapper, therefore it just wraps around the camera instance if it already exists

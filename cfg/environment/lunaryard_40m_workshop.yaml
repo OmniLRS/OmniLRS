@@ -230,8 +230,11 @@ robots_settings:
     instance: "workshop"
     processor: "realtime"
     intervals:
-      robot_stats: 3
-      camera_streaming: 5
+      robot_stats: 1
+      camera_streaming: 2
+    lander_camera:
+      prim_path: "/StaticAssets/lander/Lander/Cam_Right/Lander_Camera"
+      resolution: [1440, 1080]
     parameters:
       pose_of_base_link: "/Rover/pose_ground_truth"
       go_nogo: "/Rover/go_nogo"
@@ -254,6 +257,7 @@ robots_settings:
       battery_charge: "/Rover/battery_charge"
       battery_voltage: "/Rover/battery_voltage"
       total_current_in: "/Rover/total_current_in"
+      total_current_out: "/Rover/total_current_out"
       motor_current: "/Rover/motor_current"
       current_draw_obc: "/Rover/current_draw_obc"
       current_draw_motor_controller: "/Rover/current_draw_motor_controller"
@@ -264,6 +268,7 @@ robots_settings:
       current_draw_eps: "/Rover/current_draw_eps"
       neutron_counts: "/Rover/neutron_counts"
       camera_streaming_state: "/Rover/camera/images_streaming/state"
+      solar_panel_state: "/Rover/solar_panel_state"
     commands:
       drive_straight: "/Rover/motor/drive_straight"
       drive_turn: "/Rover/motor/drive_turn"
@@ -274,8 +279,10 @@ robots_settings:
       power_electronics: "/Rover/power/power_electronics"
       go_nogo: "/Rover/system/go_nogo_command"
       capture_apxs: "/Rover/payload/payload_capture_apxs"
-      admin_batter_percentage: "/Admin/admin_set_battery_percentage"
+      admin_battery_percentage: "/Admin/admin_set_battery_percentage"
       admin_water_detection: "/Admin/admin_water_detection"
+      admin_inject_fault: "/Admin/admin_inject_fault"
+      lander_camera_capture_high: "/Lander/camera/lander_camera_capture"
 
 static_assets_settings:
   root_path: "/StaticAssets"
