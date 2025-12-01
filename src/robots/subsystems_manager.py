@@ -10,12 +10,12 @@ from isaacsim.core.utils.xforms import get_world_pose
 import random
 
 class PowerState(StrEnum):
-    OFF = "OFF",
-    ON = "ON",
+    OFF = "OFF"
+    ON = "ON"
 
-class SolarPanelState(StrEnum):
-    STOWED = "STOWED",
-    DEPLOYED = "DEPLOYED",
+class SolarPanelState(Enum):
+    STOWED = 0
+    DEPLOYED = 1
 
 class GoNogoState(Enum):
     NOGO = 0
@@ -157,7 +157,7 @@ class RobotSubsystemsManager:
     def set_solar_panel_state(self, state:SolarPanelState):
         self._solar_panel_state = state
 
-    def get_solar_state(self):
+    def get_solar_panel_state(self):
         return self._solar_panel_state
     
     def set_go_nogo_state(self, new_state:GoNogoState):

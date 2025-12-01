@@ -279,10 +279,20 @@ class YamcsTMTC:
                                                  function=self._transmit_thermal_info, f_args=[self._yamcs_conf["intervals"]["robot_stats"]])
         self._intervals_handler.add_new_interval(name="Power status", seconds=self._yamcs_conf["intervals"]["robot_stats"], is_repeating=True, execute_immediately=True,
                                                  function=self._transmit_power_info, f_args=[self._yamcs_conf["intervals"]["robot_stats"]])
+        self._intervals_handler.add_new_interval(name="Solar panel state", seconds=self._yamcs_conf["intervals"]["robot_stats"], is_repeating=True, execute_immediately=True,
+                                                 function=self._transmit_solar_panel_state)
         #NOTE Not starting neutrons streaming automatically since now it has to be turned ON / OFF
         # self._intervals_handler.add_new_interval(name="Neutron count", seconds=self._yamcs_conf["intervals"]["robot_stats"], is_repeating=True, execute_immediately=True,
         #                                          function=self._transmit_neutroun_count, f_args=[self._yamcs_conf["intervals"]["robot_stats"]])
         # here add further intervals and their functionalities
+
+    def _transmit_solar_panel_state(self):
+        print("SOLAR PANEL STATE")
+        state:SolarPanelState = self._robot.subsystems.get_solar_panel_state()
+        print(state)
+        print(state.name)
+        print(state.value)
+        self._yamcs_processor.set_parameter_value(self._yamcs_conf["parameters"]["solar_panel_state"], state.value)
 
     def _transmit_radio_signal_info(self):
         robot_position, orientation = self._robots_RG[str(self._robot_name)].get_pose_of_base_link()
