@@ -38,6 +38,10 @@ class Electronics(Enum):
     APXS = "APXS"
     RADIO = "RADIO"
 
+class HealthStatus(Enum):
+    OK = 0
+    FAULT = 1
+
 class RobotSubsystemsManager:
     SUN_POSITION = (10.0, 5.0, 7.5)
     LANDER_POSITION = (0.0, 0.0, 0.0)
@@ -51,6 +55,9 @@ class RobotSubsystemsManager:
             Electronics.NEUTRON_SPECTROMETER.value: PowerState.OFF,
             Electronics.APXS.value: PowerState.OFF,
             Electronics.RADIO.value: PowerState.ON,
+        }
+        self._electronics_health = {
+            key: HealthStatus.OK for key in self._electronics_power_state
         }
         self._solar_panel_state = SolarPanelState.STOWED
         self._go_nogo_state = GoNogoState.NOGO
@@ -178,6 +185,28 @@ class RobotSubsystemsManager:
     
     def set_is_near_water(self, is_near):
         self._neutron_spectrometer.is_near_water = is_near
+
+    def set_electronics_health(self, electronics:str, status:HealthStatus):
+        if electronics not in self._electronics_health:
+            print("Invalid electronics naming: ", electronics)
+            return
+
+        self._electronics_health[electronics] = status
+    
+    def is_electronics_healthy(self, electronics:str):
+        if electronics not in self._electronics_health:
+            print("Invalid electronics naming: ", electronics)
+            return
+
+        return self._electronics_health[electronics] == HealthStatus.OK
+    
+    def get_electronics_health(self, electronics:str):
+        if electronics not in self._electronics_health:
+            print("Invalid electronics naming: ", electronics)
+            return
+
+        return self._electronics_health[electronics]
+
 
 class NeutronSpectrometerSimulator():
     

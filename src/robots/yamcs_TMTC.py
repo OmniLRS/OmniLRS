@@ -2,7 +2,7 @@ __author__ = "Aleksa Stanivuk"
 __status__ = "development"
 
 from src.environments.utils import transform_orientation_into_xyz
-from src.robots.subsystems_manager import Electronics, GoNogoState, ObcState, PowerState, SolarPanelState
+from src.robots.subsystems_manager import Electronics, GoNogoState, HealthStatus, ObcState, PowerState, SolarPanelState
 from yamcs.client import YamcsClient, CommandHistory
 import time
 import math
@@ -88,12 +88,18 @@ class YamcsTMTC:
             self._handle_batter_perc_change(arguments["battery_percentage"])
         elif name == self._yamcs_conf["commands"]["admin_water_detection"]:
             self._robot.subsystems.set_is_near_water(arguments["trigger_water_detection"])
+        elif name == self._yamcs_conf["commands"]["admin_inject_fault"]:
+            self._inject_fault()
         elif name == self._yamcs_conf["commands"]["lander_camera_capture_high"]:
             self.handle_lander_camera_capture()
         # here add reactions to other commands
         else:
             print("Unknown command:", name)
 
+    def _inject_fault(self):
+        self._robot.subsystems.set_electronics_health(Electronics.MOTOR_CONTROLLER.value, HealthStatus.FAULT)
+        print("Electronics name:", Electronics.MOTOR_CONTROLLER.value)
+        print("Health status:", self._robot.subsystems.get_electronics_health(Electronics.MOTOR_CONTROLLER.value))
 
     def _handle_batter_perc_change(self, battery_percentage:int):
         self._robot.subsystems.set_battery_perc(battery_percentage)
@@ -238,8 +244,13 @@ class YamcsTMTC:
     def _is_robot_able_to_drive(self):
         motor_state:PowerState = self._robot.subsystems.get_electronics_state(Electronics.MOTOR_CONTROLLER.value)
         go_state:GoNogoState = self._robot.subsystems.get_go_nogo_state()
+        motor_health:HealthStatus = self._robot.subsystems.get_electronics_health(Electronics.MOTOR_CONTROLLER.value)
 
-        return go_state == GoNogoState.GO and motor_state == PowerState.ON  
+        print("motor_state", motor_state)
+        print("go_state", go_state)
+        print("motor_health", motor_health)
+
+        return go_state == GoNogoState.GO and motor_state == PowerState.ON and motor_health == HealthStatus.OK
 
     def _calculate_turn_speed(self, angular_velocity):
         robot_width = self._robot.dimensions["width"]

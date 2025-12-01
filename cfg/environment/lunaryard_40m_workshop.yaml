@@ -277,6 +277,7 @@ robots_settings:
       capture_apxs: "/Rover/payload/payload_capture_apxs"
       admin_batter_percentage: "/Admin/admin_set_battery_percentage"
       admin_water_detection: "/Admin/admin_water_detection"
+      admin_inject_fault: "/Admin/admin_inject_fault"
       lander_camera_capture_high: "/Lander/camera/lander_camera_capture"
 
 static_assets_settings:
