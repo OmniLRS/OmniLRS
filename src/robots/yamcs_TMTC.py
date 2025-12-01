@@ -84,8 +84,8 @@ class YamcsTMTC:
             self._handle_go_nogo(arguments["decision"])
         elif name == self._yamcs_conf["commands"]["capture_apxs"]:
             self._payload_handler._snap_apxs(self._robot.subsystems.get_electronics_state(Electronics.APXS.value))
-        elif name == self._yamcs_conf["commands"]["admin_batter_percentage"]:
-            self._handle_batter_perc_change(arguments["battery_percentage"])
+        elif name == self._yamcs_conf["commands"]["admin_battery_percentage"]:
+            self._handle_battery_perc_change(arguments["battery_percentage"])
         elif name == self._yamcs_conf["commands"]["admin_water_detection"]:
             self._robot.subsystems.set_is_near_water(arguments["trigger_water_detection"])
         elif name == self._yamcs_conf["commands"]["admin_inject_fault"]:
@@ -99,7 +99,7 @@ class YamcsTMTC:
     def _inject_fault(self):
         self._robot.subsystems.set_electronics_health(Electronics.MOTOR_CONTROLLER.value, HealthStatus.FAULT)
 
-    def _handle_batter_perc_change(self, battery_percentage:int):
+    def _handle_battery_perc_change(self, battery_percentage:int):
         self._robot.subsystems.set_battery_perc(battery_percentage)
 
     def handle_lander_camera_capture(self):
