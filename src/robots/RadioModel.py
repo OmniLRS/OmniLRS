@@ -17,7 +17,7 @@ class RadioModel:
 
 	lander_position: Tuple[float, float, float] = (0.0, 0.0, 0.0)
 	rover_position: Tuple[float, float, float] = (0.0, 0.0, 0.0)
-	best_rssi: float = -100.0  # Strongest signal observed at zero separation.
+	best_rssi: float = -90.0  # Strongest signal observed at zero separation.
 	worst_rssi: float = -30.0  # Weakest accepted reading at reference distance.
 	reference_distance: float = 100.0  # Distance (m) at which worst_rssi applies.
 	noise_std: float = 1.0  # Standard deviation of random RSSI noise [dB].
