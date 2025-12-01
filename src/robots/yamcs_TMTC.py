@@ -260,11 +260,9 @@ class YamcsTMTC:
 
     def start_streaming_data(self):
         self._payload_handler._snap_apxs() # snaps initial blank apxs reading
+        self._camera_handler.snap_initial_no_data_stream(self._robot.get_streaming_cam_resolution()) # snaps initial blank apxs reading
         self._intervals_handler.add_new_interval(name="Pose of base link", seconds=self._yamcs_conf["intervals"]["robot_stats"], is_repeating=True, execute_immediately=True,
                                                  function=self._transmit_pose_of_base_link)
-        #NOTE Not starting camera streaming automatically since now Camera has to be turned ON / OFF
-        # self._intervals_handler.add_new_interval(name=IntervalName.CAMERA_STREAMING.value, seconds=self._yamcs_conf["intervals"]["camera_streaming"], is_repeating=True, execute_immediately=True,
-        #                                          function=self._camera_handler.transmit_camera_view, f_args=(CameraViewTransmitHandler.BUCKET_IMAGES_STREAMING, "low"))
         self._intervals_handler.add_new_interval(name="camera streaming state", seconds=self._yamcs_conf["intervals"]["robot_stats"], is_repeating=True, execute_immediately=True,
                                                  function=self._transmit_camera_streaming_state)
         self._intervals_handler.add_new_interval(name="GO_NOGO", seconds=self._yamcs_conf["intervals"]["robot_stats"], is_repeating=True, execute_immediately=True,
@@ -281,17 +279,10 @@ class YamcsTMTC:
                                                  function=self._transmit_power_info, f_args=[self._yamcs_conf["intervals"]["robot_stats"]])
         self._intervals_handler.add_new_interval(name="Solar panel state", seconds=self._yamcs_conf["intervals"]["robot_stats"], is_repeating=True, execute_immediately=True,
                                                  function=self._transmit_solar_panel_state)
-        #NOTE Not starting neutrons streaming automatically since now it has to be turned ON / OFF
-        # self._intervals_handler.add_new_interval(name="Neutron count", seconds=self._yamcs_conf["intervals"]["robot_stats"], is_repeating=True, execute_immediately=True,
-        #                                          function=self._transmit_neutroun_count, f_args=[self._yamcs_conf["intervals"]["robot_stats"]])
         # here add further intervals and their functionalities
 
     def _transmit_solar_panel_state(self):
-        print("SOLAR PANEL STATE")
         state:SolarPanelState = self._robot.subsystems.get_solar_panel_state()
-        print(state)
-        print(state.name)
-        print(state.value)
         self._yamcs_processor.set_parameter_value(self._yamcs_conf["parameters"]["solar_panel_state"], state.value)
 
     def _transmit_radio_signal_info(self):
@@ -456,6 +447,7 @@ class CameraViewTransmitHandler:
     BUCKET_IMAGES_STREAMING = "images_streaming"
     BUCKET_IMAGES_ONCOMMAND = "images_oncommand"
     BUCKET_IMAGES_DEPTH = "images_depth"
+    NO_DATA_IMAGE_PATH = "/workspace/omnilrs/assets/images/no_data_grafana.png"
 
     def __init__(self, yamcs_processor, robot, yamcs_address, helper) -> None:
         self._yamcs_processor = yamcs_processor
@@ -483,6 +475,12 @@ class CameraViewTransmitHandler:
         print(image_name)
         self._helper.inform_yamcs(image_name, "camera", bucket, self._counter[bucket])
         self._counter[bucket] += 1
+
+    def snap_initial_no_data_stream(self, resolution):
+        img = Image.open(self.NO_DATA_IMAGE_PATH).convert('RGB').resize((resolution[0], resolution[1]))
+        image_name = self._helper.save_image_locally(img, self.BUCKET_IMAGES_STREAMING, self._counter[self.BUCKET_IMAGES_STREAMING])
+        self._helper.inform_yamcs(image_name, "camera", self.BUCKET_IMAGES_STREAMING, self._counter[self.BUCKET_IMAGES_STREAMING])
+        self._counter[self.BUCKET_IMAGES_STREAMING] += 1
 
     def _snap_camera_view_rgb(self, resolution:str) -> Image:
         frame = self._robot.get_rgba_camera_view(resolution)
