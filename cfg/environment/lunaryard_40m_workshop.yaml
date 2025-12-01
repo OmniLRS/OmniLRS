@@ -232,6 +232,9 @@ robots_settings:
     intervals:
       robot_stats: 1
       camera_streaming: 2
+    lander_camera:
+      prim_path: "/StaticAssets/lander/Lander/Cam_Right/Lander_Camera"
+      resolution: [1440, 1080]
     parameters:
       pose_of_base_link: "/Rover/pose_ground_truth"
       go_nogo: "/Rover/go_nogo"
@@ -274,6 +277,7 @@ robots_settings:
       capture_apxs: "/Rover/payload/payload_capture_apxs"
       admin_batter_percentage: "/Admin/admin_set_battery_percentage"
       admin_water_detection: "/Admin/admin_water_detection"
+      lander_camera_capture_high: "/Lander/camera/lander_camera_capture"
 
 static_assets_settings:
   root_path: "/StaticAssets"
