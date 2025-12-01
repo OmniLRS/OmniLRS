@@ -98,8 +98,6 @@ class YamcsTMTC:
 
     def _inject_fault(self):
         self._robot.subsystems.set_electronics_health(Electronics.MOTOR_CONTROLLER.value, HealthStatus.FAULT)
-        print("Electronics name:", Electronics.MOTOR_CONTROLLER.value)
-        print("Health status:", self._robot.subsystems.get_electronics_health(Electronics.MOTOR_CONTROLLER.value))
 
     def _handle_batter_perc_change(self, battery_percentage:int):
         self._robot.subsystems.set_battery_perc(battery_percentage)
@@ -154,6 +152,7 @@ class YamcsTMTC:
         elif electronics == Electronics.MOTOR_CONTROLLER.value:
             if (new_state == PowerState.OFF):
                 self._stop_robot()
+                self._robot.subsystems.set_electronics_health(Electronics.MOTOR_CONTROLLER.value, HealthStatus.OK)
         elif electronics == Electronics.RADIO.value:
             #TODO
             pass
@@ -245,10 +244,6 @@ class YamcsTMTC:
         motor_state:PowerState = self._robot.subsystems.get_electronics_state(Electronics.MOTOR_CONTROLLER.value)
         go_state:GoNogoState = self._robot.subsystems.get_go_nogo_state()
         motor_health:HealthStatus = self._robot.subsystems.get_electronics_health(Electronics.MOTOR_CONTROLLER.value)
-
-        print("motor_state", motor_state)
-        print("go_state", go_state)
-        print("motor_health", motor_health)
 
         return go_state == GoNogoState.GO and motor_state == PowerState.ON and motor_health == HealthStatus.OK
 
