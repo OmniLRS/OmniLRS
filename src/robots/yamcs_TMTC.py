@@ -290,9 +290,9 @@ class YamcsTMTC:
         obc_state = self._robot.subsystems.get_obc_state()
         self._robot.subsystems.input_obc_state(obc_state)
 
-        cpu_usage = self._robot.subsystems.get_obc_cpu_usage()
-        ram_usage = self._robot.subsystems.get_obc_ram_usage()
-        disk_usage = self._robot.subsystems.get_obc_disk_usage()
+        cpu_usage = int(self._robot.subsystems.get_obc_cpu_usage())
+        ram_usage = int(self._robot.subsystems.get_obc_ram_usage())
+        disk_usage = int(self._robot.subsystems.get_obc_disk_usage())
         uptime = self._robot.subsystems.get_obc_uptime()
 
         self._yamcs_processor.set_parameter_value(self._yamcs_conf["parameters"]["obc_cpu_usage"], cpu_usage)
