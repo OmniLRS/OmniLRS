@@ -39,7 +39,7 @@ class Electronics(Enum):
     RADIO = "RADIO"
 
 class HealthStatus(Enum):
-    OK = 0
+    NOMINAL = 0
     FAULT = 1
 
 class RobotSubsystemsManager:
@@ -57,7 +57,7 @@ class RobotSubsystemsManager:
             Electronics.RADIO.value: PowerState.ON,
         }
         self._electronics_health = {
-            key: HealthStatus.OK for key in self._electronics_power_state
+            key: HealthStatus.NOMINAL for key in self._electronics_power_state
         }
         self._solar_panel_state = SolarPanelState.STOWED
         self._go_nogo_state = GoNogoState.NOGO
@@ -90,7 +90,7 @@ class RobotSubsystemsManager:
             return func(self, *args, **kwargs)
         return wrapper
 
-    def map_into_currents(self):
+    def _map_into_currents(self):
         mapped = {
             "current_draw_obc": True,
             "current_draw_motor_controller": self.is_turned_on(Electronics.MOTOR_CONTROLLER.value),
@@ -101,8 +101,19 @@ class RobotSubsystemsManager:
             "current_draw_eps": True,
         }
 
-        # print(mapped)
-
+        return mapped
+    
+    def _map_into_healths(self):
+        mapped = {
+            "current_draw_obc": HealthStatus.NOMINAL.name,
+            "current_draw_motor_controller":  self.get_electronics_health(Electronics.MOTOR_CONTROLLER.value).name,
+            "current_draw_neutron_spectrometer":  self.get_electronics_health(Electronics.NEUTRON_SPECTROMETER.value).name,
+            "current_draw_apxs":  self.get_electronics_health(Electronics.APXS.value).name,
+            "current_draw_camera":  self.get_electronics_health(Electronics.CAMERA.value).name,
+            "current_draw_radio":  self.get_electronics_health(Electronics.RADIO.value).name,
+            "current_draw_eps":  HealthStatus.NOMINAL.name,
+        }
+        
         return mapped
     
     def is_turned_on(self, electronic):
@@ -130,10 +141,11 @@ class RobotSubsystemsManager:
     
     @_update_positions_before
     def calculate_power_status(self, robot_position, interval_s, obc_state):
-        self._power.set_device_states(self.map_into_currents())
+        self._power.set_device_states(self._map_into_currents())
         self._power.set_sun_position(self._sun_pos)
         self._power.set_rover_position(robot_position)
         self._power.set_motor_state(obc_state == ObcState.MOTOR) 
+        self._power.set_device_health(self._map_into_healths())
         self._power.step(interval_s)
         status = self._power.status()
    
@@ -198,7 +210,7 @@ class RobotSubsystemsManager:
             print("Invalid electronics naming: ", electronics)
             return
 
-        return self._electronics_health[electronics] == HealthStatus.OK
+        return self._electronics_health[electronics] == HealthStatus.NOMINAL
     
     def get_electronics_health(self, electronics:str):
         if electronics not in self._electronics_health:

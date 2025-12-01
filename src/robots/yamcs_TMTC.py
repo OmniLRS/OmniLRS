@@ -152,7 +152,7 @@ class YamcsTMTC:
         elif electronics == Electronics.MOTOR_CONTROLLER.value:
             if (new_state == PowerState.OFF):
                 self._stop_robot()
-                self._robot.subsystems.set_electronics_health(Electronics.MOTOR_CONTROLLER.value, HealthStatus.OK)
+                self._robot.subsystems.set_electronics_health(Electronics.MOTOR_CONTROLLER.value, HealthStatus.NOMINAL)
         elif electronics == Electronics.RADIO.value:
             #TODO
             pass
@@ -245,7 +245,7 @@ class YamcsTMTC:
         go_state:GoNogoState = self._robot.subsystems.get_go_nogo_state()
         motor_health:HealthStatus = self._robot.subsystems.get_electronics_health(Electronics.MOTOR_CONTROLLER.value)
 
-        return go_state == GoNogoState.GO and motor_state == PowerState.ON and motor_health == HealthStatus.OK
+        return go_state == GoNogoState.GO and motor_state == PowerState.ON and motor_health == HealthStatus.NOMINAL
 
     def _calculate_turn_speed(self, angular_velocity):
         robot_width = self._robot.dimensions["width"]
