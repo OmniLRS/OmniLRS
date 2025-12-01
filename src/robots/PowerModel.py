@@ -192,6 +192,7 @@ class PowerModel:
 				return
 		self.battery_voltage_v = curve[-1][1]
 
+	### Measured outputs (adds noise) ###
 	def measured_battery_percentage(self) -> float:
 		value = self.battery_percentage()
 		return _clamp(value + random.gauss(0.0, self.battery_percentage_noise_std), 0.0, 100.0)
