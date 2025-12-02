@@ -303,6 +303,13 @@ static_assets_settings:
         orientation: [0.5, 0.5 , 0.5, 0.5]   # w/x/y/z
       collision: False
 
+    - asset_name: background_landscape
+      usd_path: Terrains/landscape_cropped/landscape_cropped.usd
+      pose:
+        position: [-20405.6, -9502.6, 561.8]
+        orientation: [0, 0, 0, 1]
+      collision: False
+
 monitoring_cameras_settings:
   root_path: "/MonitoringCameras"
   camera_definitions:
