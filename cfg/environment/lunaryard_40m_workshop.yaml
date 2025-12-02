@@ -222,7 +222,7 @@ robots_settings:
           low: [320, 240]
           high: [1440, 1080]
       imu_sensor_path: "/Robots/pragyaan/base_link/Imu_Sensor"
-      turn_speed_coef: 19
+      turn_speed_coef: 18
       solar_panel_joint: "solarJoint"  # finds it within the main robot articulation
   yamcs_tmtc:
     enabled: True
