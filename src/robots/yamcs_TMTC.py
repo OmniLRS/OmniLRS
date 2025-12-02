@@ -532,11 +532,10 @@ class CameraViewTransmitHandler:
         if not np.any(valid):
             return Image.fromarray(np.zeros_like(depth, dtype=np.uint8), "L")
 
-        near = np.percentile(depth[valid], 1)
-        far  = np.percentile(depth[valid], 20)
+        near, far = 0.0, 10.0  # fixed 0-20 m range for consistent depth scaling
 
         d = np.clip(depth, near, far)
-        d = (d - near) / (far - near + 1e-8)
+        d = (d - near) / (far - near)
         d = (1.0 - d) * 255.0 
         d_uint8 = d.astype(np.uint8)
 
