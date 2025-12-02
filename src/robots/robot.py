@@ -29,7 +29,7 @@ from src.configurations.robot_confs import RobotManagerConf
 import numpy as np
 from scipy.spatial.transform import Rotation as R
 
-from src.environments.utils import transform_orientation_into_xyz
+from src.environments.utils import transform_orientation_from_xyzw_into_xyz, transform_orientation_into_xyz
 from src.robots.subsystems_manager import RobotSubsystemsManager
 from src.robots.yamcs_TMTC import YamcsTMTC
 from omni.isaac.sensor import Camera
@@ -396,9 +396,10 @@ class Robot:
         linear_acceleration = {"ax": sensor_reading.lin_acc_x, "ay": sensor_reading.lin_acc_y, "az": sensor_reading.lin_acc_z}
         angular_velocity = {"gx":sensor_reading.ang_vel_x, "gy":sensor_reading.ang_vel_y, "gz":sensor_reading.ang_vel_z} 
         
-        orientation = sensor_reading.orientation # w, x, y, z
-        xyz_orientation = transform_orientation_into_xyz(orientation) 
-        orientation = {"roll":float(xyz_orientation[0]), "pitch":float(xyz_orientation[1]), "yaw":float(xyz_orientation[2])}
+        # orientation = sensor_reading.orientation # w, x, y, z 
+        orientation = sensor_reading.orientation # x, y, z, w
+        xyz_orientation = transform_orientation_from_xyzw_into_xyz(orientation) 
+        orientation = {"roll":-float(xyz_orientation[0]), "pitch":-float(xyz_orientation[1]), "yaw":float(xyz_orientation[2])}
 
         # print(linear_acceleration, angular_velocity, orientation)
         return linear_acceleration, angular_velocity, orientation
