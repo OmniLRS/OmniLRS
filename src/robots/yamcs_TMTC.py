@@ -550,7 +550,7 @@ class CameraViewTransmitHandler:
         self._helper.inform_yamcs(image_name, 
                                   asset=HandlerHelper.CARRIER_ASSET.LANDER, 
                                   type=HandlerHelper.INPUT_TYPE.CAMERA, 
-                                  bucket="images_oncommand", 
+                                  bucket=self.BUCKET_IMAGES_ONCOMMAND, 
                                   counter_number=self._counter[self.BUCKET_LANDER_ONCOMMAND])
         self._counter[self.BUCKET_LANDER_ONCOMMAND] += 1
 
@@ -562,6 +562,34 @@ class CameraViewTransmitHandler:
         return camera_view
     
     def _initialize_lander_cam(self, lander_camera_conf) -> None:
+        if (lander_camera_conf == None):
+            return
+        
+        self.lander_cam = Camera(lander_camera_conf["prim_path"], 
+                                resolution=(lander_camera_conf["resolution"][0], lander_camera_conf["resolution"][1]))
+        self.lander_cam.initialize()
+
+    def transmit_lander_camera_view(self):
+        if self.lander_cam == None:
+            return
+
+        camera_view:Image = self._snap_lander_camera_view()
+        image_name = self._helper.save_image_locally(camera_view, self.BUCKET_LANDER_ONCOMMAND, self._counter[self.BUCKET_LANDER_ONCOMMAND])
+        self._helper.inform_yamcs(image_name, 
+                                  asset=HandlerHelper.CARRIER_ASSET.LANDER, 
+                                  type=HandlerHelper.INPUT_TYPE.CAMERA, 
+                                  bucket=self.BUCKET_LANDER_ONCOMMAND, 
+                                  counter_number=self._counter[self.BUCKET_LANDER_ONCOMMAND])
+        self._counter[self.BUCKET_LANDER_ONCOMMAND] += 1
+
+    def _snap_lander_camera_view(self) -> Image:
+        frame = self.lander_cam.get_rgba()
+        frame_uint8 = frame.astype(np.uint8)
+        camera_view = Image.fromarray(frame_uint8, "RGBA")
+
+        return camera_view
+    
+    def _initialize_monitoring_cam(self, lander_camera_conf) -> None:
         if (lander_camera_conf == None):
             return
         
