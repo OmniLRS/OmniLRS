@@ -304,7 +304,7 @@ static_assets_settings:
 monitoring_cameras_settings:
   root_path: "/MonitoringCameras"
   camera_definitions:
-    - name: "corner"
+    - name: "monitoring_camera"
       pose:
         position: [0.0, 0.0, 2.5]
         orientation: [0.493, -0.302, -0.169, 0.796]
@@ -317,8 +317,8 @@ monitoring_cameras_settings:
         clipping_range: [0.01, 1000000.0]
       ros2:
         enabled: False
-        topic: "/monitoring/corner"
-        frame_id: "corner_id"
+        topic: "/monitoring/monitoring_camera"
+        frame_id: "monitoring_camera_id"
       type: "Rgb" # make sure to have correct naming - eg. Rgb ; Depth ; SemanticSegmentation ; InstanceSegmentation ; Normals
-      resolution: [1280, 720]  
+      resolution: [720, 480]
       # stream_frequency: 2.0 #  every 0.5s - in order to not overwhelm the network
