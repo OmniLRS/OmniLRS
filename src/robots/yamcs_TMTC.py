@@ -575,7 +575,7 @@ class CameraViewTransmitHandler:
         self._helper.inform_yamcs(image_name, 
                                   asset=HandlerHelper.CARRIER_ASSET.LANDER, 
                                   type=HandlerHelper.INPUT_TYPE.CAMERA, 
-                                  bucket=self.BUCKET_IMAGES_ONCOMMAND, 
+                                  bucket=self.BUCKET_LANDER_ONCOMMAND, 
                                   counter_number=self._counter[self.BUCKET_LANDER_ONCOMMAND])
         self._counter[self.BUCKET_LANDER_ONCOMMAND] += 1
 
