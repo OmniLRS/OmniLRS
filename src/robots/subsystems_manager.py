@@ -162,8 +162,6 @@ class RobotSubsystemsManager:
         self._power.set_solar_panel_state(sp_state)
         self._power.set_motor_state(obc_state == ObcState.MOTOR) 
         self._power.set_device_health(self._map_into_healths())
-        print("SUNCE")
-        print(self._power.sun_position)
         self._power.step(interval_s)
         status = self._power.status()
    
