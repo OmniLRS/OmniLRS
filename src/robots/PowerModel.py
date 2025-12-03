@@ -340,18 +340,18 @@ def run_power_profile_test(
 			rover_pos = rover_pos + np.asarray(rover_delta, dtype=float)
 
 	SUN_DISTANCE = 1000. # m
-	SUN_AZYMUTH_DEG = 70.0
+	SUN_AZYMUTH_DEG = 65.0
 	SUN_POSITION = (
-		- SUN_DISTANCE * np.cos(np.pi * SUN_AZYMUTH_DEG / 180.0), 
-  		SUN_DISTANCE * np.sin(np.pi * SUN_AZYMUTH_DEG / 180.0), 
+		- SUN_DISTANCE * np.sin(np.pi * SUN_AZYMUTH_DEG / 180.0), 
+  		SUN_DISTANCE * np.cos(np.pi * SUN_AZYMUTH_DEG / 180.0), 
     	10.0
 	)
 	print(SUN_POSITION)
 	# phase 1 all devices on, sun low horizon, rover moving forward
-	ROVER_YAW_DEG = 90.0
+	ROVER_YAW_DEG = 65.
 	simulate(on_duration, True, SUN_POSITION, (0., 0.0, 0.0))
 	# phase 2 all devices off, sun low horizon, rover moving forward
-	ROVER_YAW_DEG = 70.0
+	ROVER_YAW_DEG = -42.
 	simulate(off_duration, False, SUN_POSITION, (0., 0.0, 0.0))
 	return times, percentages, voltages, solar_currents, current_series
 
