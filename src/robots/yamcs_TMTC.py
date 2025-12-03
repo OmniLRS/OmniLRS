@@ -99,6 +99,7 @@ class YamcsTMTC:
 
     def _inject_fault(self):
         self._robot.subsystems.set_electronics_health(Electronics.MOTOR_CONTROLLER.value, HealthStatus.FAULT)
+        self._stop_robot()
 
     def _handle_battery_perc_change(self, battery_percentage:int):
         self._robot.subsystems.set_battery_perc(battery_percentage)
@@ -128,6 +129,9 @@ class YamcsTMTC:
                                                  function=self._robot.subsystems.set_obc_state, f_args=[ObcState.IDLE])
 
     def _handle_solar_panel(self, command:str):
+        if self._robot.subsystems.get_go_nogo_state() == GoNogoState.NOGO:
+            return
+
         if command == "DEPLOY":
             self._robot.subsystems.set_solar_panel_state(SolarPanelState.DEPLOYED)
             self._robot.deploy_solar_panel()

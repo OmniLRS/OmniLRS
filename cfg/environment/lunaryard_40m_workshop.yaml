@@ -308,8 +308,10 @@ monitoring_cameras_settings:
   camera_definitions:
     - name: "monitoring_camera"
       pose:
-        position: [0.0, 0.0, 2.5]
-        orientation: [0.493, -0.302, -0.169, 0.796]
+        # position: [0.0, 0.0, 2.5]
+        # orientation: [0.493, -0.302, -0.169, 0.796]
+        position: [20.44369, 9.73725, 3.43137]
+        orientation: [ 0.522, -0.193, -0.234,  0.801 ] # [x,y,z,w]
       camera_params:
         focal_length: 1.93
         horizontal_aperture:  2.4
