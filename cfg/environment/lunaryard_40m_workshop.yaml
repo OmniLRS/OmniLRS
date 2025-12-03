@@ -294,7 +294,7 @@ static_assets_settings:
         position: [28, 19., 0.0]
         # position: [5.0, 7.5, 0.0]
         orientation: [1, 0, 0, 1]
-      collision: False
+      collision: True
 
     - asset_name: lander
       usd_path: USD_Assets/common/lander/Vikram/Vikram.usd
@@ -302,17 +302,16 @@ static_assets_settings:
         position: [25.7, 10.6, 0.2]
         # orientation: [0.70711, 0. , 0., 0.70711]   # w/x/y/z
         orientation: [0.5, 0.5 , 0.5, 0.5]   # w/x/y/z
-      collision: False
+      collision: True
 
 monitoring_cameras_settings:
   root_path: "/MonitoringCameras"
   camera_definitions:
     - name: "monitoring_camera"
       pose:
-        # position: [0.0, 0.0, 2.5]
-        # orientation: [0.493, -0.302, -0.169, 0.796]
-        position: [20.44369, 9.73725, 3.43137]
-        orientation: [ 0.522, -0.193, -0.234,  0.801 ] # [x,y,z,w]
+        position: [32.0, 22.0, 25.0]
+        orientation: [0.082948, 0.091931, 0.700333, 0.702995]
+        
       camera_params:
         focal_length: 1.93
         horizontal_aperture:  2.4
