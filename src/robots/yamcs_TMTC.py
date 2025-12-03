@@ -657,6 +657,10 @@ class HandlerHelper:
 
     def inform_yamcs(self, image_name, asset:CARRIER_ASSET, type:INPUT_TYPE, bucket, counter_number):
         url_storage = f"/storage/buckets/{bucket}/objects/{image_name}"
+
+        if bucket == CameraViewTransmitHandler.BUCKET_LANDER_ONCOMMAND:
+            bucket = CameraViewTransmitHandler.BUCKET_IMAGES_ONCOMMAND
+
         url_full = "http://" + self._yamcs_address + f"/api{url_storage}"
         url_full_nginx = self.URL_FULL_NGINX + f"/api{url_storage}"  # @TODO hardcoded nginx address for now
         self._yamcs_processor.set_parameter_values({
