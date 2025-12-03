@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 import random
 from collections.abc import Mapping as MappingABC, Sequence as SequenceABC
 from dataclasses import dataclass, field
@@ -33,7 +34,7 @@ BATTERY_VOLTAGE_CURVE: Tuple[Tuple[float, float], ...] = (
 )
 
 SOLAR_PANEL_NORMALS = {
-	"deployed": np.array((0.0, -1.0, 0.0)),
+	"deployed": np.array((0.0, 1.0, 0.0)),
 	"stowed": np.array((0.0, 0.0, 1.0)),
 }
 BATTERY_CAPACITY_WH = 60.0  # Watt-hours
@@ -77,6 +78,7 @@ class PowerModel:
 	solar_input_noise_std: float = 0.1
  
 	rover_position: Tuple[float, float, float] = (0.0, 0.0, 0.0)
+	rover_yaw_deg: float = 0.0
 	sun_position: Tuple[float, float, float] = (0.0, -10.0, 0.0)
 	solar_input_power: float = 0.0
 	battery_voltage_v: float = BATTERY_VOLTAGE_CURVE[-1][1]
@@ -108,6 +110,9 @@ class PowerModel:
 	def set_rover_position(self, position: Tuple[float, float, float]) -> None:
 		self.rover_position = position
 
+	def set_rover_yaw(self, yaw_deg: float) -> None:
+		self.rover_yaw_deg = yaw_deg
+
 	def set_sun_position(self, position: Tuple[float, float, float]) -> None:
 		self.sun_position = position
 
@@ -124,7 +129,19 @@ class PowerModel:
 		self.motor_state = state
 
 	def _current_panel_normal(self) -> np.ndarray:
-		return SOLAR_PANEL_NORMALS.get(self.solar_panel_state, SOLAR_PANEL_NORMALS["deployed"])
+		base_normal = SOLAR_PANEL_NORMALS.get(
+			self.solar_panel_state, SOLAR_PANEL_NORMALS["deployed"]
+		)
+		yaw_rad = math.radians(self.rover_yaw_deg)
+		rotation = np.array(
+			[
+				[math.cos(yaw_rad), -math.sin(yaw_rad), 0.0],
+				[math.sin(yaw_rad), math.cos(yaw_rad), 0.0],
+				[0.0, 0.0, 1.0],
+			],
+			dtype=float,
+		)
+		return rotation @ base_normal
 
 	def _device_power(self, name: str) -> float:
 		lo, hi = self.device_power_settings[name]
@@ -185,7 +202,7 @@ class PowerModel:
 		return 100.0 * self.battery_charge_wh / self.battery_capacity_wh
 
 	def battery_voltage(self) -> float:
-		return self.battery_voltage_v
+		return max(self.battery_voltage_v, 1e-3)
 
 	def _update_battery_voltage(self) -> None:
 		if self.battery_capacity_wh <= 0.0:
@@ -229,7 +246,7 @@ class PowerModel:
 		return currents
 
 	def measured_motor_currents(self) -> Sequence[float]:
-		voltage = max(self.battery_voltage_v, 1e-3)
+		voltage = self.battery_voltage()
 		base_current = (self.motor_power_w / voltage) if self.motor_state else 0.0
 		currents = [base_current for _ in range(self.motor_count)]
 		return [
@@ -243,13 +260,17 @@ class PowerModel:
 			0.0,
 			self.solar_panel_max_power,
 		)
-		voltage = max(self.battery_voltage_v, 1e-3)
+		voltage = self.battery_voltage()
 		return power / voltage
   
 	def status(self) -> Dict[str, float | Dict[str, float] | Sequence[float]]:
 		motor_currents = self.measured_motor_currents()
 		device_currents = self.measured_device_currents()
-		total_current_out = sum(device_currents.values()) + sum(motor_currents)
+		regulated_power = REGULATED_BUS_VOLTAGE * sum(device_currents.values())
+		# sum of currents
+		battery_voltage = self.battery_voltage()
+		device_current_at_battery = (regulated_power / DC_DC_EFFICIENCY) / battery_voltage
+		total_current_out = device_current_at_battery + sum(motor_currents)
 		status: Dict[str, float | Dict[str, float] | Sequence[float]] = {
 			"net_power": self.solar_input_power - self.total_load_power(),
 			"solar_input_current_measured": self.measured_solar_input_current(),
@@ -301,6 +322,7 @@ def run_power_profile_test(
 		for _ in range(steps):
 			# set inputs
 			model.set_rover_position(tuple(rover_pos))
+			model.set_rover_yaw(ROVER_YAW_DEG)
 			model.set_motor_state(devices_on)
 			model.set_sun_position(sun_position)
 			model.set_device_states(active_states)
@@ -330,10 +352,20 @@ def run_power_profile_test(
 					series.append(series[-1] if series else 0.0)
 			rover_pos = rover_pos + np.asarray(rover_delta, dtype=float)
 
+	SUN_DISTANCE = 1000. # m
+	SUN_AZYMUTH_DEG = 65.0
+	SUN_POSITION = (
+		- SUN_DISTANCE * np.sin(np.pi * SUN_AZYMUTH_DEG / 180.0), 
+  		SUN_DISTANCE * np.cos(np.pi * SUN_AZYMUTH_DEG / 180.0), 
+    	10.0
+	)
+	print(SUN_POSITION)
 	# phase 1 all devices on, sun low horizon, rover moving forward
-	simulate(on_duration, True, (0.0, -1000.0, 10.0), (0.5, 0.0, 0.0))
+	ROVER_YAW_DEG = 65.
+	simulate(on_duration, True, SUN_POSITION, (0., 0.0, 0.0))
 	# phase 2 all devices off, sun low horizon, rover moving forward
-	simulate(off_duration, False, (0.0, -1000.0, 10.0), (0.5, 0.0, 0.0))
+	ROVER_YAW_DEG = -42.
+	simulate(off_duration, False, SUN_POSITION, (0., 0.0, 0.0))
 	return times, percentages, voltages, solar_currents, current_series
 
 def _plot_battery_profile(

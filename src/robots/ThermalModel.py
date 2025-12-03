@@ -46,6 +46,7 @@ class ThermalModel:
 	node_temps: Dict[str, float] = field(default_factory=dict)
 	initial_temp: float = 20.0
 	rover_position: Tuple[float, float, float] = (0.0, 0.0, 0.0)
+	rover_yaw_deg: float = 0.0
 	sun_position: Tuple[float, float, float] = (1.0, 0.0, 0.0)
 	measurement_noise_std: float = 0.5
 
@@ -73,6 +74,15 @@ class ThermalModel:
 
 		self.node_temps["interior"] = sum(self.node_temps[face] for face in self.faces) / len(self.faces)
 
+	def set_rover_yaw(self, yaw_deg: float) -> None:
+		self.rover_yaw_deg = yaw_deg
+
+	def set_rover_position(self, position: Tuple[float, float, float]) -> None:
+		self.rover_position = position
+
+	def set_sun_position(self, position: Tuple[float, float, float]) -> None:
+		self.sun_position = position
+
 	def _target_temperature(self, view_factor: float) -> float:
 		"""Return the sigmoid-based target temperature for a view factor."""
 
@@ -97,8 +107,21 @@ class ThermalModel:
 			return {face: 0.0 for face in self.faces}
 
 		unit = vector / magnitude
+		yaw_rad = math.radians(self.rover_yaw_deg)
+		cos_yaw = math.cos(yaw_rad)
+		sin_yaw = math.sin(yaw_rad)
+		rotation = np.array(
+			[
+				[cos_yaw, -sin_yaw, 0.0],
+				[sin_yaw, cos_yaw, 0.0],
+				[0.0, 0.0, 1.0],
+			],
+			dtype=float,
+		)
 		return {
-			face: float(_clamp(float(np.dot(unit, FACE_NORMALS[face])), 0.0, 1.0))
+			face: float(
+				_clamp(float(np.dot(unit, rotation @ FACE_NORMALS[face])), 0.0, 1.0)
+			)
 			for face in self.faces
 		}
 
@@ -123,14 +146,25 @@ def run_single_sun_test(total_time: float = 600.0, dt: float = 1.0) -> tuple[Seq
 	temps = {name: [value] for name, value in initial_snapshot.items()}
 
 	rover_pos = (0.0, 0.0, 0.0)
-	sun_pos = (10.0, 5.0, 7.5)
+ 
+	SUN_DISTANCE = 1000. # m
+	SUN_AZYMUTH_DEG = 65.0
+	SUN_POSITION = (
+		- SUN_DISTANCE * np.sin(np.pi * SUN_AZYMUTH_DEG / 180.0), 
+  		SUN_DISTANCE * np.cos(np.pi * SUN_AZYMUTH_DEG / 180.0), 
+    	10.0
+	)
+	print(SUN_POSITION)
+	ROVER_YAW_DEG = -58.0
 
 	for idx in range(steps):
      
      
         # set inputs
-		model.rover_position = rover_pos
-		model.sun_position = sun_pos
+		model.set_rover_position(rover_pos)
+		model.set_rover_yaw(ROVER_YAW_DEG)
+		model.set_sun_position(SUN_POSITION)
+
         # perform computation
 		model.step(dt)
         # get results
