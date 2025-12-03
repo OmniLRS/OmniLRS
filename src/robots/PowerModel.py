@@ -172,7 +172,7 @@ class PowerModel:
 		return 100.0 * self.battery_charge_wh / self.battery_capacity_wh
 
 	def battery_voltage(self) -> float:
-		return self.battery_voltage_v
+		return max(self.battery_voltage_v, 1e-3)
 
 	def _update_battery_voltage(self) -> None:
 		if self.battery_capacity_wh <= 0.0:
@@ -216,7 +216,7 @@ class PowerModel:
 		return currents
 
 	def measured_motor_currents(self) -> Sequence[float]:
-		voltage = max(self.battery_voltage_v, 1e-3)
+		voltage = self.battery_voltage()
 		base_current = (self.motor_power_w / voltage) if self.motor_state else 0.0
 		currents = [base_current for _ in range(self.motor_count)]
 		return [
@@ -230,13 +230,17 @@ class PowerModel:
 			0.0,
 			self.solar_panel_max_power,
 		)
-		voltage = max(self.battery_voltage_v, 1e-3)
+		voltage = self.battery_voltage()
 		return power / voltage
   
 	def status(self) -> Dict[str, float | Dict[str, float] | Sequence[float]]:
 		motor_currents = self.measured_motor_currents()
 		device_currents = self.measured_device_currents()
-		total_current_out = sum(device_currents.values()) + sum(motor_currents)
+		regulated_power = REGULATED_BUS_VOLTAGE * sum(device_currents.values())
+		# sum of currents
+		battery_voltage = self.battery_voltage()
+		device_current_at_battery = (regulated_power / DC_DC_EFFICIENCY) / battery_voltage
+		total_current_out = device_current_at_battery + sum(motor_currents)
 		status: Dict[str, float | Dict[str, float] | Sequence[float]] = {
 			"net_power": self.solar_input_power - self.total_load_power(),
 			"solar_input_current_measured": self.measured_solar_input_current(),
