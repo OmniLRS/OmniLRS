@@ -631,7 +631,7 @@ class CameraViewTransmitHandler:
         self.monitoring_cam = MonitoringCamerasManager.cameras[camera_name]
     
 class HandlerHelper:
-    URL_FULL_NGINX = "https://52.69.177.254/yamcs"
+    URL_FULL_NGINX = "https://workshop.jaops.com/yamcs"
 
     class INPUT_TYPE(Enum):
         CAMERA = "camera"
