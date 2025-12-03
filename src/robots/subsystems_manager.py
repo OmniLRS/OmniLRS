@@ -43,7 +43,7 @@ class HealthStatus(Enum):
     FAULT = 1
 
 class RobotSubsystemsManager:
-    SUN_POSITION = (0.0, 16.0, 10.0)
+    SUN_POSITION = (-100.0, -100.0, 10.0)
     LANDER_POSITION = (0.0, 0.0, 0.0)
 
     def __init__(self, pos_relative_to_prim):
@@ -75,14 +75,14 @@ class RobotSubsystemsManager:
         self._update_positions()
 
     def _update_positions(self):
-        if get_moon_env_name() == "Lunaryard": # Lunalab has no sun prim
-            self._sun_pos, rot = get_world_pose("/" + get_moon_env_name() + "/Sun/sun") # self.SUN_POSITION
-        else: 
-            self._sun_pos = self.SUN_POSITION
-
+        # if get_moon_env_name() == "Lunaryard": # Lunalab has no sun prim
+        #     self._sun_pos, rot = get_world_pose("/" + get_moon_env_name() + "/Sun/sun") # self.SUN_POSITION
+        # else: 
+        #     self._sun_pos = self.SUN_POSITION
+        self._sun_pos = self.SUN_POSITION
         print(self._sun_pos)
-        print(get_moon_env_name())
-        print(get_moon_env_name() == "Lunaryard")
+        # print(get_moon_env_name())
+        # print(get_moon_env_name() == "Lunaryard")
 
     def get_lander_position(self):
         return self._lander_pos
@@ -150,6 +150,8 @@ class RobotSubsystemsManager:
         self._power.set_rover_position(robot_position)
         self._power.set_motor_state(obc_state == ObcState.MOTOR) 
         self._power.set_device_health(self._map_into_healths())
+        print("SUNCE")
+        print(self._power.sun_position)
         self._power.step(interval_s)
         status = self._power.status()
    

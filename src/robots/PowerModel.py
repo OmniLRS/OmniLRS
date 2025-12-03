@@ -145,10 +145,15 @@ class PowerModel:
 		"""Advance the battery state by *dt* seconds."""
 
 		view_factor = self.compute_view_factor(self.rover_position, self.sun_position)
+		print("view_factor", view_factor)
 		self.solar_input_power = self.solar_panel_max_power * view_factor
+		print("self.solar_input_power", self.solar_input_power)
 		net_power = self.solar_input_power - self.total_load_power()
+		print("net_power", net_power)
 		self.battery_charge_wh += net_power * (dt / 3600.0)
+		print("self.battery_charge_wh", self.battery_charge_wh)
 		self.battery_charge_wh = _clamp(self.battery_charge_wh, 0.0, self.battery_capacity_wh)
+		print("self.battery_charge_wh", self.battery_charge_wh)
 		self._update_battery_voltage()
 
 	def compute_view_factor(
@@ -157,14 +162,22 @@ class PowerModel:
 		sun_position: Tuple[float, float, float],
 	) -> float:
 		rover = np.asarray(rover_position, dtype=float)
+		print("rover", rover)
 		sun = np.asarray(sun_position, dtype=float)
+		print("sun", sun)
 		vector = sun - rover
+		print("vector", vector)
 		magnitude = np.linalg.norm(vector)
+		print("magnitude", magnitude)
 		if magnitude == 0.0:
 			return 0.0
 		unit = vector / magnitude
+		print("unit", unit)
 		panel_normal = self._current_panel_normal()
-		return float(_clamp(float(np.dot(unit, panel_normal)), 0.0, 1.0))
+		print("panel_normal", panel_normal)
+		clamp = float(_clamp(float(np.dot(unit, panel_normal)), 0.0, 1.0))
+		print("clamp", clamp)
+		return clamp
 
 	def battery_percentage(self) -> float:
 		if self.battery_capacity_wh <= 0.0:
