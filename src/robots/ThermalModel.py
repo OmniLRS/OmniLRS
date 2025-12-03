@@ -146,6 +146,7 @@ def run_single_sun_test(total_time: float = 600.0, dt: float = 1.0) -> tuple[Seq
 	temps = {name: [value] for name, value in initial_snapshot.items()}
 
 	rover_pos = (0.0, 0.0, 0.0)
+	ROVER_YAW_DEG = -58.0 
  
 	SUN_DISTANCE = 1000. # m
 	SUN_AZYMUTH_DEG = 65.0
@@ -155,7 +156,6 @@ def run_single_sun_test(total_time: float = 600.0, dt: float = 1.0) -> tuple[Seq
     	10.0
 	)
 	print(SUN_POSITION)
-	ROVER_YAW_DEG = -58.0
 
 	for idx in range(steps):
      

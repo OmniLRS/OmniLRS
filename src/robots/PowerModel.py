@@ -181,7 +181,8 @@ class PowerModel:
 			return 0.0
 		unit = vector / magnitude
 		panel_normal = self._current_panel_normal()
-		return float(_clamp(float(np.dot(unit, panel_normal)), 0.0, 1.0))
+		clamp = float(_clamp(float(np.dot(unit, panel_normal)), 0.0, 1.0))
+		return clamp
 
 	def battery_percentage(self) -> float:
 		if self.battery_capacity_wh <= 0.0:

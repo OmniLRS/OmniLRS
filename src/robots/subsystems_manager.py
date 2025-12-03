@@ -43,9 +43,16 @@ class HealthStatus(Enum):
     FAULT = 1
 
 class RobotSubsystemsManager:
-    SUN_POSITION = (10.0, 5.0, 7.5)
+    # SUN_POSITION = (-100.0, -100.0, 10.0)
+    SUN_DISTANCE = 1000. # m
+    SUN_AZYMUTH_DEG = 65.0
+    SUN_POSITION = (
+        - SUN_DISTANCE * math.sin(math.pi * SUN_AZYMUTH_DEG / 180.0), 
+        SUN_DISTANCE * math.cos(math.pi * SUN_AZYMUTH_DEG / 180.0), 
+        10.0
+    )
+
     LANDER_POSITION = (0.0, 0.0, 0.0)
-    USE_DYNAMIC_SUN = get_moon_env_name() == "Lunaryard" # Lunalab has no sun prim
 
     def __init__(self, pos_relative_to_prim):
         self.LANDER_PATH = pos_relative_to_prim
@@ -76,10 +83,14 @@ class RobotSubsystemsManager:
         self._update_positions()
 
     def _update_positions(self):
-        if self.USE_DYNAMIC_SUN:
-            self._sun_pos, rot = get_world_pose("/" + get_moon_env_name() + "/Sun/sun") # self.SUN_POSITION
-        else: 
-            self._sun_pos = self.SUN_POSITION
+        # if get_moon_env_name() == "Lunaryard": # Lunalab has no sun prim
+        #     self._sun_pos, rot = get_world_pose("/" + get_moon_env_name() + "/Sun/sun") # self.SUN_POSITION
+        # else: 
+        #     self._sun_pos = self.SUN_POSITION
+        self._sun_pos = self.SUN_POSITION
+        print(self._sun_pos)
+        # print(get_moon_env_name())
+        # print(get_moon_env_name() == "Lunaryard")
 
     def get_lander_position(self):
         return self._lander_pos
@@ -132,19 +143,23 @@ class RobotSubsystemsManager:
         return rssi
     
     @_update_positions_before
-    def calculate_temperature(self, robot_position, interval_s):
-        self._thermal.rover_position = robot_position
-        self._thermal.sun_position = self._sun_pos
+    def calculate_temperature(self, robot_position, robot_yaw_deg, interval_s):
+        self._thermal.set_rover_yaw(robot_yaw_deg)
+        self._thermal.set_rover_position(robot_position)
+        self._thermal.set_sun_position(self._sun_pos)
         self._thermal.step(interval_s)
         t = self._thermal.temperatures()
 
         return t
     
     @_update_positions_before
-    def calculate_power_status(self, robot_position, interval_s, obc_state):
+    def calculate_power_status(self, robot_position, robot_yaw_deg, interval_s, obc_state):
         self._power.set_device_states(self._map_into_currents())
         self._power.set_sun_position(self._sun_pos)
         self._power.set_rover_position(robot_position)
+        self._power.set_rover_yaw(robot_yaw_deg)
+        sp_state = "deployed" if self._solar_panel_state == SolarPanelState.DEPLOYED else "stowed"
+        self._power.set_solar_panel_state(sp_state)
         self._power.set_motor_state(obc_state == ObcState.MOTOR) 
         self._power.set_device_health(self._map_into_healths())
         self._power.step(interval_s)
