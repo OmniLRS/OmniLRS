@@ -43,9 +43,8 @@ class HealthStatus(Enum):
     FAULT = 1
 
 class RobotSubsystemsManager:
-    SUN_POSITION = (10.0, 5.0, 7.5)
+    SUN_POSITION = (0.0, 16.0, 10.0)
     LANDER_POSITION = (0.0, 0.0, 0.0)
-    USE_DYNAMIC_SUN = get_moon_env_name() == "Lunaryard" # Lunalab has no sun prim
 
     def __init__(self, pos_relative_to_prim):
         self.LANDER_PATH = pos_relative_to_prim
@@ -76,10 +75,14 @@ class RobotSubsystemsManager:
         self._update_positions()
 
     def _update_positions(self):
-        if self.USE_DYNAMIC_SUN:
+        if get_moon_env_name() == "Lunaryard": # Lunalab has no sun prim
             self._sun_pos, rot = get_world_pose("/" + get_moon_env_name() + "/Sun/sun") # self.SUN_POSITION
         else: 
             self._sun_pos = self.SUN_POSITION
+
+        print(self._sun_pos)
+        print(get_moon_env_name())
+        print(get_moon_env_name() == "Lunaryard")
 
     def get_lander_position(self):
         return self._lander_pos
