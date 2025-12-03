@@ -342,9 +342,14 @@ class YamcsTMTC:
         self._yamcs_processor.set_parameter_value(self._yamcs_conf["parameters"]["rssi"], int(rssi))
 
     def _transmit_thermal_info(self, interval_s):
-        robot_position, orientation = self._robots_RG[str(self._robot_name)].get_pose_of_base_link()
-        temperatures = self._robot.subsystems.calculate_temperature(robot_position, interval_s)
-
+        robot_position, _ = self._robots_RG[str(self._robot_name)].get_pose_of_base_link()
+        _, _, imu_orientation = self._robot.get_imu_readings()
+        robot_yaw_deg = imu_orientation["yaw"]
+        temperatures = self._robot.subsystems.calculate_temperature(
+            robot_position, 
+            robot_yaw_deg, 
+            interval_s
+        )
         self._yamcs_processor.set_parameter_value(self._yamcs_conf["parameters"]["temperature_front"], temperatures['+X'])
         self._yamcs_processor.set_parameter_value(self._yamcs_conf["parameters"]["temperature_back"], temperatures['-X'])
         self._yamcs_processor.set_parameter_value(self._yamcs_conf["parameters"]["temperature_left"], temperatures['+Y'])
@@ -354,9 +359,16 @@ class YamcsTMTC:
         self._yamcs_processor.set_parameter_value(self._yamcs_conf["parameters"]["temperature_elec_box"], temperatures['interior'])
 
     def _transmit_power_info(self, interval_s):
-        robot_position, orientation = self._robots_RG[str(self._robot_name)].get_pose_of_base_link()
+        robot_position, _ = self._robots_RG[str(self._robot_name)].get_pose_of_base_link()
+        _, _, imu_orientation = self._robot.get_imu_readings()
+        robot_yaw_deg = imu_orientation['yaw']
         obc_state = self._robot.subsystems.get_obc_state()
-        power_status = self._robot.subsystems.calculate_power_status(robot_position, interval_s, obc_state)
+        power_status = self._robot.subsystems.calculate_power_status(
+            robot_position,
+            robot_yaw_deg, 
+            interval_s, 
+            obc_state
+        )
         self._yamcs_processor.set_parameter_value(self._yamcs_conf["parameters"]["battery_charge"], int(power_status['battery_percentage_measured']))
         self._yamcs_processor.set_parameter_value(self._yamcs_conf["parameters"]["battery_voltage"], power_status['battery_voltage_measured'])
         self._yamcs_processor.set_parameter_value(self._yamcs_conf["parameters"]["total_current_in"], power_status['solar_input_current_measured'])

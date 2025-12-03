@@ -43,7 +43,15 @@ class HealthStatus(Enum):
     FAULT = 1
 
 class RobotSubsystemsManager:
-    SUN_POSITION = (-100.0, -100.0, 10.0)
+    # SUN_POSITION = (-100.0, -100.0, 10.0)
+    SUN_DISTANCE = 1000. # m
+    SUN_AZYMUTH_DEG = 65.0
+    SUN_POSITION = (
+        - SUN_DISTANCE * math.sin(math.pi * SUN_AZYMUTH_DEG / 180.0), 
+        SUN_DISTANCE * math.cos(math.pi * SUN_AZYMUTH_DEG / 180.0), 
+        10.0
+    )
+
     LANDER_POSITION = (0.0, 0.0, 0.0)
 
     def __init__(self, pos_relative_to_prim):
@@ -135,19 +143,23 @@ class RobotSubsystemsManager:
         return rssi
     
     @_update_positions_before
-    def calculate_temperature(self, robot_position, interval_s):
-        self._thermal.rover_position = robot_position
-        self._thermal.sun_position = self._sun_pos
+    def calculate_temperature(self, robot_position, robot_yaw_deg, interval_s):
+        self._thermal.set_rover_yaw(robot_yaw_deg)
+        self._thermal.set_rover_position(robot_position)
+        self._thermal.set_sun_position(self._sun_pos)
         self._thermal.step(interval_s)
         t = self._thermal.temperatures()
 
         return t
     
     @_update_positions_before
-    def calculate_power_status(self, robot_position, interval_s, obc_state):
+    def calculate_power_status(self, robot_position, robot_yaw_deg, interval_s, obc_state):
         self._power.set_device_states(self._map_into_currents())
         self._power.set_sun_position(self._sun_pos)
         self._power.set_rover_position(robot_position)
+        self._power.set_rover_yaw(robot_yaw_deg)
+        sp_state = "deployed" if self._solar_panel_state == SolarPanelState.DEPLOYED else "stowed"
+        self._power.set_solar_panel_state(sp_state)
         self._power.set_motor_state(obc_state == ObcState.MOTOR) 
         self._power.set_device_health(self._map_into_healths())
         print("SUNCE")
