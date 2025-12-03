@@ -277,6 +277,9 @@ class YamcsTMTC:
     def start_streaming_data(self):
         self._payload_handler._snap_apxs() # snaps initial blank apxs reading
         self._camera_handler.snap_initial_no_data_stream(self._robot.get_streaming_cam_resolution()) # snaps initial blank apxs reading
+        self._camera_handler.snap_initial_no_data_stream_lander(self._robot.get_high_cam_resolution())
+        self._camera_handler.snap_initial_no_data_stream_depth(self._robot.get_high_cam_resolution())
+        self._camera_handler.snap_initial_no_data_stream_high(self._robot.get_high_cam_resolution())
         self._intervals_handler.add_new_interval(name="Pose of base link", seconds=self._yamcs_conf["intervals"]["robot_stats"], is_repeating=True, execute_immediately=True,
                                                  function=self._transmit_pose_of_base_link)
         self._intervals_handler.add_new_interval(name="camera streaming state", seconds=self._yamcs_conf["intervals"]["robot_stats"], is_repeating=True, execute_immediately=True,
@@ -540,6 +543,36 @@ class CameraViewTransmitHandler:
                                   bucket=self.BUCKET_IMAGES_STREAMING, 
                                   counter_number=self._counter[self.BUCKET_IMAGES_STREAMING])
         self._counter[self.BUCKET_IMAGES_STREAMING] += 1
+    
+    def snap_initial_no_data_stream_depth(self, resolution):
+        img = Image.open(self.NO_DATA_IMAGE_PATH).convert('RGB').resize((resolution[0], resolution[1]))
+        image_name = self._helper.save_image_locally(img, self.BUCKET_IMAGES_DEPTH, self._counter[self.BUCKET_IMAGES_DEPTH])
+        self._helper.inform_yamcs(image_name, 
+                                  asset=HandlerHelper.CARRIER_ASSET.ROVER, 
+                                  type=HandlerHelper.INPUT_TYPE.CAMERA, 
+                                  bucket=self.BUCKET_IMAGES_DEPTH, 
+                                  counter_number=self._counter[self.BUCKET_IMAGES_DEPTH])
+        self._counter[self.BUCKET_IMAGES_DEPTH] += 1
+
+    def snap_initial_no_data_stream_high(self, resolution):
+        img = Image.open(self.NO_DATA_IMAGE_PATH).convert('RGB').resize((resolution[0], resolution[1]))
+        image_name = self._helper.save_image_locally(img, self.BUCKET_IMAGES_ONCOMMAND, self._counter[self.BUCKET_IMAGES_ONCOMMAND])
+        self._helper.inform_yamcs(image_name, 
+                                  asset=HandlerHelper.CARRIER_ASSET.ROVER, 
+                                  type=HandlerHelper.INPUT_TYPE.CAMERA, 
+                                  bucket=self.BUCKET_IMAGES_ONCOMMAND, 
+                                  counter_number=self._counter[self.BUCKET_IMAGES_ONCOMMAND])
+        self._counter[self.BUCKET_IMAGES_ONCOMMAND] += 1
+
+    def snap_initial_no_data_stream_lander(self, resolution):
+        img = Image.open(self.NO_DATA_IMAGE_PATH).convert('RGB').resize((resolution[0], resolution[1]))
+        image_name = self._helper.save_image_locally(img, self.BUCKET_LANDER_ONCOMMAND, self._counter[self.BUCKET_LANDER_ONCOMMAND])
+        self._helper.inform_yamcs(image_name, 
+                                  asset=HandlerHelper.CARRIER_ASSET.LANDER, 
+                                  type=HandlerHelper.INPUT_TYPE.CAMERA, 
+                                  bucket=self.BUCKET_LANDER_ONCOMMAND, 
+                                  counter_number=self._counter[self.BUCKET_LANDER_ONCOMMAND])
+        self._counter[self.BUCKET_LANDER_ONCOMMAND] += 1
 
     def _snap_camera_view_rgb(self, resolution:str) -> Image:
         frame = self._robot.get_rgba_camera_view(resolution)
@@ -569,7 +602,6 @@ class CameraViewTransmitHandler:
         if self.lander_cam == None:
             return
 
-        #TODO fix here path
         camera_view:Image = self._snap_lander_camera_view()
         image_name = self._helper.save_image_locally(camera_view, self.BUCKET_LANDER_ONCOMMAND, self._counter[self.BUCKET_LANDER_ONCOMMAND])
         self._helper.inform_yamcs(image_name, 

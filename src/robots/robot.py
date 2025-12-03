@@ -360,6 +360,9 @@ class Robot:
 
     def get_streaming_cam_resolution(self):
         return (self._camera_conf["resolutions"]["low"][0], self._camera_conf["resolutions"]["low"][1])
+    
+    def get_high_cam_resolution(self):
+        return (self._camera_conf["resolutions"]["high"][0], self._camera_conf["resolutions"]["high"][1])
         
     def _initialize_cameras(self) -> None:
         # Camera is a wrapper, therefore it just wraps around the camera instance if it already exists

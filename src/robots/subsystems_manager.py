@@ -5,7 +5,6 @@ from src.robots.RadioModel import RadioModel
 from src.robots.ThermalModel import ThermalModel
 from src.robots.PowerModel import PowerModel
 import math
-from omni.isaac.core.utils.prims import get_prim_at_path
 from isaacsim.core.utils.xforms import get_world_pose
 import random
 import time
