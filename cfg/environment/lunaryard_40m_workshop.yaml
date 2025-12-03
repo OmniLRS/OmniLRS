@@ -222,7 +222,7 @@ robots_settings:
           low: [320, 240]
           high: [1440, 1080]
       imu_sensor_path: "/Robots/pragyaan/base_link/Imu_Sensor"
-      turn_speed_coef: 18
+      turn_speed_coef: 19
       solar_panel_joint: "solarJoint"  # finds it within the main robot articulation
   yamcs_tmtc:
     enabled: True
@@ -269,6 +269,7 @@ robots_settings:
       neutron_counts: "/Rover/neutron_counts"
       camera_streaming_state: "/Rover/camera/images_streaming/state"
       solar_panel_state: "/Rover/solar_panel_state"
+      motor_encoder: "/Rover/motor_encoder"
     commands:
       drive_straight: "/Rover/motor/drive_straight"
       drive_turn: "/Rover/motor/drive_turn"
@@ -324,5 +325,5 @@ monitoring_cameras_settings:
         topic: "/monitoring/monitoring_camera"
         frame_id: "monitoring_camera_id"
       type: "Rgb" # make sure to have correct naming - eg. Rgb ; Depth ; SemanticSegmentation ; InstanceSegmentation ; Normals
-      resolution: [720, 480]
+      resolution: [320, 240]
       # stream_frequency: 2.0 #  every 0.5s - in order to not overwhelm the network

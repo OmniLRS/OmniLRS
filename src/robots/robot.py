@@ -489,6 +489,17 @@ class Robot:
         for dof in self._dofs[side]:
             self.dc.set_dof_velocity_target(dof, velocity)
 
+    def get_wheels_joint_angles(self):
+        self._init_dofs()
+        
+        joint_angles = []
+        for side in ["left","right"]:
+            for dof in self._dofs[side]:
+                joint_angle = self.dc.get_dof_position(dof)
+                joint_angles.append(joint_angle)
+
+        return joint_angles
+
     def _init_dofs(self):
         #NOTE idealy, this would be initialized inside load(),
         # however, for an unknown reason art, and dc do not work well when invoked there

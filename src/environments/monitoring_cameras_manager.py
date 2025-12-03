@@ -38,7 +38,7 @@ class MonitoringCamerasManager:
 
             pose = c["pose"]
             set_xform_pose(xform,
-                # prim_path,
+                # prim_path,prim_path
                 pose["position"],
                 pose["orientation"],
             )

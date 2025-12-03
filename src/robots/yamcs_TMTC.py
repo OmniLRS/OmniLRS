@@ -299,7 +299,21 @@ class YamcsTMTC:
                                                  function=self._transmit_solar_panel_state)
         self._intervals_handler.add_new_interval(name="Monitoring camera stream", seconds=self._yamcs_conf["intervals"]["robot_stats"], is_repeating=True, execute_immediately=True,
                                                  function=self._camera_handler.transmit_monitoring_camera_view)
+        self._intervals_handler.add_new_interval(name="Motor encoder", seconds=self._yamcs_conf["intervals"]["robot_stats"], is_repeating=True, execute_immediately=True,
+                                                 function=self._transmit_wheels_joint_angles)
         # here add further intervals and their functionalities
+
+    def _transmit_wheels_joint_angles(self):
+        angles = self._robot.get_wheels_joint_angles()
+        self._transform_joint_angles(angles)
+
+        print(angles)
+        self._yamcs_processor.set_parameter_value(self._yamcs_conf["parameters"]["motor_encoder"], angles)
+
+    def _transform_joint_angles(self, angles):
+        for i in range(len(angles)):
+            modulo = angles[i] % (2 * math.pi)
+            angles[i] = int(modulo * (1024.0 / (2 * math.pi)))
 
     def _transmit_solar_panel_state(self):
         state:SolarPanelState = self._robot.subsystems.get_solar_panel_state()
@@ -555,6 +569,7 @@ class CameraViewTransmitHandler:
         if self.lander_cam == None:
             return
 
+        #TODO fix here path
         camera_view:Image = self._snap_lander_camera_view()
         image_name = self._helper.save_image_locally(camera_view, self.BUCKET_LANDER_ONCOMMAND, self._counter[self.BUCKET_LANDER_ONCOMMAND])
         self._helper.inform_yamcs(image_name, 
@@ -594,7 +609,7 @@ class CameraViewTransmitHandler:
         self._counter[self.BUCKET_MONITORING] += 1
 
     def _snap_monitoring_camera_view(self) -> Image:
-        frame = self.monitoring_cam.get_rgba()
+        frame = self.monitoring_cam.get_rgb()#get_rgba()
 
         #NOTE interval tries to trigger it before initialization, and then breaks because programmatically created cameras
         # require more time to be initialized than the ones already existing inside the models
@@ -602,7 +617,7 @@ class CameraViewTransmitHandler:
             return None
         
         frame_uint8 = frame.astype(np.uint8)
-        camera_view = Image.fromarray(frame_uint8, "RGBA")
+        camera_view = Image.fromarray(frame_uint8, "RGB")
 
         return camera_view
     
