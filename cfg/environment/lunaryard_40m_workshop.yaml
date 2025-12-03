@@ -197,8 +197,8 @@ robots_settings:
       robot_name: pragyaan
       usd_path: assets/USD_Assets/robots/pragyaan/nograph_pragyaan.usd  
       pose:
-        position: [5.0, 5.0, 0.8]
-        orientation: [0.5, 0.5, 0.5, 0.5]
+        position: [26., 16., 0.8]
+        orientation: [0., 0., 0.70711, 0.70711]
       domain_id: 0
       target_links: [
         "Mobility/Wheel_front_left",
@@ -290,15 +290,17 @@ static_assets_settings:
     - asset_name: rock1
       usd_path: USD_Assets/rocks/lunalab_rocks/rock_1/rock1.usd
       pose:
-        position: [5.0, 7.5, 0.0]
+        position: [26, 19., 0.0]
+        # position: [5.0, 7.5, 0.0]
         orientation: [1, 0, 0, 1]
       collision: False
 
     - asset_name: lander
       usd_path: USD_Assets/common/lander/Vikram/Vikram.usd
       pose:
-        position: [1.25, 2., 0.05]
-        orientation: [0.70711, 0. , 0., 0.70711]   # w/x/y/z
+        position: [25.7, 10.6, 0.2]
+        # orientation: [0.70711, 0. , 0., 0.70711]   # w/x/y/z
+        orientation: [0.5, 0.5 , 0.5, 0.5]   # w/x/y/z
       collision: False
 
 monitoring_cameras_settings:
