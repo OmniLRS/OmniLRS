@@ -269,6 +269,7 @@ robots_settings:
       neutron_counts: "/Rover/neutron_counts"
       camera_streaming_state: "/Rover/camera/images_streaming/state"
       solar_panel_state: "/Rover/solar_panel_state"
+      motor_encoder: "/Rover/motor_encoder"
     commands:
       drive_straight: "/Rover/motor/drive_straight"
       drive_turn: "/Rover/motor/drive_turn"
@@ -306,10 +307,12 @@ static_assets_settings:
 monitoring_cameras_settings:
   root_path: "/MonitoringCameras"
   camera_definitions:
-    - name: "corner"
+    - name: "monitoring_camera"
       pose:
-        position: [0.0, 0.0, 2.5]
-        orientation: [0.493, -0.302, -0.169, 0.796]
+        # position: [0.0, 0.0, 2.5]
+        # orientation: [0.493, -0.302, -0.169, 0.796]
+        position: [20.44369, 9.73725, 3.43137]
+        orientation: [ 0.522, -0.193, -0.234,  0.801 ] # [x,y,z,w]
       camera_params:
         focal_length: 1.93
         horizontal_aperture:  2.4
@@ -319,8 +322,8 @@ monitoring_cameras_settings:
         clipping_range: [0.01, 1000000.0]
       ros2:
         enabled: False
-        topic: "/monitoring/corner"
-        frame_id: "corner_id"
+        topic: "/monitoring/monitoring_camera"
+        frame_id: "monitoring_camera_id"
       type: "Rgb" # make sure to have correct naming - eg. Rgb ; Depth ; SemanticSegmentation ; InstanceSegmentation ; Normals
-      resolution: [1280, 720]  
+      resolution: [320, 240]
       # stream_frequency: 2.0 #  every 0.5s - in order to not overwhelm the network

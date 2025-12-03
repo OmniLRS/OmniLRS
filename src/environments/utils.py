@@ -73,4 +73,10 @@ def transform_orientation_into_xyz(orientation_wxyz):
 
     return np.array(xyz_orient)
 
+def transform_orientation_from_xyzw_into_xyz(orientation_xyzw):
+    q_xyzw = np.array(orientation_xyzw)
+    e_zyx_from_wxyz = R.from_quat(q_xyzw).as_euler('zyx', degrees=True)
+    xyz_orient = [e_zyx_from_wxyz[2], e_zyx_from_wxyz[1], e_zyx_from_wxyz[0]]
+
+    return np.array(xyz_orient)
 

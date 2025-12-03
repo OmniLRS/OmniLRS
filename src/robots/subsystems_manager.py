@@ -5,7 +5,6 @@ from src.robots.RadioModel import RadioModel
 from src.robots.ThermalModel import ThermalModel
 from src.robots.PowerModel import PowerModel
 import math
-from omni.isaac.core.utils.prims import get_prim_at_path
 from isaacsim.core.utils.xforms import get_world_pose
 import random
 import time
@@ -46,7 +45,7 @@ class HealthStatus(Enum):
 class RobotSubsystemsManager:
     SUN_POSITION = (10.0, 5.0, 7.5)
     LANDER_POSITION = (0.0, 0.0, 0.0)
-    USE_DYNAMIC_SUN = get_moon_env_name() == "Lunalab" # Lunalab has no sun prim
+    USE_DYNAMIC_SUN = get_moon_env_name() == "Lunaryard" # Lunalab has no sun prim
 
     def __init__(self, pos_relative_to_prim):
         self.LANDER_PATH = pos_relative_to_prim

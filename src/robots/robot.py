@@ -29,7 +29,7 @@ from src.configurations.robot_confs import RobotManagerConf
 import numpy as np
 from scipy.spatial.transform import Rotation as R
 
-from src.environments.utils import transform_orientation_into_xyz
+from src.environments.utils import transform_orientation_from_xyzw_into_xyz, transform_orientation_into_xyz
 from src.robots.subsystems_manager import RobotSubsystemsManager
 from src.robots.yamcs_TMTC import YamcsTMTC
 from omni.isaac.sensor import Camera
@@ -360,6 +360,9 @@ class Robot:
 
     def get_streaming_cam_resolution(self):
         return (self._camera_conf["resolutions"]["low"][0], self._camera_conf["resolutions"]["low"][1])
+    
+    def get_high_cam_resolution(self):
+        return (self._camera_conf["resolutions"]["high"][0], self._camera_conf["resolutions"]["high"][1])
         
     def _initialize_cameras(self) -> None:
         # Camera is a wrapper, therefore it just wraps around the camera instance if it already exists
@@ -396,9 +399,10 @@ class Robot:
         linear_acceleration = {"ax": sensor_reading.lin_acc_x, "ay": sensor_reading.lin_acc_y, "az": sensor_reading.lin_acc_z}
         angular_velocity = {"gx":sensor_reading.ang_vel_x, "gy":sensor_reading.ang_vel_y, "gz":sensor_reading.ang_vel_z} 
         
-        orientation = sensor_reading.orientation # w, x, y, z
-        xyz_orientation = transform_orientation_into_xyz(orientation) 
-        orientation = {"roll":float(xyz_orientation[0]), "pitch":float(xyz_orientation[1]), "yaw":float(xyz_orientation[2])}
+        # orientation = sensor_reading.orientation # w, x, y, z 
+        orientation = sensor_reading.orientation # x, y, z, w
+        xyz_orientation = transform_orientation_from_xyzw_into_xyz(orientation) 
+        orientation = {"roll":-float(xyz_orientation[0]), "pitch":-float(xyz_orientation[1]), "yaw":float(xyz_orientation[2])}
 
         # print(linear_acceleration, angular_velocity, orientation)
         return linear_acceleration, angular_velocity, orientation
@@ -487,6 +491,17 @@ class Robot:
 
         for dof in self._dofs[side]:
             self.dc.set_dof_velocity_target(dof, velocity)
+
+    def get_wheels_joint_angles(self):
+        self._init_dofs()
+        
+        joint_angles = []
+        for side in ["left","right"]:
+            for dof in self._dofs[side]:
+                joint_angle = self.dc.get_dof_position(dof)
+                joint_angles.append(joint_angle)
+
+        return joint_angles
 
     def _init_dofs(self):
         #NOTE idealy, this would be initialized inside load(),

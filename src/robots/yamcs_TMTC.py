@@ -1,6 +1,7 @@
 __author__ = "Aleksa Stanivuk"
 __status__ = "development"
 
+from src.environments.monitoring_cameras_manager import MonitoringCamerasManager
 from src.environments.utils import transform_orientation_into_xyz
 from src.robots.subsystems_manager import Electronics, GoNogoState, HealthStatus, ObcState, PowerState, SolarPanelState
 from yamcs.client import YamcsClient, CommandHistory
@@ -98,6 +99,7 @@ class YamcsTMTC:
 
     def _inject_fault(self):
         self._robot.subsystems.set_electronics_health(Electronics.MOTOR_CONTROLLER.value, HealthStatus.FAULT)
+        self._stop_robot()
 
     def _handle_battery_perc_change(self, battery_percentage:int):
         self._robot.subsystems.set_battery_perc(battery_percentage)
@@ -127,6 +129,9 @@ class YamcsTMTC:
                                                  function=self._robot.subsystems.set_obc_state, f_args=[ObcState.IDLE])
 
     def _handle_solar_panel(self, command:str):
+        if self._robot.subsystems.get_go_nogo_state() == GoNogoState.NOGO:
+            return
+
         if command == "DEPLOY":
             self._robot.subsystems.set_solar_panel_state(SolarPanelState.DEPLOYED)
             self._robot.deploy_solar_panel()
@@ -272,6 +277,9 @@ class YamcsTMTC:
     def start_streaming_data(self):
         self._payload_handler._snap_apxs() # snaps initial blank apxs reading
         self._camera_handler.snap_initial_no_data_stream(self._robot.get_streaming_cam_resolution()) # snaps initial blank apxs reading
+        self._camera_handler.snap_initial_no_data_stream_lander(self._robot.get_high_cam_resolution())
+        self._camera_handler.snap_initial_no_data_stream_depth(self._robot.get_high_cam_resolution())
+        self._camera_handler.snap_initial_no_data_stream_high(self._robot.get_high_cam_resolution())
         self._intervals_handler.add_new_interval(name="Pose of base link", seconds=self._yamcs_conf["intervals"]["robot_stats"], is_repeating=True, execute_immediately=True,
                                                  function=self._transmit_pose_of_base_link)
         self._intervals_handler.add_new_interval(name="camera streaming state", seconds=self._yamcs_conf["intervals"]["robot_stats"], is_repeating=True, execute_immediately=True,
@@ -292,7 +300,23 @@ class YamcsTMTC:
                                                  function=self._transmit_obc_metrics)
         self._intervals_handler.add_new_interval(name="Solar panel state", seconds=self._yamcs_conf["intervals"]["robot_stats"], is_repeating=True, execute_immediately=True,
                                                  function=self._transmit_solar_panel_state)
+        self._intervals_handler.add_new_interval(name="Monitoring camera stream", seconds=self._yamcs_conf["intervals"]["robot_stats"], is_repeating=True, execute_immediately=True,
+                                                 function=self._camera_handler.transmit_monitoring_camera_view)
+        self._intervals_handler.add_new_interval(name="Motor encoder", seconds=self._yamcs_conf["intervals"]["robot_stats"], is_repeating=True, execute_immediately=True,
+                                                 function=self._transmit_wheels_joint_angles)
         # here add further intervals and their functionalities
+
+    def _transmit_wheels_joint_angles(self):
+        angles = self._robot.get_wheels_joint_angles()
+        self._transform_joint_angles(angles)
+
+        print(angles)
+        self._yamcs_processor.set_parameter_value(self._yamcs_conf["parameters"]["motor_encoder"], angles)
+
+    def _transform_joint_angles(self, angles):
+        for i in range(len(angles)):
+            modulo = angles[i] % (2 * math.pi)
+            angles[i] = int(modulo * (1024.0 / (2 * math.pi)))
 
     def _transmit_solar_panel_state(self):
         state:SolarPanelState = self._robot.subsystems.get_solar_panel_state()
@@ -474,6 +498,7 @@ class CameraViewTransmitHandler:
     BUCKET_IMAGES_DEPTH = "images_depth"
     NO_DATA_IMAGE_PATH = "/workspace/omnilrs/assets/images/no_data_grafana.png"
     BUCKET_LANDER_ONCOMMAND = "images_lander"
+    BUCKET_MONITORING = "images_monitoring"
 
     def __init__(self, yamcs_processor, robot, yamcs_address, helper, lander_camera_conf=None) -> None:
         self._yamcs_processor = yamcs_processor
@@ -484,9 +509,11 @@ class CameraViewTransmitHandler:
             self.BUCKET_IMAGES_ONCOMMAND:0,
             self.BUCKET_IMAGES_DEPTH:0,
             self.BUCKET_LANDER_ONCOMMAND:0,
+            self.BUCKET_MONITORING:0,
         }
         self._helper = helper
         self._initialize_lander_cam(lander_camera_conf)
+        self._initialize_monitoring_cam()
 
     def transmit_camera_view(self, bucket:str, resolution:str, type:str="rgb"):
         camera_view:Image = None
@@ -516,6 +543,36 @@ class CameraViewTransmitHandler:
                                   bucket=self.BUCKET_IMAGES_STREAMING, 
                                   counter_number=self._counter[self.BUCKET_IMAGES_STREAMING])
         self._counter[self.BUCKET_IMAGES_STREAMING] += 1
+    
+    def snap_initial_no_data_stream_depth(self, resolution):
+        img = Image.open(self.NO_DATA_IMAGE_PATH).convert('RGB').resize((resolution[0], resolution[1]))
+        image_name = self._helper.save_image_locally(img, self.BUCKET_IMAGES_DEPTH, self._counter[self.BUCKET_IMAGES_DEPTH])
+        self._helper.inform_yamcs(image_name, 
+                                  asset=HandlerHelper.CARRIER_ASSET.ROVER, 
+                                  type=HandlerHelper.INPUT_TYPE.CAMERA, 
+                                  bucket=self.BUCKET_IMAGES_DEPTH, 
+                                  counter_number=self._counter[self.BUCKET_IMAGES_DEPTH])
+        self._counter[self.BUCKET_IMAGES_DEPTH] += 1
+
+    def snap_initial_no_data_stream_high(self, resolution):
+        img = Image.open(self.NO_DATA_IMAGE_PATH).convert('RGB').resize((resolution[0], resolution[1]))
+        image_name = self._helper.save_image_locally(img, self.BUCKET_IMAGES_ONCOMMAND, self._counter[self.BUCKET_IMAGES_ONCOMMAND])
+        self._helper.inform_yamcs(image_name, 
+                                  asset=HandlerHelper.CARRIER_ASSET.ROVER, 
+                                  type=HandlerHelper.INPUT_TYPE.CAMERA, 
+                                  bucket=self.BUCKET_IMAGES_ONCOMMAND, 
+                                  counter_number=self._counter[self.BUCKET_IMAGES_ONCOMMAND])
+        self._counter[self.BUCKET_IMAGES_ONCOMMAND] += 1
+
+    def snap_initial_no_data_stream_lander(self, resolution):
+        img = Image.open(self.NO_DATA_IMAGE_PATH).convert('RGB').resize((resolution[0], resolution[1]))
+        image_name = self._helper.save_image_locally(img, self.BUCKET_LANDER_ONCOMMAND, self._counter[self.BUCKET_LANDER_ONCOMMAND])
+        self._helper.inform_yamcs(image_name, 
+                                  asset=HandlerHelper.CARRIER_ASSET.LANDER, 
+                                  type=HandlerHelper.INPUT_TYPE.CAMERA, 
+                                  bucket=self.BUCKET_LANDER_ONCOMMAND, 
+                                  counter_number=self._counter[self.BUCKET_LANDER_ONCOMMAND])
+        self._counter[self.BUCKET_LANDER_ONCOMMAND] += 1
 
     def _snap_camera_view_rgb(self, resolution:str) -> Image:
         frame = self._robot.get_rgba_camera_view(resolution)
@@ -550,7 +607,7 @@ class CameraViewTransmitHandler:
         self._helper.inform_yamcs(image_name, 
                                   asset=HandlerHelper.CARRIER_ASSET.LANDER, 
                                   type=HandlerHelper.INPUT_TYPE.CAMERA, 
-                                  bucket="images_oncommand", 
+                                  bucket=self.BUCKET_LANDER_ONCOMMAND, 
                                   counter_number=self._counter[self.BUCKET_LANDER_ONCOMMAND])
         self._counter[self.BUCKET_LANDER_ONCOMMAND] += 1
 
@@ -568,9 +625,45 @@ class CameraViewTransmitHandler:
         self.lander_cam = Camera(lander_camera_conf["prim_path"], 
                                 resolution=(lander_camera_conf["resolution"][0], lander_camera_conf["resolution"][1]))
         self.lander_cam.initialize()
+
+    def transmit_monitoring_camera_view(self):
+        camera_view:Image = self._snap_monitoring_camera_view()
+
+        if camera_view == None:
+            return
+        
+        image_name = self._helper.save_image_locally(camera_view, self.BUCKET_MONITORING, self._counter[self.BUCKET_MONITORING])
+        self._helper.inform_yamcs(image_name, 
+                                  asset=HandlerHelper.CARRIER_ASSET.ADMIN, 
+                                  type=HandlerHelper.INPUT_TYPE.CAMERA, 
+                                  bucket=self.BUCKET_MONITORING, 
+                                  counter_number=self._counter[self.BUCKET_MONITORING])
+        self._counter[self.BUCKET_MONITORING] += 1
+
+    def _snap_monitoring_camera_view(self) -> Image:
+        frame = self.monitoring_cam.get_rgb()#get_rgba()
+
+        #NOTE interval tries to trigger it before initialization, and then breaks because programmatically created cameras
+        # require more time to be initialized than the ones already existing inside the models
+        if (len(frame) == 0):
+            return None
+        
+        frame_uint8 = frame.astype(np.uint8)
+        camera_view = Image.fromarray(frame_uint8, "RGB")
+
+        return camera_view
+    
+    def _initialize_monitoring_cam(self) -> None:
+        #NOTE TODO fixed for one camera right now, in future make for multiple idea: dict same as for cameras in MonCamManager, 
+        # and just iterate over them, make generic names that differ only in _id (mon_cam_1, mon_cam_2, ...) and make such yamcs buckets
+        if (list(MonitoringCamerasManager.cameras.keys()) == 0):
+            return
+
+        camera_name = list(MonitoringCamerasManager.cameras.keys())[0]
+        self.monitoring_cam = MonitoringCamerasManager.cameras[camera_name]
     
 class HandlerHelper:
-    URL_FULL_NGINX = "https://52.69.177.254/yamcs"
+    URL_FULL_NGINX = "https://workshop.jaops.com/yamcs"
 
     class INPUT_TYPE(Enum):
         CAMERA = "camera"
@@ -579,6 +672,7 @@ class HandlerHelper:
     class CARRIER_ASSET(Enum):
         ROVER = "Rover"
         LANDER = "Lander"
+        ADMIN = "Admin"
 
     def __init__(self, yamcs_processor, yamcs_address):
         self._yamcs_processor = yamcs_processor
@@ -595,6 +689,10 @@ class HandlerHelper:
 
     def inform_yamcs(self, image_name, asset:CARRIER_ASSET, type:INPUT_TYPE, bucket, counter_number):
         url_storage = f"/storage/buckets/{bucket}/objects/{image_name}"
+
+        if bucket == CameraViewTransmitHandler.BUCKET_LANDER_ONCOMMAND:
+            bucket = CameraViewTransmitHandler.BUCKET_IMAGES_ONCOMMAND
+
         url_full = "http://" + self._yamcs_address + f"/api{url_storage}"
         url_full_nginx = self.URL_FULL_NGINX + f"/api{url_storage}"  # @TODO hardcoded nginx address for now
         self._yamcs_processor.set_parameter_values({

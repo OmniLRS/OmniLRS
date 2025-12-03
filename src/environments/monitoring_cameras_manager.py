@@ -8,11 +8,14 @@ from pxr import UsdGeom, Gf
 import omni.replicator.core as rep
 import omni.syntheticdata as sd
 from src.environments.utils import set_xform_pose
+from omni.isaac.sensor import Camera
 
 class MonitoringCamerasManager:
     """
     Spawns one camera per entry under monitoring camera configs in yaml.
     """
+
+    cameras = {}
 
     def __init__(self, cameras_cfg):
         self._cfg = cameras_cfg
@@ -35,12 +38,17 @@ class MonitoringCamerasManager:
 
             pose = c["pose"]
             set_xform_pose(xform,
-                # prim_path,
+                # prim_path,prim_path
                 pose["position"],
                 pose["orientation"],
             )
             self._set_camera_attributes(cam, c["camera_params"])
-            rp = rep.create.render_product(prim_path, (c["resolution"][0], c["resolution"][1])) 
+            self.cameras[name] = Camera(prim_path,
+                                resolution=(c["resolution"][0], c["resolution"][1]),
+                                )
+            self.cameras[name].initialize()
+            # NOTE render products do not work, because it requires rep.orchestrator.step() which classhes with world.step()
+            # rp = rep.create.render_product(prim_path, (c["resolution"][0], c["resolution"][1])) 
 
             if c["ros2"]["enabled"]:
                 self._set_ros2_publisher(rp, c["ros2"], c["type"])
