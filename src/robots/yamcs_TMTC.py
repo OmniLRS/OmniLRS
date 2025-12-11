@@ -715,9 +715,6 @@ class HandlerHelper:
             f"/{asset.value}/{type.value}/{bucket}/url_full_nginx": url_full_nginx,
         })
 
-
-# /Lander/camera/images_oncommand
-
 class PayloadHandler:
 
     BUCKET_IMAGES_APXS = "images_apxs"

@@ -394,6 +394,9 @@ class Robot:
         return depth
     
     def get_imu_readings(self):
+        if (self._imu_sensor_path == ""):
+            raise Exception("Path to imu sensor is not defined. Please check your .yaml configuration file. 'imu_sensor_path' should be defined on the same level as 'robot_name'.")
+        
         # https://docs.isaacsim.omniverse.nvidia.com/4.5.0/sensors/isaacsim_sensors_physics_imu.html#reading-sensor-output
         sensor_reading = self._imu_sensor_interface.get_sensor_reading(self._imu_sensor_path, use_latest_data = True, read_gravity = True)
         linear_acceleration = {"ax": sensor_reading.lin_acc_x, "ay": sensor_reading.lin_acc_y, "az": sensor_reading.lin_acc_z}
@@ -532,6 +535,12 @@ class Robot:
         if self._solar_panel_dof == None and self._solar_panel_joint != "":
             art = self._get_art()
             self._solar_panel_dof = self.dc.find_articulation_dof(art, self._solar_panel_joint)
+            return
+        elif self._solar_panel_dof != None:
+            return
+
+        if self._solar_panel_joint == "":
+            raise Exception("Solar panel joint is not specified. Please check your .yaml configuration file. 'solar_panel_joint' should be defined on the same level as 'robot_name'.")
 
     def deploy_solar_panel(self):
         self._init_solar_panel_dof()
