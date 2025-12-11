@@ -25,6 +25,56 @@ class IntervalName(Enum):
     CONTROLLED_DRIVE = "controlled_drive"
     NEUTRON_COUNT = "neutron_count"
 
+class CommandsHandler:
+
+    def __init__(self, robot, camera_handler):
+        self._robot = robot
+        self._camera_handler = camera_handler
+
+    def _command_callback(self, command:CommandHistory):
+        # CommandHistory info is available at: https://docs.yamcs.org/python-yamcs-client/tmtc/model/#yamcs.client.CommandHistory
+        #NOTE: it happens that the subscriber receives the same instance of command multiple times in a very short period of time
+        # however, desired behavior is to execute the command only once
+        # since commands are executed by human operators, waiting for a small period of time (such as 0.5s) is enough to counter this issue
+        if time.time() - self._time_of_last_command < 0.5:
+            return
+        
+        self._time_of_last_command = time.time()
+
+        name = command.name
+        arguments = command.all_assignments
+        print(name)
+        print(arguments)
+        if name == self._yamcs_conf["commands"]["drive_straight"]:
+            self._drive_robot_straight(arguments["linear_velocity"], arguments["distance"]) 
+        elif name == self._yamcs_conf["commands"]["drive_turn"]:
+            self._drive_robot_turn(arguments["angular_velocity"], arguments["angle"])
+        elif name == self._yamcs_conf["commands"]["camera_capture_high"]:
+            self.handle_high_res_capture()
+        elif name == self._yamcs_conf["commands"]["camera_streaming_on_off"]:
+            self._set_activity_of_camera_streaming(arguments["action"])
+        elif name == self._yamcs_conf["commands"]["camera_capture_depth"]:
+            self.handle_depth_capture()
+        elif name == self._yamcs_conf["commands"]["power_electronics"]:
+            self._handle_electronics_on_off(arguments["subsystem_id"], arguments["power_state"])
+        elif name == self._yamcs_conf["commands"]["solar_panel"]:
+            self._handle_solar_panel(arguments["deployment"])
+        elif name == self._yamcs_conf["commands"]["go_nogo"]:
+            self._handle_go_nogo(arguments["decision"])
+        elif name == self._yamcs_conf["commands"]["capture_apxs"]:
+            self._payload_handler._snap_apxs(self._robot.subsystems.get_electronics_state(Electronics.APXS.value))
+        elif name == self._yamcs_conf["commands"]["admin_battery_percentage"]:
+            self._handle_battery_perc_change(arguments["battery_percentage"])
+        elif name == self._yamcs_conf["commands"]["admin_water_detection"]:
+            self._robot.subsystems.set_is_near_water(arguments["trigger_water_detection"])
+        elif name == self._yamcs_conf["commands"]["admin_inject_fault"]:
+            self._inject_fault()
+        elif name == self._yamcs_conf["commands"]["lander_camera_capture_high"]:
+            self.handle_lander_camera_capture()
+        # here add reactions to other commands
+        else:
+            print("Unknown command:", name)
+
 class YamcsTMTC:
     """
     YamcsTMTC class.
@@ -52,6 +102,7 @@ class YamcsTMTC:
         self._camera_handler = CameraViewTransmitHandler(self._yamcs_processor, self._robot, yamcs_conf["address"], self._helper, yamcs_conf["lander_camera"])
         self._intervals_handler = IntervalsHandler()
         self._payload_handler = PayloadHandler(self._helper)
+        self._drive_handler = DriveHandler(self._robot, self._intervals_handler)
 
     def _command_callback(self, command:CommandHistory):
         # CommandHistory info is available at: https://docs.yamcs.org/python-yamcs-client/tmtc/model/#yamcs.client.CommandHistory
@@ -68,9 +119,11 @@ class YamcsTMTC:
         print(name)
         print(arguments)
         if name == self._yamcs_conf["commands"]["drive_straight"]:
-            self._drive_robot_straight(arguments["linear_velocity"], arguments["distance"]) 
+            # self._drive_robot_straight(arguments["linear_velocity"], arguments["distance"]) 
+            self._drive_handler.drive_robot_straight(arguments["linear_velocity"], arguments["distance"]) 
         elif name == self._yamcs_conf["commands"]["drive_turn"]:
-            self._drive_robot_turn(arguments["angular_velocity"], arguments["angle"])
+            # self._drive_robot_turn(arguments["angular_velocity"], arguments["angle"])
+            self._drive_handler.drive_robot_turn(arguments["angular_velocity"], arguments["angle"])
         elif name == self._yamcs_conf["commands"]["camera_capture_high"]:
             self.handle_high_res_capture()
         elif name == self._yamcs_conf["commands"]["camera_streaming_on_off"]:
@@ -172,107 +225,6 @@ class YamcsTMTC:
 
         if (decision == GoNogoState.NOGO):
                 self._stop_robot()
-
-    def _drive_robot_straight(self, linear_velocity, distance):
-        if not self._is_robot_able_to_drive():
-            return
-        
-        if linear_velocity == 0 or distance == 0:
-            self._stop_robot()
-            return
-        
-        self._set_obc_state(ObcState.MOTOR)
-        self._drive_with_controlled_acceleration(linear_velocity, distance)
-
-    def _drive_with_controlled_acceleration(self, orig_linear_velocity, orig_distance):
-        slow_velocity = self._calculate_slow_velocity(orig_linear_velocity)
-        _linear_velocity, _distance = self.adjust_speed_and_distance(slow_velocity, 0.05*orig_distance)
-        self._robot.drive_straight(_linear_velocity)
-        drive_time = _distance / abs(_linear_velocity)
-        self._switch_to_next_drive_mode_after_time(drive_time, orig_linear_velocity, orig_distance, self._drive_requested_speed)
-
-    def _drive_requested_speed(self, orig_linear_velocity, orig_distance):
-        _linear_velocity, _distance = self.adjust_speed_and_distance(orig_linear_velocity, 0.9*orig_distance)
-        self._robot.drive_straight(_linear_velocity)
-        drive_time = _distance / abs(_linear_velocity)
-        self._switch_to_next_drive_mode_after_time(drive_time, orig_linear_velocity, orig_distance, self._slow_down)
-
-    def _slow_down(self, orig_linear_velocity, orig_distance):
-        if (self._robot.subsystems.get_obc_state() == ObcState.IDLE):
-            return
-
-        slow_velocity = self._calculate_slow_velocity(orig_linear_velocity)
-        _linear_velocity, _distance = self.adjust_speed_and_distance(slow_velocity, 0.05*orig_distance)
-        self._robot.drive_straight(_linear_velocity)
-        drive_time = _distance / abs(_linear_velocity)
-        self._intervals_handler.remove_interval(IntervalName.CONTROLLED_DRIVE.value)
-        self._stop_robot_after_time(drive_time)
-
-    def _calculate_slow_velocity(self, orig_linear_velocity):
-        #NOTE assumpion is that the min speed is 0.25
-        # and that the max speed is 1 
-        # with speed higher than 1, rover does not move properly
-        slow_velocity = abs(orig_linear_velocity) / 2
-
-        if (slow_velocity < self.MIN_VELOCITY):
-            slow_velocity = self.MIN_VELOCITY
-
-        return math.copysign(slow_velocity, orig_linear_velocity)
-
-    def _switch_to_next_drive_mode_after_time(self, drive_time, linear_velocity, distance, next_mode_func):
-        if self._intervals_handler.does_exist(IntervalName.CONTROLLED_DRIVE.value):
-            self._intervals_handler.remove_interval(IntervalName.CONTROLLED_DRIVE.value)
-
-        self._intervals_handler.add_new_interval(name=IntervalName.CONTROLLED_DRIVE.value, seconds=drive_time, is_repeating=False, execute_immediately=False,
-                                                function=next_mode_func, f_args=[linear_velocity, distance])
-
-    def adjust_speed_and_distance(self, linear_velocity, distance):
-        linear_velocity *= 10
-        distance *= 10
-
-        return linear_velocity, distance
-
-    def _drive_robot_turn(self, angular_velocity, angle):
-        if not self._is_robot_able_to_drive():
-            return
-
-        if angular_velocity == 0 or angle == 0:
-            self._stop_robot()
-            return
-        
-        turn_speed = self._calculate_turn_speed(angular_velocity)
-        turn_time = angle / abs(angular_velocity)
-        self._robot.drive_turn(turn_speed)
-        self._stop_robot_after_time(turn_time)
-
-    def _is_robot_able_to_drive(self):
-        motor_state:PowerState = self._robot.subsystems.get_electronics_state(Electronics.MOTOR_CONTROLLER.value)
-        go_state:GoNogoState = self._robot.subsystems.get_go_nogo_state()
-        motor_health:HealthStatus = self._robot.subsystems.get_electronics_health(Electronics.MOTOR_CONTROLLER.value)
-
-        return go_state == GoNogoState.GO and motor_state == PowerState.ON and motor_health == HealthStatus.NOMINAL
-
-    def _calculate_turn_speed(self, angular_velocity):
-        robot_width = self._robot.dimensions["width"]
-        radians = math.radians(angular_velocity) 
-        wheel_speed = radians * (robot_width / 2)
-        adjusted_speed = wheel_speed * self._robot.turn_speed_coef
-
-        return adjusted_speed
-
-    def _stop_robot_after_time(self, travel_time):
-        self._set_obc_state(ObcState.MOTOR, travel_time)
-        if self._intervals_handler.does_exist(IntervalName.STOP_ROBOT.value):
-            self._intervals_handler.update_next_time(IntervalName.STOP_ROBOT.value, travel_time)
-        else:
-            self._intervals_handler.add_new_interval(name=IntervalName.STOP_ROBOT.value, seconds=travel_time, is_repeating=False, execute_immediately=False,
-                                                 function=self._stop_robot)
-
-    def _stop_robot(self):
-        self._intervals_handler.remove_interval(IntervalName.STOP_ROBOT.value)
-        self._intervals_handler.remove_interval(IntervalName.CONTROLLED_DRIVE.value)
-        self._robot.stop_drive()
-        self._set_obc_state(ObcState.IDLE)
 
     def start_streaming_data(self):
         self._payload_handler._snap_apxs() # snaps initial blank apxs reading
@@ -433,6 +385,130 @@ class YamcsTMTC:
             if not self._intervals_handler.does_exist(IntervalName.NEUTRON_COUNT.value):
                 self._intervals_handler.add_new_interval(name=IntervalName.NEUTRON_COUNT.value, seconds=self._yamcs_conf["intervals"]["camera_streaming"], is_repeating=True, execute_immediately=False,
                                                  function=self._transmit_neutroun_count, f_args=[self._yamcs_conf["intervals"]["robot_stats"]])
+
+class DriveHandler:
+
+    MIN_VELOCITY = 0.2
+
+    def __init__(
+        self,
+        robot,
+        intervals_handler
+    ) -> None:
+        self._robot = robot
+        self._intervals_handler = intervals_handler
+
+    def drive_robot_straight(self, linear_velocity, distance):
+        if not self._is_robot_able_to_drive():
+            return
+        
+        if linear_velocity == 0 or distance == 0:
+            self._stop_robot()
+            return
+        
+        self._set_obc_state(ObcState.MOTOR)
+        self._drive_with_controlled_acceleration(linear_velocity, distance)
+
+    def _drive_with_controlled_acceleration(self, orig_linear_velocity, orig_distance):
+        slow_velocity = self._calculate_slow_velocity(orig_linear_velocity)
+        _linear_velocity, _distance = self._adjust_speed_and_distance(slow_velocity, 0.05*orig_distance)
+        self._robot.drive_straight(_linear_velocity)
+        drive_time = _distance / abs(_linear_velocity)
+        self._switch_to_next_drive_mode_after_time(drive_time, orig_linear_velocity, orig_distance, self._drive_requested_speed)
+
+    def _drive_requested_speed(self, orig_linear_velocity, orig_distance):
+        _linear_velocity, _distance = self._adjust_speed_and_distance(orig_linear_velocity, 0.9*orig_distance)
+        self._robot.drive_straight(_linear_velocity)
+        drive_time = _distance / abs(_linear_velocity)
+        self._switch_to_next_drive_mode_after_time(drive_time, orig_linear_velocity, orig_distance, self._slow_down)
+
+    def _slow_down(self, orig_linear_velocity, orig_distance):
+        if (self._robot.subsystems.get_obc_state() == ObcState.IDLE):
+            return
+
+        slow_velocity = self._calculate_slow_velocity(orig_linear_velocity)
+        _linear_velocity, _distance = self._adjust_speed_and_distance(slow_velocity, 0.05*orig_distance)
+        self._robot.drive_straight(_linear_velocity)
+        drive_time = _distance / abs(_linear_velocity)
+        self._intervals_handler.remove_interval(IntervalName.CONTROLLED_DRIVE.value)
+        self._stop_robot_after_time(drive_time)
+
+    def _calculate_slow_velocity(self, orig_linear_velocity):
+        #NOTE assumpion is that the min speed is 0.25
+        # and that the max speed is 1 
+        # with speed higher than 1, rover does not move properly
+        slow_velocity = abs(orig_linear_velocity) / 2
+
+        if (slow_velocity < self.MIN_VELOCITY):
+            slow_velocity = self.MIN_VELOCITY
+
+        return math.copysign(slow_velocity, orig_linear_velocity)
+
+    def _switch_to_next_drive_mode_after_time(self, drive_time, linear_velocity, distance, next_mode_func):
+        if self._intervals_handler.does_exist(IntervalName.CONTROLLED_DRIVE.value):
+            self._intervals_handler.remove_interval(IntervalName.CONTROLLED_DRIVE.value)
+
+        self._intervals_handler.add_new_interval(name=IntervalName.CONTROLLED_DRIVE.value, seconds=drive_time, is_repeating=False, execute_immediately=False,
+                                                function=next_mode_func, f_args=[linear_velocity, distance])
+
+    def _adjust_speed_and_distance(self, linear_velocity, distance):
+        linear_velocity *= 10
+        distance *= 10
+
+        return linear_velocity, distance
+
+    def drive_robot_turn(self, angular_velocity, angle):
+        if not self._is_robot_able_to_drive():
+            return
+
+        if angular_velocity == 0 or angle == 0:
+            self._stop_robot()
+            return
+        
+        turn_speed = self._calculate_turn_speed(angular_velocity)
+        turn_time = angle / abs(angular_velocity)
+        self._robot.drive_turn(turn_speed)
+        self._stop_robot_after_time(turn_time)
+
+    def _is_robot_able_to_drive(self):
+        motor_state:PowerState = self._robot.subsystems.get_electronics_state(Electronics.MOTOR_CONTROLLER.value)
+        go_state:GoNogoState = self._robot.subsystems.get_go_nogo_state()
+        motor_health:HealthStatus = self._robot.subsystems.get_electronics_health(Electronics.MOTOR_CONTROLLER.value)
+
+        return go_state == GoNogoState.GO and motor_state == PowerState.ON and motor_health == HealthStatus.NOMINAL
+
+    def _calculate_turn_speed(self, angular_velocity):
+        robot_width = self._robot.dimensions["width"]
+        radians = math.radians(angular_velocity) 
+        wheel_speed = radians * (robot_width / 2)
+        adjusted_speed = wheel_speed * self._robot.turn_speed_coef
+
+        return adjusted_speed
+
+    def _stop_robot_after_time(self, travel_time):
+        self._set_obc_state(ObcState.MOTOR, travel_time)
+        if self._intervals_handler.does_exist(IntervalName.STOP_ROBOT.value):
+            self._intervals_handler.update_next_time(IntervalName.STOP_ROBOT.value, travel_time)
+        else:
+            self._intervals_handler.add_new_interval(name=IntervalName.STOP_ROBOT.value, seconds=travel_time, is_repeating=False, execute_immediately=False,
+                                                 function=self._stop_robot)
+
+    def _stop_robot(self):
+        self._intervals_handler.remove_interval(IntervalName.STOP_ROBOT.value)
+        self._intervals_handler.remove_interval(IntervalName.CONTROLLED_DRIVE.value)
+        self._robot.stop_drive()
+        self._set_obc_state(ObcState.IDLE)
+
+    def _set_obc_state(self, state:ObcState, set_to_idle_after=0):
+        if self._intervals_handler.does_exist(IntervalName.OBC_STATE.value):
+            self._intervals_handler.remove_interval(IntervalName.OBC_STATE.value)
+
+        self._robot.subsystems.set_obc_state(state)
+
+        if set_to_idle_after != 0:
+            # for states that should switch back to idle after a duration
+            self._intervals_handler.add_new_interval(name=IntervalName.OBC_STATE.value, seconds=set_to_idle_after, is_repeating=False, execute_immediately=False,
+                                                 function=self._robot.subsystems.set_obc_state, f_args=[ObcState.IDLE])
 
 class IntervalsHandler:
     def __init__(self):
