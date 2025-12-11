@@ -194,8 +194,8 @@ robots_settings:
       robot_name: pragyaan
       usd_path: assets/USD_Assets/robots/pragyaan/nograph_pragyaan.usd  
       pose:
-        position: [5.0, 5.0, 0.8]
-        orientation: [0.5, 0.5, 0.5, 0.5]
+        position:  [5.0, 5.0, 0.5]
+        orientation: [0., 0., 0.70711, 0.70711]
       domain_id: 0
       target_links: [
         "Mobility/Wheel_front_left",
@@ -206,15 +206,20 @@ robots_settings:
         "Mobility/Wheel_back_right"
       ]
       base_link: "base_link" # core link used to determine the position of the robot
+      dimensions:
+        width: 1.6 # m
+        length: 1.5
+      pos_relative_to_prim: "/StaticAssets/lander"
       wheel_joints:
         left: ["wheel_fl", "wheel_ml", "wheel_bl"]
         right: ["wheel_fr", "wheel_mr", "wheel_br"]
       camera:
-        prim_path: "/Robots/husky/Body/body_main/depth_cam"
+        prim_path: "/Robots/pragyaan/Body/body_main/depth_cam"
         resolutions: 
           low: [320, 240]
           high: [1440, 1080]
-      turn_speed_coef: 17
+      imu_sensor_path: "/Robots/pragyaan/base_link/Imu_Sensor"
+      turn_speed_coef: 19
       solar_panel_joint: "solarJoint"  # finds it within the main robot articulation
   yamcs_tmtc:
     enabled: True
@@ -261,6 +266,7 @@ robots_settings:
       neutron_counts: "/Rover/neutron_counts"
       camera_streaming_state: "/Rover/camera/images_streaming/state"
       solar_panel_state: "/Rover/solar_panel_state"
+      motor_encoder: "/Rover/motor_encoder"
     commands:
       drive_straight: "/Rover/motor/drive_straight"
       drive_turn: "/Rover/motor/drive_turn"
