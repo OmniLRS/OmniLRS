@@ -48,6 +48,11 @@ class CraterDistributionConf:
     y_size: float = dataclasses.field(default_factory=float)
     densities: list = dataclasses.field(default_factory=list)
     radius: list = dataclasses.field(default_factory=list)
+    radius_range: list = dataclasses.field(default_factory=list)
+    dist_exp: float = dataclasses.field(default_factory=float)
+    dist_coef: float = dataclasses.field(default_factory=float)
+    radius_step: float = dataclasses.field(default_factory=float)
+    radius_step_factor: float = dataclasses.field(default_factory=float)
     num_repeat: int = dataclasses.field(default_factory=int)
     seed: int = dataclasses.field(default_factory=int)
 
@@ -56,11 +61,14 @@ class CraterDistributionConf:
         assert type(self.y_size) is float, "y_size must be a float"
         assert type(self.num_repeat) is int, "num_repeat must be an integer"
         assert type(self.seed) is int, "seed must be an integer"
+        assert type(self.dist_exp) is float,"dist_exp must be float"
+        assert type(self.dist_coef) is float,"dist_coef must be float"
 
         assert self.x_size > 0, "x_size must be greater than 0"
         assert self.y_size > 0, "y_size must be greater than 0"
-        assert len(self.densities) == len(self.radius), "densities and radius must have the same length"
         assert self.num_repeat >= 0, "num_repeat must be greater or equal to 0"
+        assert self.dist_exp < 0, "density distribution exponential term must be less than 0"
+        assert self.dist_coef > 0, "density distribution coefficient term must be greater than 0"
 
 
 @dataclasses.dataclass
