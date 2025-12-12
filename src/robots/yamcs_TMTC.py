@@ -16,6 +16,7 @@ from enum import Enum
 from scipy.spatial.transform import Rotation as R
 from pathlib import Path
 from omni.isaac.sensor import Camera
+from abc import ABC, abstractmethod
 
 class IntervalName(Enum):
     # use for intervals that are repeatedly created or removed
@@ -25,6 +26,45 @@ class IntervalName(Enum):
     CONTROLLED_DRIVE = "controlled_drive"
     NEUTRON_COUNT = "neutron_count"
 
+class CommandsHandler(ABC):
+
+    def __init__(self, yamcs_processor):
+        self._yamcs_processor = yamcs_processor
+        self._yamcs_processor.create_command_history_subscription(on_data=self._command_callback)
+        self._time_of_last_command = 0
+        self._commands_catalogue = {}
+        self._init_commands_catalogue()
+
+    @abstractmethod
+    def _init_commands_catalogue(self):
+        """Subclasses must initialize self._commands here using add_command()"""
+        pass
+
+    def _command_callback(self, command:CommandHistory):
+        # CommandHistory info is available at: https://docs.yamcs.org/python-yamcs-client/tmtc/model/#yamcs.client.CommandHistory
+        #NOTE: it happens that the subscriber receives the same instance of command multiple times in a very short period of time
+        # however, desired behavior is to execute the command only once
+        # since commands are executed by human operators, waiting for a small period of time (such as 0.5s) is enough to counter this issue
+        if time.time() - self._time_of_last_command < 0.5:
+            return
+        
+        self._time_of_last_command = time.time()
+
+        name = command.name
+        arguments = command.all_assignments
+        print(name)
+        print(arguments)
+        self._commands_catalogue[name](arguments)
+
+    def add_command(self, command_name:str, func):
+        """public, still testing if it is better to init the commands from inside the class or outside"""
+        if command_name in self._commands_catalogue.keys:
+            raise Exception("Command named", str(command_name), "already exists")
+        elif command_name == "":
+            raise Exception("Command name can not be an empty string.")
+
+        self._commands_catalogue[command_name] = func
+        
 class CommandsHandler:
 
     def __init__(self, robot, camera_handler):
