@@ -26,21 +26,15 @@ class IntervalName(Enum):
     CONTROLLED_DRIVE = "controlled_drive"
     NEUTRON_COUNT = "neutron_count"
 
-class CommandsHandler(ABC):
+class CommandsHandler():
 
     def __init__(self, yamcs_processor):
         self._yamcs_processor = yamcs_processor
-        self._yamcs_processor.create_command_history_subscription(on_data=self._command_callback)
+        self._yamcs_processor.create_command_history_subscription(on_data=self._command_callback) # immeditally starts listening for commands once created
         self._time_of_last_command = 0
         self._commands_catalogue = {}
-        self._init_commands_catalogue()
 
-    @abstractmethod
-    def _init_commands_catalogue(self):
-        """Subclasses must initialize self._commands here using add_command()"""
-        pass
-
-    def _command_callback(self, command:CommandHistory):
+    def _command_callback(self, received_command:CommandHistory):
         # CommandHistory info is available at: https://docs.yamcs.org/python-yamcs-client/tmtc/model/#yamcs.client.CommandHistory
         #NOTE: it happens that the subscriber receives the same instance of command multiple times in a very short period of time
         # however, desired behavior is to execute the command only once
@@ -50,70 +44,152 @@ class CommandsHandler(ABC):
         
         self._time_of_last_command = time.time()
 
-        name = command.name
-        arguments = command.all_assignments
+        name = received_command.name
+        received_arguments = received_command.all_assignments
         print(name)
-        print(arguments)
-        self._commands_catalogue[name](arguments)
+        print(received_arguments)
+        command = self._commands_catalogue.get(name)
 
-    def add_command(self, command_name:str, func):
-        """public, still testing if it is better to init the commands from inside the class or outside"""
-        if command_name in self._commands_catalogue.keys:
+        if command is None:
+            raise Exception(f"Command '{name}' not found in catalogue")
+
+        self._execute(command, received_arguments)
+    
+    def _execute(self, command, received_arguments):
+        kwargs = self._get_kwargs(command, received_arguments)
+        func = command["func"]
+
+        # print("func:", func)
+        # print("kwargs:", kwargs)
+
+        func(**kwargs)
+
+    def _get_kwargs(self, command, received_arguments):
+        arg_names = command.get("args", [])
+        kwargs = {}
+
+        for name in arg_names:
+            if name not in received_arguments:
+                raise Exception(f"Missing argument '{name}' for command")
+            kwargs[name] = received_arguments[name]
+
+        return kwargs
+
+    def add_command(self, command_name:str, func, args:list=None):
+        # Can be called from inside _init_commands_catalogue or externally.
+        if command_name in self._commands_catalogue:
             raise Exception("Command named", str(command_name), "already exists")
         elif command_name == "":
             raise Exception("Command name can not be an empty string.")
 
-        self._commands_catalogue[command_name] = func
-        
-class CommandsHandler:
+        self._commands_catalogue[command_name] = {"func":func, "args":args}
 
-    def __init__(self, robot, camera_handler):
+class RobotController(ABC):
+    def __init__(self, yamcs_processor, robot, drive_handler, camera_handler, payload_handler, intervals_handler):
+        self._yamcs_processor = yamcs_processor
         self._robot = robot
-        self._camera_handler = camera_handler
+        self._drive_handler:DriveHandler = drive_handler
+        self._camera_handler:CameraViewTransmitHandler = camera_handler
+        self._payload_handler:PayloadHandler = payload_handler
+        self._intervals_handler:IntervalsHandler = intervals_handler
 
-    def _command_callback(self, command:CommandHistory):
-        # CommandHistory info is available at: https://docs.yamcs.org/python-yamcs-client/tmtc/model/#yamcs.client.CommandHistory
-        #NOTE: it happens that the subscriber receives the same instance of command multiple times in a very short period of time
-        # however, desired behavior is to execute the command only once
-        # since commands are executed by human operators, waiting for a small period of time (such as 0.5s) is enough to counter this issue
-        if time.time() - self._time_of_last_command < 0.5:
+class PragyaanController(RobotController):
+    def __init__(self, yamcs_processor, robot, drive_handler, camera_handler, payload_handler, intervals_handler):
+        super().__init__(yamcs_processor, robot, drive_handler, camera_handler, payload_handler, intervals_handler)
+
+    def inject_fault(self):
+        self._robot.subsystems.set_electronics_health(Electronics.MOTOR_CONTROLLER.value, HealthStatus.FAULT)
+        self._drive_handler.stop_robot()
+
+    def handle_battery_perc_change(self, battery_percentage:int):
+        self._robot.subsystems.set_battery_perc(battery_percentage)
+
+    def handle_lander_camera_capture(self):
+        self._camera_handler.transmit_lander_camera_view()
+
+    def handle_high_res_capture(self):
+        if (self._robot.subsystems.get_electronics_state(Electronics.CAMERA.value) == PowerState.ON):
+            self._camera_handler.transmit_camera_view(CameraViewTransmitHandler.BUCKET_IMAGES_ONCOMMAND, "high", "rgb")
+            self._set_obc_state(ObcState.CAMERA, 10)
+
+    def handle_depth_capture(self):
+        if (self._robot.subsystems.get_electronics_state(Electronics.CAMERA.value) == PowerState.ON):
+            self._camera_handler.transmit_camera_view(CameraViewTransmitHandler.BUCKET_IMAGES_DEPTH, "high", "depth")
+            self._set_obc_state(ObcState.CAMERA, 10)
+
+    def set_obc_state(self, state:ObcState, set_to_idle_after=0):
+        if self._intervals_handler.does_exist(IntervalName.OBC_STATE.value):
+            self._intervals_handler.remove_interval(IntervalName.OBC_STATE.value)
+
+        self._robot.subsystems.set_obc_state(state)
+
+        if set_to_idle_after != 0:
+            # for states that should switch back to idle after a duration
+            self._intervals_handler.add_new_interval(name=IntervalName.OBC_STATE.value, seconds=set_to_idle_after, is_repeating=False, execute_immediately=False,
+                                                 function=self._robot.subsystems.set_obc_state, f_args=[ObcState.IDLE])
+
+    def handle_solar_panel(self, command:str):
+        if self._robot.subsystems.get_go_nogo_state() == GoNogoState.NOGO:
+            return
+
+        if command == "DEPLOY":
+            self._robot.subsystems.set_solar_panel_state(SolarPanelState.DEPLOYED)
+            self._robot.deploy_solar_panel()
+        elif command == "STOW":
+            self._robot.subsystems.set_solar_panel_state(SolarPanelState.STOWED)
+            self._robot.stow_solar_panel()
+        else:
+            print("Command for solar panel is unknown:", command)
+            return
+
+    def handle_electronics_on_off(self, electronics:str, new_state:PowerState):
+        if new_state not in [PowerState.ON.value, PowerState.OFF.value]:
+            print("New decision for PowerState of electronics is unknown:", new_state)
             return
         
-        self._time_of_last_command = time.time()
+        new_state = PowerState[new_state]
+        self._robot.subsystems.set_electronics_state(electronics, new_state)
 
-        name = command.name
-        arguments = command.all_assignments
-        print(name)
-        print(arguments)
-        if name == self._yamcs_conf["commands"]["drive_straight"]:
-            self._drive_robot_straight(arguments["linear_velocity"], arguments["distance"]) 
-        elif name == self._yamcs_conf["commands"]["drive_turn"]:
-            self._drive_robot_turn(arguments["angular_velocity"], arguments["angle"])
-        elif name == self._yamcs_conf["commands"]["camera_capture_high"]:
-            self.handle_high_res_capture()
-        elif name == self._yamcs_conf["commands"]["camera_streaming_on_off"]:
-            self._set_activity_of_camera_streaming(arguments["action"])
-        elif name == self._yamcs_conf["commands"]["camera_capture_depth"]:
-            self.handle_depth_capture()
-        elif name == self._yamcs_conf["commands"]["power_electronics"]:
-            self._handle_electronics_on_off(arguments["subsystem_id"], arguments["power_state"])
-        elif name == self._yamcs_conf["commands"]["solar_panel"]:
-            self._handle_solar_panel(arguments["deployment"])
-        elif name == self._yamcs_conf["commands"]["go_nogo"]:
-            self._handle_go_nogo(arguments["decision"])
-        elif name == self._yamcs_conf["commands"]["capture_apxs"]:
-            self._payload_handler._snap_apxs(self._robot.subsystems.get_electronics_state(Electronics.APXS.value))
-        elif name == self._yamcs_conf["commands"]["admin_battery_percentage"]:
-            self._handle_battery_perc_change(arguments["battery_percentage"])
-        elif name == self._yamcs_conf["commands"]["admin_water_detection"]:
-            self._robot.subsystems.set_is_near_water(arguments["trigger_water_detection"])
-        elif name == self._yamcs_conf["commands"]["admin_inject_fault"]:
-            self._inject_fault()
-        elif name == self._yamcs_conf["commands"]["lander_camera_capture_high"]:
-            self.handle_lander_camera_capture()
-        # here add reactions to other commands
+        if electronics == Electronics.CAMERA.value:
+            self._set_activity_of_camera_streaming("START") if new_state == PowerState.ON else self._set_activity_of_camera_streaming("STOP")
+        elif electronics == Electronics.NEUTRON_SPECTROMETER.value:
+            self._set_activity_of_neutron_streaming(new_state)
+        elif electronics == Electronics.MOTOR_CONTROLLER.value:
+            if (new_state == PowerState.OFF):
+                self._drive_handler.stop_robot()
+                self._robot.subsystems.set_electronics_health(Electronics.MOTOR_CONTROLLER.value, HealthStatus.NOMINAL)
+        elif electronics == Electronics.RADIO.value:
+            #TODO
+            pass
+
+    def handle_go_nogo(self, decision:str):
+        if decision not in [GoNogoState.GO.name, GoNogoState.NOGO.name]:
+            print("New decision for GO / NOGO is unknown:", decision)
+            return
+        
+        decision = GoNogoState[decision]
+        self._robot.subsystems.set_go_nogo_state(decision)
+
+        if (decision == GoNogoState.NOGO):
+                self._drive_handler.stop_robot()
+    
+    def set_activity_of_camera_streaming(self, action:str):
+        if action == "STOP":
+            self._intervals_handler.remove_interval(IntervalName.CAMERA_STREAMING.value)
+        elif action == "START":
+            if not self._intervals_handler.does_exist(IntervalName.CAMERA_STREAMING.value):
+                self._intervals_handler.add_new_interval(name=IntervalName.CAMERA_STREAMING.value, seconds=self._yamcs_conf["intervals"]["camera_streaming"], is_repeating=True, execute_immediately=False,
+                                                 function=self._camera_handler.transmit_camera_view, f_args=(CameraViewTransmitHandler.BUCKET_IMAGES_STREAMING, "low"))
         else:
-            print("Unknown command:", name)
+            print("Unknown action:", action)
+
+    def _set_activity_of_neutron_streaming(self, power_state:PowerState):
+        if power_state == PowerState.OFF:
+            self._intervals_handler.remove_interval(IntervalName.NEUTRON_COUNT.value)
+        elif power_state == PowerState.ON:
+            if not self._intervals_handler.does_exist(IntervalName.NEUTRON_COUNT.value):
+                self._intervals_handler.add_new_interval(name=IntervalName.NEUTRON_COUNT.value, seconds=self._yamcs_conf["intervals"]["camera_streaming"], is_repeating=True, execute_immediately=False,
+                                                 function=self._transmit_neutroun_count, f_args=[self._yamcs_conf["intervals"]["robot_stats"]])
 
 class YamcsTMTC:
     """
@@ -137,137 +213,34 @@ class YamcsTMTC:
         self._yamcs_conf = yamcs_conf
         self._time_of_last_command = 0
         self._robot = robot
-        self._yamcs_processor.create_command_history_subscription(on_data=self._command_callback)
+        # self._yamcs_processor.create_command_history_subscription(on_data=self._command_callback)
         self._helper = HandlerHelper(self._yamcs_processor, yamcs_conf["address"])
         self._camera_handler = CameraViewTransmitHandler(self._yamcs_processor, self._robot, yamcs_conf["address"], self._helper, yamcs_conf["lander_camera"])
         self._intervals_handler = IntervalsHandler()
         self._payload_handler = PayloadHandler(self._helper)
         self._drive_handler = DriveHandler(self._robot, self._intervals_handler)
+        # self._commands_handler = PragyaanCommands(self._yamcs_processor, yamcs_conf["commands"], self._robot, self._drive_handler, self._camera_handler, self._payload_handler)
+        self._commands_handler:CommandsHandler = CommandsHandler(self._yamcs_processor)
+        self._c = PragyaanController(self._yamcs_processor, self._robot, self._drive_handler, self._camera_handler, self._payload_handler, self._intervals_handler)
+        self._setup_command_callbacks(yamcs_conf["commands"])
 
-    def _command_callback(self, command:CommandHistory):
-        # CommandHistory info is available at: https://docs.yamcs.org/python-yamcs-client/tmtc/model/#yamcs.client.CommandHistory
-        #NOTE: it happens that the subscriber receives the same instance of command multiple times in a very short period of time
-        # however, desired behavior is to execute the command only once
-        # since commands are executed by human operators, waiting for a small period of time (such as 0.5s) is enough to counter this issue
-        if time.time() - self._time_of_last_command < 0.5:
-            return
-        
-        self._time_of_last_command = time.time()
-
-        name = command.name
-        arguments = command.all_assignments
-        print(name)
-        print(arguments)
-        if name == self._yamcs_conf["commands"]["drive_straight"]:
-            # self._drive_robot_straight(arguments["linear_velocity"], arguments["distance"]) 
-            self._drive_handler.drive_robot_straight(arguments["linear_velocity"], arguments["distance"]) 
-        elif name == self._yamcs_conf["commands"]["drive_turn"]:
-            # self._drive_robot_turn(arguments["angular_velocity"], arguments["angle"])
-            self._drive_handler.drive_robot_turn(arguments["angular_velocity"], arguments["angle"])
-        elif name == self._yamcs_conf["commands"]["camera_capture_high"]:
-            self.handle_high_res_capture()
-        elif name == self._yamcs_conf["commands"]["camera_streaming_on_off"]:
-            self._set_activity_of_camera_streaming(arguments["action"])
-        elif name == self._yamcs_conf["commands"]["camera_capture_depth"]:
-            self.handle_depth_capture()
-        elif name == self._yamcs_conf["commands"]["power_electronics"]:
-            self._handle_electronics_on_off(arguments["subsystem_id"], arguments["power_state"])
-        elif name == self._yamcs_conf["commands"]["solar_panel"]:
-            self._handle_solar_panel(arguments["deployment"])
-        elif name == self._yamcs_conf["commands"]["go_nogo"]:
-            self._handle_go_nogo(arguments["decision"])
-        elif name == self._yamcs_conf["commands"]["capture_apxs"]:
-            self._payload_handler._snap_apxs(self._robot.subsystems.get_electronics_state(Electronics.APXS.value))
-        elif name == self._yamcs_conf["commands"]["admin_battery_percentage"]:
-            self._handle_battery_perc_change(arguments["battery_percentage"])
-        elif name == self._yamcs_conf["commands"]["admin_water_detection"]:
-            self._robot.subsystems.set_is_near_water(arguments["trigger_water_detection"])
-        elif name == self._yamcs_conf["commands"]["admin_inject_fault"]:
-            self._inject_fault()
-        elif name == self._yamcs_conf["commands"]["lander_camera_capture_high"]:
-            self.handle_lander_camera_capture()
-        # here add reactions to other commands
-        else:
-            print("Unknown command:", name)
-
-    def _inject_fault(self):
-        self._robot.subsystems.set_electronics_health(Electronics.MOTOR_CONTROLLER.value, HealthStatus.FAULT)
-        self._stop_robot()
-
-    def _handle_battery_perc_change(self, battery_percentage:int):
-        self._robot.subsystems.set_battery_perc(battery_percentage)
-
-    def handle_lander_camera_capture(self):
-        self._camera_handler.transmit_lander_camera_view()
-
-    def handle_high_res_capture(self):
-        if (self._robot.subsystems.get_electronics_state(Electronics.CAMERA.value) == PowerState.ON):
-            self._camera_handler.transmit_camera_view(CameraViewTransmitHandler.BUCKET_IMAGES_ONCOMMAND, "high", "rgb")
-            self._set_obc_state(ObcState.CAMERA, 10)
-
-    def handle_depth_capture(self):
-        if (self._robot.subsystems.get_electronics_state(Electronics.CAMERA.value) == PowerState.ON):
-            self._camera_handler.transmit_camera_view(CameraViewTransmitHandler.BUCKET_IMAGES_DEPTH, "high", "depth")
-            self._set_obc_state(ObcState.CAMERA, 10)
-
-    def _set_obc_state(self, state:ObcState, set_to_idle_after=0):
-        if self._intervals_handler.does_exist(IntervalName.OBC_STATE.value):
-            self._intervals_handler.remove_interval(IntervalName.OBC_STATE.value)
-
-        self._robot.subsystems.set_obc_state(state)
-
-        if set_to_idle_after != 0:
-            # for states that should switch back to idle after a duration
-            self._intervals_handler.add_new_interval(name=IntervalName.OBC_STATE.value, seconds=set_to_idle_after, is_repeating=False, execute_immediately=False,
-                                                 function=self._robot.subsystems.set_obc_state, f_args=[ObcState.IDLE])
-
-    def _handle_solar_panel(self, command:str):
-        if self._robot.subsystems.get_go_nogo_state() == GoNogoState.NOGO:
-            return
-
-        if command == "DEPLOY":
-            self._robot.subsystems.set_solar_panel_state(SolarPanelState.DEPLOYED)
-            self._robot.deploy_solar_panel()
-        elif command == "STOW":
-            self._robot.subsystems.set_solar_panel_state(SolarPanelState.STOWED)
-            self._robot.stow_solar_panel()
-        else:
-            print("Command for solar panel is unknown:", command)
-            return
-
-    def _handle_electronics_on_off(self, electronics:str, new_state:PowerState):
-        if new_state not in [PowerState.ON.value, PowerState.OFF.value]:
-            print("New decision for PowerState of electronics is unknown:", new_state)
-            return
-        
-        new_state = PowerState[new_state]
-        self._robot.subsystems.set_electronics_state(electronics, new_state)
-
-        if electronics == Electronics.CAMERA.value:
-            self._set_activity_of_camera_streaming("START") if new_state == PowerState.ON else self._set_activity_of_camera_streaming("STOP")
-        elif electronics == Electronics.NEUTRON_SPECTROMETER.value:
-            self._set_activity_of_neutron_streaming(new_state)
-        elif electronics == Electronics.MOTOR_CONTROLLER.value:
-            if (new_state == PowerState.OFF):
-                self._stop_robot()
-                self._robot.subsystems.set_electronics_health(Electronics.MOTOR_CONTROLLER.value, HealthStatus.NOMINAL)
-        elif electronics == Electronics.RADIO.value:
-            #TODO
-            pass
-
-    def _handle_go_nogo(self, decision:str):
-        if decision not in [GoNogoState.GO.name, GoNogoState.NOGO.name]:
-            print("New decision for GO / NOGO is unknown:", decision)
-            return
-        
-        decision = GoNogoState[decision]
-        self._robot.subsystems.set_go_nogo_state(decision)
-
-        if (decision == GoNogoState.NOGO):
-                self._stop_robot()
+    def _setup_command_callbacks(self, commands_conf):
+        #TODO turn into abstract once TMTC is (ABC)
+        self._commands_handler.add_command(commands_conf["drive_straight"], self._c._drive_handler.drive_robot_straight, args=["linear_velocity", "distance"] )
+        self._commands_handler.add_command(commands_conf["drive_turn"], self._c._drive_handler.drive_robot_turn, args=["angular_velocity", "angle"] )
+        self._commands_handler.add_command(commands_conf["camera_capture_high"], self._c.handle_high_res_capture )
+        self._commands_handler.add_command(commands_conf["camera_streaming_on_off"], self._c.set_activity_of_camera_streaming, args=["action"] )
+        self._commands_handler.add_command(commands_conf["camera_capture_depth"], self._c.handle_depth_capture )
+        self._commands_handler.add_command(commands_conf["power_electronics"], self._c.handle_electronics_on_off )
+        self._commands_handler.add_command(commands_conf["solar_panel"], self._c.handle_solar_panel, args=["subsystem_id", "power_state"] )
+        self._commands_handler.add_command(commands_conf["go_nogo"], self._c.handle_go_nogo, args=["decision"] )
+        self._commands_handler.add_command(commands_conf["capture_apxs"], self._c._payload_handler.snap_apxs )
+        self._commands_handler.add_command(commands_conf["admin_water_detection"], self._c._robot.subsystems.set_is_near_water, args=["trigger_water_detection"] )
+        self._commands_handler.add_command(commands_conf["admin_inject_fault"], self._c.inject_fault)
+        self._commands_handler.add_command(commands_conf["lander_camera_capture_high"], self._c.handle_lander_camera_capture )
 
     def start_streaming_data(self):
-        self._payload_handler._snap_apxs() # snaps initial blank apxs reading
+        self._payload_handler.snap_apxs() # snaps initial blank apxs reading
         self._camera_handler.snap_initial_no_data_stream(self._robot.get_streaming_cam_resolution()) # snaps initial blank apxs reading
         self._camera_handler.snap_initial_no_data_stream_lander(self._robot.get_high_cam_resolution())
         self._camera_handler.snap_initial_no_data_stream_depth(self._robot.get_high_cam_resolution())
@@ -408,24 +381,6 @@ class YamcsTMTC:
                                 "orientation":{"w":orientation[0],"x":orientation[1], "y":orientation[2], "z":orientation[3] }}
         self._yamcs_processor.set_parameter_value(self._yamcs_conf["parameters"]["pose_of_base_link"], pose_of_base_link)
 
-    def _set_activity_of_camera_streaming(self, action:str):
-        if action == "STOP":
-            self._intervals_handler.remove_interval(IntervalName.CAMERA_STREAMING.value)
-        elif action == "START":
-            if not self._intervals_handler.does_exist(IntervalName.CAMERA_STREAMING.value):
-                self._intervals_handler.add_new_interval(name=IntervalName.CAMERA_STREAMING.value, seconds=self._yamcs_conf["intervals"]["camera_streaming"], is_repeating=True, execute_immediately=False,
-                                                 function=self._camera_handler.transmit_camera_view, f_args=(CameraViewTransmitHandler.BUCKET_IMAGES_STREAMING, "low"))
-        else:
-            print("Unknown action:", action)
-
-    def _set_activity_of_neutron_streaming(self, power_state:PowerState):
-        if power_state == PowerState.OFF:
-            self._intervals_handler.remove_interval(IntervalName.NEUTRON_COUNT.value)
-        elif power_state == PowerState.ON:
-            if not self._intervals_handler.does_exist(IntervalName.NEUTRON_COUNT.value):
-                self._intervals_handler.add_new_interval(name=IntervalName.NEUTRON_COUNT.value, seconds=self._yamcs_conf["intervals"]["camera_streaming"], is_repeating=True, execute_immediately=False,
-                                                 function=self._transmit_neutroun_count, f_args=[self._yamcs_conf["intervals"]["robot_stats"]])
-
 class DriveHandler:
 
     MIN_VELOCITY = 0.2
@@ -443,7 +398,7 @@ class DriveHandler:
             return
         
         if linear_velocity == 0 or distance == 0:
-            self._stop_robot()
+            self.stop_robot()
             return
         
         self._set_obc_state(ObcState.MOTOR)
@@ -502,7 +457,7 @@ class DriveHandler:
             return
 
         if angular_velocity == 0 or angle == 0:
-            self._stop_robot()
+            self.stop_robot()
             return
         
         turn_speed = self._calculate_turn_speed(angular_velocity)
@@ -531,9 +486,9 @@ class DriveHandler:
             self._intervals_handler.update_next_time(IntervalName.STOP_ROBOT.value, travel_time)
         else:
             self._intervals_handler.add_new_interval(name=IntervalName.STOP_ROBOT.value, seconds=travel_time, is_repeating=False, execute_immediately=False,
-                                                 function=self._stop_robot)
+                                                 function=self.stop_robot)
 
-    def _stop_robot(self):
+    def stop_robot(self):
         self._intervals_handler.remove_interval(IntervalName.STOP_ROBOT.value)
         self._intervals_handler.remove_interval(IntervalName.CONTROLLED_DRIVE.value)
         self._robot.stop_drive()
@@ -845,7 +800,8 @@ class PayloadHandler:
             self.BUCKET_IMAGES_APXS:0,
         }
 
-    def _snap_apxs(self, apxs_power_state:PowerState=PowerState.OFF):
+    def snap_apxs(self, apxs_power_state:PowerState=PowerState.OFF):
+        #TODO fix this, remove power_state from params
         image_name = f"{self.BUCKET_IMAGES_APXS}_{self._counter[self.BUCKET_IMAGES_APXS]}"
 
         if self._counter[self.BUCKET_IMAGES_APXS] == 0:
