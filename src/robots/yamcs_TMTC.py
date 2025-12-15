@@ -56,26 +56,19 @@ class CommandsHandler():
         self._execute(command, received_arguments)
     
     def _execute(self, command, received_arguments):
-        kwargs = self._get_kwargs(command, received_arguments)
+        arg_names = command["args"]
         func = command["func"]
 
-        # print("func:", func)
-        # print("kwargs:", kwargs)
+        print(func)
+        print(arg_names)
 
-        func(**kwargs)
+        if arg_names == []:
+            func()
+        else:
+            args = [received_arguments[name] for name in arg_names]
+            func(*args) 
 
-    def _get_kwargs(self, command, received_arguments):
-        arg_names = command.get("args", [])
-        kwargs = {}
-
-        for name in arg_names:
-            if name not in received_arguments:
-                raise Exception(f"Missing argument '{name}' for command")
-            kwargs[name] = received_arguments[name]
-
-        return kwargs
-
-    def add_command(self, command_name:str, func, args:list=None):
+    def add_command(self, command_name:str, func, args:list=[]):
         # Can be called from inside _init_commands_catalogue or externally.
         if command_name in self._commands_catalogue:
             raise Exception("Command named", str(command_name), "already exists")
@@ -94,8 +87,14 @@ class RobotController(ABC):
         self._intervals_handler:IntervalsHandler = intervals_handler
 
 class PragyaanController(RobotController):
-    def __init__(self, yamcs_processor, robot, drive_handler, camera_handler, payload_handler, intervals_handler):
+    def __init__(self, yamcs_processor, robot, drive_handler, camera_handler, payload_handler, intervals_handler, intervals_conf):
         super().__init__(yamcs_processor, robot, drive_handler, camera_handler, payload_handler, intervals_handler)
+        self._intervals = intervals_conf
+
+    def snap_apxs(self):
+        #TODO image does not get saved on yamcs, take a loot fix
+        power_state = self._robot.subsystems.is_turned_on(Electronics.APXS.value)
+        self._payload_handler.snap_apxs(power_state)
 
     def inject_fault(self):
         self._robot.subsystems.set_electronics_health(Electronics.MOTOR_CONTROLLER.value, HealthStatus.FAULT)
@@ -117,7 +116,7 @@ class PragyaanController(RobotController):
             self._camera_handler.transmit_camera_view(CameraViewTransmitHandler.BUCKET_IMAGES_DEPTH, "high", "depth")
             self._set_obc_state(ObcState.CAMERA, 10)
 
-    def set_obc_state(self, state:ObcState, set_to_idle_after=0):
+    def _set_obc_state(self, state:ObcState, set_to_idle_after=0):
         if self._intervals_handler.does_exist(IntervalName.OBC_STATE.value):
             self._intervals_handler.remove_interval(IntervalName.OBC_STATE.value)
 
@@ -151,9 +150,11 @@ class PragyaanController(RobotController):
         self._robot.subsystems.set_electronics_state(electronics, new_state)
 
         if electronics == Electronics.CAMERA.value:
-            self._set_activity_of_camera_streaming("START") if new_state == PowerState.ON else self._set_activity_of_camera_streaming("STOP")
+            self.set_activity_of_camera_streaming("START") if new_state == PowerState.ON else self._set_activity_of_camera_streaming("STOP")
         elif electronics == Electronics.NEUTRON_SPECTROMETER.value:
-            self._set_activity_of_neutron_streaming(new_state)
+            #TODO fix this once implemented the Transmitter, and providehere as a property (just turn ON transmit of the neutron)
+            # self._set_activity_of_neutron_streaming(new_state)
+            pass
         elif electronics == Electronics.MOTOR_CONTROLLER.value:
             if (new_state == PowerState.OFF):
                 self._drive_handler.stop_robot()
@@ -178,7 +179,7 @@ class PragyaanController(RobotController):
             self._intervals_handler.remove_interval(IntervalName.CAMERA_STREAMING.value)
         elif action == "START":
             if not self._intervals_handler.does_exist(IntervalName.CAMERA_STREAMING.value):
-                self._intervals_handler.add_new_interval(name=IntervalName.CAMERA_STREAMING.value, seconds=self._yamcs_conf["intervals"]["camera_streaming"], is_repeating=True, execute_immediately=False,
+                self._intervals_handler.add_new_interval(name=IntervalName.CAMERA_STREAMING.value, seconds=self._intervals["camera_streaming"], is_repeating=True, execute_immediately=False,
                                                  function=self._camera_handler.transmit_camera_view, f_args=(CameraViewTransmitHandler.BUCKET_IMAGES_STREAMING, "low"))
         else:
             print("Unknown action:", action)
@@ -188,8 +189,17 @@ class PragyaanController(RobotController):
             self._intervals_handler.remove_interval(IntervalName.NEUTRON_COUNT.value)
         elif power_state == PowerState.ON:
             if not self._intervals_handler.does_exist(IntervalName.NEUTRON_COUNT.value):
-                self._intervals_handler.add_new_interval(name=IntervalName.NEUTRON_COUNT.value, seconds=self._yamcs_conf["intervals"]["camera_streaming"], is_repeating=True, execute_immediately=False,
+                self._intervals_handler.add_new_interval(name=IntervalName.NEUTRON_COUNT.value, seconds=self._intervals["camera_streaming"], is_repeating=True, execute_immediately=False,
                                                  function=self._transmit_neutroun_count, f_args=[self._yamcs_conf["intervals"]["robot_stats"]])
+
+    def drive_straight(self, linear_velocity, distance):
+        self._drive_handler.drive_robot_straight(linear_velocity, distance)
+
+    def drive_turn(self, angular_velocity, angle):
+        self._drive_handler.drive_robot_turn(angular_velocity, angle)
+
+    def set_is_near_water(self, trigger_water_detection):
+         self._robot.subsystems.set_is_near_water(trigger_water_detection)
 
 class YamcsTMTC:
     """
@@ -221,21 +231,21 @@ class YamcsTMTC:
         self._drive_handler = DriveHandler(self._robot, self._intervals_handler)
         # self._commands_handler = PragyaanCommands(self._yamcs_processor, yamcs_conf["commands"], self._robot, self._drive_handler, self._camera_handler, self._payload_handler)
         self._commands_handler:CommandsHandler = CommandsHandler(self._yamcs_processor)
-        self._c = PragyaanController(self._yamcs_processor, self._robot, self._drive_handler, self._camera_handler, self._payload_handler, self._intervals_handler)
+        self._c = PragyaanController(self._yamcs_processor, self._robot, self._drive_handler, self._camera_handler, self._payload_handler, self._intervals_handler, self._yamcs_conf["intervals"])
         self._setup_command_callbacks(yamcs_conf["commands"])
 
     def _setup_command_callbacks(self, commands_conf):
         #TODO turn into abstract once TMTC is (ABC)
-        self._commands_handler.add_command(commands_conf["drive_straight"], self._c._drive_handler.drive_robot_straight, args=["linear_velocity", "distance"] )
-        self._commands_handler.add_command(commands_conf["drive_turn"], self._c._drive_handler.drive_robot_turn, args=["angular_velocity", "angle"] )
+        self._commands_handler.add_command(commands_conf["drive_straight"], self._c.drive_straight, args=["linear_velocity", "distance"] )
+        self._commands_handler.add_command(commands_conf["drive_turn"], self._c.drive_turn, args=["angular_velocity", "angle"] )
         self._commands_handler.add_command(commands_conf["camera_capture_high"], self._c.handle_high_res_capture )
         self._commands_handler.add_command(commands_conf["camera_streaming_on_off"], self._c.set_activity_of_camera_streaming, args=["action"] )
         self._commands_handler.add_command(commands_conf["camera_capture_depth"], self._c.handle_depth_capture )
-        self._commands_handler.add_command(commands_conf["power_electronics"], self._c.handle_electronics_on_off )
-        self._commands_handler.add_command(commands_conf["solar_panel"], self._c.handle_solar_panel, args=["subsystem_id", "power_state"] )
+        self._commands_handler.add_command(commands_conf["power_electronics"], self._c.handle_electronics_on_off,  args=["subsystem_id", "power_state"] )
+        self._commands_handler.add_command(commands_conf["solar_panel"], self._c.handle_solar_panel, args=["deployment"] )
         self._commands_handler.add_command(commands_conf["go_nogo"], self._c.handle_go_nogo, args=["decision"] )
-        self._commands_handler.add_command(commands_conf["capture_apxs"], self._c._payload_handler.snap_apxs )
-        self._commands_handler.add_command(commands_conf["admin_water_detection"], self._c._robot.subsystems.set_is_near_water, args=["trigger_water_detection"] )
+        self._commands_handler.add_command(commands_conf["capture_apxs"], self._c.snap_apxs )
+        self._commands_handler.add_command(commands_conf["admin_water_detection"], self._c.set_is_near_water, args=["trigger_water_detection"] )
         self._commands_handler.add_command(commands_conf["admin_inject_fault"], self._c.inject_fault)
         self._commands_handler.add_command(commands_conf["lander_camera_capture_high"], self._c.handle_lander_camera_capture )
 
@@ -801,7 +811,6 @@ class PayloadHandler:
         }
 
     def snap_apxs(self, apxs_power_state:PowerState=PowerState.OFF):
-        #TODO fix this, remove power_state from params
         image_name = f"{self.BUCKET_IMAGES_APXS}_{self._counter[self.BUCKET_IMAGES_APXS]}"
 
         if self._counter[self.BUCKET_IMAGES_APXS] == 0:
