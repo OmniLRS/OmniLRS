@@ -201,6 +201,47 @@ class PragyaanController(RobotController):
     def set_is_near_water(self, trigger_water_detection):
          self._robot.subsystems.set_is_near_water(trigger_water_detection)
 
+class TM_item:
+
+    def __init__(self, yamcs_processor, intervals_handler):
+        self._yamcs_processor = yamcs_processor
+        self._intervals_handler = intervals_handler
+        self.func = None
+        self.args = None
+        self.topic = ""
+        self.is_active = True
+
+    def set_activity(self, is_active:bool):
+        self._is_active = is_active
+        
+    def add_TM_item(self):
+        pass
+
+    def set_item_activity(self, tm_item, is_active:bool):
+        self._TM_catalogue
+
+    def _transmit(self):
+        pass
+
+class Transmitter:
+
+    def __init__(self, yamcs_processor, intervals_handler):
+        self._yamcs_processor = yamcs_processor
+        self._intervals_handler = intervals_handler
+        self._TM_catalogue = {} # interval_s : {items:[]}
+
+    def set_activity(self, is_active:bool):
+        self._is_active = is_active
+        
+    def add_TM_item(self):
+        pass
+
+    def set_item_activity(self, tm_item, is_active:bool):
+        self._TM_catalogue
+
+    def _transmit(self):
+        pass
+
 class YamcsTMTC:
     """
     YamcsTMTC class.
@@ -221,7 +262,7 @@ class YamcsTMTC:
         self._robot_name = robot_name
         self._robots_RG = robot_RG
         self._yamcs_conf = yamcs_conf
-        self._time_of_last_command = 0
+        # self._time_of_last_command = 0
         self._robot = robot
         # self._yamcs_processor.create_command_history_subscription(on_data=self._command_callback)
         self._helper = HandlerHelper(self._yamcs_processor, yamcs_conf["address"])
@@ -847,3 +888,79 @@ class PayloadHandler:
             x, y = position
 
         draw.text((x, y), text, fill=fill, font=self.APXS_FONT)
+
+
+class CameraHandler:
+    #NOTE: WORK IN PROGRES
+    # this class, alongside the yaml confs, will simplify work with images
+    #   essentially it will replace the HandlerHelper (these functionalities are core, not 'helpings')
+    #   it will allow for easier implementation of future image-related features, such as is the current apxs inside Payload handler
+    #       - allows for adding new buckets (apxs_images), and their own NO_DATA images
+    #   the class will be part of the TMTC packege, alongside IntervalsHandler, and CommandsHandler
+    #
+    #   further work:
+    #       - replacement of HandlerHelper use inside the CameraViewTransmitHandler
+    #       - refactoring the CameraViewTransmitHandler - many functions will be simplified and even removed due to better organisation of CameraHandler
+    #       - turning PayloadHandler just into PragyaanController's functions
+    #           - still the functions can be separated inside a so-called PayloadHandler, but there should not be any PayloadHandlers inside TMTC
+    #               - same idea can be followed for 'transmitter' functions - no specific tranmitter as part of the TMTC framework, but Controller can have its transmitting functionalities inside a custom Transmitter file
+    #       - integration of added yaml properties where necessary and testing it out
+    #       - splitting files into TMTC folder (Intervals, Commands, Camera, TMTC), Pragyaan (Controller, payload handler, ...), robots (this current folder)
+    #       - work on the subsystems Manager ... a lot of hardcoded stuff also there, that should not affect the Robot class itself
+    NO_DATA_RESOLUTION = (640, 480)
+
+    def __init__(self, yamcs_processor, yamcs_address, images_conf, url_full_nginx):
+        self._yamcs_processor = yamcs_processor
+        self._yamcs_address = yamcs_address
+        self.URL_FULL_NGINX = url_full_nginx
+        self.NO_DATA_IMAGE_PATH = images_conf["no_data_image_path"]
+        self._buckets = {}
+        self._counter = {}
+        self._init_buckets_and_counter(images_conf["buckets"])
+
+    def _init_buckets_and_counter(self, buckets_conf):
+        for bucket in buckets_conf:
+            name = bucket["name"]
+            self._buckets[name] = bucket["path"]
+            self._buckets[name] = 0
+
+    def add_bucket(self, bucket_name, path):
+        if bucket_name not in self._buckets:
+            self._buckets[bucket_name] = path
+            self._buckets[bucket_name] = 0
+        else:
+            raise Exception(f"Bucket with name {bucket_name} already exists.")
+
+    def snap_no_data_images(self):
+        for bucket_name in self._buckets:
+            self.snap_no_data_image(bucket_name)
+
+    def snap_no_data_image(self, bucket_name, image_path=""):
+        image_path = self.NO_DATA_IMAGE_PATH if image_path == "" else image_path
+        img = Image.open(image_path).convert('RGB').resize((self.NO_DATA_RESOLUTION[0], self.NO_DATA_RESOLUTION[1]))
+        image_name = self.save_image_locally(img, bucket_name)
+        self._helper.inform_yamcs(image_name, bucket_name)
+        self._counter[bucket_name] += 1
+
+    def save_image_locally(self, image, bucket) -> str:
+        counter_number = self._counter[bucket]
+        image_name = f"{bucket}_{counter_number:04d}.png"
+        IMG_DIR = f"/tmp/{bucket}"
+        os.makedirs(IMG_DIR, exist_ok=True)   # creates directory if missing
+        img_path = f"{IMG_DIR}/{image_name}" 
+        image.save(img_path)
+
+        return image_name
+
+    def inform_yamcs(self, image_name, bucket):
+        counter_number = self._counter[bucket]
+        url_storage = f"/storage/buckets/{bucket}/objects/{image_name}"
+        url_full = "http://" + self._yamcs_address + f"/api{url_storage}"
+        url_full_nginx = self.URL_FULL_NGINX + f"/api{url_storage}"  # @TODO hardcoded nginx address for now
+        self._yamcs_processor.set_parameter_values({
+            self._buckets[bucket] + "/number": counter_number,
+            self._buckets[bucket] + "/name": image_name,
+            self._buckets[bucket] + "/url_storage": url_storage,
+            self._buckets[bucket] + "/url_full": url_full,
+            self._buckets[bucket] + "/url_full_nginx": url_full_nginx,
+        })
