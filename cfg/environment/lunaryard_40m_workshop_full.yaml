@@ -227,7 +227,9 @@ robots_settings:
       payload:
         apxs:
           resolution: [1440, 1080]
-          sample_dir: "/workspace/omnilrs/assets/images/"
+          samples_dir: "/workspace/omnilrs/assets/images/"
+          no_data: "APXS_nodata.png"
+          measurement: "APXS_measurement.png"
           bucket:
           - name: "images_apxs"
             path: "/Rover/payload/images_apxs"

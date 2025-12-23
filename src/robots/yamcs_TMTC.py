@@ -92,7 +92,7 @@ class PragyaanController(RobotController):
         self._intervals = intervals_conf
 
     def snap_apxs(self):
-        #TODO image does not get saved on yamcs, take a loot fix
+        #TODO image does not get saved on yamcs, take a look fix
         power_state = self._robot.subsystems.is_turned_on(Electronics.APXS.value)
         self._payload_handler.snap_apxs(power_state)
 
@@ -268,12 +268,13 @@ class YamcsTMTC:
         self._helper = HandlerHelper(self._yamcs_processor, yamcs_conf["address"])
         self._camera_handler = CameraViewTransmitHandler(self._yamcs_processor, self._robot, yamcs_conf["address"], self._helper, yamcs_conf["lander_camera"])
         self._intervals_handler = IntervalsHandler()
-        self._payload_handler = PayloadHandler(self._helper)
         self._drive_handler = DriveHandler(self._robot, self._intervals_handler)
         # self._commands_handler = PragyaanCommands(self._yamcs_processor, yamcs_conf["commands"], self._robot, self._drive_handler, self._camera_handler, self._payload_handler)
         self._commands_handler:CommandsHandler = CommandsHandler(self._yamcs_processor)
         self._c = PragyaanController(self._yamcs_processor, self._robot, self._drive_handler, self._camera_handler, self._payload_handler, self._intervals_handler, self._yamcs_conf["intervals"])
         self._setup_command_callbacks(yamcs_conf["commands"])
+        self._camera_handler_ = CameraHandler(self._yamcs_processor, yamcs_conf["address"], yamcs_conf["images"], yamcs_conf["url_full_nginx"])
+        self._payload_handler = PayloadHandler(self._camera_handler, self._yamcs_conf["payload"])
 
     def _setup_command_callbacks(self, commands_conf):
         #TODO turn into abstract once TMTC is (ABC)
@@ -775,6 +776,9 @@ class CameraViewTransmitHandler:
         self._counter[self.BUCKET_MONITORING] += 1
 
     def _snap_monitoring_camera_view(self) -> Image:
+        if self.monitoring_cam == None:
+            return
+        
         frame = self.monitoring_cam.get_rgb()#get_rgba()
 
         #NOTE interval tries to trigger it before initialization, and then breaks because programmatically created cameras
@@ -837,57 +841,7 @@ class HandlerHelper:
             f"/{asset.value}/{type.value}/{bucket}/url_full_nginx": url_full_nginx,
         })
 
-class PayloadHandler:
 
-    BUCKET_IMAGES_APXS = "images_apxs"
-    APXS_WIDTH = 1440
-    APXS_HEIGHT = 1080
-    APXS_SAMPLES_DIR = "/workspace/omnilrs/assets/images/"
-    APXS_FONT = ImageFont.load_default(APXS_HEIGHT//15) 
-
-    def __init__(self, helper:HandlerHelper):
-        self._helper = helper
-        self._counter = {
-            self.BUCKET_IMAGES_APXS:0,
-        }
-
-    def snap_apxs(self, apxs_power_state:PowerState=PowerState.OFF):
-        image_name = f"{self.BUCKET_IMAGES_APXS}_{self._counter[self.BUCKET_IMAGES_APXS]}"
-
-        if self._counter[self.BUCKET_IMAGES_APXS] == 0:
-            apxs_background_path = os.path.join(self.APXS_SAMPLES_DIR, 'APXS_nodata.png')
-        elif self._counter[self.BUCKET_IMAGES_APXS] > 0 and apxs_power_state == PowerState.ON:
-            apxs_background_path = os.path.join(self.APXS_SAMPLES_DIR, 'APXS_measurement.png')
-        else:
-            return
-
-        img = Image.open(apxs_background_path).convert('RGB').resize((self.APXS_WIDTH, self.APXS_HEIGHT))
-        draw = ImageDraw.Draw(img)
-        self._draw_text(draw, text=image_name, fill="black", position='top-right')
-        image_name = self._helper.save_image_locally(img, self.BUCKET_IMAGES_APXS, self._counter[self.BUCKET_IMAGES_APXS])
-        self._helper.inform_yamcs(image_name, 
-                                  asset=HandlerHelper.CARRIER_ASSET.ROVER, 
-                                  type=HandlerHelper.INPUT_TYPE.PAYLOAD, 
-                                  bucket=self.BUCKET_IMAGES_APXS, 
-                                  counter_number=self._counter[self.BUCKET_IMAGES_APXS])
-        self._counter[self.BUCKET_IMAGES_APXS] += 1
-    
-    def _draw_text(self, draw: ImageDraw.ImageDraw, text: str, fill, position: str = "center"):
-        bbox = draw.textbbox((0, 0), text, font=self.APXS_FONT)
-        text_width = bbox[2] - bbox[0]
-        text_height = bbox[3] - bbox[1]
-
-        if position == "center":
-            x = (self.APXS_WIDTH - text_width) // 2
-            y = (self.APXS_HEIGHT - text_height) // 2
-        elif position == "top-right":
-            margin = 40
-            x = self.APXS_WIDTH - text_width - margin
-            y = margin
-        else:
-            x, y = position
-
-        draw.text((x, y), text, fill=fill, font=self.APXS_FONT)
 
 
 class CameraHandler:
@@ -913,7 +867,7 @@ class CameraHandler:
         self._yamcs_processor = yamcs_processor
         self._yamcs_address = yamcs_address
         self.URL_FULL_NGINX = url_full_nginx
-        self.NO_DATA_IMAGE_PATH = images_conf["no_data_image_path"]
+        self._NO_DATA_IMAGE_PATH = images_conf["no_data_image_path"]
         self._buckets = {}
         self._counter = {}
         self._init_buckets_and_counter(images_conf["buckets"])
@@ -922,12 +876,12 @@ class CameraHandler:
         for bucket in buckets_conf:
             name = bucket["name"]
             self._buckets[name] = bucket["path"]
-            self._buckets[name] = 0
+            self._counter[name] = 0
 
     def add_bucket(self, bucket_name, path):
         if bucket_name not in self._buckets:
             self._buckets[bucket_name] = path
-            self._buckets[bucket_name] = 0
+            self._counter[bucket_name] = 0
         else:
             raise Exception(f"Bucket with name {bucket_name} already exists.")
 
@@ -935,14 +889,19 @@ class CameraHandler:
         for bucket_name in self._buckets:
             self.snap_no_data_image(bucket_name)
 
-    def snap_no_data_image(self, bucket_name, image_path=""):
-        image_path = self.NO_DATA_IMAGE_PATH if image_path == "" else image_path
+    def snap_no_data_image(self, bucket_name):
+        image_path = self._NO_DATA_IMAGE_PATH 
         img = Image.open(image_path).convert('RGB').resize((self.NO_DATA_RESOLUTION[0], self.NO_DATA_RESOLUTION[1]))
-        image_name = self.save_image_locally(img, bucket_name)
-        self._helper.inform_yamcs(image_name, bucket_name)
+        image_name = self._save_image_locally(img, bucket_name)
+        self._inform_yamcs(image_name, bucket_name)
         self._counter[bucket_name] += 1
 
-    def save_image_locally(self, image, bucket) -> str:
+    def save_image(self, image:Image, bucket_name:str):
+        image_name = self._save_image_locally(image, bucket_name)
+        self._counter[bucket_name] += 1
+        self._inform_yamcs(image_name, bucket_name)
+
+    def _save_image_locally(self, image, bucket) -> str:
         counter_number = self._counter[bucket]
         image_name = f"{bucket}_{counter_number:04d}.png"
         IMG_DIR = f"/tmp/{bucket}"
@@ -952,7 +911,7 @@ class CameraHandler:
 
         return image_name
 
-    def inform_yamcs(self, image_name, bucket):
+    def _inform_yamcs(self, image_name, bucket):
         counter_number = self._counter[bucket]
         url_storage = f"/storage/buckets/{bucket}/objects/{image_name}"
         url_full = "http://" + self._yamcs_address + f"/api{url_storage}"
@@ -964,3 +923,49 @@ class CameraHandler:
             self._buckets[bucket] + "/url_full": url_full,
             self._buckets[bucket] + "/url_full_nginx": url_full_nginx,
         })
+
+
+class PayloadHandler:
+
+    def __init__(self, camera_handler:CameraHandler, payload_conf):
+        self._camera_handler = camera_handler
+        self._init_apxs(payload_conf)
+
+    def _init_apxs(self, payload_conf):
+        self._apxs_conf = payload_conf["apxs"]
+        self._APXS_WIDTH = payload_conf["apxs"]["resolution"][0]
+        self._APXS_HEIGHT = payload_conf["apxs"]["resolution"][1]
+        self._camera_handler.add_bucket(payload_conf["apxs"]["bucket"]["name"], payload_conf["apxs"]["bucket"]["path"])
+
+    def snap_apxs(self, apxs_power_state:PowerState=PowerState.OFF):
+        APXS_BUCKET = self._apxs_conf["bucket"]["name"]
+        APXS_COUNT = self._camera_handler._counter[APXS_BUCKET]
+        text_to_write = f"{APXS_BUCKET}_{APXS_COUNT}"
+
+        if APXS_COUNT == 0:
+            apxs_background_path = os.path.join(self._apxs_conf["samples_dir"], self._apxs_conf["no_data"])
+        elif APXS_COUNT > 0 and apxs_power_state == PowerState.ON:
+            apxs_background_path = os.path.join(self._apxs_conf["samples_dir"], self._apxs_conf["measurement"])
+
+        img = Image.open(apxs_background_path).convert('RGB').resize((self._APXS_WIDTH, self._APXS_HEIGHT))
+        draw = ImageDraw.Draw(img)
+        self._draw_text(draw, text=text_to_write, fill="black", position='top-right')
+        self._camera_handler.save_image(img, APXS_BUCKET)
+    
+    def _draw_text(self, draw: ImageDraw.ImageDraw, text: str, fill, position: str = "center"):
+        APXS_FONT = ImageFont.load_default(self._APXS_HEIGHT//15) 
+        bbox = draw.textbbox((0, 0), text, font=APXS_FONT)
+        text_width = bbox[2] - bbox[0]
+        text_height = bbox[3] - bbox[1]
+
+        if position == "center":
+            x = (self._APXS_WIDTH - text_width) // 2
+            y = (self._APXS_HEIGHT - text_height) // 2
+        elif position == "top-right":
+            margin = 40
+            x = self._APXS_WIDTH - text_width - margin
+            y = margin
+        else:
+            x, y = position
+
+        draw.text((x, y), text, fill=fill, font=APXS_FONT)
