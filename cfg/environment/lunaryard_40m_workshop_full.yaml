@@ -224,15 +224,6 @@ robots_settings:
       imu_sensor_path: "/Robots/pragyaan/base_link/Imu_Sensor"
       turn_speed_coef: 19
       solar_panel_joint: "solarJoint"  # finds it within the main robot articulation
-      payload:
-        apxs:
-          resolution: [1440, 1080]
-          samples_dir: "/workspace/omnilrs/assets/images/"
-          no_data: "APXS_nodata.png"
-          measurement: "APXS_measurement.png"
-          bucket:
-          - name: "images_apxs"
-            path: "/Rover/payload/images_apxs"
   yamcs_tmtc:
     enabled: True
     address: "localhost:8090"
@@ -258,6 +249,15 @@ robots_settings:
           path: "/Laner/camera/images_oncommand"
         - name: "images_monitoring"
           path: "/Admin/camera/images_monitoring"
+    payload:
+      apxs:
+        resolution: [1440, 1080]
+        samples_dir: "/workspace/omnilrs/assets/images/"
+        no_data: "APXS_nodata.png"
+        measurement: "APXS_measurement.png"
+        bucket:
+        - name: "images_apxs"
+          path: "/Rover/payload/images_apxs"
     parameters:
       pose_of_base_link: "/Rover/pose_ground_truth"
       go_nogo: "/Rover/go_nogo"

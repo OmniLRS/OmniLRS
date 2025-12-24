@@ -133,6 +133,9 @@ class RobotSubsystemsManager:
             return True
         
         return False
+    
+    def get_power_state(self, electronic):
+        return self._electronics_power_state[electronic] 
 
     @_update_positions_before
     def calculate_rssi(self, robot_position):

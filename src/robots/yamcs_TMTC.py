@@ -92,8 +92,7 @@ class PragyaanController(RobotController):
         self._intervals = intervals_conf
 
     def snap_apxs(self):
-        #TODO image does not get saved on yamcs, take a look fix
-        power_state = self._robot.subsystems.is_turned_on(Electronics.APXS.value)
+        power_state = self._robot.subsystems.get_power_state(Electronics.APXS.value)
         self._payload_handler.snap_apxs(power_state)
 
     def inject_fault(self):
@@ -271,10 +270,10 @@ class YamcsTMTC:
         self._drive_handler = DriveHandler(self._robot, self._intervals_handler)
         # self._commands_handler = PragyaanCommands(self._yamcs_processor, yamcs_conf["commands"], self._robot, self._drive_handler, self._camera_handler, self._payload_handler)
         self._commands_handler:CommandsHandler = CommandsHandler(self._yamcs_processor)
+        self._camera_handler_ = CameraHandler(self._yamcs_processor, yamcs_conf["address"], yamcs_conf["images"], yamcs_conf["url_full_nginx"])
+        self._payload_handler = PayloadHandler(self._camera_handler_, self._yamcs_conf["payload"])
         self._c = PragyaanController(self._yamcs_processor, self._robot, self._drive_handler, self._camera_handler, self._payload_handler, self._intervals_handler, self._yamcs_conf["intervals"])
         self._setup_command_callbacks(yamcs_conf["commands"])
-        self._camera_handler_ = CameraHandler(self._yamcs_processor, yamcs_conf["address"], yamcs_conf["images"], yamcs_conf["url_full_nginx"])
-        self._payload_handler = PayloadHandler(self._camera_handler, self._yamcs_conf["payload"])
 
     def _setup_command_callbacks(self, commands_conf):
         #TODO turn into abstract once TMTC is (ABC)
@@ -942,10 +941,27 @@ class PayloadHandler:
         APXS_COUNT = self._camera_handler._counter[APXS_BUCKET]
         text_to_write = f"{APXS_BUCKET}_{APXS_COUNT}"
 
+        print()
+        print()
+        print()
+        print(apxs_power_state)
+        print()
+        print()
+        print("EVOO APXS SNAP")
+        print(text_to_write)
+        print()
+        print()
+        print()
+        print()
+        print()
+        print()
+
         if APXS_COUNT == 0:
             apxs_background_path = os.path.join(self._apxs_conf["samples_dir"], self._apxs_conf["no_data"])
         elif APXS_COUNT > 0 and apxs_power_state == PowerState.ON:
             apxs_background_path = os.path.join(self._apxs_conf["samples_dir"], self._apxs_conf["measurement"])
+        else:
+            return
 
         img = Image.open(apxs_background_path).convert('RGB').resize((self._APXS_WIDTH, self._APXS_HEIGHT))
         draw = ImageDraw.Draw(img)
