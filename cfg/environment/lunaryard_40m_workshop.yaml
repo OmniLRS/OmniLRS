@@ -246,7 +246,7 @@ robots_settings:
         - name: "images_depth"
           path: "/Rover/camera/images_depth"
         - name: "images_lander"
-          path: "/Laner/camera/images_oncommand"
+          path: "/Lander/camera/images_oncommand"
         - name: "images_monitoring"
           path: "/Admin/camera/images_monitoring"
     payload:
