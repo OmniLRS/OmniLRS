@@ -31,7 +31,8 @@ from scipy.spatial.transform import Rotation as R
 
 from src.environments.utils import transform_orientation_from_xyzw_into_xyz, transform_orientation_into_xyz
 from src.robots.subsystems_manager import RobotSubsystemsManager
-from src.robots.yamcs_TMTC import YamcsTMTC
+from src.tmtc.pragyaan.pragyaan_controller import PragyaanController
+from src.tmtc.yamcs_TMTC import YamcsTMTC
 from omni.isaac.sensor import Camera
 
 from isaacsim.sensors.physics import _sensor
@@ -246,10 +247,12 @@ class RobotManager:
 
     def start_TMTC(self):
         robot_name = list(self.robots.keys())[0].replace("/","") # assumes only 1 robot for workshop use
-        self.TMTC = YamcsTMTC(self.RM_conf.yamcs_tmtc, robot_name, self.robots_RG, self.robots["/" + robot_name])
+        # self.TMTC = YamcsTMTC(self.RM_conf.yamcs_tmtc, robot_name, self.robots_RG, self.robots["/" + robot_name])
+        # Call a specific implementation of TMTC here:
+        self.TMTC = PragyaanController(self.RM_conf.yamcs_tmtc, robot_name, self.robots_RG, self.robots["/" + robot_name])
         self.TMTC.start_streaming_data()
 
-class Robot:
+class Robot:#
     """
     Robot class.
     It allows to spawn, reset, teleport a robot. It also allows to automatically add namespaces to topics,
