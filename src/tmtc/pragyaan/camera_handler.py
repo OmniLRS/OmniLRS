@@ -1,12 +1,19 @@
 __author__ = "Aleksa Stanivuk"
 __status__ = "development"
 
+from enum import Enum
 from src.environments.monitoring_cameras_manager import MonitoringCamerasManager
 from src.tmtc.yamcs_TMTC import ImagesHandler
 import omni.kit.app
 import numpy as np
 from omni.isaac.sensor import Camera
 from PIL import Image
+
+
+class CameraViewType(Enum):
+    RGBA = "RGBA"
+    RGB = "RGB" # only for monitoring, as is more light weight
+    DEPTH = "DEPTH"
 
 class PragyaanCameraHandler:
     # reflects the buckets defined in yaml
@@ -22,12 +29,12 @@ class PragyaanCameraHandler:
         self._initialize_lander_cam(lander_camera_conf)
         self._initialize_monitoring_cam()
 
-    def transmit_camera_view(self, bucket:str, resolution:str, type:str="rgb"):
+    def transmit_camera_view(self, bucket:str, resolution:str, type:CameraViewType=CameraViewType.RGBA):
         camera_view:Image = None
 
-        if type == "depth":
+        if type == CameraViewType.DEPTH:
             camera_view:Image = self._snap_camera_view_depth(resolution)
-        elif type == "rgb":
+        elif type == CameraViewType.RGBA:
             camera_view:Image = self._snap_camera_view_rgb(resolution)
         else:
             print("in transmit_camera_view: unknown type:", type)
@@ -38,7 +45,7 @@ class PragyaanCameraHandler:
     def _snap_camera_view_rgb(self, resolution:str) -> Image:
         frame = self._robot.get_rgba_camera_view(resolution)
         frame_uint8 = frame.astype(np.uint8)
-        camera_view = Image.fromarray(frame_uint8, "RGBA")
+        camera_view = Image.fromarray(frame_uint8, CameraViewType.RGBA.value)
 
         return camera_view
     
@@ -77,7 +84,7 @@ class PragyaanCameraHandler:
     def _snap_lander_camera_view(self) -> Image:
         frame = self.lander_cam.get_rgba()
         frame_uint8 = frame.astype(np.uint8)
-        camera_view = Image.fromarray(frame_uint8, "RGBA")
+        camera_view = Image.fromarray(frame_uint8, CameraViewType.RGBA.value)
 
         return camera_view
 
@@ -93,7 +100,7 @@ class PragyaanCameraHandler:
             return None
         
         frame_uint8 = frame.astype(np.uint8)
-        camera_view = Image.fromarray(frame_uint8, "RGB")
+        camera_view = Image.fromarray(frame_uint8, CameraViewType.RGB.value)
 
         return camera_view
     

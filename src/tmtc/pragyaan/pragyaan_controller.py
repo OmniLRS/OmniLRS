@@ -1,13 +1,25 @@
 __author__ = "Aleksa Stanivuk"
 __status__ = "development"
 
+from enum import Enum
 from src.robots.subsystems_manager import Electronics, GoNogoState, HealthStatus, ObcState, PowerState, SolarPanelState
 from src.tmtc.intervals_handler import IntervalName
-from src.tmtc.pragyaan.camera_handler import PragyaanCameraHandler
+from src.tmtc.pragyaan.camera_handler import CameraViewType, PragyaanCameraHandler
 from src.tmtc.pragyaan.payload_handler import PayloadHandler
 from src.tmtc.pragyaan.transmitter import PragyaanTransmitter
 from src.tmtc.yamcs_TMTC import  YamcsTMTC
 import omni.kit.app
+
+class YamcsArguments(Enum):
+    DEPLOY = "DEPLOY"
+    STOW = "STOW"
+    START = "START"
+    STOP = "STOP"
+
+class CameraResolution(Enum):
+    # depend on the yaml conf file
+    LOW = "low"
+    HIGH = "high"
 
 class PragyaanController(YamcsTMTC):
     def __init__(self,
@@ -81,12 +93,12 @@ class PragyaanController(YamcsTMTC):
 
     def handle_high_res_capture(self):
         if (self._robot.subsystems.get_electronics_state(Electronics.CAMERA.value) == PowerState.ON):
-            self._camera_handler.transmit_camera_view(PragyaanCameraHandler.BUCKET_ONCOMMAND, "high", "rgb")
+            self._camera_handler.transmit_camera_view(PragyaanCameraHandler.BUCKET_ONCOMMAND, CameraResolution.HIGH.value, CameraViewType.RGBA)
             self._set_obc_state(ObcState.CAMERA, 10)
 
     def handle_depth_capture(self):
         if (self._robot.subsystems.get_electronics_state(Electronics.CAMERA.value) == PowerState.ON):
-            self._camera_handler.transmit_camera_view(PragyaanCameraHandler.BUCKET_DEPTH, "high", "depth")
+            self._camera_handler.transmit_camera_view(PragyaanCameraHandler.BUCKET_DEPTH, CameraResolution.HIGH.value, CameraViewType.DEPTH)
             self._set_obc_state(ObcState.CAMERA, 10)
 
     def _set_obc_state(self, state:ObcState, set_to_idle_after=0):
@@ -104,10 +116,10 @@ class PragyaanController(YamcsTMTC):
         if self._robot.subsystems.get_go_nogo_state() == GoNogoState.NOGO:
             return
 
-        if command == "DEPLOY":
+        if command == YamcsArguments.DEPLOY.value:
             self._robot.subsystems.set_solar_panel_state(SolarPanelState.DEPLOYED)
             self._robot.deploy_solar_panel()
-        elif command == "STOW":
+        elif command == YamcsArguments.STOW.value:
             self._robot.subsystems.set_solar_panel_state(SolarPanelState.STOWED)
             self._robot.stow_solar_panel()
         else:
@@ -147,12 +159,12 @@ class PragyaanController(YamcsTMTC):
                 self._drive_handler.stop_robot()
     
     def set_activity_of_camera_streaming(self, action:str):
-        if action == "STOP":
+        if action == YamcsArguments.STOP.value:
             self._intervals_handler.remove_interval(IntervalName.CAMERA_STREAMING.value)
-        elif action == "START":
+        elif action == YamcsArguments.START.value:
             if not self._intervals_handler.does_exist(IntervalName.CAMERA_STREAMING.value):
                 self._intervals_handler.add_new_interval(name=IntervalName.CAMERA_STREAMING.value, seconds=self._intervals["camera_streaming"], is_repeating=True, execute_immediately=False,
-                                                 function=self._camera_handler.transmit_camera_view, f_args=(PragyaanCameraHandler.BUCKET_STREAMING, "low"))
+                                                 function=self._camera_handler.transmit_camera_view, f_args=(PragyaanCameraHandler.BUCKET_STREAMING, CameraResolution.LOW.value))
         else:
             print("Unknown action:", action)
 
