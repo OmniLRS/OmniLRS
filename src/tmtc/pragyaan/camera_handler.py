@@ -9,7 +9,6 @@ import numpy as np
 from omni.isaac.sensor import Camera
 from PIL import Image
 
-
 class CameraViewType(Enum):
     RGBA = "RGBA"
     RGB = "RGB" # only for monitoring, as is more light weight

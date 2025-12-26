@@ -83,14 +83,8 @@ class RobotSubsystemsManager:
         self._update_positions()
 
     def _update_positions(self):
-        # if get_moon_env_name() == "Lunaryard": # Lunalab has no sun prim
-        #     self._sun_pos, rot = get_world_pose("/" + get_moon_env_name() + "/Sun/sun") # self.SUN_POSITION
-        # else: 
-        #     self._sun_pos = self.SUN_POSITION
         self._sun_pos = self.SUN_POSITION
         print(self._sun_pos)
-        # print(get_moon_env_name())
-        # print(get_moon_env_name() == "Lunaryard")
 
     def get_lander_position(self):
         return self._lander_pos
