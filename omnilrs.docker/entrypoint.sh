@@ -9,4 +9,10 @@ set -e
 ## https://docs.isaacsim.omniverse.nvidia.com/5.0.0/installation/install_ros.html#isaac-sim-app-no-system-installed-ros
 
 cd /workspace/omnilrs
-exec "$@"
+
+# If arguments provided, run them through interactive bash to expand aliases; otherwise start interactive shell
+if [ $# -gt 0 ]; then
+    exec bash -ic "$*"
+else
+    exec bash
+fi

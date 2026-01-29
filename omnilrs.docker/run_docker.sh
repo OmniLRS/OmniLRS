@@ -1,5 +1,6 @@
 #!/bin/bash
 xhost +
+
 docker run --name isaac-sim-omnilrs-container -it --gpus all -e "ACCEPT_EULA=Y" --rm --network=host --ipc=host \
 -v $HOME/.Xauthority:/root/.Xauthority \
 -e DISPLAY \
@@ -21,4 +22,4 @@ docker run --name isaac-sim-omnilrs-container -it --gpus all -e "ACCEPT_EULA=Y" 
 -v /tmp/images_monitoring:/tmp/images_monitoring:rw \
 -v /tmp/images_lander:/tmp/images_lander:rw \
 -v bash_command_history:/commandhistory \
-isaac-sim-omnilrs:latest
+isaac-sim-omnilrs:latest "$@"
