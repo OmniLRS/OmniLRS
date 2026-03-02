@@ -34,6 +34,7 @@ class PragyaanController(YamcsTMTC):
         self._transmitter:PragyaanTransmitter = PragyaanTransmitter(self._yamcs_processor, self._intervals_handler, self._robot, self._robots_RG, robot_name, self._yamcs_conf["parameters"])
         self._setup_command_callbacks(yamcs_conf["commands"])
 
+    "performs mapping between yamcs commands and functions that affect the simulation and rover's state"
     def _setup_command_callbacks(self, commands_conf):
         self._commands_handler.add_command(commands_conf["drive_straight"], self.drive_straight, args=["linear_velocity", "distance"] )
         self._commands_handler.add_command(commands_conf["drive_turn"], self.drive_turn, args=["angular_velocity", "angle"] )
@@ -48,6 +49,7 @@ class PragyaanController(YamcsTMTC):
         self._commands_handler.add_command(commands_conf["admin_inject_fault"], self.inject_fault)
         self._commands_handler.add_command(commands_conf["lander_camera_capture_high"], self.handle_lander_camera_capture )
 
+    "creates intervals for automatic transmission of rover's parameters to yamcs"
     def start_streaming_data(self):
         self._payload_handler.snap_apxs() # snaps initial blank apxs reading
         self._images_handler.snap_no_data_images()
@@ -94,23 +96,12 @@ class PragyaanController(YamcsTMTC):
     def handle_high_res_capture(self):
         if (self._robot.subsystems.get_electronics_state(Electronics.CAMERA.value) == PowerState.ON):
             self._camera_handler.transmit_camera_view(PragyaanCameraHandler.BUCKET_ONCOMMAND, CameraResolution.HIGH.value, CameraViewType.RGBA)
-            self._set_obc_state(ObcState.CAMERA, 10)
+            self._obc_handler.set_obc_state(ObcState.CAMERA, 10)
 
     def handle_depth_capture(self):
         if (self._robot.subsystems.get_electronics_state(Electronics.CAMERA.value) == PowerState.ON):
             self._camera_handler.transmit_camera_view(PragyaanCameraHandler.BUCKET_DEPTH, CameraResolution.HIGH.value, CameraViewType.DEPTH)
-            self._set_obc_state(ObcState.CAMERA, 10)
-
-    def _set_obc_state(self, state:ObcState, set_to_idle_after=0):
-        if self._intervals_handler.does_exist(IntervalName.OBC_STATE.value):
-            self._intervals_handler.remove_interval(IntervalName.OBC_STATE.value)
-
-        self._robot.subsystems.set_obc_state(state)
-
-        if set_to_idle_after != 0:
-            # for states that should switch back to idle after a duration
-            self._intervals_handler.add_new_interval(name=IntervalName.OBC_STATE.value, seconds=set_to_idle_after, is_repeating=False, execute_immediately=False,
-                                                 function=self._robot.subsystems.set_obc_state, f_args=[ObcState.IDLE])
+            self._obc_handler.set_obc_state(ObcState.CAMERA, 10)
 
     def handle_solar_panel(self, command:str):
         if self._robot.subsystems.get_go_nogo_state() == GoNogoState.NOGO:
@@ -137,7 +128,7 @@ class PragyaanController(YamcsTMTC):
         if electronics == Electronics.CAMERA.value:
             self.set_activity_of_camera_streaming("START") if new_state == PowerState.ON else self._set_activity_of_camera_streaming("STOP")
         elif electronics == Electronics.NEUTRON_SPECTROMETER.value:
-            self._set_activity_of_neutron_streaming(new_state)
+            self.set_activity_of_neutron_streaming(new_state)
             pass
         elif electronics == Electronics.MOTOR_CONTROLLER.value:
             if (new_state == PowerState.OFF):
@@ -168,7 +159,7 @@ class PragyaanController(YamcsTMTC):
         else:
             print("Unknown action:", action)
 
-    def _set_activity_of_neutron_streaming(self, power_state:PowerState):
+    def set_activity_of_neutron_streaming(self, power_state:PowerState):
         if power_state == PowerState.OFF:
             self._intervals_handler.remove_interval(IntervalName.NEUTRON_COUNT.value)
         elif power_state == PowerState.ON:

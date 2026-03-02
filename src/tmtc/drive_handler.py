@@ -13,10 +13,12 @@ class DriveHandler:
     def __init__(
         self,
         robot,
-        intervals_handler
+        intervals_handler,
+        obc_handler
     ) -> None:
         self._robot = robot
         self._intervals_handler = intervals_handler
+        self._obc_handler = obc_handler
 
     def drive_robot_straight(self, linear_velocity, distance):
         if not self._is_robot_able_to_drive():
@@ -26,7 +28,7 @@ class DriveHandler:
             self.stop_robot()
             return
         
-        self._set_obc_state(ObcState.MOTOR)
+        self._obc_handler.set_obc_state(ObcState.MOTOR)
         self._drive_with_controlled_acceleration(linear_velocity, distance)
 
     def _drive_with_controlled_acceleration(self, orig_linear_velocity, orig_distance):
@@ -106,7 +108,7 @@ class DriveHandler:
         return adjusted_speed
 
     def _stop_robot_after_time(self, travel_time):
-        self._set_obc_state(ObcState.MOTOR, travel_time)
+        self._obc_handler.set_obc_state(ObcState.MOTOR, travel_time)
         if self._intervals_handler.does_exist(IntervalName.STOP_ROBOT.value):
             self._intervals_handler.update_next_time(IntervalName.STOP_ROBOT.value, travel_time)
         else:
@@ -117,15 +119,4 @@ class DriveHandler:
         self._intervals_handler.remove_interval(IntervalName.STOP_ROBOT.value)
         self._intervals_handler.remove_interval(IntervalName.CONTROLLED_DRIVE.value)
         self._robot.stop_drive()
-        self._set_obc_state(ObcState.IDLE)
-
-    def _set_obc_state(self, state:ObcState, set_to_idle_after=0):
-        if self._intervals_handler.does_exist(IntervalName.OBC_STATE.value):
-            self._intervals_handler.remove_interval(IntervalName.OBC_STATE.value)
-
-        self._robot.subsystems.set_obc_state(state)
-
-        if set_to_idle_after != 0:
-            # for states that should switch back to idle after a duration
-            self._intervals_handler.add_new_interval(name=IntervalName.OBC_STATE.value, seconds=set_to_idle_after, is_repeating=False, execute_immediately=False,
-                                                 function=self._robot.subsystems.set_obc_state, f_args=[ObcState.IDLE])
+        self._obc_handler.set_obc_state(ObcState.IDLE)

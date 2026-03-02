@@ -174,6 +174,7 @@ robots_settings:
   is_ROS2: True
   max_robots: 5
   robots_root: "/Robots"
+  robot_controller: "pragyaan-controller"
   parameters:
     # -
     #   robot_name: ex1

@@ -8,6 +8,7 @@ from src.tmtc.intervals_handler import IntervalsHandler
 from yamcs.client import YamcsClient
 import omni.kit.app
 from abc import ABC, abstractmethod
+from src.tmtc.obc_handler import ObcHandler
 
 class YamcsTMTC(ABC):
     """
@@ -28,11 +29,13 @@ class YamcsTMTC(ABC):
         self._robots_RG = robot_RG
         self._yamcs_conf = yamcs_conf
         self._robot = robot
-        self._intervals_handler = IntervalsHandler()
-        self._drive_handler = DriveHandler(self._robot, self._intervals_handler)
+        "creating the five generic handlers for the main functions of the robot"
+        self._intervals_handler:IntervalsHandler = IntervalsHandler()
+        self._obc_handler:ObcHandler = ObcHandler(self._robot, self._intervals_handler)
+        self._drive_handler:DriveHandler = DriveHandler(self._robot, self._intervals_handler, self._obc_handler)
         self._commands_handler:CommandsHandler = CommandsHandler(self._yamcs_processor)
-        self._images_handler = ImagesHandler(self._yamcs_processor, yamcs_conf["address"], yamcs_conf["images"], yamcs_conf["url_full_nginx"])
-        
+        self._images_handler:ImagesHandler = ImagesHandler(self._yamcs_processor, yamcs_conf["address"], yamcs_conf["images"], yamcs_conf["url_full_nginx"])
+
     @abstractmethod
     def _setup_command_callbacks(self, commands_conf):
         """Register command callbacks for the robot."""

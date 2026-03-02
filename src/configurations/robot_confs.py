@@ -45,6 +45,7 @@ class RobotManagerConf:
     robots_root: str = "/Robots"
     parameters: List[RobotParameters] = field(default_factory=list)
     yamcs_tmtc: Dict = field(default_factory=dict)
+    robot_controller: str = field(default_factory=str)
 
     def __post_init__(self):
         if self.parameters:

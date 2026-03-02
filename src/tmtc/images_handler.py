@@ -61,7 +61,7 @@ class ImagesHandler:
         counter_number = self._counter[bucket]
         url_storage = f"/storage/buckets/{bucket}/objects/{image_name}"
         url_full = "http://" + self._yamcs_address + f"/api{url_storage}"
-        url_full_nginx = self.URL_FULL_NGINX + f"/api{url_storage}"  # @TODO hardcoded nginx address for now
+        url_full_nginx = self.URL_FULL_NGINX + f"/api{url_storage}" 
         self._yamcs_processor.set_parameter_values({
             self._buckets[bucket] + "/number": counter_number,
             self._buckets[bucket] + "/name": image_name,

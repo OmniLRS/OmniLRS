@@ -17,7 +17,7 @@ class IntervalName(Enum):
 class IntervalsHandler:
     def __init__(self):
         self._intervals = {}
-        self.timeline = omni.timeline.get_timeline_interface()
+        self._timeline = omni.timeline.get_timeline_interface()
         self._update_stream = omni.kit.app.get_app().get_update_event_stream()
 
     def add_new_interval(self, *, name: str, seconds: int, is_repeating: bool, execute_immediately: bool, function, f_args=()):
@@ -26,7 +26,7 @@ class IntervalsHandler:
 
         interval = {
             "seconds": seconds,
-            "next_time": self.timeline.get_current_time() + seconds,
+            "next_time": self._timeline.get_current_time() + seconds,
             "repeat": is_repeating,
             "execute_immediately": execute_immediately,
             "func": function,
@@ -35,7 +35,7 @@ class IntervalsHandler:
         }
 
         def callback(e, _interval=interval, _name=name):
-            now = self.timeline.get_current_time()
+            now = self._timeline.get_current_time()
             if now < interval["next_time"]:
                 return
 
@@ -63,7 +63,7 @@ class IntervalsHandler:
             raise ValueError(f"Interval '{interval_name}' does not exist")
 
         interval = self._intervals[interval_name]
-        now = self.timeline.get_current_time()
+        now = self._timeline.get_current_time()
 
         if new_interval_time is None:
             interval["next_time"] = now + interval["seconds"]
