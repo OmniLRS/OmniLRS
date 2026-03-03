@@ -74,7 +74,7 @@ class LunalabController(BaseEnv):
         if static_assets_settings:
             self.SAM = StaticAssetsManager(static_assets_settings)
 
-        if monitoring_cameras_settings:
+        if monitoring_cameras_settings and monitoring_cameras_settings["enabled"]:
             self.MCM = MonitoringCamerasManager(monitoring_cameras_settings)
 
     def build_scene(self) -> None:

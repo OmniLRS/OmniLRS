@@ -329,6 +329,7 @@ static_assets_settings:
       collision: True
 
 monitoring_cameras_settings:
+  enabled: False
   root_path: "/MonitoringCameras"
   camera_definitions:
     - name: "monitoring_camera"
