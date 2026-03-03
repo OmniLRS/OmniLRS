@@ -485,6 +485,7 @@ class ParabolicBoundaryDistributionGenerator(BoundaryDistributionGenerator):
         plt.title("YZ cross section distribution")
 
 
+
 class TrapezoidalBoundaryDistributionGenerator(BoundaryDistributionGenerator):
     """
     Trapezoidal boundary distribution generator class.
@@ -540,6 +541,7 @@ class TrapezoidalBoundaryDistributionGenerator(BoundaryDistributionGenerator):
         plt.xlabel("y [m]")
         plt.ylabel("depth mask")
         plt.title("YZ cross section distribution")
+
 
 
 class DeformationEngine:
@@ -725,7 +727,7 @@ if __name__ == "__main__":
     # Confs
     footprint_conf = FootprintConf(width=0.1, height=0.18)
     deform_constrain_conf = DeformConstrainConf(
-        horizontal_deform_offset=0.0, vertical_deform_offset=0.0, deform_decay_ratio=0.01
+        x_deform_offset=0.0, y_deform_offset=0.0, deform_decay_ratio=0.01
     )
     depth_distribution_conf = DepthDistributionConf(distribution="sinusoidal", wave_frequency=4.14)
     boundary_distribution_conf = BoundaryDistributionConf(distribution="trapezoidal", angle_of_repose=1.047)
@@ -760,14 +762,19 @@ if __name__ == "__main__":
     )
 
     # # Plot footprint
-    # footprint.plot_profile()
+    plt.figure(figsize=(5, 5))
+    footprint.plot_profile()
+    # plt.savefig("footprint_profile.png", dpi=100)
+    plt.show()
 
+    
     # Plot depth distribution
     plt.figure(figsize=(10, 5))
     uniform_depth_distribution.plot_depth_distribution()
     sinusoidal_depth_distribution.plot_depth_distribution()
     trapezoidal_depth_distribution.plot_depth_distribution()
     plt.legend(["uniform", "sinusoidal", "trapezoidal"], loc="best")
+    # plt.savefig("depth_distribution.png", dpi=100)
     plt.show()
 
     # Plot boundary distribution
@@ -776,4 +783,5 @@ if __name__ == "__main__":
     parabolic_boundary_distribution.plot_boundary_distribution()
     trapezoidal_boundary_distribution.plot_boundary_distribution()
     plt.legend(["uniform", "parabolic", "trapezoidal"], loc="best")
+    # plt.savefig("boundary_distribution.png", dpi=100)
     plt.show()
