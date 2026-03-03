@@ -1,13 +1,3 @@
-__author__ = "Antoine Richard, Junnosuke Kamohara"
-__copyright__ = "Copyright 2023-24, Space Robotics Lab, SnT, University of Luxembourg, SpaceR"
-__license__ = "BSD 3-Clause"
-__version__ = "2.0.0"
-__maintainer__ = "Antoine Richard"
-__email__ = "antoine.richard@uni.lu"
-__status__ = "development"
-
-from threading import Thread
-
 from isaacsim import SimulationApp
 from isaacsim.core.api.world import World
 from typing import Union
@@ -126,8 +116,8 @@ class Yamcs_SimulationManager:
     """
     Manages the simulation. This class is responsible for:
     - Initializing the simulation
-    - Running the lab manager thread
-    - Running the robot manager thread
+    - Running the lab manager 
+    - Running the robot manager 
     - Running the simulation
     - Cleaning the simulation
     """
@@ -180,11 +170,6 @@ class Yamcs_SimulationManager:
         # Robot manager
         self.YamcsRobotManager = Yamcs_RobotManager(cfg["environment"]["robots_settings"])
         #NOTE here removed ROS2 node additions to Executor instance
-
-        #TODO are threads only ROS-relevant, or is it IsaacSim related?
-        # # if only ROS, then remove:
-        # if self.YamcsLabManager.get_wait_for_threads():
-        #     self.simulation_app.add_wait(self.YamcsLabManager.get_wait_for_threads())
 
         if "terrain_manager" in cfg["environment"].keys():
             self.terrain_manager_conf: TerrainManagerConf = cfg["environment"]["terrain_manager"]

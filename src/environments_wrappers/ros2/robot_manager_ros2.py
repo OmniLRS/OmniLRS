@@ -24,7 +24,7 @@ class ROS_RobotManager(Node):
 
     def __init__(self, RM_conf: dict) -> None:
         super().__init__("Robot_spawn_manager_node")
-        self.RM = RobotManager(RM_conf)
+        self.RM = RobotManager(RM_conf, is_ROS2=True) #TODO noticed that ros1 does not even have RobotManager but sets LabManager where RobotManager is -> time for deprication?
 
         self.create_subscription(PoseStamped, "/OmniLRS/Robots/Spawn", self.spawn_robot, 1)
         self.create_subscription(PoseStamped, "/OmniLRS/Robots/Teleport", self.teleport_robot, 1)

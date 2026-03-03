@@ -45,6 +45,7 @@ class RobotManager:
     def __init__(
         self,
         RM_conf: RobotManagerConf,
+        is_ROS2:bool
     ) -> None:
         """
         Args:
@@ -53,9 +54,9 @@ class RobotManager:
 
         self.stage = omni.usd.get_context().get_stage()
         self.RM_conf = RobotManagerConf(**RM_conf)
+        self.is_ROS2 = is_ROS2
         self.robot_parameters = self.RM_conf.parameters
         self.uses_nucleus = self.RM_conf.uses_nucleus
-        self.is_ROS2 = self.RM_conf.is_ROS2
         self.max_robots = self.RM_conf.max_robots
         self.robots_root = self.RM_conf.robots_root
         createXform(self.stage, self.robots_root)

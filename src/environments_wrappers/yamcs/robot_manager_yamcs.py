@@ -21,7 +21,7 @@ class Yamcs_RobotManager():
     """
 
     def __init__(self, RM_conf: dict) -> None:
-        self.RM = RobotManager(RM_conf)
+        self.RM = RobotManager(RM_conf, is_ROS2=False)
 
         #NOTE Yamcs command subscriptions would go here
         # if ROS2 architecture is to be followed
