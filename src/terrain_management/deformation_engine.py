@@ -578,60 +578,34 @@ class DeformationEngine:
         )
 
         # generate depth distribution
-        if self.depth_distribution.distribution == "uniform":
-            self.depth_distribution_generator = UniformDepthDistributionGenerator(
-                depth_distribution=self.depth_distribution,
-                footprint=self.footprint,
-                footprint_profile_width=self.footprint_profile_width,
-                footprint_profile_height=self.footprint_profile_height,
-            )
-            self.depth_dist = self.depth_distribution_generator.get_depth_distribution()
-
-        elif self.depth_distribution.distribution == "sinusoidal":
-            self.depth_distribution_generator = SinusoidalDepthDistributionGenerator(
-                depth_distribution=self.depth_distribution,
-                footprint=self.footprint,
-                footprint_profile_width=self.footprint_profile_width,
-                footprint_profile_height=self.footprint_profile_height,
-            )
-            self.depth_dist = self.depth_distribution_generator.get_depth_distribution()
-
-        elif self.depth_distribution.distribution == "trapezoidal":
-            self.depth_distribution_generator = TrapezoidalDepthDistributionGenerator(
-                depth_distribution=self.depth_distribution,
-                footprint=self.footprint,
-                footprint_profile_width=self.footprint_profile_width,
-                footprint_profile_height=self.footprint_profile_height,
-            )
-            self.depth_dist = self.depth_distribution_generator.get_depth_distribution()
+        depth_distribution_generators = {
+            "uniform": UniformDepthDistributionGenerator,
+            "sinusoidal": SinusoidalDepthDistributionGenerator,
+            "trapezoidal": TrapezoidalDepthDistributionGenerator,
+        }
+        
+        self.depth_distribution_generator = depth_distribution_generators[self.depth_distribution.distribution](
+            depth_distribution=self.depth_distribution,
+            footprint=self.footprint,
+            footprint_profile_width=self.footprint_profile_width,
+            footprint_profile_height=self.footprint_profile_height,
+        )
+        self.depth_dist = self.depth_distribution_generator.get_depth_distribution()
 
         # generate boundary distribution
-        if self.boundary_distribution.distribution == "uniform":
-            self.boundary_distribution_generator = UniformBoundaryDistributionGenerator(
-                boundary_distribution=self.boundary_distribution,
-                footprint=self.footprint,
-                footprint_profile_width=self.footprint_profile_width,
-                footprint_profile_height=self.footprint_profile_height,
-            )
-            self.boundary_dist = self.boundary_distribution_generator.get_boundary_distribution()
-
-        elif self.boundary_distribution.distribution == "parabolic":
-            self.boundary_distribution_generator = ParabolicBoundaryDistributionGenerator(
-                boundary_distribution=self.boundary_distribution,
-                footprint=self.footprint,
-                footprint_profile_width=self.footprint_profile_width,
-                footprint_profile_height=self.footprint_profile_height,
-            )
-            self.boundary_dist = self.boundary_distribution_generator.get_boundary_distribution()
-
-        elif self.boundary_distribution.distribution == "trapezoidal":
-            self.boundary_distribution_generator = TrapezoidalBoundaryDistributionGenerator(
-                boundary_distribution=self.boundary_distribution,
-                footprint=self.footprint,
-                footprint_profile_width=self.footprint_profile_width,
-                footprint_profile_height=self.footprint_profile_height,
-            )
-            self.boundary_dist = self.boundary_distribution_generator.get_boundary_distribution()
+        boundary_distribution_generators = {
+            "uniform": UniformBoundaryDistributionGenerator,
+            "parabolic": ParabolicBoundaryDistributionGenerator,
+            "trapezoidal": TrapezoidalBoundaryDistributionGenerator,
+        }
+        
+        self.boundary_distribution_generator = boundary_distribution_generators[self.boundary_distribution.distribution](
+            boundary_distribution=self.boundary_distribution,
+            footprint=self.footprint,
+            footprint_profile_width=self.footprint_profile_width,
+            footprint_profile_height=self.footprint_profile_height,
+        )
+        self.boundary_dist = self.boundary_distribution_generator.get_boundary_distribution()
 
         self.instantiate_np_buffer(n=self.num_links, num_point_sample=self.profile.shape[0])
 
