@@ -93,6 +93,19 @@ def startSim(cfg: dict):
     set_motion_blur(cfg)
     set_chromatic_aberrations(cfg)
 
+    #NOTE mode is chosen by setting the value of "mode" property within "defaults" @cfg/config.yaml
+    # it can also be overwritten through console, same as environment
+    # mode is required to exist also @cfg/mode/[mode_name].yaml with "name" property
+
+    # Omits ROS settings, purely Yamcs-native
+    if cfg["mode"]["name"] == "Yamcs":
+        # Call to the environment factory to load the correct environment.
+        from src.environments_wrappers.yamcs.simulation_manager_yamcs import (
+            Yamcs_SimulationManager,
+        )
+
+        SM = Yamcs_SimulationManager(cfg, simulation_app)
+
     # Starts the ROS2 extension. Allows to import ROS2 related things.
     if cfg["mode"]["name"] == "ROS2":
         # ROS2 startup routine

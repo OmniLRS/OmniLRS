@@ -10,7 +10,6 @@ __status__ = "development"
 from typing import List, Tuple
 
 # Custom libs
-from src.environments.lunaryard import LunaryardController
 import src.environments.rendering as rndr
 
 # Loads ROS2 dependent libraries
