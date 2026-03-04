@@ -10,8 +10,6 @@ from typing import List, Tuple
 
 from src.robots.robot import RobotManager
 
-#NOTE removed ROS-dependent imports and function implementations
-
 #TODO 3rd March 2026 (for after Version 3)
 # implemented to resemble the same structure as used for ROS
 # might be unnecessary if we do not want to control the environment during runtim same way as ROS wrappers do

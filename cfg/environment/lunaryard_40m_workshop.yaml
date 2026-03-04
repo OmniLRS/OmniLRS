@@ -342,8 +342,8 @@ monitoring_cameras_settings:
         fstop: 5.0
         focus_distance: 10.0
         clipping_range: [0.01, 1000000.0]
-      ros2:
-        enabled: False #TODO left here as for now, might remove if eg. we decide to put is_ros2 as context knowledge in a global var, instead of propagating it to the MonitoringCameraManager
+      ros2: # these settings are only relevant if the mode is set to ROS2 (@cfg/config.yaml)
+        enabled: False #TODO remove
         topic: "/monitoring/monitoring_camera"
         frame_id: "monitoring_camera_id"
       type: "Rgb" # make sure to have correct naming - eg. Rgb ; Depth ; SemanticSegmentation ; InstanceSegmentation ; Normals

@@ -16,7 +16,6 @@ from src.physics.physics_scene import PhysicsSceneManager
 logger = logging.getLogger(__name__)
 logging.basicConfig(format="%(asctime)s %(message)s", datefmt="%m/%d/%Y %I:%M:%S %p")
 
-
 #TODO 3rd March 2026 (for after Version 3)
 # class Rate should stay, but it should be reused among all Simulation Managers
 # therefore, it should be defined in a single place
@@ -75,7 +74,7 @@ class Yamcs_LabManagerFactory:
     def register(
         self,
         name: str,
-        lab_manager: Union[Yamcs_LunalabManager, Yamcs_LunaryardManager],
+        lab_manager: Union[Yamcs_LunalabManager, Yamcs_LunaryardManager, Yamcs_LargeScaleManager],
     ) -> None:
         """
         Registers a lab manager.
@@ -91,7 +90,7 @@ class Yamcs_LabManagerFactory:
         self,
         cfg: dict,
         **kwargs,
-    ) -> Union[Yamcs_LunalabManager, Yamcs_LunaryardManager]: #NOTE Why is there no LargeScaleManager here ?
+    ) -> Union[Yamcs_LunalabManager, Yamcs_LunaryardManager, Yamcs_LargeScaleManager]: 
         """
         Returns an instance of the lab manager corresponding to the environment name.
 
@@ -158,18 +157,14 @@ class Yamcs_SimulationManager:
             self.rate = Rate(is_disabled=True)
 
         
-        # Lab manager
         #TODO 3rd March 2026 (for after Version 3)
         # ROSLabManager(s) and YamcsLabManager instances should just be self.environmnent_manager
         # ... EnvironmentManagerFactory (EMF), RobotManager, etc. no need to specify in the naming the protocol which is used
         self.YamcsLabManager = Yamcs_LMF(
             cfg, is_simulation_alive=self.simulation_app.is_running, close_simulation=self.simulation_app.close
         )
-        #NOTE here removed ROS2 node additions to Executor instance
 
-        # Robot manager
         self.YamcsRobotManager = Yamcs_RobotManager(cfg["environment"]["robots_settings"])
-        #NOTE here removed ROS2 node additions to Executor instance
 
         if "terrain_manager" in cfg["environment"].keys():
             self.terrain_manager_conf: TerrainManagerConf = cfg["environment"]["terrain_manager"]
@@ -216,7 +211,6 @@ class Yamcs_SimulationManager:
                 if self.enable_deformation:
                     if self.world.current_time_step_index >= (self.deform_delay * self.world.get_physics_dt()):
                         self.YamcsLabManager.LC.deform_terrain()
-            #NOTE here removed ROS-related checking for active threads and nodes
 
             self.rate.sleep()
         self.world.stop()

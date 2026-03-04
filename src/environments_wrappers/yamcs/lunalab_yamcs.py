@@ -6,13 +6,8 @@ __maintainer__ = "Antoine Richard"
 __email__ = "antoine.richard@uni.lu"
 __status__ = "development"
 
-# Custom libs
 from src.environments.lunalab import LunalabController
-
-# Loads ROS2 dependent libraries
 from src.environments_wrappers.yamcs.base_wrapper_yamcs import Yamcs_BaseManager
-
-#NOTE removed ROS-dependent imports and function implementations
 
 #TODO 3rd March 2026 (for after Version 3)
 # implemented to resemble the same structure as used for ROS

@@ -1,9 +1,5 @@
-# Custom libs
 from src.environments.large_scale_lunar import LargeScaleController
-
 from src.environments_wrappers.yamcs.base_wrapper_yamcs import Yamcs_BaseManager
-
-#NOTE removed ROS-dependent imports and function implementations
 
 #TODO 3rd March 2026 (for after Version 3)
 # implemented to resemble the same structure as used for ROS

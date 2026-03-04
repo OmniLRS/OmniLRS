@@ -7,25 +7,25 @@ import os
 import omni.kit.app
 from src.tmtc.yamcs_TMTC import ImagesHandler
 
-"""
-In the context of Pragyaan rover, the PayloadHandler handles only one payload - APXS.
 
-This APXS handler only symulates the work of a real APXS sensor by sampling 'no_data' and 'measurement' snaps.
-
-For the workshop implementation, APXS was intented to initially show no results.
-Therefore, once turned on, it automatically snaps "no_data" image as 'no reading' results.
-
-However, on the second invocation (at the workshop) the APXS was intended to show results.
-Therefore, second, and every other time, the APXS reader would snap a 'measurement' image which shows reading.
-
-Measurement snaps show spectra from Chandrayaan3 mission.
-
-_draw_text method is used to write name of the new reading (incremental counter), 
-as to show that there was an update to readings, after the sensor was used.
-"""
 
 class PayloadHandler:
+    """
+    In the context of Pragyaan rover, the PayloadHandler handles only one payload - APXS.
 
+    This APXS handler only symulates the work of a real APXS sensor by sampling 'no_data' and 'measurement' snaps.
+
+    For the workshop implementation, APXS was intented to initially show no results.
+    Therefore, once turned on, it automatically snaps "no_data" image as 'no reading' results.
+
+    However, on the second invocation (at the workshop) the APXS was intended to show results.
+    Therefore, second, and every other time, the APXS reader would snap a 'measurement' image which shows reading.
+
+    Measurement snaps show spectra from Chandrayaan3 mission.
+
+    _draw_text method is used to write name of the new reading (incremental counter), 
+    as to show that there was an update to readings, after the sensor was used.
+    """
     def __init__(self, images_handler:ImagesHandler, payload_conf):
         self._images_handler = images_handler
         self._init_apxs(payload_conf)

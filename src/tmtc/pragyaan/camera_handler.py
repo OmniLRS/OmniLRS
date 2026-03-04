@@ -14,25 +14,27 @@ class CameraViewType(Enum):
     RGB = "RGB" # only for monitoring, as is more light weight
     DEPTH = "DEPTH"
 
-"""
-This file contains methods for handling ALL cameras related to Rragyaan's setup. 
 
-Rover's own camera(s) are initialized in the file for robot initialization.
-This file initializes additional cameras in the environment, such as lander's camera, and monitoring camera.
-
-Camera handler contains the methods for snapping camera views of rover's camera, and lander's and monitoring camera.
-Rover's camera is able to snap DEPTH and RGB views.
-
-Handler also contains methods for transmitting snapped views to Yamcs, by utilizing saving methods of the images handler property. 
-
-CameraHandler is a layer on top of the ImagesHandler, and in that way is implemented a separation between controlling different
-instances of camera, and concers of low-level image saving to the Yamcs buckets and/or disk.
-Thus CameraHandler(s) are intended to reuse functionalities provided by the ImagesHandler, and not reimplement the communication 
-with Yamcs from the scratch.
-
-The reference to _robot provides access to rover's cameras, and desired use-case implementation.
-"""
 class PragyaanCameraHandler:
+    """
+    This file contains methods for handling ALL cameras related to Rragyaan's setup. 
+
+    Rover's own camera(s) are initialized in the file for robot initialization.
+    This file initializes additional cameras in the environment, such as lander's camera, and monitoring camera.
+
+    Camera handler contains the methods for snapping camera views of rover's camera, and lander's and monitoring camera.
+    Rover's camera is able to snap DEPTH and RGB views.
+
+    Handler also contains methods for transmitting snapped views to Yamcs, by utilizing saving methods of the images handler property. 
+
+    CameraHandler is a layer on top of the ImagesHandler, and in that way is implemented a separation between controlling different
+    instances of camera, and concers of low-level image saving to the Yamcs buckets and/or disk.
+    Thus CameraHandler(s) are intended to reuse functionalities provided by the ImagesHandler, and not reimplement the communication 
+    with Yamcs from the scratch.
+
+    The reference to _robot provides access to rover's cameras, and desired use-case implementation.
+    """
+    
     # reflects the buckets defined in yaml
     BUCKET_STREAMING = "images_streaming"
     BUCKET_ONCOMMAND = "images_oncommand"

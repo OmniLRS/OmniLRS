@@ -8,6 +8,10 @@ from PIL import Image
 class ImagesHandler:
     
     NO_DATA_RESOLUTION = (640, 480)
+
+    #NOTE
+    # image_0 is no no_data image
+    # image_1 is the first image with real camera view
     INIT_COUNT = 0 
 
     def __init__(self, yamcs_processor, yamcs_address, images_conf, url_full_nginx):
@@ -33,11 +37,6 @@ class ImagesHandler:
         self._buckets[bucket_name] = path
         self._counter[bucket_name] = init_count
 
-    #NOTE incrementing after saving because image_0 is NO_DATA image
-    # should we start the counter with -1, and then increment the counter before saving
-    # we can revert back to 
-    # Do we want first image to be 0, or 1 ? Do we want NO_DATA to be 0? Does not make sense to have NO_DATA as 1
-    #TODO We should find a way to show 'default' image as NO_DATA in case there is really no images in the storage
     def snap_no_data_images(self):
         for bucket_name in self._buckets:
             self.snap_no_data_image(bucket_name)
@@ -49,8 +48,8 @@ class ImagesHandler:
 
     def save_image(self, image:Image, bucket_name:str):
         image_name = self._save_image_locally(image, bucket_name)
-        self._counter[bucket_name] += 1
         self._inform_yamcs(image_name, bucket_name)
+        self._counter[bucket_name] += 1
 
     def _save_image_locally(self, image, bucket) -> str:
         counter_number = self._counter[bucket]

@@ -1,10 +1,5 @@
-# System imports
 from typing import List, Tuple
-
-# Custom libs
 import src.environments.rendering as rndr
-
-#NOTE removed ROS-dependent imports and function implementations
 
 #TODO 3rd March 2026 (for after Version 3)
 # implemented to resemble the same structure as used for ROS

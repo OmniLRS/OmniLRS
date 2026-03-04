@@ -38,7 +38,6 @@ class YamcsTMTC(ABC):
         start_streaming_data - utilizes IntervalsHandler to setup and trigger update of rover's parameters in Yamcs (check PragyaanController for ref. impl.)
 
     """ 
-
     def __init__(
         self,
         yamcs_conf,
