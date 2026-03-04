@@ -24,6 +24,13 @@ Camera handler contains the methods for snapping camera views of rover's camera,
 Rover's camera is able to snap DEPTH and RGB views.
 
 Handler also contains methods for transmitting snapped views to Yamcs, by utilizing saving methods of the images handler property. 
+
+CameraHandler is a layer on top of the ImagesHandler, and in that way is implemented a separation between controlling different
+instances of camera, and concers of low-level image saving to the Yamcs buckets and/or disk.
+Thus CameraHandler(s) are intended to reuse functionalities provided by the ImagesHandler, and not reimplement the communication 
+with Yamcs from the scratch.
+
+The reference to _robot provides access to rover's cameras, and desired use-case implementation.
 """
 class PragyaanCameraHandler:
     # reflects the buckets defined in yaml

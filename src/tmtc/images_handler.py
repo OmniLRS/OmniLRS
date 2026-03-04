@@ -8,6 +8,7 @@ from PIL import Image
 class ImagesHandler:
     
     NO_DATA_RESOLUTION = (640, 480)
+    INIT_COUNT = 0 
 
     def __init__(self, yamcs_processor, yamcs_address, images_conf, url_full_nginx):
         self._yamcs_processor = yamcs_processor
@@ -20,17 +21,23 @@ class ImagesHandler:
 
     def _init_buckets_and_counter(self, buckets_conf):
         for bucket in buckets_conf:
-            name = bucket["name"]
-            self._buckets[name] = bucket["path"]
-            self._counter[name] = 0
+            self.add_bucket(bucket["name"], bucket["path"])
 
-    def add_bucket(self, bucket_name, path):
+    def add_bucket(self, bucket_name, path, init_count=INIT_COUNT):
         if bucket_name not in self._buckets:
-            self._buckets[bucket_name] = path
-            self._counter[bucket_name] = 0
+            self._init_bucket(bucket_name, path, init_count)
         else:
             raise Exception(f"Bucket with name {bucket_name} already exists.")
+        
+    def _init_bucket(self, bucket_name, path, init_count):
+        self._buckets[bucket_name] = path
+        self._counter[bucket_name] = init_count
 
+    #NOTE incrementing after saving because image_0 is NO_DATA image
+    # should we start the counter with -1, and then increment the counter before saving
+    # we can revert back to 
+    # Do we want first image to be 0, or 1 ? Do we want NO_DATA to be 0? Does not make sense to have NO_DATA as 1
+    #TODO We should find a way to show 'default' image as NO_DATA in case there is really no images in the storage
     def snap_no_data_images(self):
         for bucket_name in self._buckets:
             self.snap_no_data_image(bucket_name)
@@ -38,9 +45,7 @@ class ImagesHandler:
     def snap_no_data_image(self, bucket_name):
         image_path = self._NO_DATA_IMAGE_PATH 
         img = Image.open(image_path).convert('RGB').resize((self.NO_DATA_RESOLUTION[0], self.NO_DATA_RESOLUTION[1]))
-        image_name = self._save_image_locally(img, bucket_name)
-        self._inform_yamcs(image_name, bucket_name)
-        self._counter[bucket_name] += 1
+        self.save_image(img, bucket_name)
 
     def save_image(self, image:Image, bucket_name:str):
         image_name = self._save_image_locally(image, bucket_name)

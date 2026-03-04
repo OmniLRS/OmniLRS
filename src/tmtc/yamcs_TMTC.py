@@ -12,8 +12,31 @@ from src.tmtc.obc_handler import ObcHandler
 
 class YamcsTMTC(ABC):
     """
-    YamcsTMTC class.
+    YamcsTMTC is implementation of Yamcs-TMTC framework. 
     It allows to control a robot instance, by receiving TCs from Yamcs and sending TM to Yamcs.
+
+    It is not intended to be used standalone, but as a class that is inherited by a rover controller.
+    Take a loot at PragyaanController for reference implementation of how YamcsTMTC should be utilized for a specific rover context.
+
+    The class provides handlers that enable working with general concepts of Yamcs-TMTC framework, that would be used by all rovers.
+    YamcsTMTC is not constrained by specific rover implementation and functionalities, but is implemented on a high level. 
+    Specific rover controller classes are intended to adhere to the required rover functionalities by building upon the concepts 
+    provided by YamcsTMTC.
+
+    Description of handlers:
+        IntervalsHandler - allows for easy handling of intervals, thus enables scheduling (non-)repeating tasks in intervals.
+        ObcHandler - facilitates work with rover's OBC, such as updating the rover's state from a central point.
+        DriveHandler - handles commanding of rover's drive mechanichs by transfering high level commands in term of speed and distance 
+                            into low level wheel movements.
+        CommandsHandler - handles addition and execution of commands coming from Yamcs by conducing mapping between the predefined commands and 
+                            specific functions (functions are implemented inside specific rover controllers that will utilize the CommandsHandler) 
+        ImagesHandler - facilitates working with Yamcs bucket storages for saving the images created inside the simulator
+
+    The class also implements (two) abstract methods that are required to be implemented by the inheriting controllers:
+        _setup_command_callbacks(commands_conf) - utilizes CommandsHandler to construct the mapping between high level Yamcs commands, 
+                                                    and desired functionalities (check PragyaanController for ref. impl.)
+        start_streaming_data - utilizes IntervalsHandler to setup and trigger update of rover's parameters in Yamcs (check PragyaanController for ref. impl.)
+
     """ 
 
     def __init__(

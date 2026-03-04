@@ -21,6 +21,24 @@ class CameraResolution(Enum):
     LOW = "low"
     HIGH = "high"
 
+"""
+Implementation of controller for Pragyaan rover.
+Functions as a reference implementation for implementation of other rover controllers.
+
+Rover controller inherits YamcsTMTC to benefit from the pre-implemented helping handlers that come with the YamcsTMTC framework.
+Implements two mandatory funtions inherited from YamcsTMTC:
+    _setup_command_callbacks(commands_conf) - utilizes CommandsHandler to construct the mapping between high level Yamcs commands, 
+                                                    and desired functionalities 
+                                            - commands_conf are previously defined inside .yaml configuration file
+    start_streaming_data - utilizes IntervalsHandler to setup and trigger update of rover's parameters in Yamcs 
+
+The rest of the functions are implementations of specific desired behaviour of Pragyaan rover. 
+Implementations of controllers for other rovers should follow the same architecture, and separation of high level YamcsTMTC concepts, and 
+functionalities of the specific rover in question.
+
+Besides utilizing handlers provided by YamcsTMTC, the controller implements its own specific handlers that adhere to rover's use case.
+
+"""
 class PragyaanController(YamcsTMTC):
     def __init__(self,
         yamcs_conf,
@@ -135,7 +153,8 @@ class PragyaanController(YamcsTMTC):
                 self._drive_handler.stop_robot()
                 self._robot.subsystems.set_electronics_health(Electronics.MOTOR_CONTROLLER.value, HealthStatus.NOMINAL)
         elif electronics == Electronics.RADIO.value:
-            #TODO
+            #NOTE How realistic is this to happen? The rover would lose all communication capabilities if the radio is turned off.
+            # Should it just be skipped?
             pass
 
     def handle_go_nogo(self, decision:str):
