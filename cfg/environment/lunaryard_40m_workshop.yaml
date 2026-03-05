@@ -328,7 +328,7 @@ static_assets_settings:
       collision: True
 
 monitoring_cameras_settings:
-  enabled: False
+  enabled: True
   root_path: "/MonitoringCameras"
   camera_definitions:
     - name: "monitoring_camera"
@@ -343,7 +343,6 @@ monitoring_cameras_settings:
         focus_distance: 10.0
         clipping_range: [0.01, 1000000.0]
       ros2: # these settings are only relevant if the mode is set to ROS2 (@cfg/config.yaml)
-        enabled: False #TODO remove
         topic: "/monitoring/monitoring_camera"
         frame_id: "monitoring_camera_id"
       type: "Rgb" # make sure to have correct naming - eg. Rgb ; Depth ; SemanticSegmentation ; InstanceSegmentation ; Normals

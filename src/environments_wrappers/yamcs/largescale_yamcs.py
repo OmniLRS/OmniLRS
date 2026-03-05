@@ -30,7 +30,7 @@ class Yamcs_LargeScaleManager(Yamcs_BaseManager):
         # this naming still 'works' because all environments start with an L
         # but that might not be the case forever
         self.LC = LargeScaleController(
-            **environment_cfg, is_simulation_alive=is_simulation_alive, close_simulation=close_simulation
+            is_ROS2=False, **environment_cfg, is_simulation_alive=is_simulation_alive, close_simulation=close_simulation
         )
         self.LC.load()
 

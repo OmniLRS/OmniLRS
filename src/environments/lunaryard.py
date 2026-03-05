@@ -39,6 +39,7 @@ class LunaryardController(BaseEnv):
 
     def __init__(
         self,
+        is_ROS2:bool = True,
         lunaryard_settings: LunaryardConf = None,
         rocks_settings: Dict = None,
         terrain_manager: TerrainManagerConf = None,
@@ -63,7 +64,7 @@ class LunaryardController(BaseEnv):
             **kwargs: Arbitrary keyword arguments.
         """
 
-        super().__init__(**kwargs)
+        super().__init__(is_ROS2, **kwargs)
         self.stage_settings = lunaryard_settings
         self.sun_settings = sun_settings
 
@@ -91,7 +92,7 @@ class LunaryardController(BaseEnv):
             self.SAM = StaticAssetsManager(static_assets_settings)
 
         if monitoring_cameras_settings and monitoring_cameras_settings["enabled"]:
-            self.MCM = MonitoringCamerasManager(monitoring_cameras_settings)
+            self.MCM = MonitoringCamerasManager(self._is_ROS2, monitoring_cameras_settings)
 
     def build_scene(self) -> None:
         """

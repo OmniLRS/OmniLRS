@@ -20,6 +20,7 @@ class BaseEnv:
 
     def __init__(
         self,
+        is_ROS2:bool = True,
         **kwargs,
     ) -> None:
         """
@@ -28,7 +29,7 @@ class BaseEnv:
         Args:
             **kwargs: Arbitrary keyword arguments.
         """
-
+        self._is_ROS2 = is_ROS2
         self.stage: Usd.Stage = omni.usd.get_context().get_stage()
 
     def build_scene(self) -> None:

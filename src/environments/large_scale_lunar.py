@@ -36,6 +36,7 @@ class LargeScaleController(BaseEnv):
 
     def __init__(
         self,
+        is_ROS2:bool = True, 
         large_scale_terrain: LargeScaleTerrainConf = None,
         stellar_engine_settings: StellarEngineConf = None,
         sun_settings: SunConf = None,
@@ -57,7 +58,7 @@ class LargeScaleController(BaseEnv):
             **kwargs: Arbitrary keyword arguments.
         """
 
-        super().__init__(**kwargs)
+        super().__init__(is_ROS2, **kwargs)
         self.stage_settings = large_scale_terrain
         self.sun_settings = sun_settings
         self.is_simulation_alive = is_simulation_alive
@@ -77,7 +78,7 @@ class LargeScaleController(BaseEnv):
             self.SAM = StaticAssetsManager(static_assets_settings)
 
         if monitoring_cameras_settings and monitoring_cameras_settings["enabled"]:
-            self.MCM = MonitoringCamerasManager(monitoring_cameras_settings)
+            self.MCM = MonitoringCamerasManager(self._is_ROS2, monitoring_cameras_settings)
 
     def build_scene(self) -> None:
         """

@@ -34,7 +34,7 @@ class Yamcs_LunalabManager(Yamcs_BaseManager):
         # because LC was probably named when Lunalab was the only environment
         # this naming still 'works' because all environments start with an L
         # but that might not be the case forever
-        self.LC = LunalabController(**environment_cfg)
+        self.LC = LunalabController(is_ROS2=False, **environment_cfg)
         self.LC.load()
         self.trigger_reset = False
 

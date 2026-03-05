@@ -27,7 +27,7 @@ class Yamcs_LunaryardManager(Yamcs_BaseManager):
         # because LC was probably named when Lunalab was the only environment
         # this naming still 'works' because all environments start with an L
         # but that might not be the case forever
-        self.LC = LunaryardController(**environment_cfg)
+        self.LC = LunaryardController(is_ROS2=False, **environment_cfg)
         self.LC.load()
 
         #NOTE Yamcs command subscriptions would go here

@@ -45,10 +45,11 @@ class PragyaanCameraHandler:
     def __init__(self, images_handler:ImagesHandler, robot, lander_camera_conf=None) -> None:
         self._images_handler = images_handler
         self._robot = robot
-        self._initialize_lander_cam(lander_camera_conf)
-        self._initialize_monitoring_cam()
         self._lander_cam = None
         self._monitoring_cam = None
+        self._initialize_lander_cam(lander_camera_conf)
+        self._initialize_monitoring_cam()
+
 
     def _initialize_lander_cam(self, lander_camera_conf) -> None:
         if (lander_camera_conf == None):

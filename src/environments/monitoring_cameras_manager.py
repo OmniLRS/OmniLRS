@@ -17,7 +17,8 @@ class MonitoringCamerasManager:
 
     cameras = {}
 
-    def __init__(self, cameras_cfg):
+    def __init__(self, is_ROS2:bool, cameras_cfg):
+        self._is_ROS2 = is_ROS2
         self._cfg = cameras_cfg
         self._root_path = cameras_cfg["root_path"]
         self._stage = omni.usd.get_context().get_stage()
@@ -49,8 +50,11 @@ class MonitoringCamerasManager:
             self.cameras[name].initialize()
             # NOTE render products do not work, because it requires rep.orchestrator.step() which classhes with world.step()
             # rp = rep.create.render_product(prim_path, (c["resolution"][0], c["resolution"][1])) 
+            print("CREATED CAMERA!")
+            print(self.cameras[name])
 
-            if c["ros2"]["enabled"]:
+            if self._is_ROS2:
+                print("IS ROS2 activated for monitoring camera")
                 self._set_ros2_publisher(rp, c["ros2"], c["type"])
 
 
