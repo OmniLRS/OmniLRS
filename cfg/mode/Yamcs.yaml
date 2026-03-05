@@ -1,1 +1,6 @@
 name: Yamcs
+instance_conf:
+  address: "localhost:8090"
+  instance: "workshop"
+  processor: "realtime"
+  url_full_nginx: "https://workshop.jaops.com/yamcs"

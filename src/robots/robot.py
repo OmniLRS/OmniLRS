@@ -46,7 +46,8 @@ class RobotManager:
     def __init__(
         self,
         RM_conf: RobotManagerConf,
-        mode:SimulatorMode = SimulatorMode.ROS2
+        mode:SimulatorMode = SimulatorMode.ROS2,
+        yamcs_instance_conf:dict = {}
     ) -> None:
         """
         Args:
@@ -65,6 +66,7 @@ class RobotManager:
         self.robots_RG: Dict[str, RobotRigidGroup] = {}
         self.TMTC: YamcsTMTC
         self.num_robots = 0
+        self.yamcs_instance_conf = yamcs_instance_conf
 
     def preload_robot(
         self,
@@ -254,7 +256,7 @@ class RobotManager:
         if self.RM_conf.robot_controller == "pragyaan-controller":
             from src.tmtc.pragyaan.pragyaan_controller import PragyaanController
 
-            self.TMTC = PragyaanController(self.RM_conf.yamcs_tmtc, robot_name, self.robots_RG, self.robots["/" + robot_name])
+            self.TMTC = PragyaanController(self.yamcs_instance_conf, self.RM_conf.yamcs_tmtc, robot_name, self.robots_RG, self.robots["/" + robot_name])
         elif self.RM_conf is None or self.RM_conf.robot_controller == "":
             raise Exception("No robot controller was setup in yaml configurations.")
         else: 

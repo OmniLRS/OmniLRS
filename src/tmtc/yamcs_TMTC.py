@@ -40,23 +40,24 @@ class YamcsTMTC(ABC):
     """ 
     def __init__(
         self,
+        yamcs_instance_conf,
         yamcs_conf,
         robot_name,
         robot_RG,
         robot,
     ) -> None:
-        yamcs_client = YamcsClient(yamcs_conf["address"])
-        self._yamcs_processor = yamcs_client.get_processor(instance=yamcs_conf["instance"], processor=yamcs_conf["processor"])
+        yamcs_client = YamcsClient(yamcs_instance_conf["address"])
+        self._yamcs_processor = yamcs_client.get_processor(instance=yamcs_instance_conf["instance"], processor=yamcs_instance_conf["processor"])
         self._robot_name = robot_name
         self._robots_RG = robot_RG
         self._yamcs_conf = yamcs_conf
         self._robot = robot
-        "creating the five generic handlers for the main functions of the robot"
+        #creating the five generic handlers for the main functions of the robot
         self._intervals_handler:IntervalsHandler = IntervalsHandler()
         self._obc_handler:ObcHandler = ObcHandler(self._robot, self._intervals_handler)
         self._drive_handler:DriveHandler = DriveHandler(self._robot, self._intervals_handler, self._obc_handler)
         self._commands_handler:CommandsHandler = CommandsHandler(self._yamcs_processor)
-        self._images_handler:ImagesHandler = ImagesHandler(self._yamcs_processor, yamcs_conf["address"], yamcs_conf["images"], yamcs_conf["url_full_nginx"])
+        self._images_handler:ImagesHandler = ImagesHandler(self._yamcs_processor, yamcs_instance_conf["address"], yamcs_conf["images"], yamcs_instance_conf["url_full_nginx"])
 
     @abstractmethod
     def _setup_command_callbacks(self, commands_conf):

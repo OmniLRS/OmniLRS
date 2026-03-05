@@ -40,11 +40,12 @@ class PragyaanController(YamcsTMTC):
     Besides utilizing handlers provided by YamcsTMTC, the controller implements its own specific handlers that adhere to rover's use case.
     """
     def __init__(self,
+        yamcs_instance_conf,
         yamcs_conf,
         robot_name,
         robot_RG,
         robot):
-        super().__init__(yamcs_conf, robot_name, robot_RG, robot)
+        super().__init__(yamcs_instance_conf, yamcs_conf, robot_name, robot_RG, robot)
         self._intervals = yamcs_conf["intervals"]
         self._payload_handler:PayloadHandler = PayloadHandler(self._images_handler, self._yamcs_conf["payload"])
         self._camera_handler = PragyaanCameraHandler(self._images_handler, robot, yamcs_conf["lander_camera"])

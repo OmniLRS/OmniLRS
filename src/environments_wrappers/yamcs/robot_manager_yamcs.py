@@ -19,8 +19,8 @@ class Yamcs_RobotManager():
     Yamcs wrapper that manages the robots.
     """
 
-    def __init__(self, RM_conf: dict) -> None:
-        self.RM = RobotManager(RM_conf, mode=SimulatorMode.YAMCS)
+    def __init__(self, RM_conf: dict, yamcs_instance_conf:dict) -> None:
+        self.RM = RobotManager(RM_conf, mode=SimulatorMode.YAMCS, yamcs_instance_conf=yamcs_instance_conf)
 
         #NOTE Yamcs command subscriptions would go here
         # if ROS2 architecture is to be followed

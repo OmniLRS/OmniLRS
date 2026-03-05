@@ -164,7 +164,7 @@ class Yamcs_SimulationManager:
             cfg, is_simulation_alive=self.simulation_app.is_running, close_simulation=self.simulation_app.close
         )
 
-        self.YamcsRobotManager = Yamcs_RobotManager(cfg["environment"]["robots_settings"])
+        self.YamcsRobotManager = Yamcs_RobotManager(cfg["environment"]["robots_settings"], cfg["mode"]["instance_conf"])
 
         if "terrain_manager" in cfg["environment"].keys():
             self.terrain_manager_conf: TerrainManagerConf = cfg["environment"]["terrain_manager"]
