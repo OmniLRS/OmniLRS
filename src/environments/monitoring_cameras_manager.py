@@ -7,7 +7,7 @@ import omni
 from pxr import UsdGeom, Gf
 import omni.replicator.core as rep
 import omni.syntheticdata as sd
-from src.environments.base_env import SimulatorMode
+from src.environments.simulator_mode_enum import SimulatorMode
 from src.environments.utils import set_xform_pose
 from omni.isaac.sensor import Camera
 

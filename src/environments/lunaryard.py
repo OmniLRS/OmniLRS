@@ -28,7 +28,8 @@ from src.terrain_management.terrain_manager import TerrainManager
 from src.configurations.environments import LunaryardConf
 from src.environments.rock_manager import RockManager
 from src.stellar.stellar_engine import StellarEngine
-from src.environments.base_env import BaseEnv, SimulatorMode
+from src.environments.base_env import BaseEnv
+from src.environments.simulator_mode_enum import SimulatorMode
 from src.robots.robot import RobotManager
 
 
@@ -189,7 +190,7 @@ class LunaryardController(BaseEnv):
 
     def add_robot_manager(self, robotManager: RobotManager) -> None:
         self.robotManager = robotManager
-        if self.robotManager.RM_conf.yamcs_tmtc.get("enabled", False):
+        if self._mode == SimulatorMode.YAMCS:
             self.robotManager.start_TMTC()
 
     def load_DEM(self) -> None:

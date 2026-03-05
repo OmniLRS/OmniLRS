@@ -29,6 +29,7 @@ from src.configurations.robot_confs import RobotManagerConf
 import numpy as np
 from scipy.spatial.transform import Rotation as R
 
+from src.environments.simulator_mode_enum import SimulatorMode
 from src.environments.utils import transform_orientation_from_xyzw_into_xyz, transform_orientation_into_xyz
 from src.robots.subsystems_manager import RobotSubsystemsManager
 from src.tmtc.yamcs_TMTC import YamcsTMTC
@@ -45,7 +46,7 @@ class RobotManager:
     def __init__(
         self,
         RM_conf: RobotManagerConf,
-        is_ROS2:bool
+        mode:SimulatorMode = SimulatorMode.ROS2
     ) -> None:
         """
         Args:
@@ -54,7 +55,7 @@ class RobotManager:
 
         self.stage = omni.usd.get_context().get_stage()
         self.RM_conf = RobotManagerConf(**RM_conf)
-        self.is_ROS2 = is_ROS2
+        self.is_ROS2 = mode == SimulatorMode.ROS2
         self.robot_parameters = self.RM_conf.parameters
         self.uses_nucleus = self.RM_conf.uses_nucleus
         self.max_robots = self.RM_conf.max_robots

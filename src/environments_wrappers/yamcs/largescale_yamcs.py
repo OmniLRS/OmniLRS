@@ -1,4 +1,4 @@
-from src.environments.base_env import SimulatorMode
+from src.environments.simulator_mode_enum import SimulatorMode
 from src.environments.large_scale_lunar import LargeScaleController
 from src.environments_wrappers.yamcs.base_wrapper_yamcs import Yamcs_BaseManager
 

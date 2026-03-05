@@ -18,13 +18,14 @@ import omni
 from pxr import UsdLux, Gf, Usd
 
 from src.environments.monitoring_cameras_manager import MonitoringCamerasManager
+from src.environments.simulator_mode_enum import SimulatorMode
 from src.environments.static_assets_manager import StaticAssetsManager
 from src.terrain_management.large_scale_terrain_manager import LargeScaleTerrainManager
 from src.terrain_management.large_scale_terrain.pxr_utils import set_xform_ops, set_texture_path
 from src.configurations.stellar_engine_confs import StellarEngineConf, SunConf
 from src.configurations.environments import LargeScaleTerrainConf
 from src.stellar.stellar_engine import StellarEngine
-from src.environments.base_env import BaseEnv, SimulatorMode
+from src.environments.base_env import BaseEnv
 from src.robots.robot import RobotManager
 from assets import get_assets_path
 
@@ -180,7 +181,7 @@ class LargeScaleController(BaseEnv):
         """
 
         self.robotManager = robotManager
-        if self.robotManager.RM_conf.yamcs_tmtc.get("enabled", False):
+        if self._mode == SimulatorMode.YAMCS:
             self.robotManager.start_TMTC()
         self.pose_tracker = list(self.robotManager.robots.values())[0].get_pose
 

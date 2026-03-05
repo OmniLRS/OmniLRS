@@ -40,7 +40,6 @@ class RobotParameters:
 @dataclass
 class RobotManagerConf:
     uses_nucleus: str = False
-    # is_ROS2: str = False
     max_robots: int = 5
     robots_root: str = "/Robots"
     parameters: List[RobotParameters] = field(default_factory=list)

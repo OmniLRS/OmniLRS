@@ -8,6 +8,7 @@ __status__ = "development"
 
 from typing import List, Tuple
 
+from src.environments.simulator_mode_enum import SimulatorMode
 from src.robots.robot import RobotManager
 
 #TODO 3rd March 2026 (for after Version 3)
@@ -19,7 +20,7 @@ class Yamcs_RobotManager():
     """
 
     def __init__(self, RM_conf: dict) -> None:
-        self.RM = RobotManager(RM_conf, is_ROS2=False)
+        self.RM = RobotManager(RM_conf, mode=SimulatorMode.YAMCS)
 
         #NOTE Yamcs command subscriptions would go here
         # if ROS2 architecture is to be followed

@@ -224,8 +224,7 @@ robots_settings:
       imu_sensor_path: "/Robots/pragyaan/base_link/Imu_Sensor"
       turn_speed_coef: 19
       solar_panel_joint: "solarJoint"  # finds it within the main robot articulation
-  yamcs_tmtc: # these settings are relevant if not ros2 mode
-    enabled: True
+  yamcs_tmtc: # these settings are relevant if not Yamcs mode
     address: "localhost:8090"
     instance: "workshop"
     processor: "realtime"

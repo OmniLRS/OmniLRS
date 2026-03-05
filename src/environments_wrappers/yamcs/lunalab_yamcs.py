@@ -6,7 +6,7 @@ __maintainer__ = "Antoine Richard"
 __email__ = "antoine.richard@uni.lu"
 __status__ = "development"
 
-from src.environments.base_env import SimulatorMode
+from src.environments.simulator_mode_enum import SimulatorMode
 from src.environments.lunalab import LunalabController
 from src.environments_wrappers.yamcs.base_wrapper_yamcs import Yamcs_BaseManager
 
