@@ -1,180 +1,95 @@
-name: Lunalab
+name: LargeScale
 seed: 42
-physics_dt: 0.0333 # 30 Hz
+physics_dt: 0.01666 # 60 Hz
 rendering_dt: 0.0333 # 30 Hz
 enforce_realtime: true
 
-lunalab_settings: # These settings cannot be changed.
-  lab_length: 10.0
-  lab_width: 6.5
-  resolution: 0.01
+# Stage settings, only edit if you know what you are doing.
+large_scale_terrain:
+  hr_dem_generate_craters: True
+  starting_position: [2800,-2200]
+  crater_gen_densities: [0.025, 0.05, 0.5]
+  crater_gen_radius: [[1.5, 2.5], [0.75, 1.5], [0.25, 0.5]]
+  rock_gen_cfgs:
+    -
+      rock_sampler_cfg: 
+        block_size: 50
+        seed: 42
+        rock_dist_cfg:
+          position_distribution:
+            name: "thomas_point_process"
+            parent_density: 0.04
+            child_density: 100
+            sigma: 3.0
+            seed: 42
+          scale_distribution:
+            name: "uniform"
+            min: 0.02
+            max: 0.05
+            seed: 43
+      rock_assets_folder: "assets/USD_Assets/rocks/small_rocks"
+      instancer_name: "very_small_rock_instancer"
+      seed: 46
+      block_span: 1
+      add_colliders: False
+      texture_name: "seaside_rock_2k"
+      texture_path: "assets/Textures/seaside_rock_2k.mdl"
+    -
+      rock_sampler_cfg:
+        block_size: 50
+        seed: 42
+        rock_dist_cfg:
+          position_distribution:
+            name: "thomas_point_process"
+            parent_density: 0.01
+            child_density: 25
+            sigma: 3.0
+            seed: 44
+          scale_distribution:
+            name: "uniform"
+            min: 0.05
+            max: 0.2
+            seed: 45
+      rock_assets_folder: "assets/USD_Assets/rocks/small_rocks"
+      instancer_name: "small_rock_instancer"
+      seed: 47
+      block_span: 2
+      add_colliders: True
+      collider_mode: "none"
+      texture_name: "seaside_rock_2k"
+      texture_path: "assets/Textures/seaside_rock_2k.mdl"
 
-# Rocks sampling parameters.
-rocks_settings:
-  instancers_path: /Lunalab/Rocks
-  rocks_settings:
-    large_rocks: # The name doesn't matter.
-      seed: ${....seed}
-      collections: ["lunalab_rocks"] # Where to get the rock models from.
-      use_point_instancer: True # If True, the rocks will be instanced using the PointInstancer.
-                                # If False, it will use the custom instancer that works for SDG.
-      requests: # A list of request used to distribute the rocks.
-        req_pos_xy:
-          attribute: Position
-          axes: ["x", "y"]
-          layer:
-            name: Image
-            # data: Is loaded automatically from the DEM.
-            mpp_resolution: ${.......lunalab_settings.resolution}
-            output_space: 2
-          sampler:
-            name: HardCoreUniform
-            randomization_space: 2
-            seed: ${.......seed}
-            core_radius: 0.5
-            num_repeat: 2
-            min: ${as_tuple:0.5,0.5}
-            max: ${as_tuple:6,9.5}
+stellar_engine_settings:
+  start_date:
+    year: 2024
+    month: 5
+    day: 21
+    hour: 5
+    minute: 1
+  time_scale: 1.0
+  update_interval: 600
 
-        req_pos_z:
-          attribute: Position
-          axes: ["z"]
-          layer:
-            name: Image
-            output_space: 1
-          sampler:
-            name: Image
-            randomization_space: 1
-            # resolution: Resolution is infered automatically from the loaded DEM.
-            # data: Is loaded automatically from the DEM.
-            mpp_resolution: ${.......lunalab_settings.resolution}
+sun_settings:
+  intensity: 1750.0
+  angle: 0.53
+  diffuse_multiplier: 1.0
+  specular_multiplier: 1.0
+  color: [1.0, 1.0, 1.0]
+  temperature: 6500.0
+  azimuth: 180.0
+  elevation: 45.0
 
-        req_random_z_rot:
-          attribute: Orientation
-          axes: ["x", "y", "z", "w"]
-          layer:
-            name: RollPitchYaw
-            rmax: 0
-            rmin: 0
-            pmax: 0
-            pmin: 0
-            ymax: 6.28318530718
-            ymin: 0
-          sampler:
-            name: Uniform
-            randomization_space: 3
-            seed: ${.......seed}
-
-        req_scale:
-          attribute: Scale
-          axes: ["xyz"]
-          layer:
-            name: Line
-            xmin: 1.0
-            xmax: 1.0
-          sampler:
-            name: Uniform
-            randomization_space: 1
-            seed: ${.......seed}
-
-terrain_manager:
-  moon_yard:
-    crater_generator:
-      profiles_path: assets/Terrains/crater_spline_profiles.pkl
-      min_xy_ratio: 0.85
-      max_xy_ratio: 1.0
-      resolution: ${....lunalab_settings.resolution}
-      pad_size: 500
-      random_rotation: True
-      z_scale: 1.0
-      seed: ${....seed}
-
-    crater_distribution:
-      x_size: 10.0
-      y_size: 6.5
-      densities: [0.025, 0.05, 0.5]
-      radius: [[1.5,2.5],[0.75,1.5],[0.25,0.5]]
-      num_repeat: 0
-      seed: ${....seed}
-
-    base_terrain_generator:
-      x_size: ${....lunalab_settings.lab_length}
-      y_size: ${....lunalab_settings.lab_width}
-      resolution: ${....lunalab_settings.resolution}
-      max_elevation: 0.25
-      min_elevation: -0.025
-      z_scale: 1.0
-      seed: ${....seed}
-
-    deformation_engine:
-      enable: False
-      delay: 2.0
-      terrain_width: ${....lunalab_settings.lab_width}
-      terrain_height: ${....lunalab_settings.lab_length}
-      terrain_resolution: ${....lunalab_settings.resolution}
-      footprint:
-        width: 0.09
-        height: 0.2
-      deform_constrain:
-        x_deform_offset: 0.0
-        y_deform_offset: 0.0
-        deform_decay_ratio: 0.01
-      boundary_distribution:
-        distribution: trapezoidal
-        angle_of_repose: 1.047 #pi/3
-      depth_distribution:
-        distribution: trapezoidal
-        wave_frequency: 4.14 # num_grouser/pi (no slip)
-      force_depth_regression:
-        amplitude_slope: 0.00006
-        amplitude_intercept: 0.008
-        mean_slope: -0.00046
-        mean_intercept: -0.0013
-
-    is_yard: False
-    is_lab: True
-
-  root_path: /Lunalab
-  texture_path: /Lunalab/Looks/Basalt
-  dems_path: Terrains/Lunalab
-  mesh_position: [0, 0, 0]
-  mesh_orientation: [0, 0, 0, 1] # Quaternion x,y,z,w
-  mesh_scale: [1, 1, 1]
-  sim_length: ${..lunalab_settings.lab_length}
-  sim_width: ${..lunalab_settings.lab_width}
-  resolution: ${..lunalab_settings.resolution}
-
-# feel free to modify which robots to spawn
-# see the commented out examples
 robots_settings:
   uses_nucleus: False
   max_robots: 5
   robots_root: "/Robots"
   robot_controller: "pragyaan-controller"
   parameters:
-    # -
-    #   robot_name: ex1
-    #   usd_path: assets/USD_Assets/robots/ex1.usd
-    #   pose:
-    #     position: [10.0, 10.0, 0.5]
-    #     orientation: [0, 0, 0, 1]
-    #   domain_id: 0
-    #   target_links: ["left_front_wheel_link", "left_rear_wheel_link", "right_front_wheel_link", "right_rear_wheel_link"]
-    
-    # -
-    #   robot_name: jackal
-    #   usd_path: assets/USD_Assets/robots/jackal.usd
-    #   pose:
-    #     position: [5.0, 5.0, 0.5]
-    #     orientation: [1, 0, 0, 0]
-    #   domain_id: 0
-    #   target_links: ["front_left_wheel_link", "front_right_wheel_link", "rear_left_wheel_link", "rear_right_wheel_link"]
-
     -
       robot_name: pragyaan
       usd_path: assets/USD_Assets/robots/pragyaan/nograph_pragyaan.usd  
       pose:
-        position:  [5.0, 5.0, 0.5]
+        position: [26., 16.6, 0.8]
         orientation: [0., 0., 0.70711, 0.70711]
       domain_id: 0
       target_links: [
@@ -286,15 +201,17 @@ static_assets_settings:
     - asset_name: rock1
       usd_path: USD_Assets/rocks/lunalab_rocks/rock_1/rock1.usd
       pose:
-        position: [5.0, 7.5, 0.0]
+        position: [28, 19., 0.0]
+        # position: [5.0, 7.5, 0.0]
         orientation: [1, 0, 0, 1]
-      collision: False
+      collision: True
 
     - asset_name: lander
       usd_path: USD_Assets/common/lander/Vikram/Vikram.usd
       pose:
-        position: [5.0, 6.2, 0.0]
-        orientation: [0, 0, 0, 1] 
+        position: [25.7, 10.6, 0.2]
+        # orientation: [0.70711, 0. , 0., 0.70711]   # w/x/y/z
+        orientation: [0.5, 0.5 , 0.5, 0.5]   # w/x/y/z
       collision: True
 
 monitoring_cameras_settings:
@@ -303,8 +220,8 @@ monitoring_cameras_settings:
   camera_definitions:
     - name: "monitoring_camera"
       pose:
-        position: [0.0, 0.0, 2.5]
-        orientation: [0.493, -0.302, -0.169, 0.796]
+        position: [32.0, 22.0, 25.0]
+        orientation: [0.082948, 0.091931, 0.700333, 0.702995] # [x,y,z,w]
       camera_params:
         focal_length: 1.93
         horizontal_aperture:  2.4

@@ -171,7 +171,7 @@ terrain_manager:
 
 robots_settings:
   uses_nucleus: False
-  max_robots: 5 #TODO should we do something in regard to this number? currently big part of implementation is constrained to only 1 robot
+  max_robots: 5
   robots_root: "/Robots"
   robot_controller: "pragyaan-controller"
   parameters:
