@@ -23,7 +23,7 @@ from src.physics.terramechanics_solver import TerramechanicsSolver
 from src.terrain_management.terrain_manager import TerrainManager
 from src.configurations.environments import LunalabConf
 from src.environments.rock_manager import RockManager
-from src.environments.base_env import BaseEnv
+from src.environments.base_env import BaseEnv, SimulatorMode
 from src.robots.robot import RobotManager
 from assets import get_assets_path
 
@@ -34,7 +34,7 @@ class LunalabController(BaseEnv):
 
     def __init__(
         self,
-        is_ROS2:bool = True,
+        mode:SimulatorMode = SimulatorMode.ROS2,
         lunalab_settings: LunalabConf = None,
         rocks_settings: Dict = None,
         terrain_manager: TerrainManagerConf = None,
@@ -57,7 +57,7 @@ class LunalabController(BaseEnv):
             terrain_manager (TerrainManagerConf): The settings of the terrain manager.
             **kwargs: Arbitrary keyword arguments."""
 
-        super().__init__(is_ROS2, **kwargs)
+        super().__init__(mode, **kwargs)
         self.stage_settings = lunalab_settings
         self.T = TerrainManager(terrain_manager)
         self.RM = RockManager(**rocks_settings)
@@ -76,7 +76,7 @@ class LunalabController(BaseEnv):
             self.SAM = StaticAssetsManager(static_assets_settings)
 
         if monitoring_cameras_settings and monitoring_cameras_settings["enabled"]:
-            self.MCM = MonitoringCamerasManager(self._is_ROS2, monitoring_cameras_settings)
+            self.MCM = MonitoringCamerasManager(self._mode, monitoring_cameras_settings)
 
     def build_scene(self) -> None:
         """

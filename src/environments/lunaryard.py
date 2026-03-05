@@ -28,7 +28,7 @@ from src.terrain_management.terrain_manager import TerrainManager
 from src.configurations.environments import LunaryardConf
 from src.environments.rock_manager import RockManager
 from src.stellar.stellar_engine import StellarEngine
-from src.environments.base_env import BaseEnv
+from src.environments.base_env import BaseEnv, SimulatorMode
 from src.robots.robot import RobotManager
 
 
@@ -39,7 +39,7 @@ class LunaryardController(BaseEnv):
 
     def __init__(
         self,
-        is_ROS2:bool = True,
+        mode:SimulatorMode = SimulatorMode.ROS2,
         lunaryard_settings: LunaryardConf = None,
         rocks_settings: Dict = None,
         terrain_manager: TerrainManagerConf = None,
@@ -64,7 +64,7 @@ class LunaryardController(BaseEnv):
             **kwargs: Arbitrary keyword arguments.
         """
 
-        super().__init__(is_ROS2, **kwargs)
+        super().__init__(mode, **kwargs)
         self.stage_settings = lunaryard_settings
         self.sun_settings = sun_settings
 
@@ -92,7 +92,7 @@ class LunaryardController(BaseEnv):
             self.SAM = StaticAssetsManager(static_assets_settings)
 
         if monitoring_cameras_settings and monitoring_cameras_settings["enabled"]:
-            self.MCM = MonitoringCamerasManager(self._is_ROS2, monitoring_cameras_settings)
+            self.MCM = MonitoringCamerasManager(self._mode, monitoring_cameras_settings)
 
     def build_scene(self) -> None:
         """

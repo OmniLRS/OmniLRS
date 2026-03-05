@@ -24,7 +24,7 @@ from src.terrain_management.large_scale_terrain.pxr_utils import set_xform_ops, 
 from src.configurations.stellar_engine_confs import StellarEngineConf, SunConf
 from src.configurations.environments import LargeScaleTerrainConf
 from src.stellar.stellar_engine import StellarEngine
-from src.environments.base_env import BaseEnv
+from src.environments.base_env import BaseEnv, SimulatorMode
 from src.robots.robot import RobotManager
 from assets import get_assets_path
 
@@ -36,7 +36,7 @@ class LargeScaleController(BaseEnv):
 
     def __init__(
         self,
-        is_ROS2:bool = True, 
+        mode:SimulatorMode = SimulatorMode.ROS2,
         large_scale_terrain: LargeScaleTerrainConf = None,
         stellar_engine_settings: StellarEngineConf = None,
         sun_settings: SunConf = None,
@@ -58,7 +58,7 @@ class LargeScaleController(BaseEnv):
             **kwargs: Arbitrary keyword arguments.
         """
 
-        super().__init__(is_ROS2, **kwargs)
+        super().__init__(mode, **kwargs)
         self.stage_settings = large_scale_terrain
         self.sun_settings = sun_settings
         self.is_simulation_alive = is_simulation_alive
@@ -78,7 +78,7 @@ class LargeScaleController(BaseEnv):
             self.SAM = StaticAssetsManager(static_assets_settings)
 
         if monitoring_cameras_settings and monitoring_cameras_settings["enabled"]:
-            self.MCM = MonitoringCamerasManager(self._is_ROS2, monitoring_cameras_settings)
+            self.MCM = MonitoringCamerasManager(self._mode, monitoring_cameras_settings)
 
     def build_scene(self) -> None:
         """

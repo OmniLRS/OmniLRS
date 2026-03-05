@@ -1,3 +1,4 @@
+from src.environments.base_env import SimulatorMode
 from src.environments.large_scale_lunar import LargeScaleController
 from src.environments_wrappers.yamcs.base_wrapper_yamcs import Yamcs_BaseManager
 
@@ -30,7 +31,7 @@ class Yamcs_LargeScaleManager(Yamcs_BaseManager):
         # this naming still 'works' because all environments start with an L
         # but that might not be the case forever
         self.LC = LargeScaleController(
-            is_ROS2=False, **environment_cfg, is_simulation_alive=is_simulation_alive, close_simulation=close_simulation
+            mode=SimulatorMode.YAMCS, **environment_cfg, is_simulation_alive=is_simulation_alive, close_simulation=close_simulation
         )
         self.LC.load()
 

@@ -1,3 +1,4 @@
+from src.environments.base_env import SimulatorMode
 from src.environments.lunaryard import LunaryardController
 
 from src.environments_wrappers.yamcs.base_wrapper_yamcs import Yamcs_BaseManager
@@ -27,7 +28,7 @@ class Yamcs_LunaryardManager(Yamcs_BaseManager):
         # because LC was probably named when Lunalab was the only environment
         # this naming still 'works' because all environments start with an L
         # but that might not be the case forever
-        self.LC = LunaryardController(is_ROS2=False, **environment_cfg)
+        self.LC = LunaryardController(mode=SimulatorMode.YAMCS, **environment_cfg)
         self.LC.load()
 
         #NOTE Yamcs command subscriptions would go here

@@ -7,11 +7,14 @@ __email__ = "antoine.richard@uni.lu"
 __status__ = "development"
 
 import omni
-
 from pxr import Usd
-
 from src.robots.robot import RobotManager
+from enum import Enum
 
+class SimulatorMode(Enum):
+    ROS2 = 1
+    YAMCS = 2
+    SDG = 3
 
 class BaseEnv:
     """
@@ -20,7 +23,7 @@ class BaseEnv:
 
     def __init__(
         self,
-        is_ROS2:bool = True,
+        mode:SimulatorMode = SimulatorMode.ROS2,
         **kwargs,
     ) -> None:
         """
@@ -29,7 +32,7 @@ class BaseEnv:
         Args:
             **kwargs: Arbitrary keyword arguments.
         """
-        self._is_ROS2 = is_ROS2
+        self._mode:SimulatorMode = mode
         self.stage: Usd.Stage = omni.usd.get_context().get_stage()
 
     def build_scene(self) -> None:
