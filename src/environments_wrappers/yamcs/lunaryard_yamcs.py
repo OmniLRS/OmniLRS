@@ -1,3 +1,11 @@
+__author__ = "Aleksa Stanivuk"
+__copyright__ = "Copyright 2026, JAOPS"
+__license__ = "BSD 3-Clause"
+__version__ = "1.0.0"
+__maintainer__ = "Louis Burtz"
+__email__ = "ljburtz@jaops.com"
+__status__ = "development"
+
 from src.environments.simulator_mode_enum import SimulatorMode
 from src.environments.lunaryard import LunaryardController
 

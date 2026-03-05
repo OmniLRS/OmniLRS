@@ -1,3 +1,11 @@
+__author__ = "Louis Burtz"
+__copyright__ = "Copyright 2026, JAOPS"
+__license__ = "BSD 3-Clause"
+__version__ = "2.0.0"
+__maintainer__ = "Louis Burtz"
+__email__ = "ljburtz@jaops.com"
+__status__ = "development"
+
 """Basic thermal model for a six-faced box with a single interior node."""
 
 from __future__ import annotations

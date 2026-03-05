@@ -1,15 +1,16 @@
-__author__ = "Antoine Richard"
-__copyright__ = "Copyright 2023, Space Robotics Lab, SnT, University of Luxembourg, SpaceR"
+__author__ = "Antoine Richard, Aleksa Stanivuk"
+__copyright__ = "Copyright 2023-26, JAOPS, Space Robotics Lab, SnT, University of Luxembourg, SpaceR"
 __license__ = "GPL"
 __version__ = "1.0.0"
-__maintainer__ = "Antoine Richard"
-__email__ = "antoine.richard@uni.lu"
+__maintainer__ = "Louis Burtz"
+__email__ = "ljburtz@jaops.com"
 __status__ = "development"
 
 from typing import List, Tuple
 
 from pxr import Gf
 
+from src.environments.simulator_mode_enum import SimulatorMode
 from std_msgs.msg import String, Empty
 from geometry_msgs.msg import PoseStamped
 from rclpy.node import Node
@@ -24,8 +25,7 @@ class ROS_RobotManager(Node):
 
     def __init__(self, RM_conf: dict) -> None:
         super().__init__("Robot_spawn_manager_node")
-        self.RM = RobotManager(RM_conf, is_ROS2=True) #TODO noticed that ros1 does not even have RobotManager but sets LabManager where RobotManager is -> time for deprication?
-
+        self.RM = RobotManager(RM_conf, mode=SimulatorMode.ROS2) 
         self.create_subscription(PoseStamped, "/OmniLRS/Robots/Spawn", self.spawn_robot, 1)
         self.create_subscription(PoseStamped, "/OmniLRS/Robots/Teleport", self.teleport_robot, 1)
         self.create_subscription(String, "/OmniLRS/Robots/Reset", self.reset_robot, 1)

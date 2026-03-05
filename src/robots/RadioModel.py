@@ -1,3 +1,11 @@
+__author__ = "Louis Burtz"
+__copyright__ = "Copyright 2026, JAOPS"
+__license__ = "BSD 3-Clause"
+__version__ = "2.0.0"
+__maintainer__ = "Louis Burtz"
+__email__ = "ljburtz@jaops.com"
+__status__ = "development"
+
 """Basic RSSI model relating rover/lander separation to signal strength."""
 
 from __future__ import annotations
