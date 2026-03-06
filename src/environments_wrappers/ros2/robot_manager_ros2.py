@@ -10,7 +10,7 @@ from typing import List, Tuple
 
 from pxr import Gf
 
-from src.environments.simulator_mode_enum import SimulatorMode
+from src.configurations.simulator_mode_enum import SimulatorMode
 from std_msgs.msg import String, Empty
 from geometry_msgs.msg import PoseStamped
 from rclpy.node import Node

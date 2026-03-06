@@ -8,7 +8,7 @@ __status__ = "development"
 
 from typing import List, Tuple
 
-from src.environments.simulator_mode_enum import SimulatorMode
+from src.configurations.simulator_mode_enum import SimulatorMode
 from src.robots.robot import RobotManager
 
 #TODO 3rd March 2026 (for after Version 3)

@@ -8,7 +8,7 @@ __status__ = "development"
 
 import omni
 from pxr import Usd
-from src.environments.simulator_mode_enum import SimulatorMode
+from src.configurations.simulator_mode_enum import SimulatorMode
 from src.robots.robot import RobotManager
 
 class BaseEnv:
