@@ -5,8 +5,8 @@ SyntaxError: from __future__ imports must occur at the beginning of the file
 """
 
 __author__ = "Louis Burtz"
-__copyright__ = "Copyright 2026, JAOPS"
-__license__ = "BSD 3-Clause"
+__copyright__ = "Copyright 2025-26, JAOPS"
+__license__ = "BSD-3-Clause"
 __version__ = "2.0.0"
 __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
