@@ -1,9 +1,9 @@
-__author__ = "Antoine Richard, Junnosuke Kamohara"
-__copyright__ = "Copyright 2023-24, Space Robotics Lab, SnT, University of Luxembourg, SpaceR"
-__license__ = "BSD 3-Clause"
+__author__ = "Antoine Richard, Junnosuke Kamohara, Aleksa Stanivuk"
+__copyright__ = "Copyright 2023-26, JAOPS, Space Robotics Lab, SnT, University of Luxembourg, SpaceR"
+__license__ = "BSD-3-Clause"
 __version__ = "2.0.0"
-__maintainer__ = "Antoine Richard"
-__email__ = "antoine.richard@uni.lu"
+__maintainer__ = "Louis Burtz"
+__email__ = "ljburtz@jaops.com"
 __status__ = "development"
 
 from typing import List, Tuple, Dict
@@ -15,6 +15,7 @@ import omni
 from pxr import UsdGeom, UsdLux, Gf, Usd
 
 from src.environments.monitoring_cameras_manager import MonitoringCamerasManager
+from src.environments.simulator_mode_enum import SimulatorMode
 from src.environments.static_assets_manager import StaticAssetsManager
 from src.physics.terramechanics_parameters import RobotParameter, TerrainMechanicalParameter
 from src.terrain_management.large_scale_terrain.pxr_utils import set_xform_ops
@@ -34,6 +35,7 @@ class LunalabController(BaseEnv):
 
     def __init__(
         self,
+        mode:SimulatorMode = SimulatorMode.ROS2,
         lunalab_settings: LunalabConf = None,
         rocks_settings: Dict = None,
         terrain_manager: TerrainManagerConf = None,
@@ -56,7 +58,7 @@ class LunalabController(BaseEnv):
             terrain_manager (TerrainManagerConf): The settings of the terrain manager.
             **kwargs: Arbitrary keyword arguments."""
 
-        super().__init__(**kwargs)
+        super().__init__(mode, **kwargs)
         self.stage_settings = lunalab_settings
         self.T = TerrainManager(terrain_manager)
         self.RM = RockManager(**rocks_settings)
@@ -74,8 +76,8 @@ class LunalabController(BaseEnv):
         if static_assets_settings:
             self.SAM = StaticAssetsManager(static_assets_settings)
 
-        if monitoring_cameras_settings:
-            self.MCM = MonitoringCamerasManager(monitoring_cameras_settings)
+        if monitoring_cameras_settings and monitoring_cameras_settings["enabled"]:
+            self.MCM = MonitoringCamerasManager(self._mode, monitoring_cameras_settings)
 
     def build_scene(self) -> None:
         """
@@ -136,7 +138,7 @@ class LunalabController(BaseEnv):
         """
 
         self.robotManager = robotManager
-        if self.robotManager.RM_conf.yamcs_tmtc.get("enabled", False):
+        if self._mode == SimulatorMode.YAMCS:
             self.robotManager.start_TMTC()
 
     def get_lux_assets(self, prim: "Usd.Prim") -> List[Usd.Prim]:

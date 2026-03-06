@@ -1,9 +1,9 @@
-__author__ = "Antoine Richard, Junnosuke Kamohara"
-__copyright__ = "Copyright 2023-24, Space Robotics Lab, SnT, University of Luxembourg, SpaceR"
-__license__ = "BSD 3-Clause"
+__author__ = "Antoine Richard, Junnosuke Kamohara, Aleksa Stanivuk"
+__copyright__ = "Copyright 2023-26, JAOPS, Space Robotics Lab, SnT, University of Luxembourg, SpaceR"
+__license__ = "BSD-3-Clause"
 __version__ = "2.0.0"
-__maintainer__ = "Antoine Richard"
-__email__ = "antoine.richard@uni.lu"
+__maintainer__ = "Louis Burtz"
+__email__ = "ljburtz@jaops.com"
 __status__ = "development"
 
 import math
@@ -29,9 +29,10 @@ from src.configurations.robot_confs import RobotManagerConf
 import numpy as np
 from scipy.spatial.transform import Rotation as R
 
+from src.environments.simulator_mode_enum import SimulatorMode
 from src.environments.utils import transform_orientation_from_xyzw_into_xyz, transform_orientation_into_xyz
 from src.robots.subsystems_manager import RobotSubsystemsManager
-from src.robots.yamcs_TMTC import YamcsTMTC
+from src.tmtc.yamcs_TMTC import YamcsTMTC
 from omni.isaac.sensor import Camera
 
 from isaacsim.sensors.physics import _sensor
@@ -45,6 +46,8 @@ class RobotManager:
     def __init__(
         self,
         RM_conf: RobotManagerConf,
+        mode:SimulatorMode = SimulatorMode.ROS2,
+        yamcs_instance_conf:dict = {}
     ) -> None:
         """
         Args:
@@ -53,9 +56,9 @@ class RobotManager:
 
         self.stage = omni.usd.get_context().get_stage()
         self.RM_conf = RobotManagerConf(**RM_conf)
+        self.is_ROS2 = mode == SimulatorMode.ROS2
         self.robot_parameters = self.RM_conf.parameters
         self.uses_nucleus = self.RM_conf.uses_nucleus
-        self.is_ROS2 = self.RM_conf.is_ROS2
         self.max_robots = self.RM_conf.max_robots
         self.robots_root = self.RM_conf.robots_root
         createXform(self.stage, self.robots_root)
@@ -63,6 +66,7 @@ class RobotManager:
         self.robots_RG: Dict[str, RobotRigidGroup] = {}
         self.TMTC: YamcsTMTC
         self.num_robots = 0
+        self.yamcs_instance_conf = yamcs_instance_conf
 
     def preload_robot(
         self,
@@ -246,7 +250,18 @@ class RobotManager:
 
     def start_TMTC(self):
         robot_name = list(self.robots.keys())[0].replace("/","") # assumes only 1 robot for workshop use
-        self.TMTC = YamcsTMTC(self.RM_conf.yamcs_tmtc, robot_name, self.robots_RG, self.robots["/" + robot_name])
+        # self.TMTC = YamcsTMTC(self.RM_conf.yamcs_tmtc, robot_name, self.robots_RG, self.robots["/" + robot_name])
+        # Call a specific implementation of TMTC here:
+
+        if self.RM_conf.robot_controller == "pragyaan-controller":
+            from src.tmtc.pragyaan.pragyaan_controller import PragyaanController
+
+            self.TMTC = PragyaanController(self.yamcs_instance_conf, self.RM_conf.yamcs_tmtc, robot_name, self.robots_RG, self.robots["/" + robot_name])
+        elif self.RM_conf is None or self.RM_conf.robot_controller == "":
+            raise Exception("No robot controller was setup in yaml configurations.")
+        else: 
+            raise Exception("Settings for '" + str(self.RM_conf.robot_controller )  + "' robot controller are not specified.")
+
         self.TMTC.start_streaming_data()
 
 class Robot:
@@ -394,6 +409,9 @@ class Robot:
         return depth
     
     def get_imu_readings(self):
+        if (self._imu_sensor_path == ""):
+            raise Exception("Path to imu sensor is not defined. Please check your .yaml configuration file. 'imu_sensor_path' should be defined on the same level as 'robot_name'.")
+        
         # https://docs.isaacsim.omniverse.nvidia.com/4.5.0/sensors/isaacsim_sensors_physics_imu.html#reading-sensor-output
         sensor_reading = self._imu_sensor_interface.get_sensor_reading(self._imu_sensor_path, use_latest_data = True, read_gravity = True)
         linear_acceleration = {"ax": sensor_reading.lin_acc_x, "ay": sensor_reading.lin_acc_y, "az": sensor_reading.lin_acc_z}
@@ -532,6 +550,12 @@ class Robot:
         if self._solar_panel_dof == None and self._solar_panel_joint != "":
             art = self._get_art()
             self._solar_panel_dof = self.dc.find_articulation_dof(art, self._solar_panel_joint)
+            return
+        elif self._solar_panel_dof != None:
+            return
+
+        if self._solar_panel_joint == "":
+            raise Exception("Solar panel joint is not specified. Please check your .yaml configuration file. 'solar_panel_joint' should be defined on the same level as 'robot_name'.")
 
     def deploy_solar_panel(self):
         self._init_solar_panel_dof()

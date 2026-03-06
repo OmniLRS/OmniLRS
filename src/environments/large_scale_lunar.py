@@ -1,9 +1,9 @@
-__author__ = "Antoine Richard"
-__copyright__ = "Copyright 2023-24, Space Robotics Lab, SnT, University of Luxembourg, SpaceR"
-__license__ = "BSD 3-Clause"
+__author__ = "Antoine Richard, Aleksa Stanivuk"
+__copyright__ = "Copyright 2023-26, JAOPS, Space Robotics Lab, SnT, University of Luxembourg, SpaceR"
+__license__ = "BSD-3-Clause"
 __version__ = "2.0.0"
-__maintainer__ = "Antoine Richard"
-__email__ = "antoine.richard@uni.lu"
+__maintainer__ = "Louis Burtz"
+__email__ = "ljburtz@jaops.com"
 __status__ = "development"
 
 from scipy.spatial.transform import Rotation as SSTR
@@ -18,6 +18,7 @@ import omni
 from pxr import UsdLux, Gf, Usd
 
 from src.environments.monitoring_cameras_manager import MonitoringCamerasManager
+from src.environments.simulator_mode_enum import SimulatorMode
 from src.environments.static_assets_manager import StaticAssetsManager
 from src.terrain_management.large_scale_terrain_manager import LargeScaleTerrainManager
 from src.terrain_management.large_scale_terrain.pxr_utils import set_xform_ops, set_texture_path
@@ -36,6 +37,7 @@ class LargeScaleController(BaseEnv):
 
     def __init__(
         self,
+        mode:SimulatorMode = SimulatorMode.ROS2,
         large_scale_terrain: LargeScaleTerrainConf = None,
         stellar_engine_settings: StellarEngineConf = None,
         sun_settings: SunConf = None,
@@ -57,7 +59,7 @@ class LargeScaleController(BaseEnv):
             **kwargs: Arbitrary keyword arguments.
         """
 
-        super().__init__(**kwargs)
+        super().__init__(mode, **kwargs)
         self.stage_settings = large_scale_terrain
         self.sun_settings = sun_settings
         self.is_simulation_alive = is_simulation_alive
@@ -76,8 +78,8 @@ class LargeScaleController(BaseEnv):
         if static_assets_settings:
             self.SAM = StaticAssetsManager(static_assets_settings)
 
-        if monitoring_cameras_settings:
-            self.MCM = MonitoringCamerasManager(monitoring_cameras_settings)
+        if monitoring_cameras_settings and monitoring_cameras_settings["enabled"]:
+            self.MCM = MonitoringCamerasManager(self._mode, monitoring_cameras_settings)
 
     def build_scene(self) -> None:
         """
@@ -179,7 +181,7 @@ class LargeScaleController(BaseEnv):
         """
 
         self.robotManager = robotManager
-        if self.robotManager.RM_conf.yamcs_tmtc.get("enabled", False):
+        if self._mode == SimulatorMode.YAMCS:
             self.robotManager.start_TMTC()
         self.pose_tracker = list(self.robotManager.robots.values())[0].get_pose
 

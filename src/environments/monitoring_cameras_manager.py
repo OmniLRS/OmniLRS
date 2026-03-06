@@ -1,4 +1,9 @@
-__author__ = "Aleksa Stanivuk, Cristian-Augustin Susanu"
+__author__ = "Aleksa Stanivuk"
+__copyright__ = "Copyright 2025-26, JAOPS"
+__license__ = "BSD-3-Clause"
+__version__ = "2.0.0"
+__maintainer__ = "Louis Burtz"
+__email__ = "ljburtz@jaops.com"
 __status__ = "development"
 
 from typing import Dict
@@ -7,6 +12,7 @@ import omni
 from pxr import UsdGeom, Gf
 import omni.replicator.core as rep
 import omni.syntheticdata as sd
+from src.environments.simulator_mode_enum import SimulatorMode
 from src.environments.utils import set_xform_pose
 from omni.isaac.sensor import Camera
 
@@ -17,7 +23,8 @@ class MonitoringCamerasManager:
 
     cameras = {}
 
-    def __init__(self, cameras_cfg):
+    def __init__(self, mode:SimulatorMode, cameras_cfg):
+        self._mode = mode
         self._cfg = cameras_cfg
         self._root_path = cameras_cfg["root_path"]
         self._stage = omni.usd.get_context().get_stage()
@@ -50,7 +57,7 @@ class MonitoringCamerasManager:
             # NOTE render products do not work, because it requires rep.orchestrator.step() which classhes with world.step()
             # rp = rep.create.render_product(prim_path, (c["resolution"][0], c["resolution"][1])) 
 
-            if c["ros2"]["enabled"]:
+            if self._mode == SimulatorMode.ROS2:
                 self._set_ros2_publisher(rp, c["ros2"], c["type"])
 
 

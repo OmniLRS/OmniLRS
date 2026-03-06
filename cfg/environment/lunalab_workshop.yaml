@@ -148,54 +148,34 @@ terrain_manager:
 # see the commented out examples
 robots_settings:
   uses_nucleus: False
-  is_ROS2: True
   max_robots: 5
   robots_root: "/Robots"
+  robot_controller: "pragyaan-controller"
   parameters:
     # -
     #   robot_name: ex1
-    #   usd_path: assets/USD_Assets/robots/ex1.usd   # by the Space Robotics Laboratory of Tohoku University
+    #   usd_path: assets/USD_Assets/robots/ex1.usd
     #   pose:
-    #     position: [1.0, 1.0, 0.5]
-    #     orientation: [1, 0, 0, 0]
+    #     position: [10.0, 10.0, 0.5]
+    #     orientation: [0, 0, 0, 1]
     #   domain_id: 0
     #   target_links: ["left_front_wheel_link", "left_rear_wheel_link", "right_front_wheel_link", "right_rear_wheel_link"]
-
+    
     # -
     #   robot_name: jackal
-    #   # usd_path: assets/USD_Assets/robots/ros2_jackal_PhysX_vlp16_stereo.usd
-    #   usd_path: assets/USD_Assets/robots/ros2_jackal_PhysX_vlp16.usd
+    #   usd_path: assets/USD_Assets/robots/jackal.usd
     #   pose:
     #     position: [5.0, 5.0, 0.5]
     #     orientation: [1, 0, 0, 0]
     #   domain_id: 0
     #   target_links: ["front_left_wheel_link", "front_right_wheel_link", "rear_left_wheel_link", "rear_right_wheel_link"]
-    # -
-      # robot_name: husky
-      # # usd_path: assets/USD_Assets/robots/ros2_husky_PhysX_vlp16.usd         
-      # usd_path: assets/USD_Assets/robots/nograph_husky.usd     
-      # # usd_path: assets/USD_Assets/robots/ros2_husky_PhysX_vlp16_mono_depth_imu.usd 
-      # pose:
-      #   position: [5.0, 5.0, 0.5]
-      #   orientation: [1, 0, 0, 0]
-      # domain_id: 0
-      # target_links: ["front_left_wheel_link", "front_right_wheel_link", "rear_left_wheel_link", "rear_right_wheel_link"]
-      # base_link: "base_link" # core link used to determine the position of the robot
-      # wheel_joints:
-      #   left: ["front_left_wheel", "rear_left_wheel"]
-      #   right: ["front_right_wheel", "rear_right_wheel"]
-      # camera:
-      #   prim_path: "/Robots/husky/d455/RSD455/Camera_OmniVision_OV9782_Left"
-      #   resolutions: 
-      #     low: [320, 240]
-      #     high: [1440, 1080]
-      # imu_sensor_path: "/Robots/husky/d455/RSD455/Imu_Sensor"
+
     -
       robot_name: pragyaan
       usd_path: assets/USD_Assets/robots/pragyaan/nograph_pragyaan.usd  
       pose:
-        position: [5.0, 5.0, 0.8]
-        orientation: [0.5, 0.5, 0.5, 0.5]
+        position:  [5.0, 5.0, 0.5]
+        orientation: [0., 0., 0.70711, 0.70711]
       domain_id: 0
       target_links: [
         "Mobility/Wheel_front_left",
@@ -206,27 +186,50 @@ robots_settings:
         "Mobility/Wheel_back_right"
       ]
       base_link: "base_link" # core link used to determine the position of the robot
+      dimensions:
+        width: 1.6 # m
+        length: 1.5
+      pos_relative_to_prim: "/StaticAssets/lander"
       wheel_joints:
         left: ["wheel_fl", "wheel_ml", "wheel_bl"]
         right: ["wheel_fr", "wheel_mr", "wheel_br"]
       camera:
-        prim_path: "/Robots/husky/Body/body_main/depth_cam"
+        prim_path: "/Robots/pragyaan/Body/body_main/depth_cam"
         resolutions: 
           low: [320, 240]
           high: [1440, 1080]
-      turn_speed_coef: 17
+      imu_sensor_path: "/Robots/pragyaan/base_link/Imu_Sensor"
+      turn_speed_coef: 19
       solar_panel_joint: "solarJoint"  # finds it within the main robot articulation
-  yamcs_tmtc:
-    enabled: True
-    address: "localhost:8090"
-    instance: "workshop"
-    processor: "realtime"
+  yamcs_tmtc: # these settings are relevant if Yamcs mode
     intervals:
       robot_stats: 1
       camera_streaming: 2
     lander_camera:
       prim_path: "/StaticAssets/lander/Lander/Cam_Right/Lander_Camera"
       resolution: [1440, 1080]
+    images:
+      no_data_image_path: "/workspace/omnilrs/assets/images/no_data_grafana.png"
+      buckets:
+        - name: "images_streaming"
+          path: "/Rover/camera/images_streaming"
+        - name: "images_oncommand"
+          path: "/Rover/camera/images_oncommand"
+        - name: "images_depth"
+          path: "/Rover/camera/images_depth"
+        - name: "images_lander"
+          path: "/Lander/camera/images_oncommand"
+        - name: "images_monitoring"
+          path: "/Admin/camera/images_monitoring"
+    payload:
+      apxs:
+        resolution: [1440, 1080]
+        samples_dir: "/workspace/omnilrs/assets/images/"
+        no_data: "APXS_nodata.png"
+        measurement: "APXS_measurement.png"
+        bucket:
+          name: "images_apxs"
+          path: "/Rover/payload/images_apxs"
     parameters:
       pose_of_base_link: "/Rover/pose_ground_truth"
       go_nogo: "/Rover/go_nogo"
@@ -261,6 +264,7 @@ robots_settings:
       neutron_counts: "/Rover/neutron_counts"
       camera_streaming_state: "/Rover/camera/images_streaming/state"
       solar_panel_state: "/Rover/solar_panel_state"
+      motor_encoder: "/Rover/motor_encoder"
     commands:
       drive_straight: "/Rover/motor/drive_straight"
       drive_turn: "/Rover/motor/drive_turn"
@@ -287,16 +291,17 @@ static_assets_settings:
       collision: False
 
     - asset_name: lander
-      usd_path: USD_Assets/rocks/lunalab_rocks/rock_2/rock2.usd
+      usd_path: USD_Assets/common/lander/Vikram/Vikram.usd
       pose:
         position: [5.0, 6.2, 0.0]
         orientation: [0, 0, 0, 1] 
       collision: True
 
 monitoring_cameras_settings:
+  enabled: True
   root_path: "/MonitoringCameras"
   camera_definitions:
-    - name: "corner"
+    - name: "monitoring_camera"
       pose:
         position: [0.0, 0.0, 2.5]
         orientation: [0.493, -0.302, -0.169, 0.796]
@@ -307,10 +312,9 @@ monitoring_cameras_settings:
         fstop: 5.0
         focus_distance: 10.0
         clipping_range: [0.01, 1000000.0]
-      ros2:
-        enabled: False
-        topic: "/monitoring/corner"
-        frame_id: "corner_id"
+      ros2: # these settings are only relevant if the mode is set to ROS2 (@cfg/config.yaml)
+        topic: "/monitoring/monitoring_camera"
+        frame_id: "monitoring_camera_id"
       type: "Rgb" # make sure to have correct naming - eg. Rgb ; Depth ; SemanticSegmentation ; InstanceSegmentation ; Normals
-      resolution: [1280, 720]  
+      resolution: [320, 240]
       # stream_frequency: 2.0 #  every 0.5s - in order to not overwhelm the network

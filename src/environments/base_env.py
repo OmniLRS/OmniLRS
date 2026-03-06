@@ -1,17 +1,15 @@
-__author__ = "Antoine Richard, Junnosuke Kamohara"
-__copyright__ = "Copyright 2023-24, Space Robotics Lab, SnT, University of Luxembourg, SpaceR"
-__license__ = "BSD 3-Clause"
+__author__ = "Antoine Richard, Junnosuke Kamohara, Aleksa Stanivuk"
+__copyright__ = "Copyright 2023-26, JAOPS, Space Robotics Lab, SnT, University of Luxembourg, SpaceR"
+__license__ = "BSD-3-Clause"
 __version__ = "2.0.0"
-__maintainer__ = "Antoine Richard"
-__email__ = "antoine.richard@uni.lu"
+__maintainer__ = "Louis Burtz"
+__email__ = "ljburtz@jaops.com"
 __status__ = "development"
 
 import omni
-
 from pxr import Usd
-
+from src.environments.simulator_mode_enum import SimulatorMode
 from src.robots.robot import RobotManager
-
 
 class BaseEnv:
     """
@@ -20,6 +18,7 @@ class BaseEnv:
 
     def __init__(
         self,
+        mode:SimulatorMode = SimulatorMode.ROS2,
         **kwargs,
     ) -> None:
         """
@@ -28,7 +27,7 @@ class BaseEnv:
         Args:
             **kwargs: Arbitrary keyword arguments.
         """
-
+        self._mode:SimulatorMode = mode
         self.stage: Usd.Stage = omni.usd.get_context().get_stage()
 
     def build_scene(self) -> None:

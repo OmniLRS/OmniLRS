@@ -1,7 +1,7 @@
 defaults:
   - environment: lunalab
   - rendering: ray_tracing
-  - mode: ROS2
+  - mode: ROS2 # Yamcs
   - physics: default_physics
 
 hydra:

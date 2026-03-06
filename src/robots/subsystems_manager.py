@@ -1,3 +1,11 @@
+__author__ = "Aleksa Stanivuk"
+__copyright__ = "Copyright 2025-26, JAOPS"
+__license__ = "BSD-3-Clause"
+__version__ = "2.0.0"
+__maintainer__ = "Louis Burtz"
+__email__ = "ljburtz@jaops.com"
+__status__ = "development"
+
 from enum import StrEnum, Enum
 
 from src.environments.utils import get_moon_env_name
@@ -83,14 +91,8 @@ class RobotSubsystemsManager:
         self._update_positions()
 
     def _update_positions(self):
-        # if get_moon_env_name() == "Lunaryard": # Lunalab has no sun prim
-        #     self._sun_pos, rot = get_world_pose("/" + get_moon_env_name() + "/Sun/sun") # self.SUN_POSITION
-        # else: 
-        #     self._sun_pos = self.SUN_POSITION
         self._sun_pos = self.SUN_POSITION
         print(self._sun_pos)
-        # print(get_moon_env_name())
-        # print(get_moon_env_name() == "Lunaryard")
 
     def get_lander_position(self):
         return self._lander_pos
@@ -133,6 +135,9 @@ class RobotSubsystemsManager:
             return True
         
         return False
+    
+    def get_power_state(self, electronic):
+        return self._electronics_power_state[electronic] 
 
     @_update_positions_before
     def calculate_rssi(self, robot_position):

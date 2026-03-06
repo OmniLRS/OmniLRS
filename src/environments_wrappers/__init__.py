@@ -1,9 +1,9 @@
 __author__ = "Antoine Richard"
-__copyright__ = "Copyright 2023-24, Space Robotics Lab, SnT, University of Luxembourg, SpaceR"
-__license__ = "BSD 3-Clause"
+__copyright__ = "Copyright 2023-26, JAOPS, Space Robotics Lab, SnT, University of Luxembourg, SpaceR"
+__license__ = "BSD-3-Clause"
 __version__ = "2.0.0"
-__maintainer__ = "Antoine Richard"
-__email__ = "antoine.richard@uni.lu"
+__maintainer__ = "Louis Burtz"
+__email__ = "ljburtz@jaops.com"
 __status__ = "development"
 
 
@@ -92,6 +92,19 @@ def startSim(cfg: dict):
     set_lens_flares(cfg)
     set_motion_blur(cfg)
     set_chromatic_aberrations(cfg)
+
+    #NOTE mode is chosen by setting the value of "mode" property within "defaults" @cfg/config.yaml
+    # it can also be overwritten through console, same as environment
+    # mode is required to exist also @cfg/mode/[mode_name].yaml with "name" property
+
+    # Omits ROS settings, purely Yamcs-native
+    if cfg["mode"]["name"] == "Yamcs":
+        # Call to the environment factory to load the correct environment.
+        from src.environments_wrappers.yamcs.simulation_manager_yamcs import (
+            Yamcs_SimulationManager,
+        )
+
+        SM = Yamcs_SimulationManager(cfg, simulation_app)
 
     # Starts the ROS2 extension. Allows to import ROS2 related things.
     if cfg["mode"]["name"] == "ROS2":

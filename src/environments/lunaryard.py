@@ -1,9 +1,9 @@
-__author__ = "Antoine Richard, Junnosuke Kamohara"
-__copyright__ = "Copyright 2023-24, Space Robotics Lab, SnT, University of Luxembourg, SpaceR"
-__license__ = "BSD 3-Clause"
+__author__ = "Antoine Richard, Junnosuke Kamohara, Aleksa Stanivuk"
+__copyright__ = "Copyright 2023-26, JAOPS, Space Robotics Lab, SnT, University of Luxembourg, SpaceR"
+__license__ = "BSD-3-Clause"
 __version__ = "2.0.0"
-__maintainer__ = "Antoine Richard"
-__email__ = "antoine.richard@uni.lu"
+__maintainer__ = "Louis Burtz"
+__email__ = "ljburtz@jaops.com"
 __status__ = "development"
 
 from scipy.spatial.transform import Rotation as SSTR
@@ -29,6 +29,7 @@ from src.configurations.environments import LunaryardConf
 from src.environments.rock_manager import RockManager
 from src.stellar.stellar_engine import StellarEngine
 from src.environments.base_env import BaseEnv
+from src.environments.simulator_mode_enum import SimulatorMode
 from src.robots.robot import RobotManager
 
 
@@ -39,6 +40,7 @@ class LunaryardController(BaseEnv):
 
     def __init__(
         self,
+        mode:SimulatorMode = SimulatorMode.ROS2,
         lunaryard_settings: LunaryardConf = None,
         rocks_settings: Dict = None,
         terrain_manager: TerrainManagerConf = None,
@@ -63,7 +65,7 @@ class LunaryardController(BaseEnv):
             **kwargs: Arbitrary keyword arguments.
         """
 
-        super().__init__(**kwargs)
+        super().__init__(mode, **kwargs)
         self.stage_settings = lunaryard_settings
         self.sun_settings = sun_settings
 
@@ -90,8 +92,8 @@ class LunaryardController(BaseEnv):
         if static_assets_settings:
             self.SAM = StaticAssetsManager(static_assets_settings)
 
-        if monitoring_cameras_settings:
-            self.MCM = MonitoringCamerasManager(monitoring_cameras_settings)
+        if monitoring_cameras_settings and monitoring_cameras_settings["enabled"]:
+            self.MCM = MonitoringCamerasManager(self._mode, monitoring_cameras_settings)
 
     def build_scene(self) -> None:
         """
@@ -188,7 +190,7 @@ class LunaryardController(BaseEnv):
 
     def add_robot_manager(self, robotManager: RobotManager) -> None:
         self.robotManager = robotManager
-        if self.robotManager.RM_conf.yamcs_tmtc.get("enabled", False):
+        if self._mode == SimulatorMode.YAMCS:
             self.robotManager.start_TMTC()
 
     def load_DEM(self) -> None:

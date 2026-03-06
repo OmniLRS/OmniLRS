@@ -1,6 +1,18 @@
-"""Basic RSSI model relating rover/lander separation to signal strength."""
-
 from __future__ import annotations
+"""
+The above import MUST be at the top of the file, can not be preceded by anything or it crashes
+SyntaxError: from __future__ imports must occur at the beginning of the file
+"""
+
+__author__ = "Louis Burtz"
+__copyright__ = "Copyright 2025-26, JAOPS"
+__license__ = "BSD-3-Clause"
+__version__ = "2.0.0"
+__maintainer__ = "Louis Burtz"
+__email__ = "ljburtz@jaops.com"
+__status__ = "development"
+
+"""Basic RSSI model relating rover/lander separation to signal strength."""
 
 import math
 import random

@@ -1,9 +1,9 @@
-__author__ = "Antoine Richard"
-__copyright__ = "Copyright 2023-24, Space Robotics Lab, SnT, University of Luxembourg, SpaceR"
-__license__ = "BSD 3-Clause"
+__author__ = "Antoine Richard, Aleksa Stanivuk"
+__copyright__ = "Copyright 2023-26, JAOPS, Space Robotics Lab, SnT, University of Luxembourg, SpaceR"
+__license__ = "BSD-3-Clause"
 __version__ = "2.0.0"
-__maintainer__ = "Antoine Richard"
-__email__ = "antoine.richard@uni.lu"
+__maintainer__ = "Louis Burtz"
+__email__ = "ljburtz@jaops.com"
 __status__ = "development"
 
 import os
@@ -30,7 +30,7 @@ class RobotParameters:
     camera: Dict = field(default_factory=dict)
     imu_sensor_path: str = field(default_factory=str)
     dimensions: dict = field(default_factory=dict)
-    turn_speed_coef: float = field(default_factory=float)
+    turn_speed_coef: float = 1
     solar_panel_joint: str = field(default_factory=str)
 
     def __post_init__(self):
@@ -40,11 +40,11 @@ class RobotParameters:
 @dataclass
 class RobotManagerConf:
     uses_nucleus: str = False
-    is_ROS2: str = False
     max_robots: int = 5
     robots_root: str = "/Robots"
     parameters: List[RobotParameters] = field(default_factory=list)
     yamcs_tmtc: Dict = field(default_factory=dict)
+    robot_controller: str = field(default_factory=str)
 
     def __post_init__(self):
         if self.parameters:

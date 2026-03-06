@@ -1,6 +1,18 @@
-"""Basic thermal model for a six-faced box with a single interior node."""
-
 from __future__ import annotations
+"""
+The above import MUST be at the top of the file, can not be preceded by anything or it crashes
+SyntaxError: from __future__ imports must occur at the beginning of the file
+"""
+
+__author__ = "Louis Burtz"
+__copyright__ = "Copyright 2025-26, JAOPS"
+__license__ = "BSD-3-Clause"
+__version__ = "2.0.0"
+__maintainer__ = "Louis Burtz"
+__email__ = "ljburtz@jaops.com"
+__status__ = "development"
+
+"""Basic thermal model for a six-faced box with a single interior node."""
 
 import math
 from dataclasses import dataclass, field

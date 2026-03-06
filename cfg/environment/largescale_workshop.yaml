@@ -1,0 +1,237 @@
+name: LargeScale
+seed: 42
+physics_dt: 0.01666 # 60 Hz
+rendering_dt: 0.0333 # 30 Hz
+enforce_realtime: true
+
+# Stage settings, only edit if you know what you are doing.
+large_scale_terrain:
+  hr_dem_generate_craters: True
+  starting_position: [2800,-2200]
+  crater_gen_densities: [0.025, 0.05, 0.5]
+  crater_gen_radius: [[1.5, 2.5], [0.75, 1.5], [0.25, 0.5]]
+  rock_gen_cfgs:
+    -
+      rock_sampler_cfg: 
+        block_size: 50
+        seed: 42
+        rock_dist_cfg:
+          position_distribution:
+            name: "thomas_point_process"
+            parent_density: 0.04
+            child_density: 100
+            sigma: 3.0
+            seed: 42
+          scale_distribution:
+            name: "uniform"
+            min: 0.02
+            max: 0.05
+            seed: 43
+      rock_assets_folder: "assets/USD_Assets/rocks/small_rocks"
+      instancer_name: "very_small_rock_instancer"
+      seed: 46
+      block_span: 1
+      add_colliders: False
+      texture_name: "seaside_rock_2k"
+      texture_path: "assets/Textures/seaside_rock_2k.mdl"
+    -
+      rock_sampler_cfg:
+        block_size: 50
+        seed: 42
+        rock_dist_cfg:
+          position_distribution:
+            name: "thomas_point_process"
+            parent_density: 0.01
+            child_density: 25
+            sigma: 3.0
+            seed: 44
+          scale_distribution:
+            name: "uniform"
+            min: 0.05
+            max: 0.2
+            seed: 45
+      rock_assets_folder: "assets/USD_Assets/rocks/small_rocks"
+      instancer_name: "small_rock_instancer"
+      seed: 47
+      block_span: 2
+      add_colliders: True
+      collider_mode: "none"
+      texture_name: "seaside_rock_2k"
+      texture_path: "assets/Textures/seaside_rock_2k.mdl"
+
+stellar_engine_settings:
+  start_date:
+    year: 2024
+    month: 5
+    day: 21
+    hour: 5
+    minute: 1
+  time_scale: 1.0
+  update_interval: 600
+
+sun_settings:
+  intensity: 1750.0
+  angle: 0.53
+  diffuse_multiplier: 1.0
+  specular_multiplier: 1.0
+  color: [1.0, 1.0, 1.0]
+  temperature: 6500.0
+  azimuth: 180.0
+  elevation: 45.0
+
+robots_settings:
+  uses_nucleus: False
+  max_robots: 5
+  robots_root: "/Robots"
+  robot_controller: "pragyaan-controller"
+  parameters:
+    -
+      robot_name: pragyaan
+      usd_path: assets/USD_Assets/robots/pragyaan/nograph_pragyaan.usd  
+      pose:
+        position: [26., 16.6, 0.8]
+        orientation: [0., 0., 0.70711, 0.70711]
+      domain_id: 0
+      target_links: [
+        "Mobility/Wheel_front_left",
+        "Mobility/Wheel_front_right",
+        "Mobility/Wheel_middle_left",
+        "Mobility/Wheel_middle_right",
+        "Mobility/Wheel_back_left",
+        "Mobility/Wheel_back_right"
+      ]
+      base_link: "base_link" # core link used to determine the position of the robot
+      dimensions:
+        width: 1.6 # m
+        length: 1.5
+      pos_relative_to_prim: "/StaticAssets/lander"
+      wheel_joints:
+        left: ["wheel_fl", "wheel_ml", "wheel_bl"]
+        right: ["wheel_fr", "wheel_mr", "wheel_br"]
+      camera:
+        prim_path: "/Robots/pragyaan/Body/body_main/depth_cam"
+        resolutions: 
+          low: [320, 240]
+          high: [1440, 1080]
+      imu_sensor_path: "/Robots/pragyaan/base_link/Imu_Sensor"
+      turn_speed_coef: 19
+      solar_panel_joint: "solarJoint"  # finds it within the main robot articulation
+  yamcs_tmtc: # these settings are relevant if Yamcs mode
+    intervals:
+      robot_stats: 1
+      camera_streaming: 2
+    lander_camera:
+      prim_path: "/StaticAssets/lander/Lander/Cam_Right/Lander_Camera"
+      resolution: [1440, 1080]
+    images:
+      no_data_image_path: "/workspace/omnilrs/assets/images/no_data_grafana.png"
+      buckets:
+        - name: "images_streaming"
+          path: "/Rover/camera/images_streaming"
+        - name: "images_oncommand"
+          path: "/Rover/camera/images_oncommand"
+        - name: "images_depth"
+          path: "/Rover/camera/images_depth"
+        - name: "images_lander"
+          path: "/Lander/camera/images_oncommand"
+        - name: "images_monitoring"
+          path: "/Admin/camera/images_monitoring"
+    payload:
+      apxs:
+        resolution: [1440, 1080]
+        samples_dir: "/workspace/omnilrs/assets/images/"
+        no_data: "APXS_nodata.png"
+        measurement: "APXS_measurement.png"
+        bucket:
+          name: "images_apxs"
+          path: "/Rover/payload/images_apxs"
+    parameters:
+      pose_of_base_link: "/Rover/pose_ground_truth"
+      go_nogo: "/Rover/go_nogo"
+      imu_accelerometer: "/Rover/imu_accelerometer"
+      imu_gyroscope: "/Rover/imu_gyroscope"
+      imu_orientation: "/Rover/imu_orientation"
+      obc_state: "/Rover/obc_state"
+      obc_cpu_usage: "/Rover/obc_cpu_usage"
+      obc_ram_usage: "/Rover/obc_ram_usage"
+      obc_disk_usage: "/Rover/obc_disk_usage"
+      obc_uptime: "/Rover/obc_uptime"
+      rssi: "/Rover/radio_rssi"
+      temperature_front: "/Rover/temperature_front"
+      temperature_back: "/Rover/temperature_back"
+      temperature_left: "/Rover/temperature_left"
+      temperature_right: "/Rover/temperature_right"
+      temperature_top: "/Rover/temperature_top"
+      temperature_bottom: "/Rover/temperature_bottom"
+      temperature_elec_box: "/Rover/temperature_elec_box"
+      battery_charge: "/Rover/battery_charge"
+      battery_voltage: "/Rover/battery_voltage"
+      total_current_in: "/Rover/total_current_in"
+      total_current_out: "/Rover/total_current_out"
+      motor_current: "/Rover/motor_current"
+      current_draw_obc: "/Rover/current_draw_obc"
+      current_draw_motor_controller: "/Rover/current_draw_motor_controller"
+      current_draw_neutron_spectrometer: "/Rover/current_draw_neutron_spectrometer"
+      current_draw_apxs: "/Rover/current_draw_apxs"
+      current_draw_camera: "/Rover/current_draw_camera"
+      current_draw_radio: "/Rover/current_draw_radio"
+      current_draw_eps: "/Rover/current_draw_eps"
+      neutron_counts: "/Rover/neutron_counts"
+      camera_streaming_state: "/Rover/camera/images_streaming/state"
+      solar_panel_state: "/Rover/solar_panel_state"
+      motor_encoder: "/Rover/motor_encoder"
+    commands:
+      drive_straight: "/Rover/motor/drive_straight"
+      drive_turn: "/Rover/motor/drive_turn"
+      camera_capture_high: "/Rover/camera/camera_capture_high"
+      camera_streaming_on_off: "/Rover/camera/camera_streaming"
+      camera_capture_depth: "/Rover/camera/camera_capture_depth"
+      solar_panel: "/Rover/system/deploy_solar_panel"
+      power_electronics: "/Rover/power/power_electronics"
+      go_nogo: "/Rover/system/go_nogo_command"
+      capture_apxs: "/Rover/payload/payload_capture_apxs"
+      admin_battery_percentage: "/Admin/admin_set_battery_percentage"
+      admin_water_detection: "/Admin/admin_water_detection"
+      admin_inject_fault: "/Admin/admin_inject_fault"
+      lander_camera_capture_high: "/Lander/camera/lander_camera_capture"
+
+static_assets_settings:
+  root_path: "/StaticAssets"
+  parameters:
+    - asset_name: rock1
+      usd_path: USD_Assets/rocks/lunalab_rocks/rock_1/rock1.usd
+      pose:
+        position: [28, 19., 0.0]
+        # position: [5.0, 7.5, 0.0]
+        orientation: [1, 0, 0, 1]
+      collision: True
+
+    - asset_name: lander
+      usd_path: USD_Assets/common/lander/Vikram/Vikram.usd
+      pose:
+        position: [25.7, 10.6, 0.2]
+        # orientation: [0.70711, 0. , 0., 0.70711]   # w/x/y/z
+        orientation: [0.5, 0.5 , 0.5, 0.5]   # w/x/y/z
+      collision: True
+
+monitoring_cameras_settings:
+  enabled: True
+  root_path: "/MonitoringCameras"
+  camera_definitions:
+    - name: "monitoring_camera"
+      pose:
+        position: [32.0, 22.0, 25.0]
+        orientation: [0.082948, 0.091931, 0.700333, 0.702995] # [x,y,z,w]
+      camera_params:
+        focal_length: 1.93
+        horizontal_aperture:  2.4
+        vertical_aperture: 1.8
+        fstop: 5.0
+        focus_distance: 10.0
+        clipping_range: [0.01, 1000000.0]
+      ros2: # these settings are only relevant if the mode is set to ROS2 (@cfg/config.yaml)
+        topic: "/monitoring/monitoring_camera"
+        frame_id: "monitoring_camera_id"
+      type: "Rgb" # make sure to have correct naming - eg. Rgb ; Depth ; SemanticSegmentation ; InstanceSegmentation ; Normals
+      resolution: [320, 240]
+      # stream_frequency: 2.0 #  every 0.5s - in order to not overwhelm the network

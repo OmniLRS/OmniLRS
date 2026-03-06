@@ -171,9 +171,9 @@ terrain_manager:
 
 robots_settings:
   uses_nucleus: False
-  is_ROS2: True
   max_robots: 5
   robots_root: "/Robots"
+  robot_controller: "pragyaan-controller"
   parameters:
     # -
     #   robot_name: ex1
@@ -224,17 +224,35 @@ robots_settings:
       imu_sensor_path: "/Robots/pragyaan/base_link/Imu_Sensor"
       turn_speed_coef: 19
       solar_panel_joint: "solarJoint"  # finds it within the main robot articulation
-  yamcs_tmtc:
-    enabled: True
-    address: "localhost:8090"
-    instance: "workshop"
-    processor: "realtime"
+  yamcs_tmtc: # these settings are relevant if Yamcs mode
     intervals:
       robot_stats: 1
       camera_streaming: 2
     lander_camera:
       prim_path: "/StaticAssets/lander/Lander/Cam_Right/Lander_Camera"
       resolution: [1440, 1080]
+    images:
+      no_data_image_path: "/workspace/omnilrs/assets/images/no_data_grafana.png"
+      buckets:
+        - name: "images_streaming"
+          path: "/Rover/camera/images_streaming"
+        - name: "images_oncommand"
+          path: "/Rover/camera/images_oncommand"
+        - name: "images_depth"
+          path: "/Rover/camera/images_depth"
+        - name: "images_lander"
+          path: "/Lander/camera/images_oncommand"
+        - name: "images_monitoring"
+          path: "/Admin/camera/images_monitoring"
+    payload:
+      apxs:
+        resolution: [1440, 1080]
+        samples_dir: "/workspace/omnilrs/assets/images/"
+        no_data: "APXS_nodata.png"
+        measurement: "APXS_measurement.png"
+        bucket:
+          name: "images_apxs"
+          path: "/Rover/payload/images_apxs"
     parameters:
       pose_of_base_link: "/Rover/pose_ground_truth"
       go_nogo: "/Rover/go_nogo"
@@ -312,6 +330,7 @@ static_assets_settings:
       collision: False
 
 monitoring_cameras_settings:
+  enabled: True
   root_path: "/MonitoringCameras"
   camera_definitions:
     - name: "monitoring_camera"
@@ -325,10 +344,10 @@ monitoring_cameras_settings:
         fstop: 5.0
         focus_distance: 10.0
         clipping_range: [0.01, 1000000.0]
-      ros2:
-        enabled: False
+      ros2: # these settings are only relevant if the mode is set to ROS2 (@cfg/config.yaml)
         topic: "/monitoring/monitoring_camera"
         frame_id: "monitoring_camera_id"
       type: "Rgb" # make sure to have correct naming - eg. Rgb ; Depth ; SemanticSegmentation ; InstanceSegmentation ; Normals
       resolution: [320, 240]
       # stream_frequency: 2.0 #  every 0.5s - in order to not overwhelm the network
+
