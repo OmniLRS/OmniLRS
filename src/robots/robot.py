@@ -21,7 +21,7 @@ import omni.graph.core as og
 from isaacsim.core.utils.rotations import quat_to_rot_matrix
 from isaacsim.core.utils.nucleus import get_assets_root_path
 from omni.isaac.dynamic_control import _dynamic_control
-from isaacsim.core.prims import SingleRigidPrim, RigidPrim
+from isaacsim.core.prims import SingleRigidPrim, SingleXFormPrim, RigidPrim
 from pxr import Gf, Usd
 
 from WorldBuilders.pxr_utils import createXform, createObject
@@ -603,8 +603,20 @@ class RobotRigidGroup:
                 self.prim_views.append(rigid_prim_view)
 
     def _initialize_base_link(self):
-        rigid_prim, rigid_prim_view = self._initialize_link(self.base_link)
-        self.base_prim = rigid_prim
+        if not self.base_link:
+            raise ValueError(
+                f"Robot '{self.robot_name}' is missing required 'base_link' in its YAML configuration. "
+                "Please add e.g. base_link: \"base_link\" under the robot's parameters."
+            )
+        # Use SingleXFormPrim instead of SingleRigidPrim for the base link.
+        # SingleRigidPrim eagerly queries physics velocities in its constructor,
+        # which fails when the physics tensor simulation view has been invalidated
+        # by prior RigidPrim view creations. The base link only needs get_world_pose(),
+        # so a transform-only prim is sufficient and avoids the tensor dependency.
+        self.base_prim = SingleXFormPrim(
+            prim_path=os.path.join(self.root_path, self.robot_name, self.base_link),
+            name=f"{self.robot_name}/{self.base_link}",
+        )
         print("initialized base link")
 
     def _initialize_link(self, link):

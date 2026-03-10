@@ -296,7 +296,7 @@ terrain_manager:
     is_lab: False
 
   root_path: /Lunaryard
-  texture_path: /Looks/Basalt
+  texture_path: /Lunaryard/Looks/Basalt
   dems_path: Terrains/Lunaryard
   mesh_position: [0, 0, 0]
   mesh_orientation: [0, 0, 0, 1] # Quaternion x,y,z,w
@@ -313,10 +313,11 @@ robots_settings:
   parameters:
     -
       robot_name: ex1
-      usd_path: assets/USD_Assets/robots/ex1.usd
+      usd_path: assets/USD_Assets/robots/ex1/ex1-withoutsubgraphs.usd
       pose:                   
         position: [3.0, 3.0, 0.5468]     
         orientation: [1, 0, 0, 0]    
       domain_id: 0     
-      target_links: ["ex1/left_front_wheel_link", "ex1/left_rear_wheel_link", "ex1/right_front_wheel_link", "ex1/right_rear_wheel_link"]                              # wheel links for physics interaction
-      visual_links: ["ex1/left_front_wheel_link_visual", "ex1/left_rear_wheel_link_visual", "ex1/right_front_wheel_link_visual", "ex1/right_rear_wheel_link_visual"]  # wheel links for visual rendering
+      target_links: ["left_front_wheel_link", "left_rear_wheel_link", "right_front_wheel_link", "right_rear_wheel_link"]
+      visual_links: ["left_front_wheel_link_visual", "left_rear_wheel_link_visual", "right_front_wheel_link_visual", "right_rear_wheel_link_visual"]
+      base_link: "base_link"
