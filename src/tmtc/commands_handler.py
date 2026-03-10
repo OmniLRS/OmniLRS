@@ -9,34 +9,74 @@ from yamcs.client import  CommandHistory
 import time
 import omni.kit.app
 
+import socket
+import time
+import threading
+
+from src.tmtc.mdb_register import decode_tc_payload, load_mdb_registry
+
 class CommandsHandler():
+
+    TC_RECEIVE_ADDRESS = "127.0.0.1"
+    TC_RECEIVE_PORT    = 10025
+
+    UDP_RECV_MAX        = 4096  
+    SOCKET_TIMEOUT_SEC  = 2.0 
+    HEARTBEAT_EVERY_SEC = 10.0  # how often to log "waiting..." when idle
 
     def __init__(self, yamcs_processor):
         self._yamcs_processor = yamcs_processor
-        self._yamcs_processor.create_command_history_subscription(on_data=self._command_callback) # immeditally starts listening for commands once created
-        self._time_of_last_command = 0
         self._commands_catalogue = {}
 
-    def _command_callback(self, received_command:CommandHistory):
-        # CommandHistory info is available at: https://docs.yamcs.org/python-yamcs-client/tmtc/model/#yamcs.client.CommandHistory
-        #NOTE: it happens that the subscriber receives the same instance of command multiple times in a very short period of time
-        # however, desired behavior is to execute the command only once
-        # since commands are executed by human operators, waiting for a small period of time (such as 0.5s) is enough to counter this issue
-        if time.time() - self._time_of_last_command < 0.5:
-            return
-        
-        self._time_of_last_command = time.time()
+        self._registry = load_mdb_registry("cfg/mdb")
 
-        name = received_command.name
-        received_arguments = received_command.all_assignments
-        print(name)
-        print(received_arguments)
-        command = self._commands_catalogue.get(name)
+        self._tc_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self._tc_socket.bind((self.TC_RECEIVE_ADDRESS, self.TC_RECEIVE_PORT))
+        self._tc_socket.settimeout(self.SOCKET_TIMEOUT_SEC)
+        print("UDP bound to:", self._tc_socket.getsockname())
 
-        if command is None:
-            raise Exception(f"Command '{name}' not found in catalogue")
+        self._stop_event = threading.Event()
+        # self._start_listening_to_TC()
+        self._tc_thread = threading.Thread(
+            target=self._start_listening_to_TC,
+            name="tc-listener",
+            daemon=True,
+        )
+        self._tc_thread.start()
 
-        self._execute(command, received_arguments)
+    def _start_listening_to_TC(self):
+        print("OBS software running ...")
+        last_heartbeat = 0.0
+        try:
+            # while True:
+            while not self._stop_event.is_set():
+                try:
+                    tc_data, addr = self._tc_socket.recvfrom(self.UDP_RECV_MAX)
+                except socket.timeout:
+                    now = time.time()
+                    if now - last_heartbeat >= self.HEARTBEAT_EVERY_SEC:
+                        print("Waiting for TC on", self._tc_socket.getsockname())
+                        last_heartbeat = now
+                    continue
+
+                print("tc_data:",tc_data)
+                print()
+
+                decoded = decode_tc_payload(tc_data, self._registry)
+                print("decoded",decoded)
+                print()
+
+                if decoded is None:
+                    return
+
+                command = self._commands_catalogue.get(decoded["full_name"])
+                if command is None:
+                    raise Exception(f"Command '{decoded['full_name']}' not found in catalogue")
+
+                self._execute(command, decoded["arguments"])
+
+        except KeyboardInterrupt:
+            print("\nStopping OBS...")
     
     def _execute(self, command, received_arguments):
         arg_names = command["args"]
