@@ -22,54 +22,46 @@ class CommandsHandler():
     def __init__(self, yamcs_processor, yamcs_instance_conf):
         self._yamcs_processor = yamcs_processor
         self._commands_catalogue = {}
-
         self._registry = MdbParsingService.load_mdb_registry("cfg/mdb")
+        self._config_tc_socket(yamcs_instance_conf)
+        self._start_tc_listener()
 
+    def _config_tc_socket(self, yamcs_instance_conf):
         self._tc_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self._tc_socket.bind((yamcs_instance_conf["tc_receive_address"], yamcs_instance_conf["tc_receive_port"]))
         self._tc_socket.settimeout(self.SOCKET_TIMEOUT_SEC)
         print("UDP bound to:", self._tc_socket.getsockname())
 
-        self._stop_event = threading.Event()
+    def _start_tc_listener(self):
+        self._tc_stop_event = threading.Event()
         self._tc_thread = threading.Thread(
-            target=self._start_listening_to_TC,
+            target=self._tc_listener_loop,
             name="tc-listener",
             daemon=True,
         )
         self._tc_thread.start()
 
-    def _start_listening_to_TC(self):
-        print("OBS software running ...")
+    def _tc_listener_loop(self):
         last_heartbeat = 0.0
-        try:
-            while not self._stop_event.is_set():  # while True:
-                try:
-                    tc_data, addr = self._tc_socket.recvfrom(self.UDP_RECV_MAX)
-                except socket.timeout:
-                    now = time.time()
-                    if now - last_heartbeat >= self.HEARTBEAT_EVERY_SEC:
-                        print("Waiting for TC on", self._tc_socket.getsockname())
-                        last_heartbeat = now
-                    continue
+        while not self._tc_stop_event.is_set():  # while True:
+            try:
+                tc_data, addr = self._tc_socket.recvfrom(self.UDP_RECV_MAX)
+            except socket.timeout:
+                now = time.time()
+                if now - last_heartbeat >= self.HEARTBEAT_EVERY_SEC:
+                    print("Waiting for TC on", self._tc_socket.getsockname())
+                    last_heartbeat = now
+                continue
 
-                print("tc_data:",tc_data)
-                print()
+            decoded = MdbParsingService.decode_tc_payload(tc_data, self._registry)
+            if decoded is None:
+                return
 
-                decoded = MdbParsingService.decode_tc_payload(tc_data, self._registry)
-                print("decoded",decoded)
-                print()
+            command = self._commands_catalogue.get(decoded["full_name"])
+            if command is None:
+                raise Exception(f"Command '{decoded['full_name']}' not found in catalogue")
 
-                if decoded is None:
-                    return
-
-                command = self._commands_catalogue.get(decoded["full_name"])
-                if command is None:
-                    raise Exception(f"Command '{decoded['full_name']}' not found in catalogue")
-
-                self._execute(command, decoded["arguments"])
-
-        except KeyboardInterrupt:
-            print("\nStopping OBS...")
+            self._execute(command, decoded["arguments"])
     
     def _execute(self, command, received_arguments):
         arg_names = command["args"]
