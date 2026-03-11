@@ -4,3 +4,5 @@ instance_conf:
   instance: "workshop"
   processor: "realtime"
   url_full_nginx: "https://workshop.jaops.com/yamcs"
+  tc_receive_address: "127.0.0.1"
+  tc_receive_port: 10025

@@ -5,7 +5,6 @@ __version__ = "2.0.0"
 __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
 __status__ = "development"
-from yamcs.client import  CommandHistory
 import time
 import omni.kit.app
 
@@ -13,30 +12,25 @@ import socket
 import time
 import threading
 
-from src.tmtc.mdb_register import decode_tc_payload, load_mdb_registry
+from src.tmtc.mdb_parsing_service import MdbParsingService
 
 class CommandsHandler():
-
-    TC_RECEIVE_ADDRESS = "127.0.0.1"
-    TC_RECEIVE_PORT    = 10025
-
     UDP_RECV_MAX        = 4096  
     SOCKET_TIMEOUT_SEC  = 2.0 
     HEARTBEAT_EVERY_SEC = 10.0  # how often to log "waiting..." when idle
 
-    def __init__(self, yamcs_processor):
+    def __init__(self, yamcs_processor, yamcs_instance_conf):
         self._yamcs_processor = yamcs_processor
         self._commands_catalogue = {}
 
-        self._registry = load_mdb_registry("cfg/mdb")
+        self._registry = MdbParsingService.load_mdb_registry("cfg/mdb")
 
         self._tc_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self._tc_socket.bind((self.TC_RECEIVE_ADDRESS, self.TC_RECEIVE_PORT))
+        self._tc_socket.bind((yamcs_instance_conf["tc_receive_address"], yamcs_instance_conf["tc_receive_port"]))
         self._tc_socket.settimeout(self.SOCKET_TIMEOUT_SEC)
         print("UDP bound to:", self._tc_socket.getsockname())
 
         self._stop_event = threading.Event()
-        # self._start_listening_to_TC()
         self._tc_thread = threading.Thread(
             target=self._start_listening_to_TC,
             name="tc-listener",
@@ -48,8 +42,7 @@ class CommandsHandler():
         print("OBS software running ...")
         last_heartbeat = 0.0
         try:
-            # while True:
-            while not self._stop_event.is_set():
+            while not self._stop_event.is_set():  # while True:
                 try:
                     tc_data, addr = self._tc_socket.recvfrom(self.UDP_RECV_MAX)
                 except socket.timeout:
@@ -62,7 +55,7 @@ class CommandsHandler():
                 print("tc_data:",tc_data)
                 print()
 
-                decoded = decode_tc_payload(tc_data, self._registry)
+                decoded = MdbParsingService.decode_tc_payload(tc_data, self._registry)
                 print("decoded",decoded)
                 print()
 
