@@ -28,8 +28,8 @@ class CommandsHandler():
         self._config_tc_socket(yamcs_instance_conf)
         self._start_tc_listener()
 
+
     def _config_tc_socket(self, yamcs_instance_conf):
-        self._registry = MdbParsingService.load_mdb_registry("cfg/mdb")
         self._tc_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self._tc_socket.bind((yamcs_instance_conf["tc_receive_address"], yamcs_instance_conf["tc_receive_port"]))
         self._tc_socket.settimeout(self.SOCKET_TIMEOUT_SEC)
