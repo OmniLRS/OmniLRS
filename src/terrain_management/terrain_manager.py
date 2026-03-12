@@ -20,6 +20,7 @@ from src.terrain_management.terrain_generation import GenerateProceduralMoonYard
 from src.configurations.procedural_terrain_confs import TerrainManagerConf
 from WorldBuilders import pxr_utils
 from assets import get_assets_path
+from isaacsim.core.api.world import World
 
 
 class TerrainManager:
@@ -64,6 +65,10 @@ class TerrainManager:
         self._id = 0
         self._og_mesh_path = self._root_path + "/Terrain/terrain_mesh"
         self._mesh_path = self._root_path + "/Terrain/terrain_mesh"
+        
+        # keep track of mesh update counts (to reduce logging to approx once per second)
+        self._mesh_update_count = 0
+        self._profile_interval = max(1, round(1.0 / World.instance().get_physics_dt()))
 
         pxr_utils.createXform(self._stage, self._root_path, add_default_op=True)
         pxr_utils.createXform(self._stage, self._root_path + "/Terrain", add_default_op=True)
@@ -246,24 +251,28 @@ class TerrainManager:
         """
 
         pxr_utils.removeCollision(self._stage, self._mesh_path)
+
         pxr_utils.addCollision(self._stage, self._mesh_path, mode="meshSimplification")
 
     def update(self, update_collider=False) -> None:
         """
         Updates the terrain mesh. This function should be called after the DEM and mask are updated.
         """
+        # profile to log the mesh update only once every self._profile_interval updates (which is approx once per second)
+        profile = self._mesh_update_count % self._profile_interval == 0
+        self._mesh_update_count += 1
 
         if update_collider:
             pxr_utils.deletePrim(self._stage, self._mesh_path)
             self._sim_verts[:, -1] = np.flip(self._DEM, 0).flatten()
-            with wp.ScopedTimer("mesh update"):
+            with wp.ScopedTimer("mesh update", active=profile):
                 self.renderMesh(self._sim_verts, self._indices, self._sim_uvs, update_default_op=True)
             self.updateTerrainCollider()
             self.autoLabel()
             pxr_utils.applyMaterialFromPath(self._stage, self._mesh_path, self._texture_path)
         else:
             self._sim_verts[:, -1] = np.flip(self._DEM, 0).flatten()
-            with wp.ScopedTimer("mesh update"):
+            with wp.ScopedTimer("mesh update", active=profile):
                 self.renderMesh(self._sim_verts, self._indices, self._sim_uvs)
 
     def randomizeTerrain(self) -> None:
