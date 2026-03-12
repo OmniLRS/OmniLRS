@@ -4,6 +4,7 @@ docker run --name isaac-sim-omnilrs-container -it --gpus all -e "ACCEPT_EULA=Y" 
 -v $HOME/.Xauthority:/root/.Xauthority \
 -e DISPLAY \
 -e "PRIVACY_CONSENT=Y" \
+-e ROS_DOMAIN_ID="${ROS_DOMAIN_ID:-0}" \
 -v ${PWD}:/workspace/omnilrs \
 -v ~/docker/isaac-sim/cache/kit:/isaac-sim/kit/cache:rw \
 -v ~/docker/isaac-sim/cache/ov:/root/.cache/ov:rw \
