@@ -37,6 +37,8 @@ from omni.isaac.sensor import Camera
 
 from isaacsim.sensors.physics import _sensor
 
+#TODO for v4: rethink which methods should be in Manager, RRG, what should be in Robot
+#TODO for v4: separate into a different file (very complex and lengthy classes)
 class RobotManager:
     """
     RobotManager class.
@@ -54,18 +56,18 @@ class RobotManager:
             RM_conf (RobotManagerConf): The configuration of the robot manager.
         """
 
-        self.stage = omni.usd.get_context().get_stage()
+        self.stage = omni.usd.get_context().get_stage() # TODO for v4: logcally an instance of a robot, should not have access to the instance of stage... change?
         self.RM_conf = RobotManagerConf(**RM_conf)
         self.is_ROS2 = mode == SimulatorMode.ROS2
         self.robot_parameters = self.RM_conf.parameters
-        self.uses_nucleus = self.RM_conf.uses_nucleus
-        self.max_robots = self.RM_conf.max_robots
+        self.uses_nucleus = self.RM_conf.uses_nucleus # TODO for v4: remove
+        self.max_robots = self.RM_conf.max_robots # TODO for v4: only 1 robot should exit, no max number
         self.robots_root = self.RM_conf.robots_root
         createXform(self.stage, self.robots_root)
-        self.robots: Dict[str, Robot] = {}
-        self.robots_RG: Dict[str, RobotRigidGroup] = {}
+        self.robots: Dict[str, Robot] = {}   # TODO for v4: if only 1 robot, no need for a dict, just an instance
+        self.robots_RG: Dict[str, RobotRigidGroup] = {} # TODO for v4: if only 1 robot, no need for a dict, just an instance
         self.TMTC: YamcsTMTC
-        self.num_robots = 0
+        self.num_robots = 0 # TODO for v4: if only 1 robot, no need for a counter
         self.yamcs_instance_conf = yamcs_instance_conf
 
     def preload_robot(
@@ -250,8 +252,6 @@ class RobotManager:
 
     def start_TMTC(self):
         robot_name = list(self.robots.keys())[0].replace("/","") # assumes only 1 robot for workshop use
-        # self.TMTC = YamcsTMTC(self.RM_conf.yamcs_tmtc, robot_name, self.robots_RG, self.robots["/" + robot_name])
-        # Call a specific implementation of TMTC here:
 
         if self.RM_conf.robot_controller == "pragyaan-controller":
             from src.tmtc.pragyaan.pragyaan_controller import PragyaanController
@@ -271,6 +271,8 @@ class Robot:
     and tfs to enable multi-robot operation.
     """
 
+    #TODO for v4: simplify and refactor the initialization, put some inits into a separate init methods, 
+    #TODO for v4: lower the number of arguments, simplify
     def __init__(
         self,
         usd_path: str,
@@ -314,7 +316,7 @@ class Robot:
         self._depth_cameras = {}
         self.dimensions = dimensions
         self.turn_speed_coef = turn_speed_coef
-        self.subsystems = RobotSubsystemsManager(pos_relative_to_prim)
+        self.subsystems = RobotSubsystemsManager(pos_relative_to_prim) #TODO for v3: here should get PragyaanPhysicsModelsHandler
         self._imu_sensor_interface = _sensor.acquire_imu_sensor_interface()
         self._imu_sensor_path:str = imu_sensor_path
         self._solar_panel_joint = solar_panel_joint
@@ -565,7 +567,8 @@ class Robot:
         self._init_solar_panel_dof()
         self.dc.set_dof_position_target(self._solar_panel_dof, math.radians(-80))
 
-
+#TODO for v4: rethink which methods should be in RRG, what should be in Robot
+#TODO for v4: separate into a different file (very complex and lengthy classes)
 class RobotRigidGroup:
     """
     Class which deals with rigidprims and rigidprimview of a single robot.

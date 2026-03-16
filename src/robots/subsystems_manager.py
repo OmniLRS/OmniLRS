@@ -9,9 +9,9 @@ __status__ = "development"
 from enum import StrEnum, Enum
 
 from src.environments.utils import get_moon_env_name
-from src.robots.RadioModel import RadioModel
-from src.robots.ThermalModel import ThermalModel
-from src.robots.PowerModel import PowerModel
+from src.physics.robot_physics_models.RadioModel import RadioModel
+from src.physics.robot_physics_models.ThermalModel import ThermalModel
+from src.physics.robot_physics_models.PowerModel import PowerModel
 import math
 from isaacsim.core.utils.xforms import get_world_pose
 import random
