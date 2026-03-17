@@ -59,9 +59,9 @@ class CommandsHandler():
 
             command = self._commands_catalogue.get(decoded["full_name"])
             if command is None:
-                raise Exception(f"Command '{decoded['full_name']}' not found in catalogue")
-
-            self._execute(command, decoded["arguments"])
+                print(f"Command '{decoded['full_name']}' not found in catalogue")
+            else:
+                self._execute(command, decoded["arguments"])
     
     def _execute(self, command, received_arguments):
         arg_names = command["args"]
