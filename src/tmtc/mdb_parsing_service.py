@@ -8,11 +8,10 @@ class MdbParsingService():
     XTCE_NS = {"xtce": "http://www.omg.org/spec/XTCE/20180204"}
 
     @classmethod
-    def load_mdb_registry(cls, mdb_dir):
+    def load_mdb_registry(cls, mdb_files):
         registry = {}
-        mdb_dir = Path(mdb_dir)
 
-        for xml_file in sorted(mdb_dir.glob("*.xml")):
+        for xml_file in mdb_files:
             file_commands = cls._parse_mdb_file(xml_file)
 
             for wire_name, spec in file_commands.items():

@@ -19,10 +19,10 @@ class CommandsHandler():
     SOCKET_TIMEOUT_SEC  = 2.0 
     HEARTBEAT_EVERY_SEC = 10.0  # how often to log "waiting..." when idle
 
-    def __init__(self, yamcs_processor, yamcs_instance_conf):
+    def __init__(self, yamcs_processor, yamcs_instance_conf, mdb_files:list[str]):
         self._yamcs_processor = yamcs_processor
         self._commands_catalogue = {}
-        self._registry = MdbParsingService.load_mdb_registry("cfg/mdb")
+        self._registry = MdbParsingService.load_mdb_registry(mdb_files) #TODO: change loading of the mdb files through .yaml
         self._config_tc_socket(yamcs_instance_conf)
         self._start_tc_listener()
 
@@ -66,9 +66,6 @@ class CommandsHandler():
     def _execute(self, command, received_arguments):
         arg_names = command["args"]
         func = command["func"]
-
-        print(func)
-        print(arg_names)
 
         if arg_names == []:
             func()
