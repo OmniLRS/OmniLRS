@@ -47,6 +47,7 @@ class PragyaanTransmitter:
         self._yamcs_processor.set_parameter_value(self._parameters_conf["solar_panel_state"], state.value)
 
     def transmit_obc_metrics(self):
+        #TODO should be fixed based on the new updates - no need to get the state, and update it, just get the metrics and divide based on the keys
         obc_state = self._robot.subsystems.get_obc_state()
         self._robot.subsystems.input_obc_state(obc_state)
 

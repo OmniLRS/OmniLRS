@@ -1,4 +1,6 @@
 from __future__ import annotations
+
+from src.physics.robot_physics_models.robot_physics_model import RobotPhysicsModel
 """
 The above import MUST be at the top of the file, can not be preceded by anything or it crashes
 SyntaxError: from __future__ imports must occur at the beginning of the file
@@ -21,31 +23,46 @@ from typing import Dict, List, Sequence, Tuple
 
 
 @dataclass
-class RadioModel:
+class RadioModel(RobotPhysicsModel):
 	"""Proof-of-concept radio model with quadratic distance falloff.
         To integrate this model in a simulation, see the example in sweep_rssi() below.
         inputs / computation / outputs are clearly separated for easy use.
     """
 
-	lander_position: Tuple[float, float, float] = (0.0, 0.0, 0.0)
-	rover_position: Tuple[float, float, float] = (0.0, 0.0, 0.0)
-	best_rssi: float = -90.0  # Strongest signal observed at zero separation.
-	worst_rssi: float = -30.0  # Weakest accepted reading at reference distance.
-	reference_distance: float = 100.0  # Distance (m) at which worst_rssi applies.
-	noise_std: float = 1.0  # Standard deviation of random RSSI noise [dB].
+	_lander_position: Tuple[float, float, float] = (0.0, 0.0, 0.0)
+	_rover_position: Tuple[float, float, float] = (0.0, 0.0, 0.0)
+	_best_rssi: float = -90.0  # Strongest signal observed at zero separation.
+	_worst_rssi: float = -30.0  # Weakest accepted reading at reference distance.
+	_reference_distance: float = 100.0  # Distance (m) at which worst_rssi applies.
+	_noise_std: float = 1.0  # Standard deviation of random RSSI noise [dB].
 
-	def distance(self) -> float:
+	def update_inputs(self, lander_position, rover_position):
+		self._lander_position = lander_position
+		self._rover_position = rover_position
+
+	def _step(self):
+		pass
+    
+	def _get_output(self):
+		mean_rssi = self._calculate_rssi()
+		return mean_rssi + random.gauss(0.0, self._noise_std)
+	
+	def get_rssi(self):
+		return self._get_output()
+	
+	def _calculate_rssi(self) -> float:
+		dist = self._distance()
+		norm = dist / self._reference_distance
+		mean_rssi = self._best_rssi + (self._worst_rssi - self._best_rssi) * (norm ** 2)
+
+		return mean_rssi
+
+	def _distance(self) -> float:
 		dx = self.rover_position[0] - self.lander_position[0]
 		dy = self.rover_position[1] - self.lander_position[1]
 		dz = self.rover_position[2] - self.lander_position[2]
+
 		return math.sqrt(dx * dx + dy * dy + dz * dz)
-
-	def rssi(self) -> float:
-		dist = self.distance()
-		norm = dist / self.reference_distance
-		mean_rssi = self.best_rssi + (self.worst_rssi - self.best_rssi) * (norm ** 2)
-		return mean_rssi + random.gauss(0.0, self.noise_std)
-
 
 def sweep_rssi(
 	steps: int = 200,

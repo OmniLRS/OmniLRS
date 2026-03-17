@@ -6,8 +6,8 @@ __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
 __status__ = "development"
 
-from src.robots.subsystems_manager import ObcState
 import omni.kit.app
+from src.robots.robot_enums import ObcState
 from src.tmtc.intervals_handler import IntervalName
 
 """

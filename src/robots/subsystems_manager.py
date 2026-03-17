@@ -130,12 +130,14 @@ class RobotSubsystemsManager:
         
         return mapped
     
+    # this is used only internaly
     def is_turned_on(self, electronic):
         if self._electronics_power_state[electronic] == PowerState.ON:
             return True
         
         return False
     
+    #this is used
     def get_power_state(self, electronic):
         return self._electronics_power_state[electronic] 
 
@@ -191,8 +193,8 @@ class RobotSubsystemsManager:
 
         return self._electronics_power_state[electronics]
     
-    def get_electronics_states(self):
-        return self._electronics_power_state
+    # def get_electronics_states(self):
+    #     return self._electronics_power_state
 
     def set_solar_panel_state(self, state:SolarPanelState):
         self._solar_panel_state = state
@@ -213,6 +215,7 @@ class RobotSubsystemsManager:
         self._obc_state = state
         self._obc_metrics_simulator.input_obc_state(state)
 
+    #TODO should be removed but is used by transmitter
     def input_obc_state(self, state:ObcState):
         self._obc_metrics_simulator.input_obc_state(state)
 
@@ -235,6 +238,7 @@ class RobotSubsystemsManager:
     def set_is_near_water(self, is_near):
         self._neutron_spectrometer.is_near_water = is_near
 
+    #NOTE should exist only inside PragyaanSubsystemsHandler, not inside regular because this is workshop-specific
     def set_electronics_health(self, electronics:str, status:HealthStatus):
         if electronics not in self._electronics_health:
             print("Invalid electronics naming: ", electronics)
@@ -242,12 +246,13 @@ class RobotSubsystemsManager:
 
         self._electronics_health[electronics] = status
     
-    def is_electronics_healthy(self, electronics:str):
-        if electronics not in self._electronics_health:
-            print("Invalid electronics naming: ", electronics)
-            return
+    #TODO remove, not used anywhere
+    # def is_electronics_healthy(self, electronics:str):
+    #     if electronics not in self._electronics_health:
+    #         print("Invalid electronics naming: ", electronics)
+    #         return
 
-        return self._electronics_health[electronics] == HealthStatus.NOMINAL
+    #     return self._electronics_health[electronics] == HealthStatus.NOMINAL
     
     def get_electronics_health(self, electronics:str):
         if electronics not in self._electronics_health:
