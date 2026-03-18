@@ -9,7 +9,7 @@ __status__ = "development"
 from enum import StrEnum, Enum
 
 from src.environments.utils import get_moon_env_name
-from src.physics.robot_physics_models.RadioModel import RadioModel
+from src.physics.robot_physics_models.radio_model import RadioModel
 from src.physics.robot_physics_models.ThermalModel import ThermalModel
 from src.physics.robot_physics_models.PowerModel import PowerModel
 import math

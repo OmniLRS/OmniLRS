@@ -9,7 +9,8 @@ __status__ = "development"
 from enum import StrEnum, Enum
 
 from src.environments.utils import get_moon_env_name
-from src.physics.robot_physics_models.RadioModel import RadioModel
+from src.physics.robot_physics_models.pragyaan_thermal_model import PragyaanThermalModel
+from src.physics.robot_physics_models.radio_model import RadioModel
 from src.physics.robot_physics_models.ThermalModel import ThermalModel
 from src.physics.robot_physics_models.PowerModel import PowerModel
 import math
@@ -25,7 +26,7 @@ from src.robots.robot_subsystems_handler import RobotSubsystemsHandler
 
 class PragyaanSubsystemsHandler(RobotSubsystemsHandler):
 
-    #TODO Take a look into sun calculations... was dynamic fetching of the sun from the sim fixed/implemented?
+    #TODO @Louis Take a look into sun calculations... was dynamic fetching of the sun from the sim fixed/implemented?
     SUN_DISTANCE = 1000. # m
     SUN_AZYMUTH_DEG = 65.0
     SUN_POSITION = (
@@ -42,7 +43,8 @@ class PragyaanSubsystemsHandler(RobotSubsystemsHandler):
     MOTOR_POWER_W = 10.0
 
     def __init__(self, pos_relative_to_prim):
-        super().__init__()
+        thermal_model = PragyaanThermalModel()
+        super().__init__(thermal_model=thermal_model)
         self._setup_devices()
         #TODO change the following setup into self._power_model.setup() once updated all
         robot_power_model = RobotPowerModel()

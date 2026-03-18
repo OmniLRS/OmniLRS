@@ -9,9 +9,9 @@ __status__ = "development"
 from abc import ABC, abstractmethod
 from enum import Enum
 
-from src.physics.robot_physics_models.ThermalModel import ThermalModel
-from src.physics.robot_physics_models.PowerModel import PowerModel
-from src.physics.robot_physics_models.RadioModel import RadioModel
+from src.physics.robot_physics_models.power_model import PowerModel
+from src.physics.robot_physics_models.radio_model import RadioModel
+from src.physics.robot_physics_models.thermal_model import ThermalModel
 from src.robots.device import Device, PowerState
 from src.robots.obc_metrics_model import ObcMetricsModel
 from src.robots.robot_enums import GoNogoState, ObcState, SolarPanelState
@@ -19,19 +19,23 @@ from src.robots.robot_enums import GoNogoState, ObcState, SolarPanelState
 class RobotSubsystemsHandler(ABC):
     def __init__(
         self,
+        power_model:PowerModel = PowerModel(),
+        thermal_model:ThermalModel = ThermalModel(),
+        radio_model:RadioModel = RadioModel(),
+        obc_metrics_model:ObcMetricsModel = ObcMetricsModel(),
         obc_state:ObcState = ObcState.IDLE,
         go_nogo_state:GoNogoState = GoNogoState.NOGO,
         devices:dict[str, Device] = {},
         solar_panel_state:SolarPanelState = SolarPanelState.STOWED,
     ) -> None:
+        self._power_model:PowerModel = power_model
+        self._thermal_model:ThermalModel = thermal_model
+        self._radio_model:RadioModel = radio_model
+        self._obc_metrics_model:ObcMetricsModel = obc_metrics_model
         self._obc_state = obc_state
         self._go_nogo_state = go_nogo_state
         self._devices:dict[str, Device] = devices
         self._solar_panel_state = solar_panel_state
-        self._power_model:PowerModel = PowerModel()
-        self._thermal_model:ThermalModel = ThermalModel()
-        self._radio_model:RadioModel = RadioModel()
-        self._obc_metrics_model:ObcMetricsModel = ObcMetricsModel()
 
     @abstractmethod
     def get_rssi(self):

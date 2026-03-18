@@ -21,6 +21,10 @@ import random
 from dataclasses import dataclass
 from typing import Dict, List, Sequence, Tuple
 
+BEST_RSSI: float = -90.0  # Strongest signal observed at zero separation.
+WORST_RSSI: float = -30.0  # Weakest accepted reading at reference distance.
+REFERENCE_DISTANCE: float = 100.0  # Distance (m) at which worst_rssi applies.
+NOISE: float = 1.0  # Standard deviation of random RSSI noise [dB].
 
 @dataclass
 class RadioModel(RobotPhysicsModel):
@@ -31,10 +35,12 @@ class RadioModel(RobotPhysicsModel):
 
 	_lander_position: Tuple[float, float, float] = (0.0, 0.0, 0.0)
 	_rover_position: Tuple[float, float, float] = (0.0, 0.0, 0.0)
-	_best_rssi: float = -90.0  # Strongest signal observed at zero separation.
-	_worst_rssi: float = -30.0  # Weakest accepted reading at reference distance.
-	_reference_distance: float = 100.0  # Distance (m) at which worst_rssi applies.
-	_noise_std: float = 1.0  # Standard deviation of random RSSI noise [dB].
+	#NOTE the below fields are set to default values, no setters are implemented but the 
+	# values can be customized by directly accessing them from the subsystems manager if customization is needed
+	_best_rssi: float = BEST_RSSI  # Strongest signal observed at zero separation.
+	_worst_rssi: float = WORST_RSSI  # Weakest accepted reading at reference distance.
+	_reference_distance: float = REFERENCE_DISTANCE  # Distance (m) at which worst_rssi applies.
+	_noise_std: float = NOISE  # Standard deviation of random RSSI noise [dB].
 
 	def update_inputs(self, lander_position, rover_position):
 		self._lander_position = lander_position
@@ -44,11 +50,11 @@ class RadioModel(RobotPhysicsModel):
 		pass
     
 	def get_output(self):
-		mean_rssi = self._calculate_rssi()
-		return mean_rssi + random.gauss(0.0, self._noise_std)
+		return self.get_rssi()
 	
 	def get_rssi(self):
-		return self.get_output()
+		mean_rssi = self._calculate_rssi()
+		return mean_rssi + random.gauss(0.0, self._noise_std)
 	
 	def _calculate_rssi(self) -> float:
 		dist = self._distance()
@@ -58,9 +64,9 @@ class RadioModel(RobotPhysicsModel):
 		return mean_rssi
 
 	def _distance(self) -> float:
-		dx = self.rover_position[0] - self.lander_position[0]
-		dy = self.rover_position[1] - self.lander_position[1]
-		dz = self.rover_position[2] - self.lander_position[2]
+		dx = self._rover_position[0] - self._lander_position[0]
+		dy = self._rover_position[1] - self._lander_position[1]
+		dz = self._rover_position[2] - self._lander_position[2]
 
 		return math.sqrt(dx * dx + dy * dy + dz * dz)
 
