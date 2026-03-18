@@ -1,0 +1,58 @@
+<?xml version="1.0" ?>
+<!--
+This file was generated with Yamcs PyMDB.
+See https://github.com/yamcs/pymdb
+-->
+<SpaceSystem xmlns="http://www.omg.org/spec/XTCE/20180204" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.omg.org/spec/XTCE/20180204 https://www.omg.org/spec/XTCE/20180204/SpaceSystem.xsd" name="Lander">
+  <TelemetryMetaData/>
+  <CommandMetaData/>
+  <SpaceSystem name="camera" shortDescription="Lander camera telemetry">
+    <TelemetryMetaData/>
+    <CommandMetaData>
+      <MetaCommandSet>
+        <MetaCommand name="lander_camera_capture" abstract="false" shortDescription="Request capture from lander camera">
+          <CommandContainer name="lander_camera_capture">
+            <EntryList>
+              <FixedValueEntry binaryValue="6c616e6465725f63616d6572615f63617074757265" sizeInBits="168" name="command_name" shortDescription="Command name identifier">
+                <LocationInContainerInBits referenceLocation="previousEntry">
+                  <FixedValue>0</FixedValue>
+                </LocationInContainerInBits>
+              </FixedValueEntry>
+            </EntryList>
+          </CommandContainer>
+          <DefaultSignificance consequenceLevel="normal"/>
+          <VerifierSet/>
+        </MetaCommand>
+      </MetaCommandSet>
+    </CommandMetaData>
+    <SpaceSystem name="images_oncommand" shortDescription="On-command capture metadata">
+      <TelemetryMetaData>
+        <ParameterTypeSet>
+          <StringParameterType name="name"/>
+          <IntegerParameterType name="number" signed="false" sizeInBits="32"/>
+          <StringParameterType name="url_full"/>
+          <StringParameterType name="url_full_nginx"/>
+          <StringParameterType name="url_storage"/>
+        </ParameterTypeSet>
+        <ParameterSet>
+          <Parameter name="name" parameterTypeRef="name" shortDescription="Friendly name for the lander capture">
+            <ParameterProperties dataSource="local" persistence="true"/>
+          </Parameter>
+          <Parameter name="number" parameterTypeRef="number" shortDescription="Sequence identifier for lander captures">
+            <ParameterProperties dataSource="local" persistence="true"/>
+          </Parameter>
+          <Parameter name="url_full" parameterTypeRef="url_full" shortDescription="External URL for lander captures">
+            <ParameterProperties dataSource="local" persistence="true"/>
+          </Parameter>
+          <Parameter name="url_full_nginx" parameterTypeRef="url_full_nginx" shortDescription="NGINX reverse proxy URL for lander captures">
+            <ParameterProperties dataSource="local" persistence="true"/>
+          </Parameter>
+          <Parameter name="url_storage" parameterTypeRef="url_storage" shortDescription="Storage endpoint for lander captures">
+            <ParameterProperties dataSource="local" persistence="true"/>
+          </Parameter>
+        </ParameterSet>
+      </TelemetryMetaData>
+      <CommandMetaData/>
+    </SpaceSystem>
+  </SpaceSystem>
+</SpaceSystem>

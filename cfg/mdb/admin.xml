@@ -1,0 +1,114 @@
+<?xml version="1.0" ?>
+<!--
+This file was generated with Yamcs PyMDB.
+See https://github.com/yamcs/pymdb
+-->
+<SpaceSystem xmlns="http://www.omg.org/spec/XTCE/20180204" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.omg.org/spec/XTCE/20180204 https://www.omg.org/spec/XTCE/20180204/SpaceSystem.xsd" name="Admin">
+  <TelemetryMetaData/>
+  <CommandMetaData>
+    <ArgumentTypeSet>
+      <IntegerArgumentType name="admin_set_battery_percentage__battery_percentage" signed="false" sizeInBits="8">
+        <UnitSet>
+          <Unit form="calibrated">%</Unit>
+        </UnitSet>
+        <IntegerDataEncoding sizeInBits="8" encoding="unsigned"/>
+        <ValidRangeSet validRangeAppliesToCalibrated="true">
+          <ValidRange minInclusive="0" maxInclusive="100"/>
+        </ValidRangeSet>
+      </IntegerArgumentType>
+      <BooleanArgumentType name="admin_water_detection__trigger_water_detection" initialValue="True" zeroStringValue="False" oneStringValue="True">
+        <IntegerDataEncoding sizeInBits="8" encoding="unsigned"/>
+      </BooleanArgumentType>
+    </ArgumentTypeSet>
+    <MetaCommandSet>
+      <MetaCommand name="admin_inject_fault" abstract="false" shortDescription="[ADMIN] Inject a system fault (facilitator only)">
+        <CommandContainer name="admin_inject_fault">
+          <EntryList>
+            <FixedValueEntry binaryValue="61646d696e5f696e6a6563745f6661756c74" sizeInBits="144" name="command_name" shortDescription="Command name identifier">
+              <LocationInContainerInBits referenceLocation="previousEntry">
+                <FixedValue>0</FixedValue>
+              </LocationInContainerInBits>
+            </FixedValueEntry>
+          </EntryList>
+        </CommandContainer>
+        <DefaultSignificance consequenceLevel="normal"/>
+        <VerifierSet/>
+      </MetaCommand>
+      <MetaCommand name="admin_set_battery_percentage" abstract="false" shortDescription="[ADMIN] Set battery percentage (facilitator only)">
+        <ArgumentList>
+          <Argument name="battery_percentage" argumentTypeRef="admin_set_battery_percentage__battery_percentage" shortDescription="Target battery percentage"/>
+        </ArgumentList>
+        <CommandContainer name="admin_set_battery_percentage">
+          <EntryList>
+            <FixedValueEntry binaryValue="61646d696e5f7365745f626174746572795f70657263656e74616765" sizeInBits="224" name="command_name" shortDescription="Command name identifier">
+              <LocationInContainerInBits referenceLocation="previousEntry">
+                <FixedValue>0</FixedValue>
+              </LocationInContainerInBits>
+            </FixedValueEntry>
+            <ArgumentRefEntry argumentRef="battery_percentage" shortDescription="Battery percentage argument">
+              <LocationInContainerInBits referenceLocation="previousEntry">
+                <FixedValue>0</FixedValue>
+              </LocationInContainerInBits>
+            </ArgumentRefEntry>
+          </EntryList>
+        </CommandContainer>
+        <DefaultSignificance consequenceLevel="normal"/>
+        <VerifierSet/>
+      </MetaCommand>
+      <MetaCommand name="admin_water_detection" abstract="false" shortDescription="[ADMIN] Trigger water detection event (facilitator only)">
+        <ArgumentList>
+          <Argument name="trigger_water_detection" argumentTypeRef="admin_water_detection__trigger_water_detection" shortDescription="True for water detection, False to reset"/>
+        </ArgumentList>
+        <CommandContainer name="admin_water_detection">
+          <EntryList>
+            <FixedValueEntry binaryValue="61646d696e5f77617465725f646574656374696f6e" sizeInBits="168" name="command_name" shortDescription="Command name identifier">
+              <LocationInContainerInBits referenceLocation="previousEntry">
+                <FixedValue>0</FixedValue>
+              </LocationInContainerInBits>
+            </FixedValueEntry>
+            <ArgumentRefEntry argumentRef="trigger_water_detection" shortDescription="Water detection trigger flag">
+              <LocationInContainerInBits referenceLocation="previousEntry">
+                <FixedValue>0</FixedValue>
+              </LocationInContainerInBits>
+            </ArgumentRefEntry>
+          </EntryList>
+        </CommandContainer>
+        <DefaultSignificance consequenceLevel="normal"/>
+        <VerifierSet/>
+      </MetaCommand>
+    </MetaCommandSet>
+  </CommandMetaData>
+  <SpaceSystem name="camera" shortDescription="Administrative camera metadata">
+    <TelemetryMetaData/>
+    <CommandMetaData/>
+    <SpaceSystem name="images_monitoring" shortDescription="Admin monitoring image metadata">
+      <TelemetryMetaData>
+        <ParameterTypeSet>
+          <StringParameterType name="name"/>
+          <IntegerParameterType name="number" signed="false" sizeInBits="32"/>
+          <StringParameterType name="url_full"/>
+          <StringParameterType name="url_full_nginx"/>
+          <StringParameterType name="url_storage"/>
+        </ParameterTypeSet>
+        <ParameterSet>
+          <Parameter name="name" parameterTypeRef="name" shortDescription="Friendly name for the monitoring capture">
+            <ParameterProperties dataSource="local" persistence="true"/>
+          </Parameter>
+          <Parameter name="number" parameterTypeRef="number" shortDescription="Sequence identifier for monitoring captures">
+            <ParameterProperties dataSource="local" persistence="true"/>
+          </Parameter>
+          <Parameter name="url_full" parameterTypeRef="url_full" shortDescription="External URL for monitoring captures">
+            <ParameterProperties dataSource="local" persistence="true"/>
+          </Parameter>
+          <Parameter name="url_full_nginx" parameterTypeRef="url_full_nginx" shortDescription="NGINX reverse proxy URL for monitoring captures">
+            <ParameterProperties dataSource="local" persistence="true"/>
+          </Parameter>
+          <Parameter name="url_storage" parameterTypeRef="url_storage" shortDescription="Storage endpoint for monitoring captures">
+            <ParameterProperties dataSource="local" persistence="true"/>
+          </Parameter>
+        </ParameterSet>
+      </TelemetryMetaData>
+      <CommandMetaData/>
+    </SpaceSystem>
+  </SpaceSystem>
+</SpaceSystem>

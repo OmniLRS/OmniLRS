@@ -1,0 +1,938 @@
+<?xml version="1.0" ?>
+<!--
+This file was generated with Yamcs PyMDB.
+See https://github.com/yamcs/pymdb
+-->
+<SpaceSystem xmlns="http://www.omg.org/spec/XTCE/20180204" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.omg.org/spec/XTCE/20180204 https://www.omg.org/spec/XTCE/20180204/SpaceSystem.xsd" name="Rover">
+  <TelemetryMetaData>
+    <ParameterTypeSet>
+      <IntegerParameterType name="battery_charge" signed="false" sizeInBits="8">
+        <UnitSet>
+          <Unit form="calibrated">%</Unit>
+        </UnitSet>
+        <ValidRange validRangeAppliesToCalibrated="true" minInclusive="0" maxInclusive="100"/>
+      </IntegerParameterType>
+      <FloatParameterType name="battery_voltage" sizeInBits="32">
+        <UnitSet>
+          <Unit form="calibrated">V</Unit>
+        </UnitSet>
+        <ValidRange validRangeAppliesToCalibrated="true" minInclusive="0.0"/>
+      </FloatParameterType>
+      <FloatParameterType name="current_draw_apxs" sizeInBits="32">
+        <UnitSet>
+          <Unit form="calibrated">A</Unit>
+        </UnitSet>
+        <ValidRange validRangeAppliesToCalibrated="true" minInclusive="0.0"/>
+      </FloatParameterType>
+      <FloatParameterType name="current_draw_camera" sizeInBits="32">
+        <UnitSet>
+          <Unit form="calibrated">A</Unit>
+        </UnitSet>
+        <ValidRange validRangeAppliesToCalibrated="true" minInclusive="0.0"/>
+      </FloatParameterType>
+      <FloatParameterType name="current_draw_eps" sizeInBits="32">
+        <UnitSet>
+          <Unit form="calibrated">A</Unit>
+        </UnitSet>
+        <ValidRange validRangeAppliesToCalibrated="true" minInclusive="0.0"/>
+      </FloatParameterType>
+      <FloatParameterType name="current_draw_motor_controller" sizeInBits="32">
+        <UnitSet>
+          <Unit form="calibrated">A</Unit>
+        </UnitSet>
+        <ValidRange validRangeAppliesToCalibrated="true" minInclusive="0.0"/>
+      </FloatParameterType>
+      <FloatParameterType name="current_draw_neutron_spectrometer" sizeInBits="32">
+        <UnitSet>
+          <Unit form="calibrated">A</Unit>
+        </UnitSet>
+        <ValidRange validRangeAppliesToCalibrated="true" minInclusive="0.0"/>
+      </FloatParameterType>
+      <FloatParameterType name="current_draw_obc" sizeInBits="32">
+        <UnitSet>
+          <Unit form="calibrated">A</Unit>
+        </UnitSet>
+        <ValidRange validRangeAppliesToCalibrated="true" minInclusive="0.0"/>
+      </FloatParameterType>
+      <FloatParameterType name="current_draw_radio" sizeInBits="32">
+        <UnitSet>
+          <Unit form="calibrated">A</Unit>
+        </UnitSet>
+        <ValidRange validRangeAppliesToCalibrated="true" minInclusive="0.0"/>
+      </FloatParameterType>
+      <EnumeratedParameterType name="go_nogo">
+        <EnumerationList>
+          <Enumeration value="0" label="NOGO"/>
+          <Enumeration value="1" label="GO"/>
+        </EnumerationList>
+      </EnumeratedParameterType>
+      <AggregateParameterType name="imu_accelerometer">
+        <MemberList>
+          <Member name="ax" typeRef="imu_accelerometer__ax"/>
+          <Member name="ay" typeRef="imu_accelerometer__ay"/>
+          <Member name="az" typeRef="imu_accelerometer__az"/>
+        </MemberList>
+      </AggregateParameterType>
+      <FloatParameterType name="imu_accelerometer__ax" sizeInBits="32">
+        <UnitSet>
+          <Unit form="calibrated">m/s^2</Unit>
+        </UnitSet>
+      </FloatParameterType>
+      <FloatParameterType name="imu_accelerometer__ay" sizeInBits="32">
+        <UnitSet>
+          <Unit form="calibrated">m/s^2</Unit>
+        </UnitSet>
+      </FloatParameterType>
+      <FloatParameterType name="imu_accelerometer__az" sizeInBits="32">
+        <UnitSet>
+          <Unit form="calibrated">m/s^2</Unit>
+        </UnitSet>
+      </FloatParameterType>
+      <AggregateParameterType name="imu_gyroscope">
+        <MemberList>
+          <Member name="gx" typeRef="imu_gyroscope__gx"/>
+          <Member name="gy" typeRef="imu_gyroscope__gy"/>
+          <Member name="gz" typeRef="imu_gyroscope__gz"/>
+        </MemberList>
+      </AggregateParameterType>
+      <FloatParameterType name="imu_gyroscope__gx" sizeInBits="32">
+        <UnitSet>
+          <Unit form="calibrated">deg/s</Unit>
+        </UnitSet>
+      </FloatParameterType>
+      <FloatParameterType name="imu_gyroscope__gy" sizeInBits="32">
+        <UnitSet>
+          <Unit form="calibrated">deg/s</Unit>
+        </UnitSet>
+      </FloatParameterType>
+      <FloatParameterType name="imu_gyroscope__gz" sizeInBits="32">
+        <UnitSet>
+          <Unit form="calibrated">deg/s</Unit>
+        </UnitSet>
+      </FloatParameterType>
+      <AggregateParameterType name="imu_orientation">
+        <MemberList>
+          <Member name="roll" typeRef="imu_orientation__roll"/>
+          <Member name="pitch" typeRef="imu_orientation__pitch"/>
+          <Member name="yaw" typeRef="imu_orientation__yaw"/>
+        </MemberList>
+      </AggregateParameterType>
+      <FloatParameterType name="imu_orientation__roll" sizeInBits="32">
+        <UnitSet>
+          <Unit form="calibrated">deg</Unit>
+        </UnitSet>
+      </FloatParameterType>
+      <FloatParameterType name="imu_orientation__pitch" sizeInBits="32">
+        <UnitSet>
+          <Unit form="calibrated">deg</Unit>
+        </UnitSet>
+      </FloatParameterType>
+      <FloatParameterType name="imu_orientation__yaw" sizeInBits="32">
+        <UnitSet>
+          <Unit form="calibrated">deg</Unit>
+        </UnitSet>
+      </FloatParameterType>
+      <ArrayParameterType name="motor_current" arrayTypeRef="motor_current__el">
+        <DimensionList>
+          <Dimension>
+            <StartingIndex>
+              <FixedValue>0</FixedValue>
+            </StartingIndex>
+            <EndingIndex>
+              <FixedValue>5</FixedValue>
+            </EndingIndex>
+          </Dimension>
+        </DimensionList>
+      </ArrayParameterType>
+      <FloatParameterType name="motor_current__el" sizeInBits="32">
+        <UnitSet>
+          <Unit form="calibrated">A</Unit>
+        </UnitSet>
+      </FloatParameterType>
+      <ArrayParameterType name="motor_encoder" arrayTypeRef="motor_encoder__el">
+        <DimensionList>
+          <Dimension>
+            <StartingIndex>
+              <FixedValue>0</FixedValue>
+            </StartingIndex>
+            <EndingIndex>
+              <FixedValue>5</FixedValue>
+            </EndingIndex>
+          </Dimension>
+        </DimensionList>
+      </ArrayParameterType>
+      <IntegerParameterType name="motor_encoder__el" signed="false" sizeInBits="16">
+        <UnitSet>
+          <Unit form="calibrated">counts</Unit>
+        </UnitSet>
+        <ValidRange validRangeAppliesToCalibrated="true" minInclusive="0" maxInclusive="1024"/>
+      </IntegerParameterType>
+      <IntegerParameterType name="neutron_counts" signed="true" sizeInBits="32">
+        <UnitSet>
+          <Unit form="calibrated">counts</Unit>
+        </UnitSet>
+      </IntegerParameterType>
+      <IntegerParameterType name="obc_cpu_usage" signed="false" sizeInBits="8">
+        <UnitSet>
+          <Unit form="calibrated">%</Unit>
+        </UnitSet>
+        <ValidRange validRangeAppliesToCalibrated="true" minInclusive="0" maxInclusive="100"/>
+      </IntegerParameterType>
+      <IntegerParameterType name="obc_disk_usage" signed="false" sizeInBits="8">
+        <UnitSet>
+          <Unit form="calibrated">%</Unit>
+        </UnitSet>
+        <ValidRange validRangeAppliesToCalibrated="true" minInclusive="0" maxInclusive="100"/>
+      </IntegerParameterType>
+      <IntegerParameterType name="obc_ram_usage" signed="false" sizeInBits="8">
+        <UnitSet>
+          <Unit form="calibrated">%</Unit>
+        </UnitSet>
+        <ValidRange validRangeAppliesToCalibrated="true" minInclusive="0" maxInclusive="100"/>
+      </IntegerParameterType>
+      <EnumeratedParameterType name="obc_state">
+        <EnumerationList>
+          <Enumeration value="0" label="OFF"/>
+          <Enumeration value="1" label="BOOT"/>
+          <Enumeration value="2" label="IDLE"/>
+          <Enumeration value="3" label="CAMERA"/>
+          <Enumeration value="4" label="MOTOR"/>
+          <Enumeration value="5" label="SAFE"/>
+          <Enumeration value="6" label="ERROR"/>
+        </EnumerationList>
+      </EnumeratedParameterType>
+      <FloatParameterType name="obc_uptime" sizeInBits="32">
+        <UnitSet>
+          <Unit form="calibrated">s</Unit>
+        </UnitSet>
+        <ValidRange validRangeAppliesToCalibrated="true" minInclusive="0.0"/>
+      </FloatParameterType>
+      <AggregateParameterType name="pose_ground_truth">
+        <MemberList>
+          <Member name="position" typeRef="pose_ground_truth__position" shortDescription="3D position in Cartesian coordinates"/>
+          <Member name="orientation" typeRef="pose_ground_truth__orientation" shortDescription="3D orientation as quaternion (w, x, y, z)"/>
+        </MemberList>
+      </AggregateParameterType>
+      <AggregateParameterType name="pose_ground_truth__position">
+        <MemberList>
+          <Member name="x" typeRef="pose_ground_truth__position__x" shortDescription="X coordinate"/>
+          <Member name="y" typeRef="pose_ground_truth__position__y" shortDescription="Y coordinate"/>
+          <Member name="z" typeRef="pose_ground_truth__position__z" shortDescription="Z coordinate"/>
+        </MemberList>
+      </AggregateParameterType>
+      <FloatParameterType name="pose_ground_truth__position__x" sizeInBits="32">
+        <UnitSet>
+          <Unit form="calibrated">m</Unit>
+        </UnitSet>
+      </FloatParameterType>
+      <FloatParameterType name="pose_ground_truth__position__y" sizeInBits="32">
+        <UnitSet>
+          <Unit form="calibrated">m</Unit>
+        </UnitSet>
+      </FloatParameterType>
+      <FloatParameterType name="pose_ground_truth__position__z" sizeInBits="32">
+        <UnitSet>
+          <Unit form="calibrated">m</Unit>
+        </UnitSet>
+      </FloatParameterType>
+      <AggregateParameterType name="pose_ground_truth__orientation">
+        <MemberList>
+          <Member name="w" typeRef="pose_ground_truth__orientation__w" shortDescription="Quaternion W (scalar component)"/>
+          <Member name="x" typeRef="pose_ground_truth__orientation__x" shortDescription="Quaternion X component"/>
+          <Member name="y" typeRef="pose_ground_truth__orientation__y" shortDescription="Quaternion Y component"/>
+          <Member name="z" typeRef="pose_ground_truth__orientation__z" shortDescription="Quaternion Z component"/>
+        </MemberList>
+      </AggregateParameterType>
+      <FloatParameterType name="pose_ground_truth__orientation__w" sizeInBits="32"/>
+      <FloatParameterType name="pose_ground_truth__orientation__x" sizeInBits="32"/>
+      <FloatParameterType name="pose_ground_truth__orientation__y" sizeInBits="32"/>
+      <FloatParameterType name="pose_ground_truth__orientation__z" sizeInBits="32"/>
+      <IntegerParameterType name="radio_rssi" signed="true" sizeInBits="32">
+        <UnitSet>
+          <Unit form="calibrated">dBm</Unit>
+        </UnitSet>
+      </IntegerParameterType>
+      <EnumeratedParameterType name="solar_panel_state">
+        <EnumerationList>
+          <Enumeration value="0" label="STOWED"/>
+          <Enumeration value="1" label="DEPLOYED"/>
+        </EnumerationList>
+      </EnumeratedParameterType>
+      <FloatParameterType name="temperature_back" sizeInBits="32">
+        <UnitSet>
+          <Unit form="calibrated">C</Unit>
+        </UnitSet>
+        <ValidRange validRangeAppliesToCalibrated="true" minInclusive="-273.15"/>
+      </FloatParameterType>
+      <FloatParameterType name="temperature_bottom" sizeInBits="32">
+        <UnitSet>
+          <Unit form="calibrated">C</Unit>
+        </UnitSet>
+        <ValidRange validRangeAppliesToCalibrated="true" minInclusive="-273.15"/>
+      </FloatParameterType>
+      <FloatParameterType name="temperature_elec_box" sizeInBits="32">
+        <UnitSet>
+          <Unit form="calibrated">C</Unit>
+        </UnitSet>
+        <ValidRange validRangeAppliesToCalibrated="true" minInclusive="0.0"/>
+      </FloatParameterType>
+      <FloatParameterType name="temperature_front" sizeInBits="32">
+        <UnitSet>
+          <Unit form="calibrated">C</Unit>
+        </UnitSet>
+        <ValidRange validRangeAppliesToCalibrated="true" minInclusive="-273.15"/>
+      </FloatParameterType>
+      <FloatParameterType name="temperature_left" sizeInBits="32">
+        <UnitSet>
+          <Unit form="calibrated">C</Unit>
+        </UnitSet>
+        <ValidRange validRangeAppliesToCalibrated="true" minInclusive="-273.15"/>
+      </FloatParameterType>
+      <FloatParameterType name="temperature_right" sizeInBits="32">
+        <UnitSet>
+          <Unit form="calibrated">C</Unit>
+        </UnitSet>
+        <ValidRange validRangeAppliesToCalibrated="true" minInclusive="-273.15"/>
+      </FloatParameterType>
+      <FloatParameterType name="temperature_top" sizeInBits="32">
+        <UnitSet>
+          <Unit form="calibrated">C</Unit>
+        </UnitSet>
+        <ValidRange validRangeAppliesToCalibrated="true" minInclusive="-273.15"/>
+      </FloatParameterType>
+      <FloatParameterType name="total_current_in" sizeInBits="32">
+        <UnitSet>
+          <Unit form="calibrated">A</Unit>
+        </UnitSet>
+        <ValidRange validRangeAppliesToCalibrated="true" minInclusive="0.0"/>
+      </FloatParameterType>
+      <FloatParameterType name="total_current_out" sizeInBits="32">
+        <UnitSet>
+          <Unit form="calibrated">A</Unit>
+        </UnitSet>
+        <ValidRange validRangeAppliesToCalibrated="true" minInclusive="0.0"/>
+      </FloatParameterType>
+    </ParameterTypeSet>
+    <ParameterSet>
+      <Parameter name="battery_charge" parameterTypeRef="battery_charge" shortDescription="Battery charge percentage">
+        <ParameterProperties dataSource="local" persistence="true"/>
+      </Parameter>
+      <Parameter name="battery_voltage" parameterTypeRef="battery_voltage" shortDescription="Battery voltage">
+        <ParameterProperties dataSource="local" persistence="true"/>
+      </Parameter>
+      <Parameter name="current_draw_apxs" parameterTypeRef="current_draw_apxs" shortDescription="Current consumed by Alpha Particle X-ray Spectrometer">
+        <ParameterProperties dataSource="local" persistence="true"/>
+      </Parameter>
+      <Parameter name="current_draw_camera" parameterTypeRef="current_draw_camera" shortDescription="Current consumed by Camera system">
+        <ParameterProperties dataSource="local" persistence="true"/>
+      </Parameter>
+      <Parameter name="current_draw_eps" parameterTypeRef="current_draw_eps" shortDescription="Current consumed by Electric Power System">
+        <ParameterProperties dataSource="local" persistence="true"/>
+      </Parameter>
+      <Parameter name="current_draw_motor_controller" parameterTypeRef="current_draw_motor_controller" shortDescription="Current consumed by Motor Controller">
+        <ParameterProperties dataSource="local" persistence="true"/>
+      </Parameter>
+      <Parameter name="current_draw_neutron_spectrometer" parameterTypeRef="current_draw_neutron_spectrometer" shortDescription="Current consumed by Neutron Spectrometer">
+        <ParameterProperties dataSource="local" persistence="true"/>
+      </Parameter>
+      <Parameter name="current_draw_obc" parameterTypeRef="current_draw_obc" shortDescription="Current consumed by On-Board Computer">
+        <ParameterProperties dataSource="local" persistence="true"/>
+      </Parameter>
+      <Parameter name="current_draw_radio" parameterTypeRef="current_draw_radio" shortDescription="Current consumed by Radio system">
+        <ParameterProperties dataSource="local" persistence="true"/>
+      </Parameter>
+      <Parameter name="go_nogo" parameterTypeRef="go_nogo" shortDescription="Current GO/NOGO mission status">
+        <ParameterProperties dataSource="local" persistence="true"/>
+      </Parameter>
+      <Parameter name="imu_accelerometer" parameterTypeRef="imu_accelerometer" shortDescription="Accelerometer data with x, y, z components">
+        <ParameterProperties dataSource="local" persistence="true"/>
+      </Parameter>
+      <Parameter name="imu_gyroscope" parameterTypeRef="imu_gyroscope" shortDescription="Gyroscope data with x, y, z components">
+        <ParameterProperties dataSource="local" persistence="true"/>
+      </Parameter>
+      <Parameter name="imu_orientation" parameterTypeRef="imu_orientation" shortDescription="Orientation data with roll, pitch, and yaw">
+        <ParameterProperties dataSource="local" persistence="true"/>
+      </Parameter>
+      <Parameter name="motor_current" parameterTypeRef="motor_current" shortDescription="Array of motor current readings for the six wheels">
+        <ParameterProperties dataSource="local" persistence="true"/>
+      </Parameter>
+      <Parameter name="motor_encoder" parameterTypeRef="motor_encoder" shortDescription="Array of motor encoder positions for the six wheels">
+        <ParameterProperties dataSource="local" persistence="true"/>
+      </Parameter>
+      <Parameter name="neutron_counts" parameterTypeRef="neutron_counts" shortDescription="Neutron spectrometer counts">
+        <ParameterProperties dataSource="local" persistence="true"/>
+      </Parameter>
+      <Parameter name="obc_cpu_usage" parameterTypeRef="obc_cpu_usage" shortDescription="On-Board Computer CPU usage">
+        <ParameterProperties dataSource="local" persistence="true"/>
+      </Parameter>
+      <Parameter name="obc_disk_usage" parameterTypeRef="obc_disk_usage" shortDescription="On-Board Computer disk usage">
+        <ParameterProperties dataSource="local" persistence="true"/>
+      </Parameter>
+      <Parameter name="obc_ram_usage" parameterTypeRef="obc_ram_usage" shortDescription="On-Board Computer RAM usage">
+        <ParameterProperties dataSource="local" persistence="true"/>
+      </Parameter>
+      <Parameter name="obc_state" parameterTypeRef="obc_state" shortDescription="On-Board Computer state">
+        <ParameterProperties dataSource="local" persistence="true"/>
+      </Parameter>
+      <Parameter name="obc_uptime" parameterTypeRef="obc_uptime" shortDescription="On-Board Computer uptime">
+        <ParameterProperties dataSource="local" persistence="true"/>
+      </Parameter>
+      <Parameter name="pose_ground_truth" parameterTypeRef="pose_ground_truth" shortDescription="Ground truth pose with position and orientation">
+        <ParameterProperties dataSource="local" persistence="true"/>
+      </Parameter>
+      <Parameter name="radio_rssi" parameterTypeRef="radio_rssi" shortDescription="Radio signal strength indicator">
+        <ParameterProperties dataSource="local" persistence="true"/>
+      </Parameter>
+      <Parameter name="solar_panel_state" parameterTypeRef="solar_panel_state" shortDescription="Deployment state of the solar panel">
+        <ParameterProperties dataSource="local" persistence="true"/>
+      </Parameter>
+      <Parameter name="temperature_back" parameterTypeRef="temperature_back" shortDescription="Back temperature in Celsius">
+        <ParameterProperties dataSource="local" persistence="true"/>
+      </Parameter>
+      <Parameter name="temperature_bottom" parameterTypeRef="temperature_bottom" shortDescription="Bottom temperature in Celsius">
+        <ParameterProperties dataSource="local" persistence="true"/>
+      </Parameter>
+      <Parameter name="temperature_elec_box" parameterTypeRef="temperature_elec_box" shortDescription="Electronics box temperature in Celsius">
+        <ParameterProperties dataSource="local" persistence="true"/>
+      </Parameter>
+      <Parameter name="temperature_front" parameterTypeRef="temperature_front" shortDescription="Front temperature in Celsius">
+        <ParameterProperties dataSource="local" persistence="true"/>
+      </Parameter>
+      <Parameter name="temperature_left" parameterTypeRef="temperature_left" shortDescription="Left temperature in Celsius">
+        <ParameterProperties dataSource="local" persistence="true"/>
+      </Parameter>
+      <Parameter name="temperature_right" parameterTypeRef="temperature_right" shortDescription="Right temperature in Celsius">
+        <ParameterProperties dataSource="local" persistence="true"/>
+      </Parameter>
+      <Parameter name="temperature_top" parameterTypeRef="temperature_top" shortDescription="Top temperature in Celsius">
+        <ParameterProperties dataSource="local" persistence="true"/>
+      </Parameter>
+      <Parameter name="total_current_in" parameterTypeRef="total_current_in" shortDescription="Total current flowing into the system">
+        <ParameterProperties dataSource="local" persistence="true"/>
+      </Parameter>
+      <Parameter name="total_current_out" parameterTypeRef="total_current_out" shortDescription="Total current flowing out of the system">
+        <ParameterProperties dataSource="local" persistence="true"/>
+      </Parameter>
+    </ParameterSet>
+  </TelemetryMetaData>
+  <CommandMetaData/>
+  <SpaceSystem name="camera" shortDescription="Camera control commands">
+    <TelemetryMetaData/>
+    <CommandMetaData>
+      <ArgumentTypeSet>
+        <EnumeratedArgumentType name="camera_streaming__action">
+          <IntegerDataEncoding sizeInBits="8" encoding="unsigned"/>
+          <EnumerationList>
+            <Enumeration value="0" label="STOP"/>
+            <Enumeration value="1" label="START"/>
+          </EnumerationList>
+        </EnumeratedArgumentType>
+        <StringArgumentType name="change_camera_settings__config_path">
+          <StringDataEncoding encoding="US-ASCII">
+            <Variable maxSizeInBits="8388608">
+              <DynamicValue>
+                <ParameterInstanceRef parameterRef="_yamcs_ignore"/>
+              </DynamicValue>
+              <TerminationChar>00</TerminationChar>
+            </Variable>
+          </StringDataEncoding>
+        </StringArgumentType>
+      </ArgumentTypeSet>
+      <MetaCommandSet>
+        <MetaCommand name="camera_capture_depth" abstract="false" shortDescription="Capture a depth image">
+          <CommandContainer name="camera_capture_depth">
+            <EntryList>
+              <FixedValueEntry binaryValue="63616d6572615f636170747572655f6465707468" sizeInBits="160" name="command_name" shortDescription="Command name identifier">
+                <LocationInContainerInBits referenceLocation="previousEntry">
+                  <FixedValue>0</FixedValue>
+                </LocationInContainerInBits>
+              </FixedValueEntry>
+            </EntryList>
+          </CommandContainer>
+          <DefaultSignificance consequenceLevel="normal"/>
+          <VerifierSet/>
+        </MetaCommand>
+        <MetaCommand name="camera_capture_high" abstract="false" shortDescription="Capture a high-resolution image">
+          <CommandContainer name="camera_capture_high">
+            <EntryList>
+              <FixedValueEntry binaryValue="63616d6572615f636170747572655f68696768" sizeInBits="152" name="command_name" shortDescription="Command name identifier">
+                <LocationInContainerInBits referenceLocation="previousEntry">
+                  <FixedValue>0</FixedValue>
+                </LocationInContainerInBits>
+              </FixedValueEntry>
+            </EntryList>
+          </CommandContainer>
+          <DefaultSignificance consequenceLevel="normal"/>
+          <VerifierSet/>
+        </MetaCommand>
+        <MetaCommand name="camera_streaming" abstract="false" shortDescription="Start or stop camera streaming">
+          <ArgumentList>
+            <Argument name="action" argumentTypeRef="camera_streaming__action" shortDescription="Camera streaming action"/>
+          </ArgumentList>
+          <CommandContainer name="camera_streaming">
+            <EntryList>
+              <FixedValueEntry binaryValue="63616d6572615f73747265616d696e67" sizeInBits="128" name="command_name" shortDescription="Command name identifier">
+                <LocationInContainerInBits referenceLocation="previousEntry">
+                  <FixedValue>0</FixedValue>
+                </LocationInContainerInBits>
+              </FixedValueEntry>
+              <ArgumentRefEntry argumentRef="action" shortDescription="Camera action argument">
+                <LocationInContainerInBits referenceLocation="previousEntry">
+                  <FixedValue>0</FixedValue>
+                </LocationInContainerInBits>
+              </ArgumentRefEntry>
+            </EntryList>
+          </CommandContainer>
+          <DefaultSignificance consequenceLevel="normal"/>
+          <VerifierSet/>
+        </MetaCommand>
+        <MetaCommand name="change_camera_settings" abstract="false" shortDescription="Change the camera settings with a config file">
+          <ArgumentList>
+            <Argument name="config_path" argumentTypeRef="change_camera_settings__config_path" shortDescription="Path to the configuration file"/>
+          </ArgumentList>
+          <CommandContainer name="change_camera_settings">
+            <EntryList>
+              <FixedValueEntry binaryValue="6368616e67655f63616d6572615f73657474696e6773" sizeInBits="176" name="command_name" shortDescription="Command name identifier">
+                <LocationInContainerInBits referenceLocation="previousEntry">
+                  <FixedValue>0</FixedValue>
+                </LocationInContainerInBits>
+              </FixedValueEntry>
+              <ArgumentRefEntry argumentRef="config_path" shortDescription="Configuration file path argument">
+                <LocationInContainerInBits referenceLocation="previousEntry">
+                  <FixedValue>0</FixedValue>
+                </LocationInContainerInBits>
+              </ArgumentRefEntry>
+            </EntryList>
+          </CommandContainer>
+          <DefaultSignificance consequenceLevel="normal"/>
+          <VerifierSet/>
+        </MetaCommand>
+      </MetaCommandSet>
+    </CommandMetaData>
+    <SpaceSystem name="images_depth" shortDescription="Depth camera image metadata">
+      <TelemetryMetaData>
+        <ParameterTypeSet>
+          <StringParameterType name="name"/>
+          <IntegerParameterType name="number" signed="false" sizeInBits="32"/>
+          <StringParameterType name="url_full"/>
+          <StringParameterType name="url_full_nginx"/>
+          <StringParameterType name="url_storage"/>
+        </ParameterTypeSet>
+        <ParameterSet>
+          <Parameter name="name" parameterTypeRef="name" shortDescription="Friendly name for the depth capture">
+            <ParameterProperties dataSource="local" persistence="true"/>
+          </Parameter>
+          <Parameter name="number" parameterTypeRef="number" shortDescription="Sequence identifier for depth captures">
+            <ParameterProperties dataSource="local" persistence="true"/>
+          </Parameter>
+          <Parameter name="url_full" parameterTypeRef="url_full" shortDescription="External URL for depth captures">
+            <ParameterProperties dataSource="local" persistence="true"/>
+          </Parameter>
+          <Parameter name="url_full_nginx" parameterTypeRef="url_full_nginx" shortDescription="NGINX reverse proxy URL for depth captures">
+            <ParameterProperties dataSource="local" persistence="true"/>
+          </Parameter>
+          <Parameter name="url_storage" parameterTypeRef="url_storage" shortDescription="Storage endpoint for depth captures">
+            <ParameterProperties dataSource="local" persistence="true"/>
+          </Parameter>
+        </ParameterSet>
+      </TelemetryMetaData>
+      <CommandMetaData/>
+    </SpaceSystem>
+    <SpaceSystem name="images_oncommand" shortDescription="On-command capture metadata">
+      <TelemetryMetaData>
+        <ParameterTypeSet>
+          <StringParameterType name="name"/>
+          <IntegerParameterType name="number" signed="false" sizeInBits="32"/>
+          <StringParameterType name="url_full"/>
+          <StringParameterType name="url_full_nginx"/>
+          <StringParameterType name="url_storage"/>
+        </ParameterTypeSet>
+        <ParameterSet>
+          <Parameter name="name" parameterTypeRef="name" shortDescription="Friendly name for the on-command capture">
+            <ParameterProperties dataSource="local" persistence="true"/>
+          </Parameter>
+          <Parameter name="number" parameterTypeRef="number" shortDescription="Sequence identifier for on-command captures">
+            <ParameterProperties dataSource="local" persistence="true"/>
+          </Parameter>
+          <Parameter name="url_full" parameterTypeRef="url_full" shortDescription="External URL for on-command captures">
+            <ParameterProperties dataSource="local" persistence="true"/>
+          </Parameter>
+          <Parameter name="url_full_nginx" parameterTypeRef="url_full_nginx" shortDescription="NGINX reverse proxy URL for on-command captures">
+            <ParameterProperties dataSource="local" persistence="true"/>
+          </Parameter>
+          <Parameter name="url_storage" parameterTypeRef="url_storage" shortDescription="Storage endpoint for on-command captures">
+            <ParameterProperties dataSource="local" persistence="true"/>
+          </Parameter>
+        </ParameterSet>
+      </TelemetryMetaData>
+      <CommandMetaData/>
+    </SpaceSystem>
+    <SpaceSystem name="images_streaming" shortDescription="Streaming capture metadata">
+      <TelemetryMetaData>
+        <ParameterTypeSet>
+          <StringParameterType name="name"/>
+          <IntegerParameterType name="number" signed="false" sizeInBits="32"/>
+          <EnumeratedParameterType name="state">
+            <EnumerationList>
+              <Enumeration value="0" label="OFF"/>
+              <Enumeration value="1" label="ON"/>
+            </EnumerationList>
+          </EnumeratedParameterType>
+          <StringParameterType name="url_full"/>
+          <StringParameterType name="url_full_nginx"/>
+          <StringParameterType name="url_storage"/>
+        </ParameterTypeSet>
+        <ParameterSet>
+          <Parameter name="name" parameterTypeRef="name" shortDescription="Friendly name for the streaming capture">
+            <ParameterProperties dataSource="local" persistence="true"/>
+          </Parameter>
+          <Parameter name="number" parameterTypeRef="number" shortDescription="Sequence identifier for streaming captures">
+            <ParameterProperties dataSource="local" persistence="true"/>
+          </Parameter>
+          <Parameter name="state" parameterTypeRef="state" shortDescription="Streaming pipeline state">
+            <ParameterProperties dataSource="local" persistence="true"/>
+          </Parameter>
+          <Parameter name="url_full" parameterTypeRef="url_full" shortDescription="External URL for streaming captures">
+            <ParameterProperties dataSource="local" persistence="true"/>
+          </Parameter>
+          <Parameter name="url_full_nginx" parameterTypeRef="url_full_nginx" shortDescription="NGINX reverse proxy URL for streaming captures">
+            <ParameterProperties dataSource="local" persistence="true"/>
+          </Parameter>
+          <Parameter name="url_storage" parameterTypeRef="url_storage" shortDescription="Storage endpoint for streaming captures">
+            <ParameterProperties dataSource="local" persistence="true"/>
+          </Parameter>
+        </ParameterSet>
+      </TelemetryMetaData>
+      <CommandMetaData/>
+    </SpaceSystem>
+  </SpaceSystem>
+  <SpaceSystem name="motor" shortDescription="Motor and drive commands">
+    <TelemetryMetaData/>
+    <CommandMetaData>
+      <ArgumentTypeSet>
+        <FloatArgumentType name="drive_straight__linear_velocity" sizeInBits="32">
+          <UnitSet>
+            <Unit form="calibrated">m/s</Unit>
+          </UnitSet>
+          <FloatDataEncoding sizeInBits="32" encoding="IEEE754_1985" byteOrder="mostSignificantByteFirst"/>
+        </FloatArgumentType>
+        <FloatArgumentType name="drive_straight__distance" sizeInBits="32">
+          <UnitSet>
+            <Unit form="calibrated">m</Unit>
+          </UnitSet>
+          <FloatDataEncoding sizeInBits="32" encoding="IEEE754_1985" byteOrder="mostSignificantByteFirst"/>
+        </FloatArgumentType>
+        <FloatArgumentType name="drive_turn__angular_velocity" sizeInBits="32">
+          <UnitSet>
+            <Unit form="calibrated">deg/s</Unit>
+          </UnitSet>
+          <FloatDataEncoding sizeInBits="32" encoding="IEEE754_1985" byteOrder="mostSignificantByteFirst"/>
+        </FloatArgumentType>
+        <FloatArgumentType name="drive_turn__angle" sizeInBits="32">
+          <UnitSet>
+            <Unit form="calibrated">deg</Unit>
+          </UnitSet>
+          <FloatDataEncoding sizeInBits="32" encoding="IEEE754_1985" byteOrder="mostSignificantByteFirst"/>
+        </FloatArgumentType>
+      </ArgumentTypeSet>
+      <MetaCommandSet>
+        <MetaCommand name="drive_straight" abstract="false" shortDescription="Drive the rover straight">
+          <ArgumentList>
+            <Argument name="linear_velocity" argumentTypeRef="drive_straight__linear_velocity" shortDescription="Linear velocity"/>
+            <Argument name="distance" argumentTypeRef="drive_straight__distance" shortDescription="Distance to travel"/>
+          </ArgumentList>
+          <CommandContainer name="drive_straight">
+            <EntryList>
+              <FixedValueEntry binaryValue="64726976655f7374726169676874" sizeInBits="112" name="command_name" shortDescription="Command name identifier">
+                <LocationInContainerInBits referenceLocation="previousEntry">
+                  <FixedValue>0</FixedValue>
+                </LocationInContainerInBits>
+              </FixedValueEntry>
+              <ArgumentRefEntry argumentRef="linear_velocity" shortDescription="Linear velocity argument">
+                <LocationInContainerInBits referenceLocation="previousEntry">
+                  <FixedValue>0</FixedValue>
+                </LocationInContainerInBits>
+              </ArgumentRefEntry>
+              <ArgumentRefEntry argumentRef="distance" shortDescription="Distance argument">
+                <LocationInContainerInBits referenceLocation="previousEntry">
+                  <FixedValue>0</FixedValue>
+                </LocationInContainerInBits>
+              </ArgumentRefEntry>
+            </EntryList>
+          </CommandContainer>
+          <DefaultSignificance consequenceLevel="normal"/>
+          <VerifierSet/>
+        </MetaCommand>
+        <MetaCommand name="drive_turn" abstract="false" shortDescription="Drive the rover with spot turn">
+          <ArgumentList>
+            <Argument name="angular_velocity" argumentTypeRef="drive_turn__angular_velocity" shortDescription="Angular velocity"/>
+            <Argument name="angle" argumentTypeRef="drive_turn__angle" shortDescription="Angle to turn"/>
+          </ArgumentList>
+          <CommandContainer name="drive_turn">
+            <EntryList>
+              <FixedValueEntry binaryValue="64726976655f7475726e" sizeInBits="80" name="command_name" shortDescription="Command name identifier">
+                <LocationInContainerInBits referenceLocation="previousEntry">
+                  <FixedValue>0</FixedValue>
+                </LocationInContainerInBits>
+              </FixedValueEntry>
+              <ArgumentRefEntry argumentRef="angular_velocity" shortDescription="Angular velocity argument">
+                <LocationInContainerInBits referenceLocation="previousEntry">
+                  <FixedValue>0</FixedValue>
+                </LocationInContainerInBits>
+              </ArgumentRefEntry>
+              <ArgumentRefEntry argumentRef="angle" shortDescription="Angle argument">
+                <LocationInContainerInBits referenceLocation="previousEntry">
+                  <FixedValue>0</FixedValue>
+                </LocationInContainerInBits>
+              </ArgumentRefEntry>
+            </EntryList>
+          </CommandContainer>
+          <DefaultSignificance consequenceLevel="normal"/>
+          <VerifierSet/>
+        </MetaCommand>
+      </MetaCommandSet>
+    </CommandMetaData>
+  </SpaceSystem>
+  <SpaceSystem name="payload" shortDescription="Payload configuration commands">
+    <TelemetryMetaData/>
+    <CommandMetaData>
+      <ArgumentTypeSet>
+        <StringArgumentType name="change_payload_settings__config_path">
+          <StringDataEncoding encoding="US-ASCII">
+            <Variable maxSizeInBits="8388608">
+              <DynamicValue>
+                <ParameterInstanceRef parameterRef="_yamcs_ignore"/>
+              </DynamicValue>
+              <TerminationChar>00</TerminationChar>
+            </Variable>
+          </StringDataEncoding>
+        </StringArgumentType>
+      </ArgumentTypeSet>
+      <MetaCommandSet>
+        <MetaCommand name="change_payload_settings" abstract="false" shortDescription="Change the payload settings with a config file">
+          <ArgumentList>
+            <Argument name="config_path" argumentTypeRef="change_payload_settings__config_path" shortDescription="Path to the configuration file"/>
+          </ArgumentList>
+          <CommandContainer name="change_payload_settings">
+            <EntryList>
+              <FixedValueEntry binaryValue="6368616e67655f7061796c6f61645f73657474696e6773" sizeInBits="184" name="command_name" shortDescription="Command name identifier">
+                <LocationInContainerInBits referenceLocation="previousEntry">
+                  <FixedValue>0</FixedValue>
+                </LocationInContainerInBits>
+              </FixedValueEntry>
+              <ArgumentRefEntry argumentRef="config_path" shortDescription="Configuration file path argument">
+                <LocationInContainerInBits referenceLocation="previousEntry">
+                  <FixedValue>0</FixedValue>
+                </LocationInContainerInBits>
+              </ArgumentRefEntry>
+            </EntryList>
+          </CommandContainer>
+          <DefaultSignificance consequenceLevel="normal"/>
+          <VerifierSet/>
+        </MetaCommand>
+        <MetaCommand name="payload_capture_apxs" abstract="false" shortDescription="Capture an Alpha Particle X-ray Spectroscopy measurement">
+          <CommandContainer name="payload_capture_apxs">
+            <EntryList>
+              <FixedValueEntry binaryValue="7061796c6f61645f636170747572655f61707873" sizeInBits="160" name="command_name" shortDescription="Command name identifier">
+                <LocationInContainerInBits referenceLocation="previousEntry">
+                  <FixedValue>0</FixedValue>
+                </LocationInContainerInBits>
+              </FixedValueEntry>
+            </EntryList>
+          </CommandContainer>
+          <DefaultSignificance consequenceLevel="normal"/>
+          <VerifierSet/>
+        </MetaCommand>
+      </MetaCommandSet>
+    </CommandMetaData>
+    <SpaceSystem name="images_apxs" shortDescription="APXS capture metadata">
+      <TelemetryMetaData>
+        <ParameterTypeSet>
+          <StringParameterType name="name"/>
+          <IntegerParameterType name="number" signed="false" sizeInBits="32"/>
+          <StringParameterType name="url_full"/>
+          <StringParameterType name="url_full_nginx"/>
+          <StringParameterType name="url_storage"/>
+        </ParameterTypeSet>
+        <ParameterSet>
+          <Parameter name="name" parameterTypeRef="name" shortDescription="Friendly name for the APXS capture">
+            <ParameterProperties dataSource="local" persistence="true"/>
+          </Parameter>
+          <Parameter name="number" parameterTypeRef="number" shortDescription="Sequence identifier for APXS captures">
+            <ParameterProperties dataSource="local" persistence="true"/>
+          </Parameter>
+          <Parameter name="url_full" parameterTypeRef="url_full" shortDescription="External URL for APXS captures">
+            <ParameterProperties dataSource="local" persistence="true"/>
+          </Parameter>
+          <Parameter name="url_full_nginx" parameterTypeRef="url_full_nginx" shortDescription="NGINX reverse proxy URL for APXS captures">
+            <ParameterProperties dataSource="local" persistence="true"/>
+          </Parameter>
+          <Parameter name="url_storage" parameterTypeRef="url_storage" shortDescription="Storage endpoint for APXS captures">
+            <ParameterProperties dataSource="local" persistence="true"/>
+          </Parameter>
+        </ParameterSet>
+      </TelemetryMetaData>
+      <CommandMetaData/>
+    </SpaceSystem>
+  </SpaceSystem>
+  <SpaceSystem name="power" shortDescription="Power management commands">
+    <TelemetryMetaData/>
+    <CommandMetaData>
+      <ArgumentTypeSet>
+        <EnumeratedArgumentType name="power_electronics__subsystem_id">
+          <IntegerDataEncoding sizeInBits="8" encoding="unsigned"/>
+          <EnumerationList>
+            <Enumeration value="0" label="CAMERA"/>
+            <Enumeration value="1" label="MOTOR_CONTROLLER"/>
+            <Enumeration value="2" label="NEUTRON_SPECTROMETER"/>
+            <Enumeration value="3" label="APXS"/>
+            <Enumeration value="4" label="RADIO"/>
+          </EnumerationList>
+        </EnumeratedArgumentType>
+        <EnumeratedArgumentType name="power_electronics__power_state">
+          <IntegerDataEncoding sizeInBits="8" encoding="unsigned"/>
+          <EnumerationList>
+            <Enumeration value="0" label="OFF"/>
+            <Enumeration value="1" label="ON"/>
+          </EnumerationList>
+        </EnumeratedArgumentType>
+      </ArgumentTypeSet>
+      <MetaCommandSet>
+        <MetaCommand name="power_electronics" abstract="false" shortDescription="Power on/off electronics subsystems">
+          <ArgumentList>
+            <Argument name="subsystem_id" argumentTypeRef="power_electronics__subsystem_id" shortDescription="Subsystem identifier"/>
+            <Argument name="power_state" argumentTypeRef="power_electronics__power_state" shortDescription="Power state"/>
+          </ArgumentList>
+          <CommandContainer name="power_electronics">
+            <EntryList>
+              <FixedValueEntry binaryValue="706f7765725f656c656374726f6e696373" sizeInBits="136" name="command_name" shortDescription="Command name identifier">
+                <LocationInContainerInBits referenceLocation="previousEntry">
+                  <FixedValue>0</FixedValue>
+                </LocationInContainerInBits>
+              </FixedValueEntry>
+              <ArgumentRefEntry argumentRef="subsystem_id" shortDescription="Subsystem ID argument">
+                <LocationInContainerInBits referenceLocation="previousEntry">
+                  <FixedValue>0</FixedValue>
+                </LocationInContainerInBits>
+              </ArgumentRefEntry>
+              <ArgumentRefEntry argumentRef="power_state" shortDescription="Power state argument">
+                <LocationInContainerInBits referenceLocation="previousEntry">
+                  <FixedValue>0</FixedValue>
+                </LocationInContainerInBits>
+              </ArgumentRefEntry>
+            </EntryList>
+          </CommandContainer>
+          <DefaultSignificance consequenceLevel="normal"/>
+          <VerifierSet/>
+        </MetaCommand>
+      </MetaCommandSet>
+    </CommandMetaData>
+  </SpaceSystem>
+  <SpaceSystem name="system" shortDescription="System-level commands">
+    <TelemetryMetaData/>
+    <CommandMetaData>
+      <ArgumentTypeSet>
+        <EnumeratedArgumentType name="deploy_solar_panel__deployment">
+          <IntegerDataEncoding sizeInBits="8" encoding="unsigned"/>
+          <EnumerationList>
+            <Enumeration value="0" label="STOW"/>
+            <Enumeration value="1" label="DEPLOY"/>
+          </EnumerationList>
+        </EnumeratedArgumentType>
+        <EnumeratedArgumentType name="go_nogo_command__decision">
+          <IntegerDataEncoding sizeInBits="8" encoding="unsigned"/>
+          <EnumerationList>
+            <Enumeration value="0" label="NOGO"/>
+            <Enumeration value="1" label="GO"/>
+          </EnumerationList>
+        </EnumeratedArgumentType>
+        <EnumeratedArgumentType name="reboot_rover__reboot_mode">
+          <IntegerDataEncoding sizeInBits="8" encoding="unsigned"/>
+          <EnumerationList>
+            <Enumeration value="0" label="SOFT"/>
+            <Enumeration value="1" label="HARD"/>
+            <Enumeration value="2" label="SAFE_MODE"/>
+          </EnumerationList>
+        </EnumeratedArgumentType>
+      </ArgumentTypeSet>
+      <MetaCommandSet>
+        <MetaCommand name="deploy_from_lander" abstract="false" shortDescription="Deploy rover from lander platform">
+          <CommandContainer name="deploy_from_lander">
+            <EntryList>
+              <FixedValueEntry binaryValue="6465706c6f795f66726f6d5f6c616e646572" sizeInBits="144" name="command_name" shortDescription="Command name identifier">
+                <LocationInContainerInBits referenceLocation="previousEntry">
+                  <FixedValue>0</FixedValue>
+                </LocationInContainerInBits>
+              </FixedValueEntry>
+            </EntryList>
+          </CommandContainer>
+          <DefaultSignificance consequenceLevel="normal"/>
+          <VerifierSet/>
+        </MetaCommand>
+        <MetaCommand name="deploy_solar_panel" abstract="false" shortDescription="Deploy the solar panel">
+          <ArgumentList>
+            <Argument name="deployment" argumentTypeRef="deploy_solar_panel__deployment" shortDescription="Deployment action"/>
+          </ArgumentList>
+          <CommandContainer name="deploy_solar_panel">
+            <EntryList>
+              <FixedValueEntry binaryValue="6465706c6f795f736f6c61725f70616e656c" sizeInBits="144" name="command_name" shortDescription="Command name identifier">
+                <LocationInContainerInBits referenceLocation="previousEntry">
+                  <FixedValue>0</FixedValue>
+                </LocationInContainerInBits>
+              </FixedValueEntry>
+              <ArgumentRefEntry argumentRef="deployment" shortDescription="Deployment action argument">
+                <LocationInContainerInBits referenceLocation="previousEntry">
+                  <FixedValue>0</FixedValue>
+                </LocationInContainerInBits>
+              </ArgumentRefEntry>
+            </EntryList>
+          </CommandContainer>
+          <DefaultSignificance consequenceLevel="normal"/>
+          <VerifierSet/>
+        </MetaCommand>
+        <MetaCommand name="go_nogo_command" abstract="false" shortDescription="GO/NOGO decision">
+          <ArgumentList>
+            <Argument name="decision" argumentTypeRef="go_nogo_command__decision" shortDescription="GO/NOGO decision"/>
+          </ArgumentList>
+          <CommandContainer name="go_nogo_command">
+            <EntryList>
+              <FixedValueEntry binaryValue="676f5f6e6f676f5f636f6d6d616e64" sizeInBits="120" name="command_name" shortDescription="Command name identifier">
+                <LocationInContainerInBits referenceLocation="previousEntry">
+                  <FixedValue>0</FixedValue>
+                </LocationInContainerInBits>
+              </FixedValueEntry>
+              <ArgumentRefEntry argumentRef="decision" shortDescription="GO/NOGO decision argument">
+                <LocationInContainerInBits referenceLocation="previousEntry">
+                  <FixedValue>0</FixedValue>
+                </LocationInContainerInBits>
+              </ArgumentRefEntry>
+            </EntryList>
+          </CommandContainer>
+          <DefaultSignificance consequenceLevel="normal"/>
+          <VerifierSet/>
+        </MetaCommand>
+        <MetaCommand name="reboot_rover" abstract="false" shortDescription="Reboot the rover on-board computer">
+          <ArgumentList>
+            <Argument name="reboot_mode" argumentTypeRef="reboot_rover__reboot_mode" shortDescription="Reboot mode"/>
+          </ArgumentList>
+          <CommandContainer name="reboot_rover">
+            <EntryList>
+              <FixedValueEntry binaryValue="7265626f6f745f726f766572" sizeInBits="96" name="command_name" shortDescription="Command name identifier">
+                <LocationInContainerInBits referenceLocation="previousEntry">
+                  <FixedValue>0</FixedValue>
+                </LocationInContainerInBits>
+              </FixedValueEntry>
+              <ArgumentRefEntry argumentRef="reboot_mode" shortDescription="Reboot mode argument">
+                <LocationInContainerInBits referenceLocation="previousEntry">
+                  <FixedValue>0</FixedValue>
+                </LocationInContainerInBits>
+              </ArgumentRefEntry>
+            </EntryList>
+          </CommandContainer>
+          <DefaultSignificance consequenceLevel="normal"/>
+          <VerifierSet/>
+        </MetaCommand>
+      </MetaCommandSet>
+    </CommandMetaData>
+  </SpaceSystem>
+</SpaceSystem>

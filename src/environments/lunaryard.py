@@ -29,7 +29,7 @@ from src.configurations.environments import LunaryardConf
 from src.environments.rock_manager import RockManager
 from src.stellar.stellar_engine import StellarEngine
 from src.environments.base_env import BaseEnv
-from src.environments.simulator_mode_enum import SimulatorMode
+from src.configurations.simulator_mode_enum import SimulatorMode
 from src.robots.robot import RobotManager
 
 

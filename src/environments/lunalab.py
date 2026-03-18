@@ -15,7 +15,7 @@ import omni
 from pxr import UsdGeom, UsdLux, Gf, Usd
 
 from src.environments.monitoring_cameras_manager import MonitoringCamerasManager
-from src.environments.simulator_mode_enum import SimulatorMode
+from src.configurations.simulator_mode_enum import SimulatorMode
 from src.environments.static_assets_manager import StaticAssetsManager
 from src.physics.terramechanics_parameters import RobotParameter, TerrainMechanicalParameter
 from src.terrain_management.large_scale_terrain.pxr_utils import set_xform_ops

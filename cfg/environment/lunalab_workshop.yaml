@@ -202,6 +202,10 @@ robots_settings:
       turn_speed_coef: 19
       solar_panel_joint: "solarJoint"  # finds it within the main robot articulation
   yamcs_tmtc: # these settings are relevant if Yamcs mode
+    mdb:
+      - "cfg/mdb/rover.xml"
+      - "cfg/mdb/lander.xml"
+      - "cfg/mdb/admin.xml"
     intervals:
       robot_stats: 1
       camera_streaming: 2
