@@ -45,6 +45,14 @@ class RobotSubsystemsHandler(ABC):
     def get_power_status(self):
         pass
 
+    @abstractmethod
+    def _setup_devices(self):
+        pass
+
+    @abstractmethod
+    def _setup_power_model(self):
+        pass
+
     def get_go_nogo_state(self):
         return self._go_nogo_state
 

@@ -17,7 +17,8 @@ from isaacsim.core.utils.xforms import get_world_pose
 import random
 import time
 
-from src.robots.device import Device, HealthState
+from src.physics.robot_physics_models.power_model import RobotPowerModel
+from src.robots.device import CommonDevice, Device, HealthState
 from src.robots.neutron_spectrometer_model import NeutronSpectrometerModel
 from src.robots.robot_enums import ObcState, SolarPanelState
 from src.robots.robot_subsystems_handler import RobotSubsystemsHandler
@@ -34,9 +35,21 @@ class PragyaanSubsystemsHandler(RobotSubsystemsHandler):
     )
     LANDER_POSITION = (0.0, 0.0, 0.0)
 
+    # for setting up the Pragyaan-specific PowerModel:
+    BATTERY_CAPACITY_WH = 60.0  # Watt-hours
+    SOLAR_PANEL_MAX_POWER = 30.0  # Watts
+    MOTOR_COUNT = 6
+    MOTOR_POWER_W = 10.0
+
     def __init__(self, pos_relative_to_prim):
         super().__init__()
-        self._init_devices(["camera", "motor_controller", "neutron_spectrometer", "apxs", "radio", "obc", "eps"])
+        self._setup_devices()
+        #TODO change the following setup into self._power_model.setup() once updated all
+        robot_power_model = RobotPowerModel()
+        robot_power_model.setup(battery_capacity_wh=self.BATTERY_CAPACITY_WH, battery_charge_wh=self.BATTERY_CAPACITY_WH, 
+                                solar_panel_max_power=self.SOLAR_PANEL_MAX_POWER, solar_panel_state=self._solar_panel_state, 
+                                motor_count=self.MOTOR_COUNT, motor_power_w=self.MOTOR_POWER_W,
+                                devices=self._devices)
         self.LANDER_PATH = pos_relative_to_prim
         self._neutron_spectrometer = NeutronSpectrometerModel()
 
@@ -47,9 +60,15 @@ class PragyaanSubsystemsHandler(RobotSubsystemsHandler):
 
         self._update_positions()
 
-    def _init_devices(self, devices:list[str]):
-        for device_name in devices:
-            self._devices[device_name] = Device(device_name)
+    def _setup_devices(self):
+        # Pragyaan and workshop-specific values for the subsystem devices
+        self._devices[CommonDevice.OBC] = Device(CommonDevice.OBC, current_draw=(0.0, 7.5))
+        self._devices[CommonDevice.MOTOR_CONTROLLER] = Device(CommonDevice.MOTOR_CONTROLLER, current_draw=(0.0, 2.0))
+        self._devices["neutron_spectrometer"] = Device("neutron_spectrometer", current_draw=(0.0, 9.0))
+        self._devices["apxs"] = Device("apxs", current_draw=(0.0, 9.0))
+        self._devices["camera"] = Device("camera", current_draw=(0.0, 5.0))
+        self._devices[CommonDevice.RADIO] = Device(CommonDevice.RADIO, current_draw=(0.0, 5.0))
+        self._devices["eps"] = Device("eps", current_draw=(0.0, 1.0))
 
     def _update_positions(self):
         self._sun_pos = self.SUN_POSITION
@@ -112,11 +131,11 @@ class PragyaanSubsystemsHandler(RobotSubsystemsHandler):
         #NOTE specific to workshop use case
         self._neutron_spectrometer.is_near_water = is_near
 
-    def set_device_health_state(self, electronics:str, status:HealthState):
+    def set_device_health_state(self, device_name:str, state:HealthState):
         #NOTE specific to workshop use case
-        if electronics not in self._electronics_health:
-            print("Invalid electronics naming: ", electronics)
+        if device_name not in self._devices:
+            print("Invalid electronics naming: ", device_name)
             return
 
-        self._electronics_health[electronics] = status
+        self._devices[device_name].set_health_state(state)
     

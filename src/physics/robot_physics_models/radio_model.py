@@ -40,15 +40,15 @@ class RadioModel(RobotPhysicsModel):
 		self._lander_position = lander_position
 		self._rover_position = rover_position
 
-	def _step(self):
+	def step(self):
 		pass
     
-	def _get_output(self):
+	def get_output(self):
 		mean_rssi = self._calculate_rssi()
 		return mean_rssi + random.gauss(0.0, self._noise_std)
 	
 	def get_rssi(self):
-		return self._get_output()
+		return self.get_output()
 	
 	def _calculate_rssi(self) -> float:
 		dist = self._distance()

@@ -11,11 +11,15 @@ from abc import ABC, abstractmethod
 class RobotPhysicsModel(ABC):
 
     @abstractmethod
+    def setup(self):
+        pass
+
+    @abstractmethod
     def update_inputs(self):
         pass
 
     @abstractmethod
-    def _step(self):
+    def step(self):
         pass
     
     @abstractmethod
