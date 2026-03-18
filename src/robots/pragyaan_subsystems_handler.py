@@ -46,9 +46,7 @@ class PragyaanSubsystemsHandler(RobotSubsystemsHandler):
         thermal_model = PragyaanThermalModel()
         super().__init__(thermal_model=thermal_model)
         self._setup_devices()
-        #TODO change the following setup into self._power_model.setup() once updated all
-        robot_power_model = RobotPowerModel()
-        robot_power_model.setup(battery_capacity_wh=self.BATTERY_CAPACITY_WH, battery_charge_wh=self.BATTERY_CAPACITY_WH, 
+        self._power_model.setup(battery_capacity_wh=self.BATTERY_CAPACITY_WH, battery_charge_wh=self.BATTERY_CAPACITY_WH, 
                                 solar_panel_max_power=self.SOLAR_PANEL_MAX_POWER, solar_panel_state=self._solar_panel_state, 
                                 motor_count=self.MOTOR_COUNT, motor_power_w=self.MOTOR_POWER_W,
                                 devices=self._devices)
@@ -92,29 +90,24 @@ class PragyaanSubsystemsHandler(RobotSubsystemsHandler):
     
     @_update_positions_before
     def get_thermal_status(self, robot_position, robot_yaw_deg, interval_s):
-        self._thermal_model.set_rover_yaw(robot_yaw_deg)
-        self._thermal_model.set_rover_position(robot_position)
-        self._thermal_model.set_sun_position(self._sun_pos)
+        self._thermal_model.update_inputs(robot_position, self._sun_pos, robot_yaw_deg)
         self._thermal_model.step(interval_s)
-        t = self._thermal.temperatures()
+        t = self._thermal_model.temperatures()
 
         return t
     
     @_update_positions_before
     def get_power_status(self, robot_position, robot_yaw_deg, interval_s, obc_state):
-        self._power_model.set_device_states(self._map_into_currents())
-        self._power_model.set_sun_position(self._sun_pos)
-        self._power_model.set_rover_position(robot_position)
-        self._power_model.set_rover_yaw(robot_yaw_deg)
-        sp_state = "deployed" if self._solar_panel_state == SolarPanelState.DEPLOYED else "stowed"
-        self._power_model.set_solar_panel_state(sp_state)
-        self._power_model.set_motor_state(obc_state == ObcState.MOTOR) 
-        self._power_model.set_device_health(self._map_into_healths())
+        # device states are reflected between the handler and power model, as they use the same dict
+        self._power_model.update_inputs(rover_position=robot_position, 
+                                        sun_position=self._sun_pos, 
+                                        rover_yaw_deg=robot_yaw_deg, 
+                                        solar_panel_state=self._solar_panel_state, 
+                                        is_in_motor_state=(obc_state == ObcState.MOTOR))
         self._power_model.step(interval_s)
         status = self._power_model.status()
    
         return status
-    
 
     def get_lander_position(self):
         return self._lander_pos

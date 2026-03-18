@@ -80,7 +80,7 @@ class PowerModel(RobotPhysicsModel):
     
     def setup(self, *, battery_capacity_wh:float, battery_charge_wh:float,
 				   solar_panel_max_power:float, solar_panel_state:SolarPanelState, 
-				   motor_count:int, motor_power_w:float, 
+				   motor_count:int, motor_power_w:float, is_in_motor_state:bool=False,
 				   devices:dict[str,Device]):
         #NOTE should be called from within rover subsystems handler
         #   setup for specific rover use-case
@@ -89,16 +89,16 @@ class PowerModel(RobotPhysicsModel):
         self._solar_panel_max_power = solar_panel_max_power
         self._solar_panel_state = solar_panel_state
         self._devices = devices
-        self._motor_state = devices[CommonDevice.MOTOR_CONTROLLER].get_power_state()
+        self._is_in_motor_state:bool = is_in_motor_state #NOTE rover is in motor state if its obc_state is MOTOR
         self._motor_count = motor_count
         self._motor_power_w = motor_power_w
 	
-    def update_inputs(self, rover_position, sun_position, rover_yaw_deg, solar_panel_state, motor_state):  
+    def update_inputs(self, rover_position, sun_position, rover_yaw_deg, solar_panel_state, is_in_motor_state):  
         self._rover_position = rover_position
         self._sun_position  = sun_position
         self._rover_yaw_deg = rover_yaw_deg
         self._solar_panel_state = solar_panel_state
-        self._motor_state = motor_state
+        self._is_in_motor_state = is_in_motor_state
 
     def step(self, dt: float) -> None:
         """Advance the battery state by *dt* seconds."""
@@ -148,8 +148,8 @@ class PowerModel(RobotPhysicsModel):
     def set_solar_panel_state(self, state: SolarPanelState) -> None:
         self._solar_panel_state = state
 
-    def set_motor_state(self, state:PowerState) -> None:
-        self._devices[CommonDevice.MOTOR_CONTROLLER].set_power_state(state)
+    def set_is_in_motor_state(self, is_in_motor_state:bool) -> None: #TODO fix this, no if the controller is ON, but if OBC state is MOTOR
+        self._is_in_motor_state = is_in_motor_state
 
     def _current_panel_normal(self) -> np.ndarray:
         base_normal = SOLAR_PANEL_NORMALS.get(
@@ -180,7 +180,7 @@ class PowerModel(RobotPhysicsModel):
     def _total_load_power(self) -> float:
         regulated_load = sum(self._device_power(name) for name in self._devices)
         battery_power_for_regulated = regulated_load / DC_DC_EFFICIENCY
-        motor_power = self._motor_power_w * self._motor_count if self._motor_state == PowerState.ON else 0.0
+        motor_power = self._motor_power_w * self._motor_count if self._is_in_motor_state else 0.0
         return battery_power_for_regulated + motor_power
 
     def _compute_view_factor(
@@ -250,7 +250,7 @@ class PowerModel(RobotPhysicsModel):
 
     def _measured_motor_currents(self) -> Sequence[float]:
         voltage = self._battery_voltage()
-        base_current = (self._motor_power_w / voltage) if self._motor_state else 0.0
+        base_current = (self._motor_power_w / voltage) if self._is_in_motor_state else 0.0
         currents = [base_current for _ in range(self._motor_count)]
         return [
             max(0.0, value + random.gauss(0.0, self._device_current_noise))
