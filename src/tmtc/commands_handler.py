@@ -19,10 +19,11 @@ class CommandsHandler():
     SOCKET_TIMEOUT_SEC  = 2.0 
     HEARTBEAT_EVERY_SEC = 10.0  # how often to log "waiting..." when idle
 
-    def __init__(self, yamcs_processor, yamcs_instance_conf):
+
+    def __init__(self, yamcs_processor, yamcs_instance_conf, mdb_files:list[str]):
         self._yamcs_processor = yamcs_processor
         self._commands_catalogue = {}
-        self._registry = MdbParsingService.load_mdb_registry("cfg/mdb")
+        self._registry = MdbParsingService.load_mdb_registry(mdb_files) 
         self._config_tc_socket(yamcs_instance_conf)
         self._start_tc_listener()
 
@@ -59,16 +60,13 @@ class CommandsHandler():
 
             command = self._commands_catalogue.get(decoded["full_name"])
             if command is None:
-                raise Exception(f"Command '{decoded['full_name']}' not found in catalogue")
-
-            self._execute(command, decoded["arguments"])
+                print(f"Command '{decoded['full_name']}' not found in catalogue")
+            else:
+                self._execute(command, decoded["arguments"])
     
     def _execute(self, command, received_arguments):
         arg_names = command["args"]
         func = command["func"]
-
-        print(func)
-        print(arg_names)
 
         if arg_names == []:
             func()
