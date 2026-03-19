@@ -167,7 +167,6 @@ terrain_manager:
 
 robots_settings:
   uses_nucleus: False
-  is_ROS2: False
   max_robots: 5
   robots_root: "/Robots"
   parameters:
