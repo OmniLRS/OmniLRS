@@ -31,6 +31,7 @@ from scipy.spatial.transform import Rotation as R
 
 from src.configurations.simulator_mode_enum import SimulatorMode
 from src.environments.utils import transform_orientation_from_xyzw_into_xyz, transform_orientation_into_xyz
+from src.robots.pragyaan_subsystems_handler import PragyaanSubsystemsHandler
 from src.robots.subsystems_manager import RobotSubsystemsManager
 from src.tmtc.yamcs_TMTC import YamcsTMTC
 from omni.isaac.sensor import Camera
@@ -316,11 +317,18 @@ class Robot:
         self._depth_cameras = {}
         self.dimensions = dimensions
         self.turn_speed_coef = turn_speed_coef
-        self.subsystems = RobotSubsystemsManager(pos_relative_to_prim) #TODO for v3: here should get PragyaanPhysicsModelsHandler
+        # self.subsystems = RobotSubsystemsManager(pos_relative_to_prim) #TODO for v3: here should get PragyaanPhysicsModelsHandler
         self._imu_sensor_interface = _sensor.acquire_imu_sensor_interface()
         self._imu_sensor_path:str = imu_sensor_path
         self._solar_panel_joint = solar_panel_joint
         self._solar_panel_dof = None
+        self._setup_subsystems_handler(pos_relative_to_prim)
+
+    def _setup_subsystems_handler(self, pos_relative_to_prim):
+        if self.robot_name == "pragyaan":
+            self.subsystems = PragyaanSubsystemsHandler(pos_relative_to_prim)
+        else:
+            self.subsystems = None
 
     def get_root_rigid_body_path(self) -> None:
         """
