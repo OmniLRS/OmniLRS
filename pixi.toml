@@ -1,5 +1,5 @@
 [workspace]
-authors = ["shamikarim <ahresgg@gmail.com>"]
+authors = ["Shamistan Karimov <ahresgg@gmail.com>"]
 channels = ["conda-forge"]
 name = "OmniLRS"
 platforms = ["linux-64"]
@@ -35,10 +35,20 @@ lark = "*"
 pandas = "*"
 OmniLRS = { path = ".", editable = true }
 
+[feature.yamcs.pypi-dependencies]
+yamcs-client = "*"
+
 [activation.env]
 OMNI_KIT_ACCEPT_EULA = "YES"
+OMNILRS_ROOT = "."
 
 [tasks]
 python-test = "python -c \"import isaacsim; print('isaacsim import ok')\""
 isaacsim = "isaacsim"
-run = "python run.py"
+
+[feature.yamcs.tasks]
+yamcs = "python run.py mode=Yamcs environment=lunaryard_40m_workshop"
+
+[environments]
+default = { solve-group = "default" }
+yamcs = { features = ["yamcs"], solve-group = "default" }

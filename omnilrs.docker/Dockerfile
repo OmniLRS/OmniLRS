@@ -34,6 +34,7 @@ ENV LANG=C.UTF-8
 ENV LC_ALL=C.UTF-8
 
 ENV ROS_DISTRO=humble
+ENV OMNILRS_ROOT=/workspace/omnilrs
 
 # install ros2 packages  
 RUN apt-get update && apt-get install -y \
