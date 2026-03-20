@@ -1,7 +1,10 @@
 [workspace]
-name = "omnilrs-pixi"
+authors = ["shamikarim <ahresgg@gmail.com>"]
 channels = ["conda-forge"]
+name = "OmniLRS"
 platforms = ["linux-64"]
+version = "0.1.0"
+description = "Pixi environments for OmniLRS with Isaac Sim 5 and manager-specific features"
 
 [system-requirements]
 libc = { family = "glibc", version = "2.35" }
@@ -9,6 +12,9 @@ libc = { family = "glibc", version = "2.35" }
 [dependencies]
 python = "3.11.*"
 packaging = "==23.0"
+numpy = "==1.26.0"
+gdal = "*"
+libgdal = "*"
 
 [pypi-options]
 index-url = "https://pypi.org/simple"
@@ -17,6 +23,17 @@ index-strategy = "unsafe-best-match"
 
 [pypi-dependencies]
 isaacsim = { version = "==5.0.0", extras = ["all", "extscache"] }
+opencv-python = "*"
+omegaconf = "*"
+hydra-core = "*"
+skyfield = "*"
+zfpy = "*"
+numba = "*"
+gdown = "*"
+em = "*"
+lark = "*"
+pandas = "*"
+OmniLRS = { path = ".", editable = true }
 
 [activation.env]
 OMNI_KIT_ACCEPT_EULA = "YES"
@@ -24,3 +41,4 @@ OMNI_KIT_ACCEPT_EULA = "YES"
 [tasks]
 python-test = "python -c \"import isaacsim; print('isaacsim import ok')\""
 isaacsim = "isaacsim"
+run = "python run.py"
