@@ -9,20 +9,18 @@ description = "Pixi environments for OmniLRS with Isaac Sim 5 and manager-specif
 [system-requirements]
 libc = { family = "glibc", version = "2.35" }
 
-[dependencies]
-python = "3.11.*"
-packaging = "==23.0"
-numpy = "==1.26.0"
-gdal = "*"
-libgdal = "*"
-
 [pypi-options]
 index-url = "https://pypi.org/simple"
 extra-index-urls = ["https://pypi.nvidia.com"]
 index-strategy = "unsafe-best-match"
 
-[pypi-dependencies]
-isaacsim = { version = "==5.0.0", extras = ["all", "extscache"] }
+# common deps, tasks, env variables in feature "core"
+[feature.core.dependencies]
+python = "3.11.*"
+gdal = "*"
+libgdal = "*"
+
+[feature.core.pypi-dependencies]
 opencv-python = "*"
 omegaconf = "*"
 hydra-core = "*"
@@ -35,20 +33,42 @@ lark = "*"
 pandas = "*"
 OmniLRS = { path = ".", editable = true }
 
+[feature.core.activation.env]
+OMNILRS_ROOT = "${PIXI_PROJECT_ROOT}"
+
+# isaacsim-specific deps, tasks, env variables in feature "isaac"
+[feature.isaac.dependencies]
+packaging = "==23.0"
+numpy = "==1.26.0"
+
+[feature.isaac.pypi-dependencies]
+isaacsim = { version = "==5.0.0", extras = ["all", "extscache"] }
+
+[feature.isaac.activation.env]
+OMNI_KIT_ACCEPT_EULA = "YES"
+
+[feature.isaac.tasks]
+isaacsim = "isaacsim"
+
+# ros2-specific tasks, env variables in feature "ros2"
+[feature.ros2.activation]
+scripts = ["scripts/activate_isaac_ros.sh"]
+
+[feature.ros2.activation.env]
+ROS_DISTRO = "humble"
+RMW_IMPLEMENTATION = "rmw_fastrtps_cpp"
+
+[feature.ros2.tasks]
+ros2 = "python run.py mode=ROS2"
+
+# yamcs-specific deps, tasks in feature "yamcs"
 [feature.yamcs.pypi-dependencies]
 yamcs-client = "*"
-
-[activation.env]
-OMNI_KIT_ACCEPT_EULA = "YES"
-OMNILRS_ROOT = "."
-
-[tasks]
-python-test = "python -c \"import isaacsim; print('isaacsim import ok')\""
-isaacsim = "isaacsim"
 
 [feature.yamcs.tasks]
 yamcs = "python run.py mode=Yamcs environment=lunaryard_40m_workshop"
 
 [environments]
-default = { solve-group = "default" }
-yamcs = { features = ["yamcs"], solve-group = "default" }
+default = { features = ["core", "isaac"], solve-group = "isaac" }
+yamcs = { features = ["core", "isaac", "yamcs"], solve-group = "isaac" }
+ros2 = { features = ["core", "isaac", "ros2", "yamcs"], solve-group = "isaac" } # yamcs-client is needed, because of an import in robot.py so "yamcs" feature is added
