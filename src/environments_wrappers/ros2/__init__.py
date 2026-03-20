@@ -25,7 +25,8 @@ def enable_ros2(simulation_app, bridge_name="foxy", **kwargs) -> None:
         enable_extension("isaacsim.ros2.bridge") # replaced omni.isaac.ros2_bridge_humble
     else:
         raise ValueError("Bridge not supported, please choose between foxy and humble.")
-    enable_extension("omni.kit.viewport.actions")
-    enable_extension("omni.graph.window.action")
+    # enable_extension("omni.kit.viewport.actions")
+    # enable_extension("omni.graph.window.action")
+    # enable_extension("omni.physx.ui")
 
     simulation_app.update()

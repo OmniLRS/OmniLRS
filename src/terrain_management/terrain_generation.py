@@ -558,6 +558,7 @@ class GenerateProceduralMoonYard:
         DEM, mask, craters_data = self.G.generateCraters(DEM, coords, radius)
         self._dem_init = DEM
         self._dem_delta = np.zeros_like(DEM)
+        self._dem_result = np.zeros_like(DEM)
         self._mask = mask
         self._num_pass = np.zeros_like(mask)
         self._depth_memory = np.zeros_like(mask)
@@ -576,6 +577,7 @@ class GenerateProceduralMoonYard:
         mask = mask * mask_
         self._dem_init = DEM
         self._dem_delta = np.zeros_like(DEM)
+        self._dem_result = np.zeros_like(DEM)
         self._mask = mask
         self._num_pass = np.zeros_like(mask)
         self._depth_memory = np.zeros_like(mask)
@@ -588,6 +590,7 @@ class GenerateProceduralMoonYard:
         """
         self._dem_init = DEM
         self._dem_delta = np.zeros_like(DEM)
+        self._dem_result = np.zeros_like(DEM)
         self._mask = mask
         self._num_pass = np.zeros_like(mask)
         self._depth_memory = np.zeros_like(mask)
@@ -606,7 +609,8 @@ class GenerateProceduralMoonYard:
         self._dem_delta, self._num_pass, self._depth_memory, self._trace_memory = self.DE.deform(
             self._dem_delta, self._num_pass, self._depth_memory, self._trace_memory, world_positions, world_orientations, linear_velocities, angular_velocities,contact_forces[:, 2]
         )
-        return self._dem_init + self._dem_delta, self._mask
+        np.add(self._dem_init, self._dem_delta, out=self._dem_result)
+        return self._dem_result, self._mask
 
 
 if __name__ == "__main__":
