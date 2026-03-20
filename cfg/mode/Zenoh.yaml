@@ -1,0 +1,6 @@
+name: Zenoh
+sensors:
+  camera:
+    base_keyexpr: "omnilrs/husky/camera"
+    resolution: "low" # "low" or "high"
+    json_compact: True
