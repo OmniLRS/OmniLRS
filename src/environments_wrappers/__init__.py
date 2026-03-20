@@ -88,7 +88,24 @@ def startSim(cfg: dict):
 
     # Starts the simulation and allows to import things related to Isaac and PXR
     renderer_cfg = cfg["rendering"]["renderer"]
-    simulation_app = SimulationApp_wait(renderer_cfg.__dict__)
+    launch_config = renderer_cfg.__dict__
+    # Troubleshooting: if cache issues arise e.g 100GB and warnings regarding garbage collection.
+    # Delete the cache with:
+    # rm -rf ~/docker/isaac-sim/cache/kit/DerivedDataCache
+    # Uncomment these lines to disable caching entirely
+    # launch_config["extra_args"] = [
+    #     "--/UJITSO/enabled=false",
+    # ]
+    # launch_config["extra_args"] = [
+    #     "--/UJITSO/datastore/localDataStore/largeChunkDiskBudgetMB=32768",
+    # ]
+    # Troubleshooting: enable these flags to show the visual mesh caching process.
+    # launch_config["extra_args"] = [
+    #     "--/UJITSO/failedDepLoadingLogging=true",
+    #     "--/UJITSO/logBuildResults=true",
+    #     "--/UJITSO/logInSingleLine=true",
+    # ]
+    simulation_app = SimulationApp_wait(launch_config)
     set_lens_flares(cfg)
     set_motion_blur(cfg)
     set_chromatic_aberrations(cfg)
