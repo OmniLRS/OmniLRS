@@ -1,0 +1,26 @@
+[workspace]
+name = "omnilrs-pixi"
+channels = ["conda-forge"]
+platforms = ["linux-64"]
+
+[system-requirements]
+libc = { family = "glibc", version = "2.35" }
+
+[dependencies]
+python = "3.11.*"
+packaging = "==23.0"
+
+[pypi-options]
+index-url = "https://pypi.org/simple"
+extra-index-urls = ["https://pypi.nvidia.com"]
+index-strategy = "unsafe-best-match"
+
+[pypi-dependencies]
+isaacsim = { version = "==5.0.0", extras = ["all", "extscache"] }
+
+[activation.env]
+OMNI_KIT_ACCEPT_EULA = "YES"
+
+[tasks]
+python-test = "python -c \"import isaacsim; print('isaacsim import ok')\""
+isaacsim = "isaacsim"
