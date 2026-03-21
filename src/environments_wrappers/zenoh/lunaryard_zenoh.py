@@ -8,8 +8,10 @@ __status__ = "development"
 
 from src.configurations.simulator_mode_enum import SimulatorMode
 from src.environments.lunaryard import LunaryardController
-
 from src.environments_wrappers.zenoh.base_wrapper_zenoh import Zenoh_BaseManager
+
+from asyncio_for_robotics.zenoh.session import auto_session
+import zenoh
 
 
 class Zenoh_LunaryardManager(Zenoh_BaseManager):
@@ -20,6 +22,7 @@ class Zenoh_LunaryardManager(Zenoh_BaseManager):
     def __init__(
         self,
         environment_cfg: dict = None,
+        zenoh_cfg: dict = None,
         **kwargs,
     ) -> None:
         """
@@ -33,7 +36,12 @@ class Zenoh_LunaryardManager(Zenoh_BaseManager):
         super().__init__(environment_cfg=environment_cfg, **kwargs)
         self.LC = LunaryardController(mode=SimulatorMode.ZENOH, **environment_cfg)
         self.LC.load()
-    
+
+        self.session = auto_session().declare_subscriber(
+            key_expr = zenoh_cfg["misc"]["rocks"]["randomize"]["keyexpr"],
+            handler = self.randomize_rocks
+        )
+
     def periodic_update(self, dt: float) -> None:
         """
         Updates the lab.
@@ -49,3 +57,9 @@ class Zenoh_LunaryardManager(Zenoh_BaseManager):
         Resets the lab to its initial state
         """
         pass
+
+    def randomize_rocks(self, sample: zenoh.Sample):
+        data = int(sample.payload.to_string())
+        assert data > 0, "The number of rocks must be greater than 0."
+        self.modifications.append([self.LC.randomize_rocks, {"num": data}])
+        self.trigger_reset = True

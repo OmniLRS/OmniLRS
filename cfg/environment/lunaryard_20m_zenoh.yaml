@@ -40,7 +40,7 @@ sun_settings:
 
 # Rocks sampling parameters.
 rocks_settings:
-  enable: False
+  enable: True #False
   instancers_path: /Lunaryard/Rocks
   rocks_settings:
     medium_rocks:

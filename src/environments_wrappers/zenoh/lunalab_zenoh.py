@@ -15,6 +15,7 @@ class Zenoh_LunalabManager(Zenoh_BaseManager):
     def __init__(
         self,
         environment_cfg: dict = None,
+        zenoh_cfg: dict = None,
         **kwargs,
     ) -> None:
         """

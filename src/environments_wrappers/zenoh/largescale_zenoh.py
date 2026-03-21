@@ -19,6 +19,7 @@ class Zenoh_LargeScaleManager(Zenoh_BaseManager):
     def __init__(
         self,
         environment_cfg: dict = None,
+        zenoh_cfg: dict = None,
         is_simulation_alive: callable = lambda: True,
         close_simulation: callable = lambda: None,
         **kwargs,

@@ -107,6 +107,7 @@ class Zenoh_LabManagerFactory:
 
         return self._lab_managers[cfg["environment"]["name"]](
             environment_cfg=cfg["environment"],
+            zenoh_cfg=cfg["mode"],
             **kwargs,
         )
 

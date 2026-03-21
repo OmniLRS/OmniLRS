@@ -1,6 +1,11 @@
 name: Zenoh
 sensors:
   camera:
-    base_keyexpr: "omnilrs/husky/camera"
-    resolution: "low" # "low" or "high"
+    base_keyexpr: "OmniLRS/Husky/Camera"
+    resolution: "high" # "low" or "high"
     json_compact: False #True
+  
+misc:
+  rocks:
+    randomize:
+      keyexpr: "OmniLRS/Terrain/RandomizeRocks"
