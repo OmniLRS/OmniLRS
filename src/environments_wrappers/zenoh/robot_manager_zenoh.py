@@ -9,6 +9,7 @@ __status__ = "development"
 from typing import List, Tuple
 import os
 import sys
+import cv2
 
 from src.configurations.simulator_mode_enum import SimulatorMode
 from src.robots.robot import RobotManager
@@ -71,4 +72,11 @@ class Zenoh_RobotManager():
         if self.inited:
             for i, robot_name in enumerate(self.RM.robots.keys()):
                 frame = self.RM.robots[robot_name].get_rgba_camera_view(self.resolution)
-                self.cams[robot_name].publish(f"heyy {i}")
+                if frame.size!=0:
+                    encoded = self.encode_image(frame)
+                    ## TODO: add new publish_image() in omnilrs-artefacts - ZenohPubTransport (currently publish() uses json.dump, not suitable for images)
+                    self.cams[robot_name]._pub.put(encoded)
+    
+    def encode_image(self, im):
+        encoded = cv2.imencode(".png", im)[1].tobytes()
+        return encoded
