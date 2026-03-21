@@ -4,7 +4,8 @@ RUN /isaac-sim/python.sh -m pip install --upgrade pip
 RUN /isaac-sim/python.sh -m pip install \
   opencv-python \ 
   omegaconf \ 
-  hydra-core
+  hydra-core \
+  eclipse-zenoh
 
 # setup timezone
 RUN echo 'Etc/UTC' > /etc/timezone && \

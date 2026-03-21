@@ -50,6 +50,7 @@ class Zenoh_RobotManager():
         Resets the robots to their initial state.
         """
         self.clear_modifications()
+        self.reset_robots()
     
     def clear_modifications(self) -> None:
         """
@@ -64,6 +65,16 @@ class Zenoh_RobotManager():
         for mod in self.modifications:
             mod[0](**mod[1])
         self.clear_modifications()
+
+    def reset_robots(self) -> None:
+        """
+        Resets all the robots.
+
+        Args:
+            data (Int32): Dummy argument.
+        """
+
+        self.modifications.append([self.RM.reset_robots, {}])
 
     def publish_cameras(self) -> None:
         """
