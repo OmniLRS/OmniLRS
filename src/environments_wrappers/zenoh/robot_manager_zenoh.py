@@ -28,20 +28,18 @@ class Zenoh_RobotManager():
 
         self.modifications: List[Tuple[callable, dict]] = []
 
-        self.robots = []
-        self.cam_pubs = []        
+        self.transports = []
+        self.cams = {}
         for robot in RM_conf["parameters"]:
             ### TODO: each robot should have multiple cameras
             cam_pub = ZenohPubTransport(
-                keyexpr = f"{zenoh_conf["sensors"]["camera"]["base_keyexpr"]}/{robot["camera"]["name"]}",
+                keyexpr = f'{zenoh_conf["sensors"]["camera"]["base_keyexpr"]}/{robot["camera"]["name"]}',
                 json_compact = zenoh_conf["sensors"]["camera"]["json_compact"],
             )
-            self.cam_pubs.append(cam_pub)
-            self.robots.append(self.RM.robots[robot["robot_name"]])
+            self.cams[f'/{robot["robot_name"]}'] = cam_pub
+            self.transports.append(cam_pub)
         
         self.resolution = zenoh_conf["sensors"]["camera"]["resolution"]
-
-        self.transports = self.cam_pubs # + others
 
         self.inited = False
         
@@ -70,6 +68,7 @@ class Zenoh_RobotManager():
         """
         Publish current frame from each camera
         """
-        for i, robot in enumerate(self.robots):
-            frame = robot.get_rgba_camera_view(self.resolution)
-            self.cam_pubs[i].publish(f"heyy {i}")
+        if self.inited:
+            for i, robot_name in enumerate(self.RM.robots.keys()):
+                frame = self.RM.robots[robot_name].get_rgba_camera_view(self.resolution)
+                self.cams[robot_name].publish(f"heyy {i}")

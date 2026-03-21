@@ -88,7 +88,7 @@ class Zenoh_LabManagerFactory:
             lab_manager (Union[Zenoh_LunalabManager, Zenoh_LunaryardManager, Zenoh_LargeScaleManager]): Instance of the lab manager
         """
 
-        self._labe_managers[name] = lab_manager
+        self._lab_managers[name] = lab_manager
     
     def __call__(
         self,
@@ -208,7 +208,7 @@ class Zenoh_SimulationManager:
                 # Apply modifications to the lab only once the simulation step is finished
                 # This is extremely important as modifying the stage during a simulation step
                 # will lead to a crash
-                self.ZenohLabManager.periodic_update(dt=self.world.get_physiscs_dt())
+                self.ZenohLabManager.periodic_update(dt=self.world.get_physics_dt())
                 if self.world.current_time_step_index == 0:
                     self.world.reset()
                     self.ZenohLabManager.reset()
