@@ -83,6 +83,9 @@ class ThermalModel(RobotPhysicsModel):
             for face in self._faces:
                 self._node_temps.setdefault(face, self._initial_temp)
 
+    def setup(self):
+        pass
+
     def update_inputs(self, rover_position, sun_position, rover_yaw_deg):  
         self._rover_position = rover_position
         self._sun_position  = sun_position

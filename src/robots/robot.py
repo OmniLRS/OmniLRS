@@ -32,7 +32,8 @@ from scipy.spatial.transform import Rotation as R
 from src.configurations.simulator_mode_enum import SimulatorMode
 from src.environments.utils import transform_orientation_from_xyzw_into_xyz, transform_orientation_into_xyz
 from src.robots.pragyaan_subsystems_handler import PragyaanSubsystemsHandler
-from src.robots.subsystems_manager import RobotSubsystemsManager
+from src.robots.robot_subsystems_handler import RobotSubsystemsHandler
+# from src.robots.subsystems_manager import RobotSubsystemsManager
 from src.tmtc.yamcs_TMTC import YamcsTMTC
 from omni.isaac.sensor import Camera
 
@@ -325,10 +326,36 @@ class Robot:
         self._setup_subsystems_handler(pos_relative_to_prim)
 
     def _setup_subsystems_handler(self, pos_relative_to_prim):
+        self.subsystems:RobotSubsystemsHandler = None
+
+        print()
+        print()
+        print()
+        print()
+        print()
+        print()
+        print()
+        print()
+        print()
+        print()
+        print()
+        print()
+        print("self.robot_name:", self.robot_name)
+        print()
+        print()
+        print()
+        print()
+        print()
+        print()
+        print()
+        print()
+        print()
+        print()
+        print()
+        print()
+
         if self.robot_name == "pragyaan":
             self.subsystems = PragyaanSubsystemsHandler(pos_relative_to_prim)
-        else:
-            self.subsystems = None
 
     def get_root_rigid_body_path(self) -> None:
         """

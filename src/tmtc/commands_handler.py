@@ -13,7 +13,6 @@ import time
 import threading
 
 from src.tmtc.mdb_parsing_service import MdbParsingService
-from src.tmtc.mdb_register import decode_tc_payload, load_mdb_registry
 
 class CommandsHandler():
     UDP_RECV_MAX        = 4096  

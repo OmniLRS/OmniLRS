@@ -11,14 +11,13 @@ class HealthState(Enum):
     NOMINAL = 0
     FAULT = 1
 
-class CommonDevice(Enum):
-    NOMINAL = 0
-    FAULT = 1
-
 class CommonDevice(StrEnum):
     MOTOR_CONTROLLER = "motor_controller"
     RADIO = "radio"
     OBC = "obc"
+    APXS = "apxs"
+    CAMERA = "camera"
+    NEUTRON_SPECTROMETER = "neutron_spectrometer"
 
 class Device():
     def __init__(

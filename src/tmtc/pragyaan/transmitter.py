@@ -7,9 +7,11 @@ __email__ = "ljburtz@jaops.com"
 __status__ = "development"
 
 from src.environments.utils import transform_orientation_into_xyz
-from src.robots.subsystems_manager import  PowerState, SolarPanelState
 import math
 import omni.kit.app
+from src.robots.device import PowerState
+from src.robots.robot import Robot
+from src.robots.robot_enums import SolarPanelState
 from src.tmtc.intervals_handler import IntervalName
 
 class PragyaanTransmitter:
@@ -24,7 +26,7 @@ class PragyaanTransmitter:
             parameters_conf
     ):
         self._yamcs_processor = yamcs_processor
-        self._robot = robot
+        self._robot:Robot = robot
         self._intervals_handler = intervals_handler
         self._parameters_conf = parameters_conf
         self._robots_RG = robots_RG
@@ -49,28 +51,25 @@ class PragyaanTransmitter:
     def transmit_obc_metrics(self):
         #TODO should be fixed based on the new updates - no need to get the state, and update it, just get the metrics and divide based on the keys
         obc_state = self._robot.subsystems.get_obc_state()
-        self._robot.subsystems.input_obc_state(obc_state)
+        self._robot.subsystems.set_obc_state(obc_state)
 
-        cpu_usage = int(self._robot.subsystems.get_obc_cpu_usage())
-        ram_usage = int(self._robot.subsystems.get_obc_ram_usage())
-        disk_usage = int(self._robot.subsystems.get_obc_disk_usage())
-        uptime = self._robot.subsystems.get_obc_uptime()
+        obc_metrics = self._robot.subsystems.get_obc_metrics()
 
-        self._yamcs_processor.set_parameter_value(self._parameters_conf["obc_cpu_usage"], cpu_usage)
-        self._yamcs_processor.set_parameter_value(self._parameters_conf["obc_ram_usage"], ram_usage)
-        self._yamcs_processor.set_parameter_value(self._parameters_conf["obc_disk_usage"], disk_usage)
-        self._yamcs_processor.set_parameter_value(self._parameters_conf["obc_uptime"], uptime)
+        self._yamcs_processor.set_parameter_value(self._parameters_conf["obc_cpu_usage"], obc_metrics["cpu_usage"])
+        self._yamcs_processor.set_parameter_value(self._parameters_conf["obc_ram_usage"], obc_metrics["ram_usage"])
+        self._yamcs_processor.set_parameter_value(self._parameters_conf["obc_disk_usage"], obc_metrics["disk_usage"])
+        self._yamcs_processor.set_parameter_value(self._parameters_conf["obc_uptime"], obc_metrics["uptime"])
         
     def transmit_radio_signal_info(self):
         robot_position, orientation = self._robots_RG[str(self._robot_name)].get_pose_of_base_link()
-        rssi = self._robot.subsystems.calculate_rssi(robot_position)
+        rssi = self._robot.subsystems.get_rssi(robot_position)
         self._yamcs_processor.set_parameter_value(self._parameters_conf["rssi"], int(rssi))
 
     def transmit_thermal_info(self, interval_s):
         robot_position, _ = self._robots_RG[str(self._robot_name)].get_pose_of_base_link()
         _, _, imu_orientation = self._robot.get_imu_readings()
         robot_yaw_deg = imu_orientation["yaw"]
-        temperatures = self._robot.subsystems.calculate_temperature(
+        temperatures = self._robot.subsystems.get_thermal_status(
             robot_position, 
             robot_yaw_deg, 
             interval_s
@@ -88,7 +87,7 @@ class PragyaanTransmitter:
         _, _, imu_orientation = self._robot.get_imu_readings()
         robot_yaw_deg = imu_orientation['yaw']
         obc_state = self._robot.subsystems.get_obc_state()
-        power_status = self._robot.subsystems.calculate_power_status(
+        power_status = self._robot.subsystems.get_power_status(
             robot_position,
             robot_yaw_deg, 
             interval_s, 

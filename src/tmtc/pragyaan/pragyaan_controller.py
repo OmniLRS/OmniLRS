@@ -7,7 +7,8 @@ __email__ = "ljburtz@jaops.com"
 __status__ = "development"
 
 from enum import Enum
-from src.robots.subsystems_manager import Electronics, GoNogoState, HealthStatus, ObcState, PowerState, SolarPanelState
+from src.robots.device import CommonDevice, HealthState, PowerState
+from src.robots.robot_enums import GoNogoState, ObcState, SolarPanelState
 from src.tmtc.intervals_handler import IntervalName
 from src.tmtc.pragyaan.camera_handler import CameraViewType, PragyaanCameraHandler
 from src.tmtc.pragyaan.payload_handler import PayloadHandler
@@ -103,11 +104,11 @@ class PragyaanController(YamcsTMTC):
         # here add further intervals and their functionalities
 
     def snap_apxs(self):
-        power_state = self._robot.subsystems.get_power_state(Electronics.APXS.value)
+        power_state = self._robot.subsystems.get_device_power_state(CommonDevice.APXS)
         self._payload_handler.snap_apxs(power_state)
 
     def inject_fault(self):
-        self._robot.subsystems.set_electronics_health(Electronics.MOTOR_CONTROLLER.value, HealthStatus.FAULT)
+        self._robot.subsystems.set_device_health_state(CommonDevice.MOTOR_CONTROLLER, HealthState.FAULT)
         self._drive_handler.stop_robot()
 
     def handle_battery_perc_change(self, battery_percentage:int):
@@ -117,12 +118,12 @@ class PragyaanController(YamcsTMTC):
         self._camera_handler.transmit_lander_camera_view()
 
     def handle_high_res_capture(self):
-        if (self._robot.subsystems.get_electronics_state(Electronics.CAMERA.value) == PowerState.ON):
+        if (self._robot.subsystems.get_device_power_state(CommonDevice.CAMERA) == PowerState.ON):
             self._camera_handler.transmit_camera_view(PragyaanCameraHandler.BUCKET_ONCOMMAND, CameraResolution.HIGH.value, CameraViewType.RGBA)
             self._obc_handler.set_obc_state(ObcState.CAMERA, 10)
 
     def handle_depth_capture(self):
-        if (self._robot.subsystems.get_electronics_state(Electronics.CAMERA.value) == PowerState.ON):
+        if (self._robot.subsystems.get_device_power_state(CommonDevice.CAMERA) == PowerState.ON):
             self._camera_handler.transmit_camera_view(PragyaanCameraHandler.BUCKET_DEPTH, CameraResolution.HIGH.value, CameraViewType.DEPTH)
             self._obc_handler.set_obc_state(ObcState.CAMERA, 10)
 
@@ -146,18 +147,18 @@ class PragyaanController(YamcsTMTC):
             return
         
         new_state = PowerState[new_state]
-        self._robot.subsystems.set_electronics_state(electronics, new_state)
+        self._robot.subsystems.set_device_power_state(electronics, new_state)
 
-        if electronics == Electronics.CAMERA.value:
+        if electronics == CommonDevice.CAMERA:
             self.set_activity_of_camera_streaming("START") if new_state == PowerState.ON else self._set_activity_of_camera_streaming("STOP")
-        elif electronics == Electronics.NEUTRON_SPECTROMETER.value:
+        elif electronics == CommonDevice.NEUTRON_SPECTROMETER:
             self.set_activity_of_neutron_streaming(new_state)
             pass
-        elif electronics == Electronics.MOTOR_CONTROLLER.value:
+        elif electronics == CommonDevice.MOTOR_CONTROLLER:
             if (new_state == PowerState.OFF):
                 self._drive_handler.stop_robot()
-                self._robot.subsystems.set_electronics_health(Electronics.MOTOR_CONTROLLER.value, HealthStatus.NOMINAL)
-        elif electronics == Electronics.RADIO.value:
+                self._robot.subsystems.set_device_health_state(CommonDevice.MOTOR_CONTROLLER, HealthState.NOMINAL)
+        elif electronics == CommonDevice.RADIO:
             #NOTE The rover would lose all communication capabilities if the radio is turned off.
             pass
 

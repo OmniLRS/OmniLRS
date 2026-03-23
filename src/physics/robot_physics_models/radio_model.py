@@ -48,6 +48,9 @@ class RadioModel(RobotPhysicsModel):
 
 	def step(self):
 		pass
+
+	def setup(self):
+		pass
     
 	def get_output(self):
 		return self.get_rssi()

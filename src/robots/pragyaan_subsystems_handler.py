@@ -11,14 +11,11 @@ from enum import StrEnum, Enum
 from src.environments.utils import get_moon_env_name
 from src.physics.robot_physics_models.pragyaan_thermal_model import PragyaanThermalModel
 from src.physics.robot_physics_models.radio_model import RadioModel
-from src.physics.robot_physics_models.ThermalModel import ThermalModel
-from src.physics.robot_physics_models.PowerModel import PowerModel
 import math
 from isaacsim.core.utils.xforms import get_world_pose
 import random
 import time
 
-from src.physics.robot_physics_models.power_model import RobotPowerModel
 from src.robots.device import CommonDevice, Device, HealthState
 from src.robots.neutron_spectrometer_model import NeutronSpectrometerModel
 from src.robots.robot_enums import ObcState, SolarPanelState
@@ -65,8 +62,8 @@ class PragyaanSubsystemsHandler(RobotSubsystemsHandler):
         self._devices[CommonDevice.OBC] = Device(CommonDevice.OBC, current_draw=(0.0, 7.5))
         self._devices[CommonDevice.MOTOR_CONTROLLER] = Device(CommonDevice.MOTOR_CONTROLLER, current_draw=(0.0, 2.0))
         self._devices["neutron_spectrometer"] = Device("neutron_spectrometer", current_draw=(0.0, 9.0))
-        self._devices["apxs"] = Device("apxs", current_draw=(0.0, 9.0))
-        self._devices["camera"] = Device("camera", current_draw=(0.0, 5.0))
+        self._devices[CommonDevice.APXS] = Device(CommonDevice.APXS, current_draw=(0.0, 9.0))
+        self._devices[CommonDevice.CAMERA] = Device(CommonDevice.CAMERA, current_draw=(0.0, 5.0))
         self._devices[CommonDevice.RADIO] = Device(CommonDevice.RADIO, current_draw=(0.0, 5.0))
         self._devices["eps"] = Device("eps", current_draw=(0.0, 1.0))
 
@@ -114,9 +111,9 @@ class PragyaanSubsystemsHandler(RobotSubsystemsHandler):
     
     def set_battery_perc(self, battery_perc):
         #NOTE specific to workshop use case
-        capacity = self._power.battery_capacity_wh
+        capacity = self._power_model._battery_capacity_wh
         new_charge = battery_perc / 100 * capacity
-        self._power.battery_charge_wh = new_charge
+        self._power_model._battery_charge_wh = new_charge
 
     def get_neutron_count(self):
         #NOTE specific to workshop use case
