@@ -8,7 +8,6 @@ class MdbParsingService():
     XTCE_NS = {"xtce": "http://www.omg.org/spec/XTCE/20180204"}
 
     @classmethod
-
     def load_mdb_registry(cls, mdb_files):
         registry = {}
 

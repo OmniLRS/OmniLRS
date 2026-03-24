@@ -19,7 +19,6 @@ class CommandsHandler():
     SOCKET_TIMEOUT_SEC  = 2.0 
     HEARTBEAT_EVERY_SEC = 10.0  # how often to log "waiting..." when idle
 
-
     def __init__(self, yamcs_processor, yamcs_instance_conf, mdb_files:list[str]):
         self._yamcs_processor = yamcs_processor
         self._commands_catalogue = {}
