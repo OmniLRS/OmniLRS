@@ -269,7 +269,7 @@ terrain_manager:
     
     deformation_engine:
       enable: True
-      delay: 2.0
+      delay: 5.0
       terrain_width: ${....lunaryard_settings.lab_width}
       terrain_height: ${....lunaryard_settings.lab_length}
       terrain_resolution: ${....lunaryard_settings.resolution}

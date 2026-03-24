@@ -75,6 +75,7 @@ class Rate:
             if delta < self.dt:
                 to_sleep = self.dt - delta
                 time.sleep(to_sleep)
+            self.last_check += self.dt
 
 
 class ROS2_LabManagerFactory:
@@ -216,7 +217,6 @@ class ROS2_SimulationManager:
 
         self.timeline.play()
         while self.simulation_app.is_running():
-            self.rate.reset()
             self.world.step(render=True)
             if self.world.is_playing():
                 # Apply modifications to the lab only once the simulation step is finished
