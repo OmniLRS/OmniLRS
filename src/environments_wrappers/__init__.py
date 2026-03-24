@@ -6,6 +6,57 @@ __maintainer__ = "Antoine Richard"
 __email__ = "antoine.richard@uni.lu"
 __status__ = "development"
 
+import time
+from contextlib import contextmanager
+
+
+class FrameProfiler:
+    """
+    Accumulates named per-frame timings and logs a summary periodically.
+    Keys are discovered dynamically from track() calls.
+    When disabled, track() is a bare no-op context manager.
+    """
+
+    def __init__(self, interval: int = 100, enabled: bool = True) -> None:
+        self.enabled = enabled
+        if enabled:
+            self._interval = interval
+            self._acc = {}
+            self._n = 0
+            self._frame_start = 0.0
+
+    def begin_frame(self) -> None:
+        if self.enabled:
+            self._frame_start = time.perf_counter()
+
+    @contextmanager
+    def track(self, key: str):
+        """Context manager that times the enclosed block under *key*.
+        When profiling is disabled, yields immediately with no overhead."""
+        if not self.enabled:
+            yield
+            return
+        t0 = time.perf_counter()
+        yield
+        self._acc[key] = self._acc.get(key, 0.0) + (time.perf_counter() - t0)
+
+    def end_frame(self) -> None:
+        if not self.enabled:
+            return
+        self._acc["total"] = self._acc.get("total", 0.0) + (time.perf_counter() - self._frame_start)
+        self._n += 1
+        if self._n >= self._interval:
+            n = self._n
+            keys = [k for k in self._acc if k != "total"]
+            all_keys = ["total"] + keys
+            max_key_len = max(len(k) for k in all_keys)
+            lines = [f"  {k:<{max_key_len}} = {1000*self._acc[k]/n:6.1f} ms" for k in all_keys]
+            fps = n / self._acc["total"] if self._acc["total"] > 0 else 0
+            lines.append(f"  {'fps':<{max_key_len}} = {fps:6.1f}")
+            print(f"[PROFILE] avg over {n} frames:\n" + "\n".join(lines))
+            self._acc = {}
+            self._n = 0
+
 
 def startSim(cfg: dict):
     from isaacsim import SimulationApp

@@ -21,6 +21,7 @@ from src.environments_wrappers.ros2.lunaryard_ros2 import ROS_LunaryardManager
 from src.environments_wrappers.ros2.robot_manager_ros2 import ROS_RobotManager
 from src.environments_wrappers.ros2.lunalab_ros2 import ROS_LunalabManager
 from src.configurations.procedural_terrain_confs import TerrainManagerConf
+from src.environments_wrappers import FrameProfiler
 from rclpy.executors import SingleThreadedExecutor as Executor
 from src.physics.physics_scene import PhysicsSceneManager
 import rclpy
@@ -215,27 +216,41 @@ class ROS2_SimulationManager:
         Runs the simulation.
         """
 
+        profiler = FrameProfiler(
+            enabled=self.cfg.get("enable_profiling", False),
+        )
+
         self.timeline.play()
+        self.rate.reset()
         while self.simulation_app.is_running():
-            self.world.step(render=True)
+            profiler.begin_frame()
+
+            with profiler.track("world.step"):
+                self.world.step(render=True)
+
             if self.world.is_playing():
                 # Apply modifications to the lab only once the simulation step is finished
                 # This is extremely important as modifying the stage during a simulation step
                 # will lead to a crash.
-                self.ROSLabManager.periodic_update(dt=self.world.get_physics_dt())
-                if self.world.current_time_step_index == 0:
-                    self.world.reset()
-                    self.ROSLabManager.reset()
-                    self.ROSRobotManager.reset()
-                self.ROSLabManager.apply_modifications()
-                if self.ROSLabManager.trigger_reset:
-                    self.ROSRobotManager.reset()
-                    self.ROSLabManager.trigger_reset = False
-                self.ROSRobotManager.apply_modifications()
-                if self.enable_deformation:
-                    if self.world.current_time_step_index >= self.deform_delay_steps:
-                        self.ROSLabManager.LC.deform_terrain()
-                        # self.ROSLabManager.LC.applyTerramechanics()
+                with profiler.track("lab"):
+                    self.ROSLabManager.periodic_update(dt=self.world.get_physics_dt())
+                    if self.world.current_time_step_index == 0:
+                        self.world.reset()
+                        self.ROSLabManager.reset()
+                        self.ROSRobotManager.reset()
+                    self.ROSLabManager.apply_modifications()
+                    if self.ROSLabManager.trigger_reset:
+                        self.ROSRobotManager.reset()
+                        self.ROSLabManager.trigger_reset = False
+
+                with profiler.track("robot"):
+                    self.ROSRobotManager.apply_modifications()
+
+                with profiler.track("deform"):
+                    if self.enable_deformation:
+                        if self.world.current_time_step_index >= self.deform_delay_steps:
+                                self.ROSLabManager.LC.deform_terrain()
+
             if not self.ROSLabManager.monitor_thread_is_alive():
                 logger.debug("Destroying the ROS nodes")
                 self.ROSLabManager.destroy_node()
@@ -250,6 +265,9 @@ class ROS2_SimulationManager:
                 rclpy.shutdown()
                 break
 
-            self.rate.sleep()
+            with profiler.track("rate.sleep"):
+                self.rate.sleep()
+
+            profiler.end_frame()
         self.world.stop()
         self.timeline.stop()
