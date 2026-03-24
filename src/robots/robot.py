@@ -318,7 +318,6 @@ class Robot:
         self._depth_cameras = {}
         self.dimensions = dimensions
         self.turn_speed_coef = turn_speed_coef
-        # self.subsystems = RobotSubsystemsManager(pos_relative_to_prim) #TODO for v3: here should get PragyaanPhysicsModelsHandler
         self._imu_sensor_interface = _sensor.acquire_imu_sensor_interface()
         self._imu_sensor_path:str = imu_sensor_path
         self._solar_panel_joint = solar_panel_joint

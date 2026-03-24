@@ -1,3 +1,11 @@
+__author__ = "Louis Burtz, Aleksa Stanivuk"
+__copyright__ = "Copyright 2025-26, JAOPS"
+__license__ = "BSD-3-Clause"
+__version__ = "2.0.0"
+__maintainer__ = "Louis Burtz"
+__email__ = "ljburtz@jaops.com"
+__status__ = "development"
+
 import math
 import random
 

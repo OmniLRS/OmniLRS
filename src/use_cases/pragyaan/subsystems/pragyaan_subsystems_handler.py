@@ -14,16 +14,14 @@ import math
 from isaacsim.core.utils.xforms import get_world_pose
 import random
 import time
-
 from src.subsystems.device import CommonDevice, Device, HealthState, PowerState
-from src.robots.neutron_spectrometer_model import NeutronSpectrometerModel
+from src.use_cases.pragyaan.subsystems.neutron_spectrometer_model import NeutronSpectrometerModel
 from src.subsystems.robot_enums import ObcState, SolarPanelState
 from src.subsystems.robot_subsystems_handler import RobotSubsystemsHandler
 from src.use_cases.pragyaan.subsystems.pragyaan_thermal_model import PragyaanThermalModel
 
 class PragyaanSubsystemsHandler(RobotSubsystemsHandler):
 
-    #TODO @Louis Take a look into sun calculations... was dynamic fetching of the sun from the sim fixed/implemented?
     SUN_DISTANCE = 1000. # m
     SUN_AZYMUTH_DEG = 65.0
     SUN_POSITION = (

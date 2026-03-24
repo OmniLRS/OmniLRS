@@ -8,7 +8,7 @@ The above import MUST be at the top of the file, can not be preceded by anything
 SyntaxError: from __future__ imports must occur at the beginning of the file
 """
 
-__author__ = "Louis Burtz"
+__author__ = "Louis Burtz, Aleksa Stanivuk"
 __copyright__ = "Copyright 2025-26, JAOPS"
 __license__ = "BSD-3-Clause"
 __version__ = "2.0.0"
