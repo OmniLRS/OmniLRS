@@ -74,9 +74,9 @@ class ThermalModel(RobotPhysicsModel):
         self._time_constant: float = TIME_CONSTANT  # Seconds to reach ~63% of target delta.
         self._sigmoid_gain: float = SIGMOID_GAIN  # Controls steepness of the sun-loading curve.
         self._measurement_noise_std: float = MEASUREMENT_NOISE
-        self.setup()
+        self.initialize()
 
-    def setup(self):
+    def initialize(self):
         self._faces = tuple(self._faces)
         if not self._node_temps:
             self._node_temps = {face: self._initial_temp for face in self._faces}
@@ -84,12 +84,12 @@ class ThermalModel(RobotPhysicsModel):
             for face in self._faces:
                 self._node_temps.setdefault(face, self._initial_temp)
 
-    def update_inputs(self, rover_position, sun_position, rover_yaw_deg):  
+    def set_inputs(self, rover_position, sun_position, rover_yaw_deg):  
         self._rover_position = rover_position
         self._sun_position  = sun_position
         self._rover_yaw_deg = rover_yaw_deg
 
-    def step(self, dt: float) -> None:
+    def compute(self, dt: float) -> None:
         # override in your custom model if needed
         # may call super().step() if you wish to reuse the face logic
         """Advance the model by *dt* seconds using stored rover/sun positions."""
@@ -103,7 +103,7 @@ class ThermalModel(RobotPhysicsModel):
             delta = (target - current) * (dt / self._time_constant)
             self._node_temps[face] = current + delta
 
-    def get_output(self):
+    def get_outputs(self):
         return self.temperatures()
 
     def temperatures(self) -> Dict[str, float]:

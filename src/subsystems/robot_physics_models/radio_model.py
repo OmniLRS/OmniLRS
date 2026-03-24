@@ -42,17 +42,17 @@ class RadioModel(RobotPhysicsModel):
 	_reference_distance: float = REFERENCE_DISTANCE  # Distance (m) at which worst_rssi applies.
 	_noise_std: float = NOISE  # Standard deviation of random RSSI noise [dB].
 
-	def update_inputs(self, lander_position, rover_position):
+	def set_inputs(self, lander_position, rover_position):
 		self._lander_position = lander_position
 		self._rover_position = rover_position
 
-	def step(self):
+	def compute(self):
 		pass
 
-	def setup(self):
+	def initialize(self):
 		pass
     
-	def get_output(self):
+	def get_outputs(self):
 		return self.get_rssi()
 	
 	def get_rssi(self):

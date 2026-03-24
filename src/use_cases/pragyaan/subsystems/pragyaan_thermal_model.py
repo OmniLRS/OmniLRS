@@ -38,6 +38,6 @@ class PragyaanThermalModel(ThermalModel):
         self._node_temps["interior"] = self._initial_temp
 
 
-    def step(self, dt: float) -> None:
-        super().step(dt)
+    def compute(self, dt: float) -> None:
+        super().compute(dt)
         self._node_temps["interior"] = sum(self._node_temps[face] for face in self._faces) / len(self._faces)

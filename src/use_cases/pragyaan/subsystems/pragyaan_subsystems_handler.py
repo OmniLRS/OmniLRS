@@ -65,7 +65,7 @@ class PragyaanSubsystemsHandler(RobotSubsystemsHandler):
         self._devices[CommonDevice.EPS] = Device(CommonDevice.EPS, current_draw=(0.0, 1.0), power_state=PowerState.ON)
 
     def _setup_power_model(self):
-        self._power_model.setup(battery_capacity_wh=self.BATTERY_CAPACITY_WH, battery_charge_wh=self.BATTERY_CAPACITY_WH, 
+        self._power_model.initialize(battery_capacity_wh=self.BATTERY_CAPACITY_WH, battery_charge_wh=self.BATTERY_CAPACITY_WH, 
                                 solar_panel_max_power=self.SOLAR_PANEL_MAX_POWER, solar_panel_state=self._solar_panel_state, 
                                 motor_count=self.MOTOR_COUNT, motor_power_w=self.MOTOR_POWER_W,
                                 devices=self._devices)
@@ -83,15 +83,15 @@ class PragyaanSubsystemsHandler(RobotSubsystemsHandler):
     
     @_update_positions_before
     def get_rssi(self, robot_position):
-        self._radio_model.update_inputs(robot_position, self._lander_pos)
+        self._radio_model.set_inputs(robot_position, self._lander_pos)
         rssi = self._radio_model.get_rssi()
 
         return rssi
     
     @_update_positions_before
     def get_thermal_status(self, robot_position, robot_yaw_deg, interval_s):
-        self._thermal_model.update_inputs(robot_position, self._sun_pos, robot_yaw_deg)
-        self._thermal_model.step(interval_s)
+        self._thermal_model.set_inputs(robot_position, self._sun_pos, robot_yaw_deg)
+        self._thermal_model.compute(interval_s)
         t = self._thermal_model.temperatures()
 
         return t
@@ -99,12 +99,12 @@ class PragyaanSubsystemsHandler(RobotSubsystemsHandler):
     @_update_positions_before
     def get_power_status(self, robot_position, robot_yaw_deg, interval_s, obc_state):
         # device states are reflected between the handler and power model, as they use the same dict
-        self._power_model.update_inputs(rover_position=robot_position, 
+        self._power_model.set_inputs(rover_position=robot_position, 
                                         sun_position=self._sun_pos, 
                                         rover_yaw_deg=robot_yaw_deg, 
                                         solar_panel_state=self._solar_panel_state, 
                                         is_in_motor_state=(obc_state == ObcState.MOTOR))
-        self._power_model.step(interval_s)
+        self._power_model.compute(interval_s)
         status = self._power_model.status()
    
         return status

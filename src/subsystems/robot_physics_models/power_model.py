@@ -78,7 +78,7 @@ class PowerModel(RobotPhysicsModel):
         self._dc_dc_efficiency = DC_DC_EFFICIENCY
         self._device_fault_extra_power = DEVICE_FAULT_EXTRA_POWER
     
-    def setup(self, *, battery_capacity_wh:float, battery_charge_wh:float,
+    def initialize(self, *, battery_capacity_wh:float, battery_charge_wh:float,
 				   solar_panel_max_power:float, solar_panel_state:SolarPanelState, 
 				   motor_count:int, motor_power_w:float, is_in_motor_state:bool=False,
 				   devices:dict[str,Device]):
@@ -93,14 +93,14 @@ class PowerModel(RobotPhysicsModel):
         self._motor_count = motor_count
         self._motor_power_w = motor_power_w
 	
-    def update_inputs(self, rover_position, sun_position, rover_yaw_deg, solar_panel_state, is_in_motor_state):  
+    def set_inputs(self, rover_position, sun_position, rover_yaw_deg, solar_panel_state, is_in_motor_state):  
         self._rover_position = rover_position
         self._sun_position  = sun_position
         self._rover_yaw_deg = rover_yaw_deg
         self._solar_panel_state = solar_panel_state
         self._is_in_motor_state = is_in_motor_state
 
-    def step(self, dt: float) -> None:
+    def compute(self, dt: float) -> None:
         """Advance the battery state by *dt* seconds."""
 
         view_factor = self._compute_view_factor(self._rover_position, self._sun_position)
@@ -111,9 +111,9 @@ class PowerModel(RobotPhysicsModel):
         self._update_battery_voltage()
 
     def status(self) -> Dict[str, float | Dict[str, float] | Sequence[float]]:
-        return self.get_output()
+        return self.get_outputs()
 
-    def get_output(self) -> Dict[str, float | Dict[str, float] | Sequence[float]]:
+    def get_outputs(self) -> Dict[str, float | Dict[str, float] | Sequence[float]]:
         motor_currents = self._measured_motor_currents()
         device_currents = self._measured_device_currents()
         regulated_power = self._regulated_bus_voltage * sum(device_currents.values())
