@@ -85,4 +85,4 @@ class RobotSubsystemsHandler(ABC):
         return self._devices[device_name].get_health_state()
     
     def get_obc_metrics(self):
-        self._obc_metrics_model.get_obc_metrics(self._obc_state)
+        return self._obc_metrics_model.get_obc_metrics(self._obc_state)

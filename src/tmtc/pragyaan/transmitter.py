@@ -9,7 +9,7 @@ __status__ = "development"
 from src.environments.utils import transform_orientation_into_xyz
 import math
 import omni.kit.app
-from src.robots.device import PowerState
+from src.robots.device import CommonDevice, PowerState
 from src.robots.robot import Robot
 from src.robots.robot_enums import SolarPanelState
 from src.tmtc.intervals_handler import IntervalName
@@ -55,9 +55,9 @@ class PragyaanTransmitter:
 
         obc_metrics = self._robot.subsystems.get_obc_metrics()
 
-        self._yamcs_processor.set_parameter_value(self._parameters_conf["obc_cpu_usage"], obc_metrics["cpu_usage"])
-        self._yamcs_processor.set_parameter_value(self._parameters_conf["obc_ram_usage"], obc_metrics["ram_usage"])
-        self._yamcs_processor.set_parameter_value(self._parameters_conf["obc_disk_usage"], obc_metrics["disk_usage"])
+        self._yamcs_processor.set_parameter_value(self._parameters_conf["obc_cpu_usage"], int(obc_metrics["cpu_usage"]))
+        self._yamcs_processor.set_parameter_value(self._parameters_conf["obc_ram_usage"], int(obc_metrics["ram_usage"]))
+        self._yamcs_processor.set_parameter_value(self._parameters_conf["obc_disk_usage"], int(obc_metrics["disk_usage"]))
         self._yamcs_processor.set_parameter_value(self._parameters_conf["obc_uptime"], obc_metrics["uptime"])
         
     def transmit_radio_signal_info(self):
@@ -97,17 +97,17 @@ class PragyaanTransmitter:
         self._yamcs_processor.set_parameter_value(self._parameters_conf["battery_voltage"], power_status['battery_voltage_measured'])
         self._yamcs_processor.set_parameter_value(self._parameters_conf["total_current_in"], power_status['solar_input_current_measured'])
         self._yamcs_processor.set_parameter_value(self._parameters_conf["total_current_out"], power_status["total_current_out_measured"])
-        self._yamcs_processor.set_parameter_value(self._parameters_conf["current_draw_obc"], power_status["device_currents_measured"]['current_draw_obc'])
-        self._yamcs_processor.set_parameter_value(self._parameters_conf["current_draw_motor_controller"], power_status["device_currents_measured"]['current_draw_motor_controller'])
-        self._yamcs_processor.set_parameter_value(self._parameters_conf["current_draw_neutron_spectrometer"], power_status["device_currents_measured"]['current_draw_neutron_spectrometer'])
-        self._yamcs_processor.set_parameter_value(self._parameters_conf["current_draw_apxs"], power_status["device_currents_measured"]['current_draw_apxs'])
-        self._yamcs_processor.set_parameter_value(self._parameters_conf["current_draw_camera"], power_status["device_currents_measured"]['current_draw_camera'])
-        self._yamcs_processor.set_parameter_value(self._parameters_conf["current_draw_radio"], power_status["device_currents_measured"]['current_draw_radio'])
-        self._yamcs_processor.set_parameter_value(self._parameters_conf["current_draw_eps"], power_status["device_currents_measured"]['current_draw_eps'])
+        self._yamcs_processor.set_parameter_value(self._parameters_conf["current_draw_obc"], power_status["device_currents_measured"][CommonDevice.OBC])
+        self._yamcs_processor.set_parameter_value(self._parameters_conf["current_draw_motor_controller"], power_status["device_currents_measured"][CommonDevice.MOTOR_CONTROLLER])
+        self._yamcs_processor.set_parameter_value(self._parameters_conf["current_draw_neutron_spectrometer"], power_status["device_currents_measured"][CommonDevice.NEUTRON_SPECTROMETER])
+        self._yamcs_processor.set_parameter_value(self._parameters_conf["current_draw_apxs"], power_status["device_currents_measured"][CommonDevice.APXS])
+        self._yamcs_processor.set_parameter_value(self._parameters_conf["current_draw_camera"], power_status["device_currents_measured"][CommonDevice.CAMERA])
+        self._yamcs_processor.set_parameter_value(self._parameters_conf["current_draw_radio"], power_status["device_currents_measured"][CommonDevice.RADIO])
+        self._yamcs_processor.set_parameter_value(self._parameters_conf["current_draw_eps"], power_status["device_currents_measured"][CommonDevice.EPS])
         self._yamcs_processor.set_parameter_value(self._parameters_conf["motor_current"], power_status['motor_currents_measured'])
 
-    def transmit_neutroun_count(self, interval_s):
-        neutron_counts = self._robot.subsystems.get_neutron_count(interval_s)
+    def transmit_neutroun_count(self):
+        neutron_counts = self._robot.subsystems.get_neutron_count()
         self._yamcs_processor.set_parameter_value(self._parameters_conf["neutron_counts"], neutron_counts)
 
     def transmit_obc_state(self):

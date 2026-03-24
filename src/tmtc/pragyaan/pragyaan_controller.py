@@ -60,18 +60,19 @@ class PragyaanController(YamcsTMTC):
 
     "Performs mapping between yamcs commands and functions that affect the simulation and rover's state"
     def _setup_command_callbacks(self, commands_conf):
-        self._commands_handler.add_command(commands_conf["drive_straight"], self.drive_straight, args=["linear_velocity", "distance"] )
-        self._commands_handler.add_command(commands_conf["drive_turn"], self.drive_turn, args=["angular_velocity", "angle"] )
-        self._commands_handler.add_command(commands_conf["camera_capture_high"], self.handle_high_res_capture )
-        self._commands_handler.add_command(commands_conf["camera_streaming_on_off"], self.set_activity_of_camera_streaming, args=["action"] )
-        self._commands_handler.add_command(commands_conf["camera_capture_depth"], self.handle_depth_capture )
-        self._commands_handler.add_command(commands_conf["power_electronics"], self.handle_electronics_on_off,  args=["subsystem_id", "power_state"] )
-        self._commands_handler.add_command(commands_conf["solar_panel"], self.handle_solar_panel, args=["deployment"] )
-        self._commands_handler.add_command(commands_conf["go_nogo"], self.handle_go_nogo, args=["decision"] )
-        self._commands_handler.add_command(commands_conf["capture_apxs"], self.snap_apxs )
-        self._commands_handler.add_command(commands_conf["admin_water_detection"], self.set_is_near_water, args=["trigger_water_detection"] )
-        self._commands_handler.add_command(commands_conf["admin_inject_fault"], self.inject_fault)
-        self._commands_handler.add_command(commands_conf["lander_camera_capture_high"], self.handle_lander_camera_capture )
+        self._commands_handler.add_command(commands_conf["drive_straight"], self._drive_straight, args=["linear_velocity", "distance"] )
+        self._commands_handler.add_command(commands_conf["drive_turn"], self._drive_turn, args=["angular_velocity", "angle"] )
+        self._commands_handler.add_command(commands_conf["camera_capture_high"], self._handle_high_res_capture )
+        self._commands_handler.add_command(commands_conf["camera_streaming_on_off"], self._set_activity_of_camera_streaming, args=["action"] )
+        self._commands_handler.add_command(commands_conf["camera_capture_depth"], self._handle_depth_capture )
+        self._commands_handler.add_command(commands_conf["power_electronics"], self._handle_electronics_on_off,  args=["subsystem_id", "power_state"] )
+        self._commands_handler.add_command(commands_conf["solar_panel"], self._handle_solar_panel, args=["deployment"] )
+        self._commands_handler.add_command(commands_conf["go_nogo"], self._handle_go_nogo, args=["decision"] )
+        self._commands_handler.add_command(commands_conf["capture_apxs"], self._snap_apxs )
+        self._commands_handler.add_command(commands_conf["admin_water_detection"], self._set_is_near_water, args=["trigger_water_detection"] )
+        self._commands_handler.add_command(commands_conf["admin_inject_fault"], self._inject_fault)
+        self._commands_handler.add_command(commands_conf["lander_camera_capture_high"], self._handle_lander_camera_capture )
+        self._commands_handler.add_command(commands_conf["admin_battery_percentage"], self._handle_battery_perc_change, args=["battery_percentage"] )
 
     "Creates intervals for automatic transmission of rover's parameters to yamcs"
     def start_streaming_data(self):
@@ -103,31 +104,31 @@ class PragyaanController(YamcsTMTC):
                                                  function=self._transmitter.transmit_wheels_joint_angles)
         # here add further intervals and their functionalities
 
-    def snap_apxs(self):
+    def _snap_apxs(self):
         power_state = self._robot.subsystems.get_device_power_state(CommonDevice.APXS)
         self._payload_handler.snap_apxs(power_state)
 
-    def inject_fault(self):
+    def _inject_fault(self):
         self._robot.subsystems.set_device_health_state(CommonDevice.MOTOR_CONTROLLER, HealthState.FAULT)
         self._drive_handler.stop_robot()
 
-    def handle_battery_perc_change(self, battery_percentage:int):
+    def _handle_battery_perc_change(self, battery_percentage:int):
         self._robot.subsystems.set_battery_perc(battery_percentage)
 
-    def handle_lander_camera_capture(self):
+    def _handle_lander_camera_capture(self):
         self._camera_handler.transmit_lander_camera_view()
 
-    def handle_high_res_capture(self):
+    def _handle_high_res_capture(self):
         if (self._robot.subsystems.get_device_power_state(CommonDevice.CAMERA) == PowerState.ON):
             self._camera_handler.transmit_camera_view(PragyaanCameraHandler.BUCKET_ONCOMMAND, CameraResolution.HIGH.value, CameraViewType.RGBA)
             self._obc_handler.set_obc_state(ObcState.CAMERA, 10)
 
-    def handle_depth_capture(self):
+    def _handle_depth_capture(self):
         if (self._robot.subsystems.get_device_power_state(CommonDevice.CAMERA) == PowerState.ON):
             self._camera_handler.transmit_camera_view(PragyaanCameraHandler.BUCKET_DEPTH, CameraResolution.HIGH.value, CameraViewType.DEPTH)
             self._obc_handler.set_obc_state(ObcState.CAMERA, 10)
 
-    def handle_solar_panel(self, command:str):
+    def _handle_solar_panel(self, command:str):
         if self._robot.subsystems.get_go_nogo_state() == GoNogoState.NOGO:
             return
 
@@ -141,7 +142,7 @@ class PragyaanController(YamcsTMTC):
             print("Command for solar panel is unknown:", command)
             return
 
-    def handle_electronics_on_off(self, electronics:str, new_state:PowerState):
+    def _handle_electronics_on_off(self, electronics:str, new_state:PowerState):
         if new_state not in [PowerState.ON.value, PowerState.OFF.value]:
             print("New decision for PowerState of electronics is unknown:", new_state)
             return
@@ -150,19 +151,22 @@ class PragyaanController(YamcsTMTC):
         self._robot.subsystems.set_device_power_state(electronics, new_state)
 
         if electronics == CommonDevice.CAMERA:
-            self.set_activity_of_camera_streaming("START") if new_state == PowerState.ON else self._set_activity_of_camera_streaming("STOP")
+            self._set_activity_of_camera_streaming("START") if new_state == PowerState.ON else self._set_activity_of_camera_streaming("STOP")
         elif electronics == CommonDevice.NEUTRON_SPECTROMETER:
-            self.set_activity_of_neutron_streaming(new_state)
+            self._set_activity_of_neutron_streaming(new_state)
             pass
         elif electronics == CommonDevice.MOTOR_CONTROLLER:
             if (new_state == PowerState.OFF):
                 self._drive_handler.stop_robot()
+                # workshop use-case:
+                # in case of a fault on Motor controller, the motor controller should be powered off and on
+                # after that, the health state will again be nominal
                 self._robot.subsystems.set_device_health_state(CommonDevice.MOTOR_CONTROLLER, HealthState.NOMINAL)
         elif electronics == CommonDevice.RADIO:
             #NOTE The rover would lose all communication capabilities if the radio is turned off.
             pass
 
-    def handle_go_nogo(self, decision:str):
+    def _handle_go_nogo(self, decision:str):
         if decision not in [GoNogoState.GO.name, GoNogoState.NOGO.name]:
             print("New decision for GO / NOGO is unknown:", decision)
             return
@@ -173,7 +177,7 @@ class PragyaanController(YamcsTMTC):
         if (decision == GoNogoState.NOGO):
                 self._drive_handler.stop_robot()
     
-    def set_activity_of_camera_streaming(self, action:str):
+    def _set_activity_of_camera_streaming(self, action:str):
         if action == YamcsArguments.STOP.value:
             self._intervals_handler.remove_interval(IntervalName.CAMERA_STREAMING.value)
         elif action == YamcsArguments.START.value:
@@ -183,19 +187,19 @@ class PragyaanController(YamcsTMTC):
         else:
             print("Unknown action:", action)
 
-    def set_activity_of_neutron_streaming(self, power_state:PowerState):
+    def _set_activity_of_neutron_streaming(self, power_state:PowerState):
         if power_state == PowerState.OFF:
             self._intervals_handler.remove_interval(IntervalName.NEUTRON_COUNT.value)
         elif power_state == PowerState.ON:
             if not self._intervals_handler.does_exist(IntervalName.NEUTRON_COUNT.value):
                 self._intervals_handler.add_new_interval(name=IntervalName.NEUTRON_COUNT.value, seconds=self._intervals["camera_streaming"], is_repeating=True, execute_immediately=False,
-                                                 function=self._transmitter.transmit_neutroun_count, f_args=[self._intervals["robot_stats"]])
+                                                 function=self._transmitter.transmit_neutroun_count)
 
-    def drive_straight(self, linear_velocity, distance):
+    def _drive_straight(self, linear_velocity, distance):
         self._drive_handler.drive_robot_straight(linear_velocity, distance)
 
-    def drive_turn(self, angular_velocity, angle):
+    def _drive_turn(self, angular_velocity, angle):
         self._drive_handler.drive_robot_turn(angular_velocity, angle)
 
-    def set_is_near_water(self, trigger_water_detection):
+    def _set_is_near_water(self, trigger_water_detection):
          self._robot.subsystems.set_is_near_water(trigger_water_detection)

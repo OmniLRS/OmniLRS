@@ -16,7 +16,7 @@ from isaacsim.core.utils.xforms import get_world_pose
 import random
 import time
 
-from src.robots.device import CommonDevice, Device, HealthState
+from src.robots.device import CommonDevice, Device, HealthState, PowerState
 from src.robots.neutron_spectrometer_model import NeutronSpectrometerModel
 from src.robots.robot_enums import ObcState, SolarPanelState
 from src.robots.robot_subsystems_handler import RobotSubsystemsHandler
@@ -43,10 +43,7 @@ class PragyaanSubsystemsHandler(RobotSubsystemsHandler):
         thermal_model = PragyaanThermalModel()
         super().__init__(thermal_model=thermal_model)
         self._setup_devices()
-        self._power_model.setup(battery_capacity_wh=self.BATTERY_CAPACITY_WH, battery_charge_wh=self.BATTERY_CAPACITY_WH, 
-                                solar_panel_max_power=self.SOLAR_PANEL_MAX_POWER, solar_panel_state=self._solar_panel_state, 
-                                motor_count=self.MOTOR_COUNT, motor_power_w=self.MOTOR_POWER_W,
-                                devices=self._devices)
+        self._setup_power_model()
         self.LANDER_PATH = pos_relative_to_prim
         self._neutron_spectrometer = NeutronSpectrometerModel()
 
@@ -59,13 +56,19 @@ class PragyaanSubsystemsHandler(RobotSubsystemsHandler):
 
     def _setup_devices(self):
         # Pragyaan and workshop-specific values for the subsystem devices
-        self._devices[CommonDevice.OBC] = Device(CommonDevice.OBC, current_draw=(0.0, 7.5))
+        self._devices[CommonDevice.OBC] = Device(CommonDevice.OBC, current_draw=(0.0, 7.5), power_state=PowerState.ON)
         self._devices[CommonDevice.MOTOR_CONTROLLER] = Device(CommonDevice.MOTOR_CONTROLLER, current_draw=(0.0, 2.0))
-        self._devices["neutron_spectrometer"] = Device("neutron_spectrometer", current_draw=(0.0, 9.0))
+        self._devices[CommonDevice.NEUTRON_SPECTROMETER] = Device(CommonDevice.NEUTRON_SPECTROMETER, current_draw=(0.0, 9.0))
         self._devices[CommonDevice.APXS] = Device(CommonDevice.APXS, current_draw=(0.0, 9.0))
         self._devices[CommonDevice.CAMERA] = Device(CommonDevice.CAMERA, current_draw=(0.0, 5.0))
-        self._devices[CommonDevice.RADIO] = Device(CommonDevice.RADIO, current_draw=(0.0, 5.0))
-        self._devices["eps"] = Device("eps", current_draw=(0.0, 1.0))
+        self._devices[CommonDevice.RADIO] = Device(CommonDevice.RADIO, current_draw=(0.0, 5.0), power_state=PowerState.ON)
+        self._devices[CommonDevice.EPS] = Device(CommonDevice.EPS, current_draw=(0.0, 1.0), power_state=PowerState.ON)
+
+    def _setup_power_model(self):
+        self._power_model.setup(battery_capacity_wh=self.BATTERY_CAPACITY_WH, battery_charge_wh=self.BATTERY_CAPACITY_WH, 
+                                solar_panel_max_power=self.SOLAR_PANEL_MAX_POWER, solar_panel_state=self._solar_panel_state, 
+                                motor_count=self.MOTOR_COUNT, motor_power_w=self.MOTOR_POWER_W,
+                                devices=self._devices)
 
     def _update_positions(self):
         self._sun_pos = self.SUN_POSITION

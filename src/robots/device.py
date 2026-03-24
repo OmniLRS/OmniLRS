@@ -12,12 +12,13 @@ class HealthState(Enum):
     FAULT = 1
 
 class CommonDevice(StrEnum):
-    MOTOR_CONTROLLER = "motor_controller"
-    RADIO = "radio"
-    OBC = "obc"
-    APXS = "apxs"
-    CAMERA = "camera"
-    NEUTRON_SPECTROMETER = "neutron_spectrometer"
+    MOTOR_CONTROLLER = "MOTOR_CONTROLLER"
+    RADIO = "RADIO"
+    OBC = "OBC"
+    APXS = "APXS"
+    CAMERA = "CAMERA"
+    NEUTRON_SPECTROMETER = "NEUTRON_SPECTROMETER"
+    EPS = "EPS"
 
 class Device():
     def __init__(

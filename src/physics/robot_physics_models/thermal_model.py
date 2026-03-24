@@ -65,7 +65,7 @@ class ThermalModel(RobotPhysicsModel):
         self._rover_yaw_deg: float = 0.0
         self._sun_position: Tuple[float, float, float] = (1.0, 0.0, 0.0)
         self._faces: Iterable[str] = FACES
-        self._node_temps: Dict[str, float] = field(default_factory=dict)
+        self._node_temps: Dict[str, float] = {}
         #NOTE the following fileds were set to default values, as these values depend on the environment (Moon), not so much on the rover
         # no setters were implemented, but the values may be directly accessed from a subsystems manager if need for customization exists
         self._min_temp: float = MIN_TEMP
@@ -74,17 +74,15 @@ class ThermalModel(RobotPhysicsModel):
         self._time_constant: float = TIME_CONSTANT  # Seconds to reach ~63% of target delta.
         self._sigmoid_gain: float = SIGMOID_GAIN  # Controls steepness of the sun-loading curve.
         self._measurement_noise_std: float = MEASUREMENT_NOISE
+        self.setup()
 
-    def __post_init__(self) -> None:
+    def setup(self):
         self._faces = tuple(self._faces)
         if not self._node_temps:
             self._node_temps = {face: self._initial_temp for face in self._faces}
         else:
             for face in self._faces:
                 self._node_temps.setdefault(face, self._initial_temp)
-
-    def setup(self):
-        pass
 
     def update_inputs(self, rover_position, sun_position, rover_yaw_deg):  
         self._rover_position = rover_position

@@ -327,34 +327,9 @@ class Robot:
 
     def _setup_subsystems_handler(self, pos_relative_to_prim):
         self.subsystems:RobotSubsystemsHandler = None
-
-        print()
-        print()
-        print()
-        print()
-        print()
-        print()
-        print()
-        print()
-        print()
-        print()
-        print()
-        print()
-        print("self.robot_name:", self.robot_name)
-        print()
-        print()
-        print()
-        print()
-        print()
-        print()
-        print()
-        print()
-        print()
-        print()
-        print()
-        print()
-
-        if self.robot_name == "pragyaan":
+        robot_name = self.robot_name.strip("/")
+        
+        if robot_name == "pragyaan":
             self.subsystems = PragyaanSubsystemsHandler(pos_relative_to_prim)
 
     def get_root_rigid_body_path(self) -> None:
