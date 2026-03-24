@@ -192,8 +192,8 @@ class ROS2_SimulationManager:
         # Keep it in mind if you want to go crazy with the ROS2 calls to modify the sim...
         if "terrain_manager" in cfg["environment"].keys():
             self.terrain_manager_conf: TerrainManagerConf = cfg["environment"]["terrain_manager"]
-            self.deform_delay = self.terrain_manager_conf.moon_yard.deformation_engine.delay
             self.enable_deformation = self.terrain_manager_conf.moon_yard.deformation_engine.enable
+            self.deform_delay_steps = int(self.terrain_manager_conf.moon_yard.deformation_engine.delay / self.world.get_physics_dt())
         else:
             self.enable_deformation = False
 
@@ -233,7 +233,7 @@ class ROS2_SimulationManager:
                     self.ROSLabManager.trigger_reset = False
                 self.ROSRobotManager.apply_modifications()
                 if self.enable_deformation:
-                    if self.world.current_time_step_index >= (self.deform_delay * self.world.get_physics_dt()):
+                    if self.world.current_time_step_index >= self.deform_delay_steps:
                         self.ROSLabManager.LC.deform_terrain()
                         # self.ROSLabManager.LC.applyTerramechanics()
             if not self.ROSLabManager.monitor_thread_is_alive():
