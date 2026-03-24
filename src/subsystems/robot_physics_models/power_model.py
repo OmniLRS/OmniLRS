@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from src.physics.robot_physics_models.robot_physics_model import RobotPhysicsModel
-from src.robots.device import CommonDevice, Device, HealthState, PowerState
-from src.robots.robot_enums import SolarPanelState
+from src.subsystems.robot_physics_models.robot_physics_model import RobotPhysicsModel
+from src.subsystems.device import CommonDevice, Device, HealthState, PowerState
+from src.subsystems.robot_enums import SolarPanelState
 """
 The above import MUST be at the top of the file, can not be preceded by anything or it crashes
 SyntaxError: from __future__ imports must occur at the beginning of the file

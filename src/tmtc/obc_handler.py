@@ -7,7 +7,7 @@ __email__ = "ljburtz@jaops.com"
 __status__ = "development"
 
 import omni.kit.app
-from src.robots.robot_enums import ObcState
+from src.subsystems.robot_enums import ObcState
 from src.tmtc.intervals_handler import IntervalName
 
 """

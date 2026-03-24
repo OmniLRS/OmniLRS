@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from src.physics.robot_physics_models.robot_physics_model import RobotPhysicsModel
-from src.physics.robot_physics_models.thermal_model import ThermalModel
+from src.subsystems.robot_physics_models.robot_physics_model import RobotPhysicsModel
+from src.subsystems.robot_physics_models.thermal_model import ThermalModel
 """
 The above import MUST be at the top of the file, can not be preceded by anything or it crashes
 SyntaxError: from __future__ imports must occur at the beginning of the file

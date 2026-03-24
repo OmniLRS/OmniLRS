@@ -9,9 +9,9 @@ __status__ = "development"
 from src.environments.utils import transform_orientation_into_xyz
 import math
 import omni.kit.app
-from src.robots.device import CommonDevice, PowerState
+from src.subsystems.device import CommonDevice, PowerState
 from src.robots.robot import Robot
-from src.robots.robot_enums import SolarPanelState
+from src.subsystems.robot_enums import SolarPanelState
 from src.tmtc.intervals_handler import IntervalName
 
 class PragyaanTransmitter:

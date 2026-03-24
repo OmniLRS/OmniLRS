@@ -9,7 +9,7 @@ __status__ = "development"
 from PIL import Image, ImageDraw, ImageFont
 import os
 import omni.kit.app
-from src.robots.device import PowerState
+from src.subsystems.device import PowerState
 from src.tmtc.yamcs_TMTC import ImagesHandler
 
 

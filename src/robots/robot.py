@@ -31,8 +31,8 @@ from scipy.spatial.transform import Rotation as R
 
 from src.configurations.simulator_mode_enum import SimulatorMode
 from src.environments.utils import transform_orientation_from_xyzw_into_xyz, transform_orientation_into_xyz
-from src.robots.pragyaan_subsystems_handler import PragyaanSubsystemsHandler
-from src.robots.robot_subsystems_handler import RobotSubsystemsHandler
+from src.use_cases.pragyaan.subsystems.pragyaan_subsystems_handler import PragyaanSubsystemsHandler
+from src.subsystems.robot_subsystems_handler import RobotSubsystemsHandler
 # from src.robots.subsystems_manager import RobotSubsystemsManager
 from src.tmtc.yamcs_TMTC import YamcsTMTC
 from omni.isaac.sensor import Camera
@@ -256,7 +256,7 @@ class RobotManager:
         robot_name = list(self.robots.keys())[0].replace("/","") # assumes only 1 robot for workshop use
 
         if self.RM_conf.robot_controller == "pragyaan-controller":
-            from src.tmtc.pragyaan.pragyaan_controller import PragyaanController
+            from src.use_cases.pragyaan.tmtc.pragyaan_controller import PragyaanController
 
             self.TMTC = PragyaanController(self.yamcs_instance_conf, self.RM_conf.yamcs_tmtc, robot_name, self.robots_RG, self.robots["/" + robot_name])
         elif self.RM_conf is None or self.RM_conf.robot_controller == "":

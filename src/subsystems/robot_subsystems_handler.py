@@ -9,12 +9,12 @@ __status__ = "development"
 from abc import ABC, abstractmethod
 from enum import Enum
 
-from src.physics.robot_physics_models.power_model import PowerModel
-from src.physics.robot_physics_models.radio_model import RadioModel
-from src.physics.robot_physics_models.thermal_model import ThermalModel
-from src.robots.device import Device, PowerState
-from src.robots.obc_metrics_model import ObcMetricsModel
-from src.robots.robot_enums import GoNogoState, ObcState, SolarPanelState
+from src.subsystems.robot_physics_models.power_model import PowerModel
+from src.subsystems.robot_physics_models.radio_model import RadioModel
+from src.subsystems.robot_physics_models.thermal_model import ThermalModel
+from src.subsystems.device import Device, PowerState
+from src.subsystems.robot_physics_models.obc_metrics_model import ObcMetricsModel
+from src.subsystems.robot_enums import GoNogoState, ObcState, SolarPanelState
 
 class RobotSubsystemsHandler(ABC):
     def __init__(

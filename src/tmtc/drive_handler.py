@@ -6,10 +6,10 @@ __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
 __status__ = "development"
 
-from src.robots.device import CommonDevice, HealthState, PowerState
+from src.subsystems.device import CommonDevice, HealthState, PowerState
 import math
 import omni.kit.app
-from src.robots.robot_enums import GoNogoState, ObcState
+from src.subsystems.robot_enums import GoNogoState, ObcState
 from src.tmtc.intervals_handler import IntervalName
 
 class DriveHandler:

@@ -1,7 +1,7 @@
 import random
 import time
 
-from src.robots.robot_enums import ObcState
+from src.subsystems.robot_enums import ObcState
 
 
 class ObcMetricsModel():

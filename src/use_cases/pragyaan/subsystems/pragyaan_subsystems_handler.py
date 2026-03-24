@@ -9,17 +9,17 @@ __status__ = "development"
 from enum import StrEnum, Enum
 
 from src.environments.utils import get_moon_env_name
-from src.physics.robot_physics_models.pragyaan_thermal_model import PragyaanThermalModel
-from src.physics.robot_physics_models.radio_model import RadioModel
+from src.subsystems.robot_physics_models.radio_model import RadioModel
 import math
 from isaacsim.core.utils.xforms import get_world_pose
 import random
 import time
 
-from src.robots.device import CommonDevice, Device, HealthState, PowerState
+from src.subsystems.device import CommonDevice, Device, HealthState, PowerState
 from src.robots.neutron_spectrometer_model import NeutronSpectrometerModel
-from src.robots.robot_enums import ObcState, SolarPanelState
-from src.robots.robot_subsystems_handler import RobotSubsystemsHandler
+from src.subsystems.robot_enums import ObcState, SolarPanelState
+from src.subsystems.robot_subsystems_handler import RobotSubsystemsHandler
+from src.use_cases.pragyaan.subsystems.pragyaan_thermal_model import PragyaanThermalModel
 
 class PragyaanSubsystemsHandler(RobotSubsystemsHandler):
 

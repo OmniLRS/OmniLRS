@@ -7,12 +7,12 @@ __email__ = "ljburtz@jaops.com"
 __status__ = "development"
 
 from enum import Enum
-from src.robots.device import CommonDevice, HealthState, PowerState
-from src.robots.robot_enums import GoNogoState, ObcState, SolarPanelState
+from src.subsystems.device import CommonDevice, HealthState, PowerState
+from src.subsystems.robot_enums import GoNogoState, ObcState, SolarPanelState
 from src.tmtc.intervals_handler import IntervalName
-from src.tmtc.pragyaan.camera_handler import CameraViewType, PragyaanCameraHandler
-from src.tmtc.pragyaan.payload_handler import PayloadHandler
-from src.tmtc.pragyaan.transmitter import PragyaanTransmitter
+from src.use_cases.pragyaan.tmtc.camera_handler import CameraViewType, PragyaanCameraHandler
+from src.use_cases.pragyaan.tmtc.payload_handler import PayloadHandler
+from src.use_cases.pragyaan.tmtc.transmitter import PragyaanTransmitter
 from src.tmtc.yamcs_TMTC import  YamcsTMTC
 import omni.kit.app
 
