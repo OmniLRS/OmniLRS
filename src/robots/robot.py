@@ -19,7 +19,6 @@ import omni
 from isaacsim.core.api.world import World
 import omni.graph.core as og
 from isaacsim.core.utils.rotations import quat_to_rot_matrix
-from isaacsim.core.utils.nucleus import get_assets_root_path
 from omni.isaac.dynamic_control import _dynamic_control
 from isaacsim.core.prims import SingleRigidPrim, RigidPrim
 from pxr import Gf, Usd
@@ -62,7 +61,6 @@ class RobotManager:
         self.RM_conf = RobotManagerConf(**RM_conf)
         self.is_ROS2 = mode == SimulatorMode.ROS2
         self.robot_parameters = self.RM_conf.parameters
-        self.uses_nucleus = self.RM_conf.uses_nucleus # TODO for v4: remove
         self.robots_root = self.RM_conf.robots_root
         createXform(self.stage, self.robots_root)
         self.robot: Robot = None   # TODO for v4: if only 1 robot, no need for a dict, just an instance
@@ -172,7 +170,6 @@ class RobotManager:
         self.robot = Robot(
             usd_path,
             robot_name,
-            is_on_nucleus=self.uses_nucleus,
             is_ROS2=self.is_ROS2,
             domain_id=domain_id,
             robots_root=self.robots_root,
@@ -252,7 +249,6 @@ class Robot:
         usd_path: str,
         robot_name: str,
         robots_root: str = "/Robots",
-        is_on_nucleus: bool = False,
         is_ROS2: bool = False,
         domain_id: int = 0,
         wheel_joints: Dict = {},
@@ -269,7 +265,6 @@ class Robot:
             usd_path (str): The path of the robot's usd file.
             robot_name (str): The name of the robot.
             robots_root (str, optional): The root path of the robots. Defaults to "/Robots".
-            is_on_nucleus (bool, optional): Whether the robots are loaded from the nucleus or not. Defaults to False.
             is_ROS2 (bool, optional): Whether the robots are ROS2 enabled or not. Defaults to False.
             domain_id (int, optional): The domain id of the robot. Defaults to 0."""
 
@@ -278,7 +273,6 @@ class Robot:
         self.robots_root = robots_root
         self.robot_name = robot_name
         self.robot_path = os.path.join(self.robots_root, self.robot_name.strip("/"))
-        self.is_on_nucleus = is_on_nucleus
         self.is_ROS2 = is_ROS2
         self.domain_id = int(domain_id)
         self.dc = _dynamic_control.acquire_dynamic_control_interface()
@@ -342,9 +336,6 @@ class Robot:
 
         self.stage = omni.usd.get_context().get_stage()
         self.set_reset_pose(position, orientation)
-        if self.is_on_nucleus:
-            nucleus = get_assets_root_path()
-            self.usd_path = os.path.join(nucleus, self.usd_path)
         createObject(
             self.robot_path,
             self.stage,

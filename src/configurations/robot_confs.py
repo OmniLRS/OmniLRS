@@ -39,7 +39,6 @@ class RobotParameters:
 
 @dataclass
 class RobotManagerConf:
-    uses_nucleus: str = False
     robots_root: str = "/Robots"
     parameters: RobotParameters = None
     yamcs_tmtc: Dict = field(default_factory=dict)

@@ -80,7 +80,6 @@ sun_settings:
   elevation: 45.0
 
 robots_settings:
-  uses_nucleus: False
   robots_root: "/Robots"
   robot_controller: "pragyaan-controller"
   parameters:
