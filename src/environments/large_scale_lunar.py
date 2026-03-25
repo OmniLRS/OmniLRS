@@ -183,7 +183,7 @@ class LargeScaleController(BaseEnv):
         self.robotManager = robotManager
         if self._mode == SimulatorMode.YAMCS:
             self.robotManager.start_TMTC()
-        self.pose_tracker = list(self.robotManager.robots.values())[0].get_pose
+        self.pose_tracker = self.robotManager.robot.get_pose     # is later called as a function, thus now does not have ()
 
     # ==============================================================================
     # Stellar engine control

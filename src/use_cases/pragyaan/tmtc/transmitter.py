@@ -21,7 +21,7 @@ class PragyaanTransmitter:
             yamcs_processor,
             intervals_handler,
             robot, 
-            robots_RG,
+            robot_RG,
             robot_name,
             parameters_conf
     ):
@@ -29,7 +29,7 @@ class PragyaanTransmitter:
         self._robot:Robot = robot
         self._intervals_handler = intervals_handler
         self._parameters_conf = parameters_conf
-        self._robots_RG = robots_RG
+        self._robot_RG = robot_RG
         self._robot_name = robot_name
 
     def transmit_wheels_joint_angles(self):
@@ -61,12 +61,12 @@ class PragyaanTransmitter:
         self._yamcs_processor.set_parameter_value(self._parameters_conf["obc_uptime"], obc_metrics["uptime"])
         
     def transmit_radio_signal_info(self):
-        robot_position, orientation = self._robots_RG[str(self._robot_name)].get_pose_of_base_link()
+        robot_position, orientation = self._robot_RG.get_pose_of_base_link()
         rssi = self._robot.subsystems.get_rssi(robot_position)
         self._yamcs_processor.set_parameter_value(self._parameters_conf["rssi"], int(rssi))
 
     def transmit_thermal_info(self, interval_s):
-        robot_position, _ = self._robots_RG[str(self._robot_name)].get_pose_of_base_link()
+        robot_position, _ = self._robot_RG.get_pose_of_base_link()
         _, _, imu_orientation = self._robot.get_imu_readings()
         robot_yaw_deg = imu_orientation["yaw"]
         temperatures = self._robot.subsystems.get_thermal_status(
@@ -83,7 +83,7 @@ class PragyaanTransmitter:
         self._yamcs_processor.set_parameter_value(self._parameters_conf["temperature_elec_box"], temperatures['interior'])
 
     def transmit_power_info(self, interval_s):
-        robot_position, _ = self._robots_RG[str(self._robot_name)].get_pose_of_base_link()
+        robot_position, _ = self._robot_RG.get_pose_of_base_link()
         _, _, imu_orientation = self._robot.get_imu_readings()
         robot_yaw_deg = imu_orientation['yaw']
         obc_state = self._robot.subsystems.get_obc_state()
@@ -130,7 +130,7 @@ class PragyaanTransmitter:
         self._yamcs_processor.set_parameter_value(self._parameters_conf["go_nogo"], go_nogo_state)
 
     def transmit_pose_of_base_link(self):
-        position, orientation = self._robots_RG[str(self._robot_name)].get_pose_of_base_link()
+        position, orientation = self._robot_RG.get_pose_of_base_link()
         lander_pos = self._robot.subsystems.get_lander_position()
         position = position - lander_pos
         # euler_orient = transform_orientation_into_xyz(orientation)

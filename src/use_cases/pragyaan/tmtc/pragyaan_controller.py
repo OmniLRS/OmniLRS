@@ -55,7 +55,7 @@ class PragyaanController(YamcsTMTC):
         self._intervals = yamcs_conf["intervals"]
         self._payload_handler:PayloadHandler = PayloadHandler(self._images_handler, self._yamcs_conf["payload"])
         self._camera_handler = PragyaanCameraHandler(self._images_handler, robot, yamcs_conf["lander_camera"])
-        self._transmitter:PragyaanTransmitter = PragyaanTransmitter(self._yamcs_processor, self._intervals_handler, self._robot, self._robots_RG, robot_name, self._yamcs_conf["parameters"])
+        self._transmitter:PragyaanTransmitter = PragyaanTransmitter(self._yamcs_processor, self._intervals_handler, self._robot, self._robot_RG, robot_name, self._yamcs_conf["parameters"])
         self._setup_command_callbacks(yamcs_conf["commands"])
 
     "Performs mapping between yamcs commands and functions that affect the simulation and rover's state"

@@ -40,15 +40,13 @@ class RobotParameters:
 @dataclass
 class RobotManagerConf:
     uses_nucleus: str = False
-    max_robots: int = 5
     robots_root: str = "/Robots"
-    parameters: List[RobotParameters] = field(default_factory=list)
+    parameters: RobotParameters = None
     yamcs_tmtc: Dict = field(default_factory=dict)
     robot_controller: str = field(default_factory=str)
 
     def __post_init__(self):
         if self.parameters:
-            assert len(self.parameters) <= self.max_robots, "number of robots to register should not exeed max_robots"
-            self.parameters = [RobotParameters(**param) for param in self.parameters]
+            self.parameters = RobotParameters(**self.parameters)
         else:
-            self.parameters = []
+            self.parameters = None

@@ -391,11 +391,10 @@ class LunalabController(BaseEnv):
         world_positions = []
         world_orientations = []
         contact_forces = []
-        for rrg in self.robotManager.robots_RG.values():
-            position, orientation = rrg.get_pose()
-            world_positions.append(position)
-            world_orientations.append(orientation)
-            contact_forces.append(rrg.get_net_contact_forces())
+        position, orientation = self.robotManager.robot_RG.get_pose()
+        world_positions.append(position)
+        world_orientations.append(orientation)
+        contact_forces.append(self.robotManager.robot_RG.get_net_contact_forces())
         world_positions = np.concatenate(world_positions, axis=0)
         world_orientations = np.concatenate(world_orientations, axis=0)
         contact_forces = np.concatenate(contact_forces, axis=0)
@@ -410,12 +409,11 @@ class LunalabController(BaseEnv):
 
     def apply_terramechanics(self) -> None:
         """
-        Applies the terramechanics solver to the robots.
+        Applies the terramechanics solver to the robot.
         """
 
-        for rrg in self.robotManager.robots_RG.values():
-            linear_velocities, angular_velocities = rrg.get_velocities()
-            sinkages = np.zeros((linear_velocities.shape[0],))
-            force, torque = self.TS.compute_force_and_torque(linear_velocities, angular_velocities, sinkages)
-            rrg.apply_force_torque(force, torque)
-            rrg.apply_force_torque(force, torque)
+        linear_velocities, angular_velocities = self.robotManager.robot_RG.get_velocities()
+        sinkages = np.zeros((linear_velocities.shape[0],))
+        force, torque = self.TS.compute_force_and_torque(linear_velocities, angular_velocities, sinkages)
+        self.robotManager.robot_RG.apply_force_torque(force, torque)
+        self.robotManager.robot_RG.apply_force_torque(force, torque)

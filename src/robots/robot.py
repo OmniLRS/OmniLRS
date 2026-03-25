@@ -63,13 +63,11 @@ class RobotManager:
         self.is_ROS2 = mode == SimulatorMode.ROS2
         self.robot_parameters = self.RM_conf.parameters
         self.uses_nucleus = self.RM_conf.uses_nucleus # TODO for v4: remove
-        self.max_robots = self.RM_conf.max_robots # TODO for v4: only 1 robot should exit, no max number
         self.robots_root = self.RM_conf.robots_root
         createXform(self.stage, self.robots_root)
-        self.robots: Dict[str, Robot] = {}   # TODO for v4: if only 1 robot, no need for a dict, just an instance
-        self.robots_RG: Dict[str, RobotRigidGroup] = {} # TODO for v4: if only 1 robot, no need for a dict, just an instance
+        self.robot: Robot = None   # TODO for v4: if only 1 robot, no need for a dict, just an instance
+        self.robot_RG: RobotRigidGroup = None # TODO for v4: if only 1 robot, no need for a dict, just an instance
         self.TMTC: YamcsTMTC
-        self.num_robots = 0 # TODO for v4: if only 1 robot, no need for a counter
         self.yamcs_instance_conf = yamcs_instance_conf
 
     def preload_robot(
@@ -77,32 +75,35 @@ class RobotManager:
         world: World,
     ) -> None:
         """
-        Preload the robots in the scene.
+        Preload the robot in the scene.
         Args:
             world (Usd.Stage): The usd stage scene.
         """
-        if len(self.robot_parameters) > 0:
-            for robot_parameter in self.robot_parameters:
-                self.add_robot(
-                    robot_parameter.usd_path,
-                    robot_parameter.robot_name,
-                    robot_parameter.pose.position,
-                    robot_parameter.pose.orientation,
-                    robot_parameter.domain_id,
-                    robot_parameter.wheel_joints,
-                    robot_parameter.camera,
-                    robot_parameter.imu_sensor_path,
-                    robot_parameter.dimensions,
-                    robot_parameter.turn_speed_coef,
-                    robot_parameter.pos_relative_to_prim,
-                    robot_parameter.solar_panel_joint,
-                )
-                self.add_RRG(
-                    robot_parameter.robot_name,
-                    robot_parameter.target_links,
-                    robot_parameter.base_link,
-                    world,
-                )
+        print("self.robot_parameters")
+
+        print(self.robot_parameters)
+
+
+        self.add_robot(
+            self.robot_parameters.usd_path,
+            self.robot_parameters.robot_name,
+            self.robot_parameters.pose.position,
+            self.robot_parameters.pose.orientation,
+            self.robot_parameters.domain_id,
+            self.robot_parameters.wheel_joints,
+            self.robot_parameters.camera,
+            self.robot_parameters.imu_sensor_path,
+            self.robot_parameters.dimensions,
+            self.robot_parameters.turn_speed_coef,
+            self.robot_parameters.pos_relative_to_prim,
+            self.robot_parameters.solar_panel_joint,
+        )
+        self.add_RRG(
+            self.robot_parameters.robot_name,
+            self.robot_parameters.target_links,
+            self.robot_parameters.base_link,
+            world,
+        )
 
     def preload_robot_at_pose(
         self,
@@ -111,34 +112,32 @@ class RobotManager:
         orientation: Tuple[float, float, float, float],
     ) -> None:
         """
-        Preload the robots in the scene.
+        Preload the robot in the scene.
         Args:
             world (Usd.Stage): The usd stage scene.
             position (Tuple[float, float, float]): The position of the robot. (x, y, z)
             orientation (Tuple[float, float, float, float]): The orientation of the robot. (w, x, y, z)
         """
-        if len(self.robot_parameters) > 0:
-            for robot_parameter in self.robot_parameters:
-                self.add_robot(
-                    robot_parameter.usd_path,
-                    robot_parameter.robot_name,
-                    position,
-                    orientation,
-                    robot_parameter.domain_id,
-                    robot_parameter.wheel_joints,
-                    robot_parameter.camera,
-                    robot_parameter.imu_sensor_path,
-                    robot_parameter.dimensions,
-                    robot_parameter.turn_speed_coef,
-                    robot_parameter.pos_relative_to_prim,
-                    robot_parameter.solar_panel_joint,
-                )
-                self.add_RRG(
-                    robot_parameter.robot_name,
-                    robot_parameter.target_links,
-                    robot_parameter.base_link,
-                    world,
-                )
+        self.add_robot(
+            self.robot_parameters.usd_path,
+            self.robot_parameters.robot_name,
+            position,
+            orientation,
+            self.robot_parameters.domain_id,
+            self.robot_parameters.wheel_joints,
+            self.robot_parameters.camera,
+            self.robot_parameters.imu_sensor_path,
+            self.robot_parameters.dimensions,
+            self.robot_parameters.turn_speed_coef,
+            self.robot_parameters.pos_relative_to_prim,
+            self.robot_parameters.solar_panel_joint,
+        )
+        self.add_RRG(
+            self.robot_parameters.robot_name,
+            self.robot_parameters.target_links,
+            self.robot_parameters.base_link,
+            world,
+        )
 
     def add_robot(
         self,
@@ -167,30 +166,25 @@ class RobotManager:
         """
 
         if robot_name[0] != "/":
+            print(robot_name)
             robot_name = "/" + robot_name
-        if self.num_robots >= self.max_robots:
-            pass
-        else:
-            if robot_name in self.robots.keys():
-                warnings.warn("Robot already exists. Ignoring request.")
-            else:
-                self.robots[robot_name] = Robot(
-                    usd_path,
-                    robot_name,
-                    is_on_nucleus=self.uses_nucleus,
-                    is_ROS2=self.is_ROS2,
-                    domain_id=domain_id,
-                    robots_root=self.robots_root,
-                    wheel_joints=wheel_joints,
-                    camera_conf=camera_conf,
-                    imu_sensor_path=imu_sensor_path,
-                    dimensions=dimensions,
-                    turn_speed_coef=turn_speed_coef,
-                    pos_relative_to_prim=pos_relative_to_prim,
-                    solar_panel_joint=solar_panel_joint,
-                )
-                self.robots[robot_name].load(p, q)
-                self.num_robots += 1
+
+        self.robot = Robot(
+            usd_path,
+            robot_name,
+            is_on_nucleus=self.uses_nucleus,
+            is_ROS2=self.is_ROS2,
+            domain_id=domain_id,
+            robots_root=self.robots_root,
+            wheel_joints=wheel_joints,
+            camera_conf=camera_conf,
+            imu_sensor_path=imu_sensor_path,
+            dimensions=dimensions,
+            turn_speed_coef=turn_speed_coef,
+            pos_relative_to_prim=pos_relative_to_prim,
+            solar_panel_joint=solar_panel_joint,
+        )
+        self.robot.load(p, q)
 
     def add_RRG(
         self,
@@ -214,51 +208,29 @@ class RobotManager:
             pose_base_link,
         )
         rrg.initialize(world)
-        self.robots_RG[robot_name] = rrg
+        self.robot_RG = rrg
 
-    def reset_robots(self) -> None:
+    def reset_robot(self) -> None:
         """
-        Reset all the robots to their original position.
+        Reset the robot to its original position.
         """
-
-        for robot in self.robots.keys():
-            self.robots[robot].reset()
-
-    def reset_robot(self, robot_name: str = None) -> None:
-        """
-        Reset a specific robot to its original position.
-
-        Args:
-            robot_name (str): The name of the robot.
-        """
-
-        if robot_name in self.robots.keys():
-            self.robots[robot_name].reset()
-        else:
-            warnings.warn("Robot does not exist. Ignoring request.")
+        self.robot.reset()
 
     def teleport_robot(
-        self, robot_name: str = None, position: np.ndarray = None, orientation: np.ndarray = None
+        self, position: np.ndarray = None, orientation: np.ndarray = None
     ) -> None:
         """
-        Teleport a specific robot to a specific position and orientation.
-
-        Args:
-            robot_name (str): The name of the robot.
+        Teleport the robot to a specific position and orientation.
         """
-        if robot_name in self.robots.keys():
-            self.robots[robot_name].teleport(position, orientation)
-        else:
-            warnings.warn("Robot does not exist. Ignoring request.")
-            print("available robots: ", self.robots.keys())
+        self.robot.teleport(position, orientation)
 
     def start_TMTC(self):
-        robot_name = list(self.robots.keys())[0].replace("/","") # assumes only 1 robot for workshop use
+        robot_name = self.robot.robot_name.replace("/","") 
 
         if self.RM_conf.robot_controller == "pragyaan-controller":
             from src.use_cases.pragyaan.tmtc.pragyaan_controller import PragyaanController
 
-            self.TMTC = PragyaanController(self.yamcs_instance_conf, self.RM_conf.yamcs_tmtc, robot_name, self.robots_RG, self.robots["/" + robot_name])
+            self.TMTC = PragyaanController(self.yamcs_instance_conf, self.RM_conf.yamcs_tmtc, robot_name, self.robot_RG, self.robot)
         elif self.RM_conf is None or self.RM_conf.robot_controller == "":
             raise Exception("No robot controller was setup in yaml configurations.")
         else: 
