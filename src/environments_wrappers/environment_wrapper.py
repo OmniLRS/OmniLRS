@@ -7,12 +7,8 @@ __email__ = "ljburtz@jaops.com"
 __status__ = "development"
 
 from typing import List, Tuple
-import src.environments.rendering as rndr
 
-#TODO 3rd March 2026 (for after Version 3)
-# implemented to resemble the same structure as used for ROS
-# might be unnecessary if we do not want to control the environment during runtim same way as ROS wrappers do
-class Yamcs_BaseManager():
+class EnvironmentWrapper():
     def __init__(
         self,
         environment_cfg: dict = None,
@@ -27,12 +23,11 @@ class Yamcs_BaseManager():
             **kwargs: Additional arguments."""
 
         self.trigger_reset = False
-
         self.modifications: List[Tuple[callable, dict]] = []
 
     def periodic_update(self, dt: float) -> None:
         """
-        Updates the lab.
+        Updates the environment.
 
         Args:
             dt (float): Time step.
@@ -42,21 +37,21 @@ class Yamcs_BaseManager():
 
     def reset(self) -> None:
         """
-        Resets the lab to its initial state.
+        Resets the environment to its initial state.
         """
 
         raise NotImplementedError
 
     def clear_modifications(self) -> None:
         """
-        Clears the list of modifications to be applied to the lab.
+        Clears the list of modifications to be applied to the environment.
         """
 
         self.modifications: List[Tuple[callable, dict]] = []
 
     def apply_modifications(self) -> None:
         """
-        Applies the list of modifications to the lab.
+        Applies the list of modifications to the environment.
         """
 
         for mod in self.modifications:

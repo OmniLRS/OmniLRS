@@ -12,6 +12,10 @@ from typing import Union
 import logging
 import omni
 
+from src.configurations.simulator_mode_enum import SimulatorMode
+from src.environments.large_scale_lunar import LargeScaleController
+from src.environments.lunalab import LunalabController
+from src.environments.lunaryard import LunaryardController
 from src.environments.utils import set_moon_env_name
 from src.configurations.procedural_terrain_confs import TerrainManagerConf
 from src.environments_wrappers.rate import Rate
@@ -105,16 +109,8 @@ class Yamcs_SimulationManager:
         set_moon_env_name(cfg["environment"]["name"])
 
         PSM = PhysicsSceneManager(cfg["physics"]["physics_scene"])
-        for i in range(100):
-            self.world.step(render=True)
-        self.world.reset()
-
-        if cfg["environment"]["enforce_realtime"]:
-            self.rate = Rate(dt=cfg["environment"]["physics_dt"])
-        else:
-            self.rate = Rate(is_disabled=True)
-
-        
+        self._step_world_and_reset()
+        self._setup_rate()
         #TODO 3rd March 2026 (for after Version 3)
         # ROSLabManager(s) and YamcsLabManager instances should just be self.environmnent_manager
         # ... EnvironmentManagerFactory (EMF), RobotManager, etc. no need to specify in the naming the protocol which is used
@@ -122,26 +118,58 @@ class Yamcs_SimulationManager:
             cfg, is_simulation_alive=self.simulation_app.is_running, close_simulation=self.simulation_app.close
         )
 
+        self._environment_controller = None
+        if self.cfg["environment"]["name"] == "LargeScale":
+            self._environment_controller = LargeScaleController(
+                mode=SimulatorMode.YAMCS, **self.cfg["environment"], 
+                is_simulation_alive=self.simulation_app.is_running, 
+                close_simulation=self.simulation_app.close
+            )
+        elif self.cfg["environment"]["name"] == "Lunaryard":
+            self._environment_controller = LunaryardController(
+                mode=SimulatorMode.YAMCS, **self.cfg["environment"], 
+                is_simulation_alive=self.simulation_app.is_running, 
+                close_simulation=self.simulation_app.close
+            )
+        elif self.cfg["environment"]["name"] == "Lunalab":
+            self._environment_controller = LunalabController(
+                mode=SimulatorMode.YAMCS, **self.cfg["environment"], 
+                is_simulation_alive=self.simulation_app.is_running, 
+                close_simulation=self.simulation_app.close
+            )
+        self._environment_controller.load()
+        
         self.YamcsRobotManager = Yamcs_RobotManager(cfg["environment"]["robots_settings"], cfg["mode"]["instance_conf"])
+        self._setup_terrain_manager()
+        self._preload_robot()
+        self.YamcsLabManager.LC.add_robot_manager(self.YamcsRobotManager.RM)
+        self._step_world_and_reset()
 
-        if "terrain_manager" in cfg["environment"].keys():
-            self.terrain_manager_conf: TerrainManagerConf = cfg["environment"]["terrain_manager"]
+    def _step_world_and_reset(self, n=100):
+        for i in range(n):
+            self.world.step(render=True)
+        self.world.reset()
+
+    def _setup_rate(self):
+        if self.cfg["environment"]["enforce_realtime"]:
+            self.rate = Rate(dt=self.cfg["environment"]["physics_dt"])
+        else:
+            self.rate = Rate(is_disabled=True)
+
+    def _setup_terrain_manager(self):
+        if "terrain_manager" in self.cfg["environment"].keys():
+            self.terrain_manager_conf: TerrainManagerConf = self.cfg["environment"]["terrain_manager"]
             self.deform_delay = self.terrain_manager_conf.moon_yard.deformation_engine.delay
             self.enable_deformation = self.terrain_manager_conf.moon_yard.deformation_engine.enable
         else:
             self.enable_deformation = False
 
-        # Preload the assets
-        if cfg["environment"]["name"] == "LargeScale":
+    def _preload_robot(self):
+        if self.cfg["environment"]["name"] == "LargeScale":
             height, quat = self.YamcsLabManager.LC.get_height_and_normal((0.0, 0.0, 0.0))
             self.YamcsRobotManager.RM.preload_robot_at_pose(self.world, (0, 0, height + 0.5), (1, 0, 0, 0))
         else:
             self.YamcsRobotManager.RM.preload_robot(self.world)
-        self.YamcsLabManager.LC.add_robot_manager(self.YamcsRobotManager.RM)
-
-        for i in range(100):
-            self.world.step(render=True)
-        self.world.reset()
 
     def run_simulation(self) -> None:
         """
@@ -159,7 +187,7 @@ class Yamcs_SimulationManager:
                 self.YamcsLabManager.periodic_update(dt=self.world.get_physics_dt())
                 if self.world.current_time_step_index == 0:
                     self.world.reset()
-                    self.YamcsLabManager.reset()
+                    self.YamcsLabManager.reset() # reset does absolutely nothing, the function is not implemented
                     self.YamcsRobotManager.reset()
                 self.YamcsLabManager.apply_modifications()
                 if self.YamcsLabManager.trigger_reset:

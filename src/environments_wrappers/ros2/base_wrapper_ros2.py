@@ -39,6 +39,7 @@ class ROS_BaseManager(Node):
 
         super().__init__("Lab_controller_node")
         self.trigger_reset = False
+        self.modifications: List[Tuple[callable, dict]] = []
 
         self.create_subscription(Empty, "/OmniLRS/Render/EnableRTXRealTime", self.use_RTX_real_time_render, 1)
         self.create_subscription(Empty, "/OmniLRS/Render/EnableRTXInteractive", self.use_RTX_interactive_render, 1)
@@ -54,8 +55,6 @@ class ROS_BaseManager(Node):
             Float32, "/OmniLRS/LensFlare/SensorAspectRatio", self.set_lens_flare_sensor_aspect_ratio, 1
         )
         self.create_subscription(Float32, "/OmniLRS/LensFlare/SensorDiagonal", self.set_lens_flare_sensor_diagonal, 1)
-
-        self.modifications: List[Tuple[callable, dict]] = []
 
     def periodic_update(self, dt: float) -> None:
         """
