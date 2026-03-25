@@ -12,6 +12,11 @@ import omni
 import time
 from typing import Union
 import logging
+import asyncio
+# import nest_asyncio
+# nest_asyncio.apply()
+
+import asyncio_for_robotics as afor
 
 from src.environments.utils import set_moon_env_name
 from src.physics.physics_scene import PhysicsSceneManager
@@ -186,7 +191,7 @@ class Zenoh_SimulationManager:
 
             for t in self.ZenohRobotManager.transports:
                 t.start()
-            self.ZenohRobotManager.inited = True
+            self.ZenohRobotManager.transports_inited = True
                 
         self.ZenohLabManager.LC.add_robot_manager(self.ZenohRobotManager.RM)
 
@@ -195,41 +200,72 @@ class Zenoh_SimulationManager:
         self.world.reset()
     
 
+    async def _run_zenoh_sub(self):
+        """
+        Listens for Zenoh messages and enqueues them for processing
+        in the main simulation loop.
+        """
+        async for sample in self.ZenohLabManager.sub.listen_reliable():
+            await self._zenoh_queue.put(sample)
+
+    def _on_update(self, event) -> None:
+        """
+        Called once per app frame by Isaac Sim's update event stream.
+        Runs synchronous simulation logic and drains the Zenoh queue.
+        """
+        # Start the async listener task exactly once, after the loop is running
+        if self._listener_task is None:
+            self._listener_task = asyncio.ensure_future(self._run_zenoh_sub())
+
+        self.rate.reset()
+
+        if self.world.is_playing():
+            self.ZenohLabManager.periodic_update(dt=self.world.get_physics_dt())
+            if self.world.current_time_step_index == 0:
+                self.world.reset()
+                self.ZenohLabManager.reset()
+                self.ZenohRobotManager.reset()
+            self.ZenohLabManager.apply_modifications()
+            if self.ZenohLabManager.trigger_reset:
+                self.ZenohRobotManager.reset()
+                self.ZenohLabManager.trigger_reset = False
+            self.ZenohRobotManager.apply_modifications()
+            if self.enable_deformation:
+                if self.world.current_time_step_index >= (self.deform_delay * self.world.get_physics_dt()):
+                    self.ZenohLabManager.LC.deform_terrain()
+
+        if self.ZenohRobotManager.transports_inited:
+            self.ZenohRobotManager.publish_cameras()
+
+        # Drain all rock-randomization samples queued since the last frame
+        while not self._zenoh_queue.empty():
+            sample = self._zenoh_queue.get_nowait()
+            self.ZenohLabManager.randomize_rocks(sample)
+
+        self.rate.sleep()
+
     def run_simulation(self) -> None:
         """
-        Runs the simulation.
+        Runs the simulation in an asynchronous manner.
         """
 
         self.timeline.play()
+        self._zenoh_queue = asyncio.Queue()
+        self._listener_task = None
+
+        _update_sub = self.simulation_app._app.get_update_event_stream().create_subscription_to_pop(
+            self._on_update, name="zenoh_sim_step"
+        )
+
         while self.simulation_app.is_running():
-            self.rate.reset()
-            self.world.step(render=True)
+            self.simulation_app.update()
 
-            if self.world.is_playing():
-                # Apply modifications to the lab only once the simulation step is finished
-                # This is extremely important as modifying the stage during a simulation step
-                # will lead to a crash
-                self.ZenohLabManager.periodic_update(dt=self.world.get_physics_dt())
-                if self.world.current_time_step_index == 0:
-                    self.world.reset()
-                    self.ZenohLabManager.reset()
-                    self.ZenohRobotManager.reset()
-                self.ZenohLabManager.apply_modifications()
-                if self.ZenohLabManager.trigger_reset:
-                    self.ZenohRobotManager.reset()
-                    self.ZenohLabManager.trigger_reset = False
-                self.ZenohRobotManager.apply_modifications()
-                if self.enable_deformation:
-                    if self.world.current_time_step_index >= (self.deform_delay * self.world.get_physics_dt()):
-                        self.ZenohLabManager.LC.deform_terrain()
-            
-            if self.ZenohRobotManager.inited:
-                self.ZenohRobotManager.publish_cameras()
+        # Cleanup
+        if self._listener_task is not None:
+            self._listener_task.cancel()
 
-            self.rate.sleep()
-        
         for t in self.ZenohRobotManager.transports:
-            t.stop()
+            t.close()
 
         self.world.stop()
         self.timeline.stop()
