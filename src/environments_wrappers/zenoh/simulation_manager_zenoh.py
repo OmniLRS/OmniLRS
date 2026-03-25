@@ -1,4 +1,4 @@
-__author__ = "Shamistan Karimov, Bach Nguyen"
+__author__ = "Shamistan Karimov, Elian NEPPEL, Bach Nguyen"
 __copyright__ = "Copyright 2023-26, JAOPS, Artefacts"
 __license__ = "BSD-3-Clause"
 __version__ = "2.0.0"
@@ -246,7 +246,7 @@ class Zenoh_SimulationManager:
 
     def run_simulation(self) -> None:
         """
-        Runs the simulation in an asynchronous manner.
+        Runs the simulation in async manner, using existing Isaac Sim's event loop.
         """
 
         self.timeline.play()

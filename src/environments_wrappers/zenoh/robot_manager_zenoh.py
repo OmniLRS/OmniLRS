@@ -42,7 +42,7 @@ class Zenoh_RobotManager():
         
         self.resolution = zenoh_conf["sensors"]["camera"]["resolution"]
 
-        self.inited = False
+        self.transports_inited = False
         
     
     def reset(self) -> None:
@@ -80,7 +80,7 @@ class Zenoh_RobotManager():
         """
         Publish current frame from each camera
         """
-        if self.inited:
+        if self.transports_inited:
             for i, robot_name in enumerate(self.RM.robots.keys()):
                 frame = self.RM.robots[robot_name].get_rgba_camera_view(self.resolution)
                 if frame.size!=0:
