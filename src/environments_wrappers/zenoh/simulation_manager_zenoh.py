@@ -213,7 +213,7 @@ class Zenoh_SimulationManager:
         Called once per app frame by Isaac Sim's update event stream.
         Runs synchronous simulation logic and drains the Zenoh queue.
         """
-        # Start the async listener task exactly once, after the loop is running
+        # asyncio.ensure_future() schedules _run_zenoh_sub on the already-running loop (the one Isaac Sim's engine provides), so asyncio.wait inside afor's listen_reliable will find a valid running loop.
         if self._listener_task is None:
             self._listener_task = asyncio.ensure_future(self._run_zenoh_sub())
 
@@ -237,7 +237,7 @@ class Zenoh_SimulationManager:
         if self.ZenohRobotManager.transports_inited:
             self.ZenohRobotManager.publish_cameras()
 
-        # Drain all rock-randomization samples queued since the last frame
+        # Drain all samples queued since the last frame
         while not self._zenoh_queue.empty():
             sample = self._zenoh_queue.get_nowait()
             self.ZenohLabManager.randomize_rocks(sample)
@@ -253,10 +253,14 @@ class Zenoh_SimulationManager:
         self._zenoh_queue = asyncio.Queue()
         self._listener_task = None
 
+        # Register a per-frame callback with Isaac Sim's app (ref: https://docs.omniverse.nvidia.com/dev-guide/latest/programmer_ref/events.html)
         _update_sub = self.simulation_app._app.get_update_event_stream().create_subscription_to_pop(
             self._on_update, name="zenoh_sim_step"
         )
 
+        # Block the main thread simply by pumping the app until it closes.
+        # Isaac Sim's async engine drives the event loop between frames,
+        # so all tasks (ours + internal ones) get proper scheduling.
         while self.simulation_app.is_running():
             self.simulation_app.update()
 
