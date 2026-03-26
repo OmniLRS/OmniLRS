@@ -3,7 +3,9 @@ defaults:
   - rendering: ray_tracing
   - mode: ROS2 # Yamcs
   - physics: default_physics
-
+  - optional robot: null
+  - optional controller: null
+  
 hydra:
   output_subdir: null
   run:
