@@ -34,8 +34,8 @@ class ROS_LunalabManager(ROS_BaseManager):
         """
 
         super().__init__(environment_cfg=environment_cfg, **kwargs)
-        self.LC = LunalabController(**environment_cfg)
-        self.LC.load()
+        self.EC = LunalabController(**environment_cfg)
+        self.EC.load()
         self.trigger_reset = False
 
         self.create_subscription(Bool, "/OmniLRS/Projector/TurnOn", self.set_projector_on, 1)
@@ -66,7 +66,7 @@ class ROS_LunalabManager(ROS_BaseManager):
             data (Bool): True to turn the projector on, False to turn it off.
         """
 
-        self.modifications.append([self.LC.turn_projector_on_off, {"flag": data.data}])
+        self.modifications.append([self.EC.turn_projector_on_off, {"flag": data.data}])
 
     def set_projector_intensity(self, data: Float32) -> None:
         """
@@ -79,7 +79,7 @@ class ROS_LunalabManager(ROS_BaseManager):
         default_intensity = 300000000.0
         data = default_intensity * float(data.data) / 100.0
         assert data >= 0, "The intensity must be greater than or equal to 0."
-        self.modifications.append([self.LC.set_projector_intensity, {"intensity": data}])
+        self.modifications.append([self.EC.set_projector_intensity, {"intensity": data}])
 
     def set_projector_radius(self, data: Float32) -> None:
         """
@@ -90,7 +90,7 @@ class ROS_LunalabManager(ROS_BaseManager):
         """
 
         assert data.data > 0.0, "Radius must be greater than 0.0"
-        self.modifications.append([self.LC.set_projector_radius, {"radius": data.data}])
+        self.modifications.append([self.EC.set_projector_radius, {"radius": data.data}])
 
     def set_projector_color(self, data: ColorRGBA) -> None:
         """
@@ -103,7 +103,7 @@ class ROS_LunalabManager(ROS_BaseManager):
         color = [data.r, data.g, data.b]
         for c in color:
             assert 0 <= c <= 1, "The color must be between 0 and 1."
-        self.modifications.append([self.LC.set_projector_color, {"color": color}])
+        self.modifications.append([self.EC.set_projector_color, {"color": color}])
 
     def set_projector_pose(self, data: Pose) -> None:
         """
@@ -115,7 +115,7 @@ class ROS_LunalabManager(ROS_BaseManager):
 
         position = (data.position.x, data.position.y, data.position.z)
         orientation = (data.orientation.w, data.orientation.x, data.orientation.y, data.orientation.z)
-        self.modifications.append([self.LC.set_projector_pose, {"position": position, "orientation": orientation}])
+        self.modifications.append([self.EC.set_projector_pose, {"position": position, "orientation": orientation}])
 
     def set_ceiling_on(self, data: Bool) -> None:
         """
@@ -125,7 +125,7 @@ class ROS_LunalabManager(ROS_BaseManager):
             data (Bool): True to turn the lights on, False to turn them off.
         """
 
-        self.modifications.append([self.LC.turn_room_lights_on_off, {"flag": data.data}])
+        self.modifications.append([self.EC.turn_room_lights_on_off, {"flag": data.data}])
 
     def set_ceiling_intensity(self, data: Float32) -> None:
         """
@@ -136,7 +136,7 @@ class ROS_LunalabManager(ROS_BaseManager):
         """
 
         assert data.data >= 0, "The intensity must be greater than or equal to 0."
-        self.modifications.append([self.LC.set_room_lights_intensity, {"intensity": data.data}])
+        self.modifications.append([self.EC.set_room_lights_intensity, {"intensity": data.data}])
 
     def set_ceiling_radius(self, data: Float32) -> None:
         """
@@ -147,7 +147,7 @@ class ROS_LunalabManager(ROS_BaseManager):
         """
 
         assert data.data > 0.0, "Radius must be greater than 0.0"
-        self.modifications.append([self.LC.set_room_lights_radius, {"radius": data.data}])
+        self.modifications.append([self.EC.set_room_lights_radius, {"radius": data.data}])
 
     def set_ceiling_FOV(self, data: Float32) -> None:
         """
@@ -158,7 +158,7 @@ class ROS_LunalabManager(ROS_BaseManager):
         """
 
         assert 0 <= data.data <= 180, "The field of view must be between 0 and 180."
-        self.modifications.append([self.LC.set_room_lights_FOV, {"FOV": data.data}])
+        self.modifications.append([self.EC.set_room_lights_FOV, {"FOV": data.data}])
 
     def set_ceiling_color(self, data: ColorRGBA) -> None:
         """
@@ -171,7 +171,7 @@ class ROS_LunalabManager(ROS_BaseManager):
         color = [data.r, data.g, data.b]
         for c in color:
             assert 0 <= c <= 1, "The color must be between 0 and 1."
-        self.modifications.append([self.LC.set_room_lights_color, {"color": color}])
+        self.modifications.append([self.EC.set_room_lights_color, {"color": color}])
 
     def set_curtains_mode(self, data: Bool) -> None:
         """
@@ -181,7 +181,7 @@ class ROS_LunalabManager(ROS_BaseManager):
             data (Bool): True to extend the curtains, False to retract them.
         """
 
-        self.modifications.append([self.LC.curtains_extend, {"flag": data.data}])
+        self.modifications.append([self.EC.curtains_extend, {"flag": data.data}])
 
     def switch_terrain(self, data: Int32) -> None:
         """
@@ -191,7 +191,7 @@ class ROS_LunalabManager(ROS_BaseManager):
             data (Int32): 0 for the first terrain, 1 for the second terrain.
         """
 
-        self.modifications.append([self.LC.switch_terrain, {"flag": data.data}])
+        self.modifications.append([self.EC.switch_terrain, {"flag": data.data}])
         self.trigger_reset = True
 
     def enable_rocks(self, data: Bool) -> None:
@@ -202,7 +202,7 @@ class ROS_LunalabManager(ROS_BaseManager):
             data (Bool): True to enable the rocks, False to disable them.
         """
 
-        self.modifications.append([self.LC.enable_rocks, {"flag": data.data}])
+        self.modifications.append([self.EC.enable_rocks, {"flag": data.data}])
         self.trigger_reset = True
 
     def randomize_rocks(self, data: Int32) -> None:
@@ -215,5 +215,5 @@ class ROS_LunalabManager(ROS_BaseManager):
 
         data = int(data.data)
         assert data > 0, "The number of rocks must be greater than 0."
-        self.modifications.append([self.LC.randomize_rocks, {"num": data}])
+        self.modifications.append([self.EC.randomize_rocks, {"num": data}])
         self.trigger_reset = True

@@ -57,8 +57,8 @@ class MonitoringCamerasManager:
             # NOTE render products do not work, because it requires rep.orchestrator.step() which classhes with world.step()
             # rp = rep.create.render_product(prim_path, (c["resolution"][0], c["resolution"][1])) 
 
-            if self._mode == SimulatorMode.ROS2:
-                self._set_ros2_publisher(rp, c["ros2"], c["type"])
+            # if self._mode == SimulatorMode.ROS2:
+            #     self._set_ros2_publisher(rp, c["ros2"], c["type"])
 
 
     def _set_ros2_publisher(self, render_product, ros2_cfg:Dict, type:str):

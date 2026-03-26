@@ -15,6 +15,7 @@ import logging
 import omni
 
 from src.environments.utils import set_moon_env_name
+from src.environments_wrappers.rate import Rate
 from src.environments_wrappers.ros2.largescale_ros2 import ROS_LargeScaleManager
 from src.environments_wrappers.ros2.lunaryard_ros2 import ROS_LunaryardManager
 from src.environments_wrappers.ros2.robot_manager_ros2 import ROS_RobotManager
@@ -27,14 +28,14 @@ import rclpy
 logger = logging.getLogger(__name__)
 logging.basicConfig(format="%(asctime)s %(message)s", datefmt="%m/%d/%Y %I:%M:%S %p")
 
-class ROS2_LabManagerFactory:
+class ROS2_EnvironmentManagerFactory:
     def __init__(self):
-        self._lab_managers = {}
+        self._environment_managers = {}
 
     def register(
         self,
         name: str,
-        lab_manager: Union[ROS_LunalabManager, ROS_LunaryardManager],
+        environment_manager: Union[ROS_LunalabManager, ROS_LunaryardManager],
     ) -> None:
         """
         Registers a lab manager.
@@ -44,7 +45,7 @@ class ROS2_LabManagerFactory:
             lab_manager (Union[ROS_LunalabManager, ROS_LunaryardManager]): Instance of the lab manager.
         """
 
-        self._lab_managers[name] = lab_manager
+        self._environment_managers[name] = environment_manager
 
     def __call__(
         self,
@@ -61,16 +62,16 @@ class ROS2_LabManagerFactory:
             Union[ROS_LunalabManager, ROS_LunaryardManager]: Instance of the lab manager.
         """
 
-        return self._lab_managers[cfg["environment"]["name"]](
+        return self._environment_managers[cfg["environment"]["name"]](
             environment_cfg=cfg["environment"],
             **kwargs,
         )
 
 
-ROS2_LMF = ROS2_LabManagerFactory()
-ROS2_LMF.register("Lunalab", ROS_LunalabManager)
-ROS2_LMF.register("Lunaryard", ROS_LunaryardManager)
-ROS2_LMF.register("LargeScale", ROS_LargeScaleManager)
+ROS2_EMF = ROS2_EnvironmentManagerFactory()
+ROS2_EMF.register("Lunalab", ROS_LunalabManager)
+ROS2_EMF.register("Lunaryard", ROS_LunaryardManager)
+ROS2_EMF.register("LargeScale", ROS_LargeScaleManager)
 
 
 class ROS2_SimulationManager:
@@ -119,11 +120,11 @@ class ROS2_SimulationManager:
             self.rate = Rate(is_disabled=True)
 
         # Lab manager thread
-        self.ROSLabManager = ROS2_LMF(
+        self.ROSEnvironmentManager = ROS2_EMF(
             cfg, is_simulation_alive=self.simulation_app.is_running, close_simulation=self.simulation_app.close
         )
         self.exec1 = Executor()
-        self.exec1.add_node(self.ROSLabManager)
+        self.exec1.add_node(self.ROSEnvironmentManager)
         self.exec1_thread = Thread(target=self.exec1.spin, daemon=True, args=())
         self.exec1_thread.start()
         # Robot manager thread
@@ -133,8 +134,8 @@ class ROS2_SimulationManager:
         self.exec2_thread = Thread(target=self.exec2.spin, daemon=True, args=())
         self.exec2_thread.start()
 
-        if self.ROSLabManager.get_wait_for_threads():
-            self.simulation_app.add_wait(self.ROSLabManager.get_wait_for_threads())
+        if self.ROSEnvironmentManager.get_wait_for_threads():
+            self.simulation_app.add_wait(self.ROSEnvironmentManager.get_wait_for_threads())
 
         # Have you ever asked your self: "Is there a limit of topics one can subscribe to in ROS2?"
         # Yes "Josh" there is.
@@ -149,11 +150,11 @@ class ROS2_SimulationManager:
 
         # Preload the assets
         if cfg["environment"]["name"] == "LargeScale":
-            height, quat = self.ROSLabManager.LC.get_height_and_normal((0.0, 0.0, 0.0))
+            height, quat = self.ROSEnvironmentManager.EC.get_height_and_normal((0.0, 0.0, 0.0))
             self.ROSRobotManager.RM.preload_robot_at_pose(self.world, (0, 0, height + 0.5), (1, 0, 0, 0))
         else:
             self.ROSRobotManager.RM.preload_robot(self.world)
-        self.ROSLabManager.LC.add_robot_manager(self.ROSRobotManager.RM)
+        self.ROSEnvironmentManager.EC.add_robot_manager(self.ROSRobotManager.RM)
 
         for i in range(100):
             self.world.step(render=True)
@@ -172,23 +173,23 @@ class ROS2_SimulationManager:
                 # Apply modifications to the lab only once the simulation step is finished
                 # This is extremely important as modifying the stage during a simulation step
                 # will lead to a crash.
-                self.ROSLabManager.periodic_update(dt=self.world.get_physics_dt())
+                self.ROSEnvironmentManager.periodic_update(dt=self.world.get_physics_dt())
                 if self.world.current_time_step_index == 0:
                     self.world.reset()
-                    self.ROSLabManager.reset()
+                    self.ROSEnvironmentManager.reset()
                     self.ROSRobotManager.reset()
-                self.ROSLabManager.apply_modifications()
-                if self.ROSLabManager.trigger_reset:
+                self.ROSEnvironmentManager.apply_modifications()
+                if self.ROSEnvironmentManager.trigger_reset:
                     self.ROSRobotManager.reset()
-                    self.ROSLabManager.trigger_reset = False
+                    self.ROSEnvironmentManager.trigger_reset = False
                 self.ROSRobotManager.apply_modifications()
                 if self.enable_deformation:
                     if self.world.current_time_step_index >= (self.deform_delay * self.world.get_physics_dt()):
-                        self.ROSLabManager.LC.deform_terrain()
-                        # self.ROSLabManager.LC.applyTerramechanics()
-            if not self.ROSLabManager.monitor_thread_is_alive():
+                        self.ROSEnvironmentManager.EC.deform_terrain()
+                        # self.ROSLabManager.EC.applyTerramechanics()
+            if not self.ROSEnvironmentManager.monitor_thread_is_alive():
                 logger.debug("Destroying the ROS nodes")
-                self.ROSLabManager.destroy_node()
+                self.ROSEnvironmentManager.destroy_node()
                 self.ROSRobotManager.destroy_node()
                 logger.debug("Shutting down the ROS executors")
                 self.exec1.shutdown()
