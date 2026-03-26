@@ -10,8 +10,6 @@ from src.configurations.simulator_mode_enum import SimulatorMode
 from src.environments.lunaryard import LunaryardController
 from src.environments_wrappers.zenoh.base_wrapper_zenoh import Zenoh_BaseManager
 
-#from asyncio_for_robotics.zenoh.session import auto_session
-from asyncio_for_robotics.zenoh.sub import Sub
 import zenoh
 
 
@@ -38,7 +36,7 @@ class Zenoh_LunaryardManager(Zenoh_BaseManager):
         self.LC = LunaryardController(mode=SimulatorMode.ZENOH, **environment_cfg)
         self.LC.load()
 
-        self.sub = Sub(zenoh_cfg["misc"]["rocks"]["randomize"]["keyexpr"])
+        self.rocks_randomize_keyexpr = zenoh_cfg["misc"]["rocks"]["randomize"]["keyexpr"]
 
     def periodic_update(self, dt: float) -> None:
         """
