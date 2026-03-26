@@ -19,59 +19,10 @@ from src.environments.lunaryard import LunaryardController
 from src.environments.utils import set_moon_env_name
 from src.configurations.procedural_terrain_confs import TerrainManagerConf
 from src.environments_wrappers.rate import Rate
-from src.environments_wrappers.yamcs.largescale_yamcs import Yamcs_LargeScaleManager
-from src.environments_wrappers.yamcs.lunalab_yamcs import Yamcs_LunalabManager
-from src.environments_wrappers.yamcs.lunaryard_yamcs import Yamcs_LunaryardManager
-from src.environments_wrappers.yamcs.robot_manager_yamcs import Yamcs_RobotManager
-from src.physics.physics_scene import PhysicsSceneManager
+from src.robots.robot import RobotManager
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(format="%(asctime)s %(message)s", datefmt="%m/%d/%Y %I:%M:%S %p")
-
-#TODO should use of 'Lab' naming be changed for 'Environment' after Version 3 ?
-class Yamcs_LabManagerFactory:
-    def __init__(self):
-        self._lab_managers = {}
-
-    def register(
-        self,
-        name: str,
-        lab_manager: Union[Yamcs_LunalabManager, Yamcs_LunaryardManager, Yamcs_LargeScaleManager],
-    ) -> None:
-        """
-        Registers a lab manager.
-
-        Args:
-            name (str): Name of the lab manager.
-            lab_manager (Union[Yamcs_LunalabManager, Yamcs_LunaryardManager]): Instance of the lab manager.
-        """
-
-        self._lab_managers[name] = lab_manager
-
-    def __call__(
-        self,
-        cfg: dict,
-        **kwargs,
-    ) -> Union[Yamcs_LunalabManager, Yamcs_LunaryardManager, Yamcs_LargeScaleManager]: 
-        """
-        Returns an instance of the lab manager corresponding to the environment name.
-
-        Args:
-            cfg (dict): Configuration dictionary.
-
-        Returns:
-            Union[Yamcs_LunalabManager, Yamcs_LunaryardManager]: Instance of the lab manager.
-        """
-
-        return self._lab_managers[cfg["environment"]["name"]](
-            environment_cfg=cfg["environment"],
-            **kwargs,
-        )
-
-Yamcs_LMF = Yamcs_LabManagerFactory()
-Yamcs_LMF.register("Lunalab", Yamcs_LunalabManager)
-Yamcs_LMF.register("Lunaryard", Yamcs_LunaryardManager)
-Yamcs_LMF.register("LargeScale", Yamcs_LargeScaleManager)
 
 class Yamcs_SimulationManager:
     """
@@ -81,6 +32,13 @@ class Yamcs_SimulationManager:
     - Running the robot manager 
     - Running the simulation
     - Cleaning the simulation
+
+    Yamcs_SimulationManager is implemented in a simpler manner than the ROS2 manager:
+    - there is no environment wrapper for each of the implemented environments (Lunalabn, Lunaryard, LargeScale)
+    - there is no factory, but instead if/else was used
+    for the reason that as for now, there is no implementation of environment alteration through Yamcs commands,
+    nor is there a need for a wrapper that inherits from ROS's Node (as is the case with ROS_SimulationManager)
+    The implementation may change in the future.
     """
 
     def __init__(
@@ -98,7 +56,6 @@ class Yamcs_SimulationManager:
 
         self.cfg = cfg
         self.simulation_app = simulation_app
-        # Setups the physics and acquires the different interfaces to talk with Isaac
         self.timeline = omni.timeline.get_timeline_interface()
         self.world = World(
             stage_units_in_meters=1.0,
@@ -107,43 +64,42 @@ class Yamcs_SimulationManager:
         )
 
         set_moon_env_name(cfg["environment"]["name"])
-
-        PSM = PhysicsSceneManager(cfg["physics"]["physics_scene"])
         self._step_world_and_reset()
         self._setup_rate()
-        #TODO 3rd March 2026 (for after Version 3)
-        # ROSLabManager(s) and YamcsLabManager instances should just be self.environmnent_manager
-        # ... EnvironmentManagerFactory (EMF), RobotManager, etc. no need to specify in the naming the protocol which is used
-        self.YamcsLabManager = Yamcs_LMF(
-            cfg, is_simulation_alive=self.simulation_app.is_running, close_simulation=self.simulation_app.close
-        )
 
-        self._environment_controller = None
-        if self.cfg["environment"]["name"] == "LargeScale":
-            self._environment_controller = LargeScaleController(
-                mode=SimulatorMode.YAMCS, **self.cfg["environment"], 
-                is_simulation_alive=self.simulation_app.is_running, 
-                close_simulation=self.simulation_app.close
-            )
-        elif self.cfg["environment"]["name"] == "Lunaryard":
-            self._environment_controller = LunaryardController(
-                mode=SimulatorMode.YAMCS, **self.cfg["environment"], 
-                is_simulation_alive=self.simulation_app.is_running, 
-                close_simulation=self.simulation_app.close
-            )
-        elif self.cfg["environment"]["name"] == "Lunalab":
-            self._environment_controller = LunalabController(
-                mode=SimulatorMode.YAMCS, **self.cfg["environment"], 
-                is_simulation_alive=self.simulation_app.is_running, 
-                close_simulation=self.simulation_app.close
-            )
-        self._environment_controller.load()
-        
-        self.YamcsRobotManager = Yamcs_RobotManager(cfg["environment"]["robots_settings"], cfg["mode"]["instance_conf"])
+        self.EC = self._get_environment_controller(self.cfg["environment"]["name"])
+        self.EC.load()
+
+        self.RM = RobotManager(cfg["environment"]["robots_settings"], 
+                               mode=SimulatorMode.YAMCS, 
+                               yamcs_instance_conf=cfg["mode"]["instance_conf"])
         self._setup_terrain_manager()
         self._preload_robot()
-        self.YamcsLabManager.LC.add_robot_manager(self.YamcsRobotManager.RM)
+        self.EC.add_robot_manager(self.RM)
         self._step_world_and_reset()
+
+    def _get_environment_controller(self, environment_name:str):
+        self.EC= None
+        if environment_name == "LargeScale":
+            self.EC = LargeScaleController(
+                mode=SimulatorMode.YAMCS, **self.cfg["environment"], 
+                is_simulation_alive=self.simulation_app.is_running, 
+                close_simulation=self.simulation_app.close
+            )
+        elif environment_name == "Lunaryard":
+            self.EC = LunaryardController(
+                mode=SimulatorMode.YAMCS, **self.cfg["environment"], 
+                is_simulation_alive=self.simulation_app.is_running, 
+                close_simulation=self.simulation_app.close
+            )
+        elif environment_name == "Lunalab":
+            self.EC = LunalabController(
+                mode=SimulatorMode.YAMCS, **self.cfg["environment"], 
+                is_simulation_alive=self.simulation_app.is_running, 
+                close_simulation=self.simulation_app.close
+            )
+
+        return self.EC
 
     def _step_world_and_reset(self, n=100):
         for i in range(n):
@@ -166,10 +122,10 @@ class Yamcs_SimulationManager:
 
     def _preload_robot(self):
         if self.cfg["environment"]["name"] == "LargeScale":
-            height, quat = self.YamcsLabManager.LC.get_height_and_normal((0.0, 0.0, 0.0))
-            self.YamcsRobotManager.RM.preload_robot_at_pose(self.world, (0, 0, height + 0.5), (1, 0, 0, 0))
+            height, quat = self.EC.get_height_and_normal((0.0, 0.0, 0.0))
+            self.RM.preload_robot_at_pose(self.world, (0, 0, height + 0.5), (1, 0, 0, 0))
         else:
-            self.YamcsRobotManager.RM.preload_robot(self.world)
+            self.RM.preload_robot(self.world)
 
     def run_simulation(self) -> None:
         """
@@ -181,23 +137,8 @@ class Yamcs_SimulationManager:
             self.rate.reset()
             self.world.step(render=True)
             if self.world.is_playing():
-                # Apply modifications to the lab only once the simulation step is finished
-                # This is extremely important as modifying the stage during a simulation step
-                # will lead to a crash.
-                self.YamcsLabManager.periodic_update(dt=self.world.get_physics_dt())
                 if self.world.current_time_step_index == 0:
                     self.world.reset()
-                    self.YamcsLabManager.reset() # reset does absolutely nothing, the function is not implemented
-                    self.YamcsRobotManager.reset()
-                self.YamcsLabManager.apply_modifications()
-                if self.YamcsLabManager.trigger_reset:
-                    self.YamcsRobotManager.reset()
-                    self.YamcsLabManager.trigger_reset = False
-                self.YamcsRobotManager.apply_modifications()
-                if self.enable_deformation:
-                    if self.world.current_time_step_index >= (self.deform_delay * self.world.get_physics_dt()):
-                        self.YamcsLabManager.LC.deform_terrain()
-
             self.rate.sleep()
         self.world.stop()
         self.timeline.stop()
