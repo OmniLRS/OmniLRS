@@ -187,6 +187,10 @@ class Zenoh_SimulationManager:
         else:
             self.ZenohRobotManager.RM.preload_robot(self.world)
 
+            for t in self.ZenohLabManager.transports:
+                t.start()
+            self.ZenohLabManager.transports_inited = True
+
             for t in self.ZenohRobotManager.transports:
                 t.start()
             self.ZenohRobotManager.transports_inited = True
@@ -252,6 +256,9 @@ class Zenoh_SimulationManager:
             if self.enable_deformation:
                 if self.world.current_time_step_index >= (self.deform_delay * self.world.get_physics_dt()):
                     self.ZenohLabManager.LC.deform_terrain()
+
+        if self.ZenohLabManager.transports_inited:
+            self.ZenohLabManager.pub_sim_is_running(True)
 
         if self.ZenohRobotManager.transports_inited:
             self.ZenohRobotManager.publish_cameras()

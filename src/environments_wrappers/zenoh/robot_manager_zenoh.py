@@ -9,7 +9,9 @@ __status__ = "development"
 from typing import List, Tuple
 import os
 import sys
-import cv2
+import msgspec
+import numpy as np
+import json
 
 from src.configurations.simulator_mode_enum import SimulatorMode
 from src.robots.robot import RobotManager
@@ -85,9 +87,23 @@ class Zenoh_RobotManager():
                 frame = self.RM.robots[robot_name].get_rgba_camera_view(self.resolution)
                 if frame.size!=0:
                     encoded = self.encode_image(frame)
-                    ## TODO: add new publish_image() in omnilrs-artefacts - ZenohPubTransport (currently publish() uses json.dump, not suitable for images)
-                    self.cams[robot_name]._pub.put(encoded)
-    
+                    self.cams[robot_name].publish(encoded)
+
     def encode_image(self, im):
-        encoded = cv2.imencode(".png", im)[1].tobytes()
+        encoded = ImageStruct.pack(im)
+        encoded = json.loads(msgspec.json.encode(encoded))
         return encoded
+
+## TODO: move this ImageStruct to new publish_image() in omnilrs-artefacts 
+class ImageStruct(msgspec.Struct, array_like=True, kw_only=True):
+    # ref: https://github.com/jcrist/msgspec/issues/732
+    dtype: str
+    shape: tuple[int, ...]
+    data: memoryview
+
+    @classmethod
+    def pack(cls, arr: np.ndarray):
+        return cls(data=arr.data, dtype=str(arr.dtype), shape=arr.shape)
+    
+    def unpack(self) -> np.ndarray:
+        return np.frombuffer(self.data, dtype=self.dtype).reshape(self.shape)

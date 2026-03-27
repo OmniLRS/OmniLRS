@@ -6,7 +6,8 @@ RUN /isaac-sim/python.sh -m pip install \
   omegaconf \ 
   hydra-core \
   eclipse-zenoh \
-  asyncio_for_robotics
+  asyncio_for_robotics \
+  msgspec
 
 # setup timezone
 RUN echo 'Etc/UTC' > /etc/timezone && \

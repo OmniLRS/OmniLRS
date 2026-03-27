@@ -6,6 +6,10 @@ sensors:
     json_compact: False #True
   
 misc:
+  sim:
+    is_running_keyexpr: "OmniLRS/sim/is_running"
+    json_compact: True
+
   rocks:
     randomize:
       keyexpr: "OmniLRS/Terrain/RandomizeRocks"
