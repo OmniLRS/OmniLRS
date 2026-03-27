@@ -38,7 +38,7 @@ class RobotSubsystemsHandler(ABC):
         self._solar_panel_state = solar_panel_state
 
     @abstractmethod
-    def get_rssi(self):
+    def get_radio_status(self):
         pass
     
     @abstractmethod
@@ -48,6 +48,10 @@ class RobotSubsystemsHandler(ABC):
     @abstractmethod
     def get_power_status(self):
         pass
+
+    def get_obc_status(self):
+        self._obc_metrics_model.set_inputs(self._obc_state)
+        return self._obc_metrics_model.get_outputs()
 
     @abstractmethod
     def _setup_devices(self):
@@ -83,6 +87,3 @@ class RobotSubsystemsHandler(ABC):
     
     def get_device_health_state(self, device_name):
         return self._devices[device_name].get_health_state()
-    
-    def get_obc_metrics(self):
-        return self._obc_metrics_model.get_obc_metrics(self._obc_state)

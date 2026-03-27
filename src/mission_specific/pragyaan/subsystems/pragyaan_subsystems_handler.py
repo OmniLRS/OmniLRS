@@ -9,16 +9,16 @@ __status__ = "development"
 from enum import StrEnum, Enum
 
 from src.environments.utils import get_moon_env_name
+from src.mission_specific.pragyaan.subsystems.neutron_spectrometer_model import NeutronSpectrometerModel
+from src.mission_specific.pragyaan.subsystems.pragyaan_thermal_model import PragyaanThermalModel
 from src.subsystems.robot_physics_models.radio_model import RadioModel
 import math
 from isaacsim.core.utils.xforms import get_world_pose
 import random
 import time
 from src.subsystems.device import CommonDevice, Device, HealthState, PowerState
-from src.use_cases.pragyaan.subsystems.neutron_spectrometer_model import NeutronSpectrometerModel
 from src.subsystems.robot_enums import ObcState, SolarPanelState
 from src.subsystems.robot_subsystems_handler import RobotSubsystemsHandler
-from src.use_cases.pragyaan.subsystems.pragyaan_thermal_model import PragyaanThermalModel
 
 class PragyaanSubsystemsHandler(RobotSubsystemsHandler):
 
@@ -55,22 +55,26 @@ class PragyaanSubsystemsHandler(RobotSubsystemsHandler):
     def _setup_devices(self):
         # Pragyaan and workshop-specific values for the subsystem devices
         self._devices[CommonDevice.OBC] = Device(CommonDevice.OBC, current_draw=(0.0, 7.5), power_state=PowerState.ON)
-        self._devices[CommonDevice.MOTOR_CONTROLLER] = Device(CommonDevice.MOTOR_CONTROLLER, current_draw=(0.0, 2.0))
-        self._devices[CommonDevice.NEUTRON_SPECTROMETER] = Device(CommonDevice.NEUTRON_SPECTROMETER, current_draw=(0.0, 9.0))
-        self._devices[CommonDevice.APXS] = Device(CommonDevice.APXS, current_draw=(0.0, 9.0))
-        self._devices[CommonDevice.CAMERA] = Device(CommonDevice.CAMERA, current_draw=(0.0, 5.0))
+        self._devices[CommonDevice.MOTOR_CONTROLLER] = Device(CommonDevice.MOTOR_CONTROLLER, current_draw=(0.0, 2.0), power_state=PowerState.OFF)
+        self._devices[CommonDevice.NEUTRON_SPECTROMETER] = Device(CommonDevice.NEUTRON_SPECTROMETER, current_draw=(0.0, 9.0), power_state=PowerState.OFF)
+        self._devices[CommonDevice.APXS] = Device(CommonDevice.APXS, current_draw=(0.0, 9.0), power_state=PowerState.OFF)
+        self._devices[CommonDevice.CAMERA] = Device(CommonDevice.CAMERA, current_draw=(0.0, 5.0), power_state=PowerState.OFF)
         self._devices[CommonDevice.RADIO] = Device(CommonDevice.RADIO, current_draw=(0.0, 5.0), power_state=PowerState.ON)
         self._devices[CommonDevice.EPS] = Device(CommonDevice.EPS, current_draw=(0.0, 1.0), power_state=PowerState.ON)
 
     def _setup_power_model(self):
-        self._power_model.initialize(battery_capacity_wh=self.BATTERY_CAPACITY_WH, battery_charge_wh=self.BATTERY_CAPACITY_WH, 
-                                solar_panel_max_power=self.SOLAR_PANEL_MAX_POWER, solar_panel_state=self._solar_panel_state, 
-                                motor_count=self.MOTOR_COUNT, motor_power_w=self.MOTOR_POWER_W,
-                                devices=self._devices)
+        self._power_model.initialize(
+            battery_capacity_wh=self.BATTERY_CAPACITY_WH, 
+            battery_charge_wh=self.BATTERY_CAPACITY_WH, 
+            solar_panel_max_power=self.SOLAR_PANEL_MAX_POWER, 
+            solar_panel_state=self._solar_panel_state, 
+            motor_count=self.MOTOR_COUNT, 
+            motor_power_w=self.MOTOR_POWER_W,
+            devices=self._devices
+        )
 
     def _update_positions(self):
         self._sun_pos = self.SUN_POSITION
-        print(self._sun_pos)
 
     def _update_positions_before(func):
         # definition of a decorator
@@ -80,7 +84,7 @@ class PragyaanSubsystemsHandler(RobotSubsystemsHandler):
         return wrapper
     
     @_update_positions_before
-    def get_rssi(self, robot_position):
+    def get_radio_status(self, robot_position):
         self._radio_model.set_inputs(robot_position, self._lander_pos)
         rssi = self._radio_model.get_rssi()
 
@@ -97,11 +101,13 @@ class PragyaanSubsystemsHandler(RobotSubsystemsHandler):
     @_update_positions_before
     def get_power_status(self, robot_position, robot_yaw_deg, interval_s, obc_state):
         # device states are reflected between the handler and power model, as they use the same dict
-        self._power_model.set_inputs(rover_position=robot_position, 
-                                        sun_position=self._sun_pos, 
-                                        rover_yaw_deg=robot_yaw_deg, 
-                                        solar_panel_state=self._solar_panel_state, 
-                                        is_in_motor_state=(obc_state == ObcState.MOTOR))
+        self._power_model.set_inputs(
+            rover_position=robot_position, 
+            sun_position=self._sun_pos, 
+            rover_yaw_deg=robot_yaw_deg, 
+            solar_panel_state=self._solar_panel_state, 
+            is_in_motor_state=(obc_state == ObcState.MOTOR)
+        )
         self._power_model.compute(interval_s)
         status = self._power_model.status()
    

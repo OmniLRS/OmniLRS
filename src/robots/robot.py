@@ -30,7 +30,6 @@ from scipy.spatial.transform import Rotation as R
 
 from src.configurations.simulator_mode_enum import SimulatorMode
 from src.environments.utils import transform_orientation_from_xyzw_into_xyz, transform_orientation_into_xyz
-from src.use_cases.pragyaan.subsystems.pragyaan_subsystems_handler import PragyaanSubsystemsHandler
 from src.subsystems.robot_subsystems_handler import RobotSubsystemsHandler
 # from src.robots.subsystems_manager import RobotSubsystemsManager
 from src.tmtc.yamcs_TMTC import YamcsTMTC
@@ -225,7 +224,7 @@ class RobotManager:
         robot_name = self.robot.robot_name.replace("/","") 
 
         if self.RM_conf.robot_controller == "pragyaan-controller":
-            from src.use_cases.pragyaan.tmtc.pragyaan_controller import PragyaanController
+            from src.mission_specific.pragyaan.tmtc.pragyaan_controller import PragyaanController
 
             self.TMTC = PragyaanController(self.yamcs_instance_conf, self.RM_conf.yamcs_tmtc, robot_name, self.robot_RG, self.robot)
         elif self.RM_conf is None or self.RM_conf.robot_controller == "":
@@ -295,6 +294,7 @@ class Robot:
         robot_name = self.robot_name.strip("/")
         
         if robot_name == "pragyaan":
+            from src.mission_specific.pragyaan.subsystems.pragyaan_subsystems_handler import PragyaanSubsystemsHandler
             self.subsystems = PragyaanSubsystemsHandler(pos_relative_to_prim)
 
     def get_root_rigid_body_path(self) -> None:

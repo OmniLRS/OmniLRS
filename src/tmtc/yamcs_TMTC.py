@@ -65,7 +65,7 @@ class YamcsTMTC(ABC):
         self._images_handler:ImagesHandler = ImagesHandler(self._yamcs_processor, yamcs_instance_conf["address"], yamcs_conf["images"], yamcs_instance_conf["url_full_nginx"])
 
     @abstractmethod
-    def _setup_command_callbacks(self, commands_conf):
+    def setup_command_callbacks(self, commands_conf):
         """Register command callbacks for the robot."""
         pass
 
@@ -73,3 +73,6 @@ class YamcsTMTC(ABC):
     def start_streaming_data(self):
         """Register command callbacks for the robot."""
         pass
+
+    def transmit_to_yamcs(self, param_name, param_value):
+        self._yamcs_processor.set_parameter_value(param_name, param_value)

@@ -1,13 +1,3 @@
-from __future__ import annotations
-
-from src.subsystems.robot_physics_models.robot_physics_model import RobotPhysicsModel
-from src.subsystems.device import CommonDevice, Device, HealthState, PowerState
-from src.subsystems.robot_enums import SolarPanelState
-"""
-The above import MUST be at the top of the file, can not be preceded by anything or it crashes
-SyntaxError: from __future__ imports must occur at the beginning of the file
-"""
-
 __author__ = "Louis Burtz, Aleksa Stanivuk"
 __copyright__ = "Copyright 2025-26, JAOPS"
 __license__ = "BSD-3-Clause"
@@ -23,6 +13,9 @@ import random
 from collections.abc import Mapping as MappingABC, Sequence as SequenceABC
 from dataclasses import dataclass, field
 from typing import Any, Dict, Mapping, Sequence, Tuple
+from src.subsystems.robot_physics_models.robot_physics_model import RobotPhysicsModel
+from src.subsystems.device import CommonDevice, Device, HealthState, PowerState
+from src.subsystems.robot_enums import SolarPanelState
 
 import numpy as np
 
@@ -173,13 +166,13 @@ class PowerModel(RobotPhysicsModel):
         if device.get_power_state() == PowerState.OFF:
             return lo
         elif device.get_health_state() == HealthState.FAULT:
-            return hi + DEVICE_FAULT_EXTRA_POWER
+            return hi + self._device_fault_extra_power
         else:
             return hi
 
     def _total_load_power(self) -> float:
         regulated_load = sum(self._device_power(name) for name in self._devices)
-        battery_power_for_regulated = regulated_load / DC_DC_EFFICIENCY
+        battery_power_for_regulated = regulated_load / self._dc_dc_efficiency
         motor_power = self._motor_power_w * self._motor_count if self._is_in_motor_state else 0.0
         return battery_power_for_regulated + motor_power
 
