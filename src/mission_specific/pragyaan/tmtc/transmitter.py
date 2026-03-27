@@ -15,17 +15,23 @@ from src.subsystems.robot_enums import SolarPanelState
 from src.tmtc.intervals_handler import IntervalName
 
 class PragyaanTransmitter:
+    """
+    This class 'transmits' the data from the simulation to the yamcs data structure. 
+    Functions as a reference implementation for the implementation of other rover transmitters.
+
+    
+    """
 
     def __init__(
             self,
-            yamcs_processor,
+            transmit_to_yamcs_func,
             intervals_handler,
             robot, 
             robots_RG,
             robot_name,
             parameters_conf
     ):
-        self._yamcs_processor = yamcs_processor
+        self._transmit = transmit_to_yamcs_func
         self._robot:Robot = robot
         self._intervals_handler = intervals_handler
         self._parameters_conf = parameters_conf
@@ -35,7 +41,7 @@ class PragyaanTransmitter:
     def transmit_wheels_joint_angles(self):
         angles = self._robot.get_wheels_joint_angles()
         self._transform_joint_angles(angles)
-        self._yamcs_processor.set_parameter_value(self._parameters_conf["motor_encoder"], angles)
+        self._transmit(self._parameters_conf["motor_encoder"], angles)
 
     def _transform_joint_angles(self, angles):
         for i in range(len(angles)):
@@ -44,7 +50,7 @@ class PragyaanTransmitter:
 
     def transmit_solar_panel_state(self):
         state:SolarPanelState = self._robot.subsystems.get_solar_panel_state()
-        self._yamcs_processor.set_parameter_value(self._parameters_conf["solar_panel_state"], state.value)
+        self._transmit(self._parameters_conf["solar_panel_state"], state.value)
 
     def transmit_obc_metrics(self):
         #TODO should be fixed based on the new updates - no need to get the state, and update it, just get the metrics and divide based on the keys
@@ -53,15 +59,15 @@ class PragyaanTransmitter:
 
         obc_metrics = self._robot.subsystems.get_obc_status()
 
-        self._yamcs_processor.set_parameter_value(self._parameters_conf["obc_cpu_usage"], int(obc_metrics["cpu_usage"]))
-        self._yamcs_processor.set_parameter_value(self._parameters_conf["obc_ram_usage"], int(obc_metrics["ram_usage"]))
-        self._yamcs_processor.set_parameter_value(self._parameters_conf["obc_disk_usage"], int(obc_metrics["disk_usage"]))
-        self._yamcs_processor.set_parameter_value(self._parameters_conf["obc_uptime"], obc_metrics["uptime"])
+        self._transmit(self._parameters_conf["obc_cpu_usage"], int(obc_metrics["cpu_usage"]))
+        self._transmit(self._parameters_conf["obc_ram_usage"], int(obc_metrics["ram_usage"]))
+        self._transmit(self._parameters_conf["obc_disk_usage"], int(obc_metrics["disk_usage"]))
+        self._transmit(self._parameters_conf["obc_uptime"], obc_metrics["uptime"])
         
     def transmit_radio_signal_info(self):
         robot_position, orientation = self._robots_RG[str(self._robot_name)].get_pose_of_base_link()
         rssi = self._robot.subsystems.get_radio_status(robot_position)
-        self._yamcs_processor.set_parameter_value(self._parameters_conf["rssi"], int(rssi))
+        self._transmit(self._parameters_conf["rssi"], int(rssi))
 
     def transmit_thermal_info(self, interval_s):
         robot_position, _ = self._robots_RG[str(self._robot_name)].get_pose_of_base_link()
@@ -72,13 +78,13 @@ class PragyaanTransmitter:
             robot_yaw_deg, 
             interval_s
         )
-        self._yamcs_processor.set_parameter_value(self._parameters_conf["temperature_front"], temperatures['+X'])
-        self._yamcs_processor.set_parameter_value(self._parameters_conf["temperature_back"], temperatures['-X'])
-        self._yamcs_processor.set_parameter_value(self._parameters_conf["temperature_left"], temperatures['+Y'])
-        self._yamcs_processor.set_parameter_value(self._parameters_conf["temperature_right"], temperatures['-Y'])
-        self._yamcs_processor.set_parameter_value(self._parameters_conf["temperature_top"], temperatures['+Z'])
-        self._yamcs_processor.set_parameter_value(self._parameters_conf["temperature_bottom"], temperatures['-Z'])
-        self._yamcs_processor.set_parameter_value(self._parameters_conf["temperature_elec_box"], temperatures['interior'])
+        self._transmit(self._parameters_conf["temperature_front"], temperatures['+X'])
+        self._transmit(self._parameters_conf["temperature_back"], temperatures['-X'])
+        self._transmit(self._parameters_conf["temperature_left"], temperatures['+Y'])
+        self._transmit(self._parameters_conf["temperature_right"], temperatures['-Y'])
+        self._transmit(self._parameters_conf["temperature_top"], temperatures['+Z'])
+        self._transmit(self._parameters_conf["temperature_bottom"], temperatures['-Z'])
+        self._transmit(self._parameters_conf["temperature_elec_box"], temperatures['interior'])
 
     def transmit_power_info(self, interval_s):
         robot_position, _ = self._robots_RG[str(self._robot_name)].get_pose_of_base_link()
@@ -91,41 +97,41 @@ class PragyaanTransmitter:
             interval_s, 
             obc_state
         )
-        self._yamcs_processor.set_parameter_value(self._parameters_conf["battery_charge"], int(power_status['battery_percentage_measured']))
-        self._yamcs_processor.set_parameter_value(self._parameters_conf["battery_voltage"], power_status['battery_voltage_measured'])
-        self._yamcs_processor.set_parameter_value(self._parameters_conf["total_current_in"], power_status['solar_input_current_measured'])
-        self._yamcs_processor.set_parameter_value(self._parameters_conf["total_current_out"], power_status["total_current_out_measured"])
-        self._yamcs_processor.set_parameter_value(self._parameters_conf["current_draw_obc"], power_status["device_currents_measured"][CommonDevice.OBC])
-        self._yamcs_processor.set_parameter_value(self._parameters_conf["current_draw_motor_controller"], power_status["device_currents_measured"][CommonDevice.MOTOR_CONTROLLER])
-        self._yamcs_processor.set_parameter_value(self._parameters_conf["current_draw_neutron_spectrometer"], power_status["device_currents_measured"][CommonDevice.NEUTRON_SPECTROMETER])
-        self._yamcs_processor.set_parameter_value(self._parameters_conf["current_draw_apxs"], power_status["device_currents_measured"][CommonDevice.APXS])
-        self._yamcs_processor.set_parameter_value(self._parameters_conf["current_draw_camera"], power_status["device_currents_measured"][CommonDevice.CAMERA])
-        self._yamcs_processor.set_parameter_value(self._parameters_conf["current_draw_radio"], power_status["device_currents_measured"][CommonDevice.RADIO])
-        self._yamcs_processor.set_parameter_value(self._parameters_conf["current_draw_eps"], power_status["device_currents_measured"][CommonDevice.EPS])
-        self._yamcs_processor.set_parameter_value(self._parameters_conf["motor_current"], power_status['motor_currents_measured'])
+        self._transmit(self._parameters_conf["battery_charge"], int(power_status['battery_percentage_measured']))
+        self._transmit(self._parameters_conf["battery_voltage"], power_status['battery_voltage_measured'])
+        self._transmit(self._parameters_conf["total_current_in"], power_status['solar_input_current_measured'])
+        self._transmit(self._parameters_conf["total_current_out"], power_status["total_current_out_measured"])
+        self._transmit(self._parameters_conf["current_draw_obc"], power_status["device_currents_measured"][CommonDevice.OBC])
+        self._transmit(self._parameters_conf["current_draw_motor_controller"], power_status["device_currents_measured"][CommonDevice.MOTOR_CONTROLLER])
+        self._transmit(self._parameters_conf["current_draw_neutron_spectrometer"], power_status["device_currents_measured"][CommonDevice.NEUTRON_SPECTROMETER])
+        self._transmit(self._parameters_conf["current_draw_apxs"], power_status["device_currents_measured"][CommonDevice.APXS])
+        self._transmit(self._parameters_conf["current_draw_camera"], power_status["device_currents_measured"][CommonDevice.CAMERA])
+        self._transmit(self._parameters_conf["current_draw_radio"], power_status["device_currents_measured"][CommonDevice.RADIO])
+        self._transmit(self._parameters_conf["current_draw_eps"], power_status["device_currents_measured"][CommonDevice.EPS])
+        self._transmit(self._parameters_conf["motor_current"], power_status['motor_currents_measured'])
 
     def transmit_neutroun_count(self):
         neutron_counts = self._robot.subsystems.get_neutron_count()
-        self._yamcs_processor.set_parameter_value(self._parameters_conf["neutron_counts"], neutron_counts)
+        self._transmit(self._parameters_conf["neutron_counts"], neutron_counts)
 
     def transmit_obc_state(self):
         obc_state = self._robot.subsystems.get_obc_state()
-        self._yamcs_processor.set_parameter_value(self._parameters_conf["obc_state"], obc_state.value)
+        self._transmit(self._parameters_conf["obc_state"], obc_state.value)
 
     def transmit_imu_readings(self):
         imu_accelerometer, imu_gyroscope, orientation = self._robot.get_imu_readings()
-        self._yamcs_processor.set_parameter_value(self._parameters_conf["imu_accelerometer"], imu_accelerometer)
-        self._yamcs_processor.set_parameter_value(self._parameters_conf["imu_gyroscope"], imu_gyroscope)
-        self._yamcs_processor.set_parameter_value(self._parameters_conf["imu_orientation"], orientation)
+        self._transmit(self._parameters_conf["imu_accelerometer"], imu_accelerometer)
+        self._transmit(self._parameters_conf["imu_gyroscope"], imu_gyroscope)
+        self._transmit(self._parameters_conf["imu_orientation"], orientation)
         
     def transmit_camera_streaming_state(self):
         is_camera_streaming = self._intervals_handler.does_exist(IntervalName.CAMERA_STREAMING.value)
         state = PowerState.ON if is_camera_streaming else PowerState.OFF
-        self._yamcs_processor.set_parameter_value(self._parameters_conf["camera_streaming_state"], state)
+        self._transmit(self._parameters_conf["camera_streaming_state"], state)
 
     def transmit_go_nogo(self):
         go_nogo_state =  self._robot.subsystems.get_go_nogo_state().value
-        self._yamcs_processor.set_parameter_value(self._parameters_conf["go_nogo"], go_nogo_state)
+        self._transmit(self._parameters_conf["go_nogo"], go_nogo_state)
 
     def transmit_pose_of_base_link(self):
         position, orientation = self._robots_RG[str(self._robot_name)].get_pose_of_base_link()
@@ -136,4 +142,4 @@ class PragyaanTransmitter:
         orientation = orientation.tolist()
         pose_of_base_link = {"position": {"x":position[0], "y":position[1], "z":position[2]}, 
                                 "orientation":{"w":orientation[0],"x":orientation[1], "y":orientation[2], "z":orientation[3] }}
-        self._yamcs_processor.set_parameter_value(self._parameters_conf["pose_of_base_link"], pose_of_base_link)
+        self._transmit(self._parameters_conf["pose_of_base_link"], pose_of_base_link)
