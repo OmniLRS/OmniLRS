@@ -9,7 +9,7 @@ __status__ = "development"
 import math
 import threading
 import time
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, TYPE_CHECKING
 from scipy.spatial.transform import Rotation as R
 import numpy as np
 import warnings
@@ -32,8 +32,10 @@ from scipy.spatial.transform import Rotation as R
 from src.configurations.simulator_mode_enum import SimulatorMode
 from src.environments.utils import transform_orientation_from_xyzw_into_xyz, transform_orientation_into_xyz
 from src.robots.subsystems_manager import RobotSubsystemsManager
-from src.tmtc.yamcs_TMTC import YamcsTMTC
 from omni.isaac.sensor import Camera
+
+if TYPE_CHECKING:
+    from src.tmtc.yamcs_TMTC import YamcsTMTC
 
 from isaacsim.sensors.physics import _sensor
 
@@ -64,7 +66,7 @@ class RobotManager:
         createXform(self.stage, self.robots_root)
         self.robots: Dict[str, Robot] = {}
         self.robots_RG: Dict[str, RobotRigidGroup] = {}
-        self.TMTC: YamcsTMTC
+        self.TMTC: "YamcsTMTC | None" = None
         self.num_robots = 0
         self.yamcs_instance_conf = yamcs_instance_conf
 
