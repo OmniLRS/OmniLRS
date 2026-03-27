@@ -1,4 +1,4 @@
-__author__ = "Shamistan Karimov, Bach Nguyen"
+__author__ = "Shamistan Karimov, Elian NEPPEL, Bach Nguyen"
 __copyright__ = "Copyright 2023-26, JAOPS, Artefacts"
 __license__ = "BSD-3-Clause"
 __version__ = "2.0.0"
@@ -86,7 +86,7 @@ class Zenoh_RobotManager():
                 frame = self.RM.robots[robot_name].get_rgba_camera_view(self.resolution)
                 if frame.size!=0:
                     encoded = self.encode_image(frame)
-                    
+
                     ## TODO: add new publish_numpy() in omnilrs-artefacts 
                     self.cams[robot_name]._pub.put(encoded)
 

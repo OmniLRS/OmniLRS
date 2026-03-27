@@ -6,6 +6,8 @@ __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
 __status__ = "development"
 
+import zenoh
+
 from src.configurations.simulator_mode_enum import SimulatorMode
 from src.environments.large_scale_lunar import LargeScaleController
 from src.environments_wrappers.zenoh.base_wrapper_zenoh import Zenoh_BaseManager
@@ -58,3 +60,9 @@ class Zenoh_LargeScaleManager(Zenoh_BaseManager):
         Resets the lab to its initial state
         """
         pass
+
+    def randomize_rocks(self, sample: zenoh.Sample):
+        data = int(sample.payload.to_string())
+        assert data > 0, "The number of rocks must be greater than 0."
+        self.modifications.append([self.LC.randomize_rocks, {"num": data}])
+        self.trigger_reset = True

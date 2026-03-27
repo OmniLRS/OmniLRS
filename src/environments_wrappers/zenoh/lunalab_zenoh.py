@@ -6,6 +6,8 @@ __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
 __status__ = "development"
 
+import zenoh
+
 from src.configurations.simulator_mode_enum import SimulatorMode
 from src.environments.lunalab import LunalabController
 from src.environments_wrappers.zenoh.base_wrapper_zenoh import Zenoh_BaseManager
@@ -33,10 +35,22 @@ class Zenoh_LunalabManager(Zenoh_BaseManager):
         self.trigger_reset = False
     
     def periodic_update(self, dt: float) -> None:
-        pass
+        """
+        Updates the lab.
+
+        Args:
+            dt (float): Time step.
+        """
+        self.modifications.append([self.LC.update_stellar_engine, {"dt": dt}])
 
     def reset(self) -> None:
         """
         Resets the lab to its initial state.
         """
         pass
+
+    def randomize_rocks(self, sample: zenoh.Sample):
+        data = int(sample.payload.to_string())
+        assert data > 0, "The number of rocks must be greater than 0."
+        self.modifications.append([self.LC.randomize_rocks, {"num": data}])
+        self.trigger_reset = True
