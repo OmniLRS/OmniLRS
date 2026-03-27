@@ -32,7 +32,6 @@ from src.configurations.simulator_mode_enum import SimulatorMode
 from src.environments.utils import transform_orientation_from_xyzw_into_xyz, transform_orientation_into_xyz
 from src.subsystems.robot_subsystems_handler import RobotSubsystemsHandler
 # from src.robots.subsystems_manager import RobotSubsystemsManager
-from src.tmtc.yamcs_TMTC import YamcsTMTC
 from omni.isaac.sensor import Camera
 
 from isaacsim.sensors.physics import _sensor
@@ -49,7 +48,6 @@ class RobotManager:
         self,
         RM_conf: RobotManagerConf,
         mode:SimulatorMode = SimulatorMode.ROS2,
-        yamcs_instance_conf:dict = {}
     ) -> None:
         """
         Args:
@@ -64,8 +62,6 @@ class RobotManager:
         createXform(self.stage, self.robots_root)
         self.robot: Robot = None   # TODO for v4: if only 1 robot, no need for a dict, just an instance
         self.robot_RG: RobotRigidGroup = None # TODO for v4: if only 1 robot, no need for a dict, just an instance
-        self.TMTC: YamcsTMTC
-        self.yamcs_instance_conf = yamcs_instance_conf
 
     def preload_robot(
         self,
@@ -219,20 +215,6 @@ class RobotManager:
         Teleport the robot to a specific position and orientation.
         """
         self.robot.teleport(position, orientation)
-
-    def start_TMTC(self):
-        robot_name = self.robot.robot_name.replace("/","") 
-
-        if self.RM_conf.robot_controller == "pragyaan-controller":
-            from src.mission_specific.pragyaan.tmtc.pragyaan_controller import PragyaanController
-
-            self.TMTC = PragyaanController(self.yamcs_instance_conf, self.RM_conf.yamcs_tmtc, robot_name, self.robot_RG, self.robot)
-        elif self.RM_conf is None or self.RM_conf.robot_controller == "":
-            raise Exception("No robot controller was setup in yaml configurations.")
-        else: 
-            raise Exception("Settings for '" + str(self.RM_conf.robot_controller )  + "' robot controller are not specified.")
-
-        self.TMTC.start_streaming_data()
 
 class Robot:
     """

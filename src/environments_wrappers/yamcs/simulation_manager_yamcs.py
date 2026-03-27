@@ -71,12 +71,26 @@ class Yamcs_SimulationManager:
         self.EC.load()
 
         self.RM = RobotManager(cfg["environment"]["robots_settings"], 
-                               mode=SimulatorMode.YAMCS, 
-                               yamcs_instance_conf=cfg["mode"]["instance_conf"])
+                               mode=SimulatorMode.YAMCS)
         self._setup_terrain_manager()
         self._preload_robot()
+        self._start_TMTC()
         self.EC.add_robot_manager(self.RM)
         self._step_world_and_reset()
+
+    def _start_TMTC(self):
+        robot_name = self.RM.robot.robot_name.replace("/","") 
+        controller_name = self.RM.RM_conf.robot_controller
+
+        if controller_name == "pragyaan-controller":
+            from src.mission_specific.pragyaan.tmtc.pragyaan_controller import PragyaanController
+            self.TMTC = PragyaanController(self.cfg["mode"]["instance_conf"], self.RM.RM_conf.yamcs_tmtc, robot_name, self.RM.robot_RG, self.RM.robot)
+        elif controller_name == "":
+            raise Exception("No robot controller was setup in yaml configurations.")
+        else: 
+            raise Exception("Settings for '" + str(controller_name)  + "' robot controller are not specified.")
+
+        self.TMTC.start_streaming_data()
 
     def _get_environment_controller(self, environment_name:str):
         self.EC= None

@@ -181,8 +181,6 @@ class LargeScaleController(BaseEnv):
         """
 
         self.robotManager = robotManager
-        if self._mode == SimulatorMode.YAMCS:
-            self.robotManager.start_TMTC()
         self.pose_tracker = self.robotManager.robot.get_pose     # is later called as a function, thus now does not have ()
 
     # ==============================================================================

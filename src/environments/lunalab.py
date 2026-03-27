@@ -138,8 +138,6 @@ class LunalabController(BaseEnv):
         """
 
         self.robotManager = robotManager
-        if self._mode == SimulatorMode.YAMCS:
-            self.robotManager.start_TMTC()
 
     def get_lux_assets(self, prim: "Usd.Prim") -> List[Usd.Prim]:
         """
