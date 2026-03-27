@@ -11,7 +11,6 @@ import os
 import sys
 import msgspec
 import numpy as np
-import json
 
 from src.configurations.simulator_mode_enum import SimulatorMode
 from src.robots.robot import RobotManager
@@ -87,15 +86,17 @@ class Zenoh_RobotManager():
                 frame = self.RM.robots[robot_name].get_rgba_camera_view(self.resolution)
                 if frame.size!=0:
                     encoded = self.encode_image(frame)
-                    self.cams[robot_name].publish(encoded)
+                    
+                    ## TODO: add new publish_numpy() in omnilrs-artefacts 
+                    self.cams[robot_name]._pub.put(encoded)
 
     def encode_image(self, im):
-        encoded = ImageStruct.pack(im)
-        encoded = json.loads(msgspec.json.encode(encoded))
+        encoded = WireNDArray.pack(im)
+        encoded = msgspec.msgpack.encode(encoded)
         return encoded
 
-## TODO: move this ImageStruct to new publish_image() in omnilrs-artefacts 
-class ImageStruct(msgspec.Struct, array_like=True, kw_only=True):
+## TODO: move this WireNDArray to new publish_numpy() in omnilrs-artefacts 
+class WireNDArray(msgspec.Struct, array_like=True, kw_only=True):
     # ref: https://github.com/jcrist/msgspec/issues/732
     dtype: str
     shape: tuple[int, ...]
