@@ -80,6 +80,5 @@ msgspec = "*"
 [environments]
 default = { features = ["core", "isaac"] }
 yamcs = { features = ["core", "isaac", "yamcs"] }
-# yamcs-client is needed in zenoh and ros2 as well, because of an import in robot.py so "yamcs" feature is added
-zenoh = { features = ["core", "isaac", "zenoh", "yamcs"] }
-ros2 = { features = ["core", "isaac", "ros2", "yamcs"] }
+zenoh = { features = ["core", "isaac", "zenoh"] }
+ros2 = { features = ["core", "isaac", "ros2"] }
