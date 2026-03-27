@@ -35,8 +35,6 @@ class PragyaanTransmitter:
     def transmit_wheels_joint_angles(self):
         angles = self._robot.get_wheels_joint_angles()
         self._transform_joint_angles(angles)
-
-        print(angles)
         self._yamcs_processor.set_parameter_value(self._parameters_conf["motor_encoder"], angles)
 
     def _transform_joint_angles(self, angles):
@@ -53,7 +51,7 @@ class PragyaanTransmitter:
         obc_state = self._robot.subsystems.get_obc_state()
         self._robot.subsystems.set_obc_state(obc_state)
 
-        obc_metrics = self._robot.subsystems.get_obc_metrics()
+        obc_metrics = self._robot.subsystems.get_obc_status()
 
         self._yamcs_processor.set_parameter_value(self._parameters_conf["obc_cpu_usage"], int(obc_metrics["cpu_usage"]))
         self._yamcs_processor.set_parameter_value(self._parameters_conf["obc_ram_usage"], int(obc_metrics["ram_usage"]))
@@ -62,7 +60,7 @@ class PragyaanTransmitter:
         
     def transmit_radio_signal_info(self):
         robot_position, orientation = self._robots_RG[str(self._robot_name)].get_pose_of_base_link()
-        rssi = self._robot.subsystems.get_rssi(robot_position)
+        rssi = self._robot.subsystems.get_radio_status(robot_position)
         self._yamcs_processor.set_parameter_value(self._parameters_conf["rssi"], int(rssi))
 
     def transmit_thermal_info(self, interval_s):

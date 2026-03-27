@@ -1,11 +1,3 @@
-from __future__ import annotations
-
-from src.subsystems.robot_physics_models.robot_physics_model import RobotPhysicsModel
-"""
-The above import MUST be at the top of the file, can not be preceded by anything or it crashes
-SyntaxError: from __future__ imports must occur at the beginning of the file
-"""
-
 __author__ = "Louis Burtz, Aleksa Stanivuk"
 __copyright__ = "Copyright 2025-26, JAOPS"
 __license__ = "BSD-3-Clause"
@@ -20,6 +12,7 @@ import math
 import random
 from dataclasses import dataclass
 from typing import Dict, List, Sequence, Tuple
+from src.subsystems.robot_physics_models.robot_physics_model import RobotPhysicsModel
 
 BEST_RSSI: float = -90.0  # Strongest signal observed at zero separation.
 WORST_RSSI: float = -30.0  # Weakest accepted reading at reference distance.

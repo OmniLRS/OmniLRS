@@ -10,9 +10,10 @@ import random
 import time
 
 from src.subsystems.robot_enums import ObcState
+from src.subsystems.robot_physics_models.robot_physics_model import RobotPhysicsModel
 
 
-class ObcMetricsModel():
+class ObcMetricsModel(RobotPhysicsModel):
     """ Simulates OBC metrics like CPU, RAM, Disk usage and Uptime.
     Usage: 
         Instantiate the class, then call input_obc_state() to share the state of the OBC with this simulator.
@@ -21,9 +22,17 @@ class ObcMetricsModel():
     def __init__(self):
         self._state = ObcState.IDLE
         self._boot_ts = time.monotonic()
+    
+    def initialize(self):
+        pass
 
-    def get_obc_metrics(self, state:ObcState):
+    def set_inputs(self, state:ObcState):
         self._input_obc_state(state)
+
+    def compute(self):
+        pass
+
+    def get_outputs(self):
         return {
             "cpu_usage": self._get_obc_cpu_usage(),
             "ram_usage": self._get_obc_ram_usage(),

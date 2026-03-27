@@ -6,7 +6,6 @@ __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
 __status__ = "development"
 
-from abc import ABC, abstractmethod
 from enum import Enum, StrEnum
 from typing import Tuple
 
@@ -33,7 +32,7 @@ class Device():
         name:str,
         power_state:PowerState = PowerState.OFF,
         health_state:HealthState = HealthState.NOMINAL,
-        current_draw:Tuple[float, float] = (0.0, 0.0), # (min, max)
+        current_draw:Tuple[float, float] = (0.0, 0.0), # (off, nominal)
     ) -> None:
         self._name = name
         self._power_state = power_state

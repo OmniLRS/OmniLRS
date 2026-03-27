@@ -31,7 +31,6 @@ from scipy.spatial.transform import Rotation as R
 
 from src.configurations.simulator_mode_enum import SimulatorMode
 from src.environments.utils import transform_orientation_from_xyzw_into_xyz, transform_orientation_into_xyz
-from src.use_cases.pragyaan.subsystems.pragyaan_subsystems_handler import PragyaanSubsystemsHandler
 from src.subsystems.robot_subsystems_handler import RobotSubsystemsHandler
 # from src.robots.subsystems_manager import RobotSubsystemsManager
 from src.tmtc.yamcs_TMTC import YamcsTMTC
@@ -68,7 +67,7 @@ class RobotManager:
         createXform(self.stage, self.robots_root)
         self.robots: Dict[str, Robot] = {}   # TODO for v4: if only 1 robot, no need for a dict, just an instance
         self.robots_RG: Dict[str, RobotRigidGroup] = {} # TODO for v4: if only 1 robot, no need for a dict, just an instance
-        self.TMTC: YamcsTMTC
+        self.TMTC: YamcsTMTC # TODO for v4: yamcs stuff only if mode is yamcs
         self.num_robots = 0 # TODO for v4: if only 1 robot, no need for a counter
         self.yamcs_instance_conf = yamcs_instance_conf
 
@@ -256,7 +255,7 @@ class RobotManager:
         robot_name = list(self.robots.keys())[0].replace("/","") # assumes only 1 robot for workshop use
 
         if self.RM_conf.robot_controller == "pragyaan-controller":
-            from src.use_cases.pragyaan.tmtc.pragyaan_controller import PragyaanController
+            from src.mission_specific.pragyaan.tmtc.pragyaan_controller import PragyaanController
 
             self.TMTC = PragyaanController(self.yamcs_instance_conf, self.RM_conf.yamcs_tmtc, robot_name, self.robots_RG, self.robots["/" + robot_name])
         elif self.RM_conf is None or self.RM_conf.robot_controller == "":
@@ -329,6 +328,7 @@ class Robot:
         robot_name = self.robot_name.strip("/")
         
         if robot_name == "pragyaan":
+            from src.mission_specific.pragyaan.subsystems.pragyaan_subsystems_handler import PragyaanSubsystemsHandler
             self.subsystems = PragyaanSubsystemsHandler(pos_relative_to_prim)
 
     def get_root_rigid_body_path(self) -> None:
