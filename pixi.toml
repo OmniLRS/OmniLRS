@@ -68,7 +68,18 @@ yamcs-client = "*"
 [feature.yamcs.tasks]
 yamcs = "python run.py mode=Yamcs environment=lunaryard_40m_workshop"
 
+# zenoh-specific deps, tasks in feature "zenoh"
+[feature.zenoh.pypi-dependencies]
+eclipse-zenoh = "*"
+asyncio_for_robotics = "*"
+msgspec = "*"
+
+[feature.zenoh.tasks]
+# zenoh = "python run.py mode=Zenoh"
+
 [environments]
-default = { features = ["core", "isaac"], solve-group = "isaac" }
-yamcs = { features = ["core", "isaac", "yamcs"], solve-group = "isaac" }
-ros2 = { features = ["core", "isaac", "ros2", "yamcs"], solve-group = "isaac" } # yamcs-client is needed, because of an import in robot.py so "yamcs" feature is added
+default = { features = ["core", "isaac"] }
+yamcs = { features = ["core", "isaac", "yamcs"] }
+# yamcs-client is needed in zenoh and ros2 as well, because of an import in robot.py so "yamcs" feature is added
+zenoh = { features = ["core", "isaac", "zenoh", "yamcs"] }
+ros2 = { features = ["core", "isaac", "ros2", "yamcs"] }
