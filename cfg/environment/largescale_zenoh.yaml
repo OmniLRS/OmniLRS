@@ -1,0 +1,111 @@
+name: LargeScale
+seed: 42
+physics_dt: 0.01666 # 60 Hz
+rendering_dt: 0.0333 # 30 Hz
+enforce_realtime: true
+
+# Stage settings, only edit if you know what you are doing.
+large_scale_terrain:
+  hr_dem_generate_craters: True
+  starting_position: [2800,-2200]
+  crater_gen_densities: [0.025, 0.05, 0.5]
+  crater_gen_radius: [[1.5, 2.5], [0.75, 1.5], [0.25, 0.5]]
+  rock_gen_cfgs:
+    -
+      rock_sampler_cfg: 
+        block_size: 50
+        seed: 42
+        rock_dist_cfg:
+          position_distribution:
+            name: "thomas_point_process"
+            parent_density: 0.04
+            child_density: 100
+            sigma: 3.0
+            seed: 42
+          scale_distribution:
+            name: "uniform"
+            min: 0.02
+            max: 0.05
+            seed: 43
+      rock_assets_folder: "assets/USD_Assets/rocks/small_rocks"
+      instancer_name: "very_small_rock_instancer"
+      seed: 46
+      block_span: 1
+      add_colliders: False
+      texture_name: "seaside_rock_2k"
+      texture_path: "assets/Textures/seaside_rock_2k.mdl"
+    -
+      rock_sampler_cfg:
+        block_size: 50
+        seed: 42
+        rock_dist_cfg:
+          position_distribution:
+            name: "thomas_point_process"
+            parent_density: 0.01
+            child_density: 25
+            sigma: 3.0
+            seed: 44
+          scale_distribution:
+            name: "uniform"
+            min: 0.05
+            max: 0.2
+            seed: 45
+      rock_assets_folder: "assets/USD_Assets/rocks/small_rocks"
+      instancer_name: "small_rock_instancer"
+      seed: 47
+      block_span: 2
+      add_colliders: True
+      collider_mode: "none"
+      texture_name: "seaside_rock_2k"
+      texture_path: "assets/Textures/seaside_rock_2k.mdl"
+
+stellar_engine_settings:
+  start_date:
+    year: 2024
+    month: 5
+    day: 21
+    hour: 5
+    minute: 1
+  time_scale: 1.0
+  update_interval: 600
+
+sun_settings:
+  intensity: 1750.0
+  angle: 0.53
+  diffuse_multiplier: 1.0
+  specular_multiplier: 1.0
+  color: [1.0, 1.0, 1.0]
+  temperature: 6500.0
+  azimuth: 180.0
+  elevation: 45.0
+
+robots_settings:
+  uses_nucleus: False
+  max_robots: 5
+  robots_root: "/Robots"
+  parameters:
+    -
+      robot_name: husky
+      usd_path: assets/USD_Assets/robots/ros2_husky_PhysX_vlp16.usd
+      pose:
+        position: [0.0, 0.0, 0.5]
+        orientation: [1, 0, 0, 0]
+      domain_id: 0
+      target_links: ["front_left_wheel_link", "front_right_wheel_link", "rear_left_wheel_link", "rear_right_wheel_link"]
+      base_link: "base_link" # core link used to determine the position of the robot
+      camera:
+        name: "cam_front"
+        prim_path: "/Robots/husky/d455/RSD455/Camera_OmniVision_OV9782_Color"
+        resolutions: 
+          low: [320, 240]
+          high: [1440, 1080]
+          
+    # -
+    #   robot_name: jackal
+    #   usd_path: assets/USD_Assets/robots/ros2_jackal_PhysX_vlp16_stereo.usd
+    #   # usd_path: assets/USD_Assets/robots/ros2_jackal_PhysX_vlp16.usd
+    #   pose:
+    #     position: [5.0, 5.0, 0.5]
+    #     orientation: [1, 0, 0, 0]
+    #   domain_id: 0
+    #   target_links: ["front_left_wheel_link", "front_right_wheel_link", "rear_left_wheel_link", "rear_right_wheel_link"]
