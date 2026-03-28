@@ -1,7 +1,4 @@
 [submodule "WorldBuilders"]
 	path = WorldBuilders
-	url = https://github.com/art-e-fact/WorldBuilders.git
+	url = https://github.com/AntoineRichard/WorldBuilders.git
 	branch = main
-[submodule "external/omnilrs_artefacts"]
-	path = external/omnilrs_artefacts
-	url = git@github.com:art-e-fact/OmniLRS-artefacts.git
