@@ -8,9 +8,26 @@ __status__ = "development"
 
 import random
 import time
+from enum import Enum
 
-from src.subsystems.robot_enums import CpuUsageLevel, RamUsageLevel, DiskUsageLevel, ObcState
+from src.subsystems.robot_enums import ObcState
 from src.subsystems.robot_physics_models.robot_physics_model import RobotPhysicsModel
+
+
+class CpuUsageLevel(float, Enum):
+    LOW = 25.0
+    MEDIUM = 50.0
+    HIGH = 75.0
+
+class RamUsageLevel(float, Enum):
+    LOW = 40.0
+    MEDIUM = 50.0
+    HIGH = 60.0
+
+class DiskUsageLevel(float, Enum):
+    LOW = 10.0
+    MEDIUM = 25.0
+    HIGH = 75.0
 
 
 class ObcMetricsModel(RobotPhysicsModel):

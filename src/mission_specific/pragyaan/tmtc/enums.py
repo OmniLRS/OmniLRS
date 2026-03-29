@@ -1,12 +1,12 @@
-from enum import Enum
+from enum import StrEnum
 
-class PragyaanYamcsArguments(Enum):
+class PragyaanYamcsArguments(StrEnum):
     DEPLOY = "DEPLOY"
     STOW = "STOW"
     START = "START"
     STOP = "STOP"
 
-class PragyaanCameraResolution(Enum):
+class PragyaanCameraResolution(StrEnum):
     # depend on the yaml conf file
     LOW = "low"
     HIGH = "high"

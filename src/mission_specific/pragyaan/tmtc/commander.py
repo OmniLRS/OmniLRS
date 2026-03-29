@@ -8,7 +8,7 @@ __status__ = "development"
 
 from src.mission_specific.pragyaan.tmtc.enums import PragyaanCameraResolution, PragyaanYamcsArguments
 from src.subsystems.device import CommonDevice, HealthState, PowerState
-from src.subsystems.robot_enums import GoNogoState, ObcState, SolarPanelState
+from src.mission_specific.pragyaan.subsystems.pragyaan_robot_enums import GoNogoState, ObcState, SolarPanelState
 from src.tmtc.intervals_handler import IntervalName
 from src.mission_specific.pragyaan.tmtc.camera_handler import CameraViewType, PragyaanCameraHandler
 from src.mission_specific.pragyaan.tmtc.payload_handler import PayloadHandler

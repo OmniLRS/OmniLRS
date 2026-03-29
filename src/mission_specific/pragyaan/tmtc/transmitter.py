@@ -11,7 +11,7 @@ import math
 import omni.kit.app
 from src.subsystems.device import CommonDevice, PowerState
 from src.robots.robot import Robot
-from src.subsystems.robot_enums import SolarPanelState
+from src.mission_specific.pragyaan.subsystems.pragyaan_robot_enums import SolarPanelState
 from src.tmtc.intervals_handler import IntervalName
 
 class PragyaanTransmitter:
