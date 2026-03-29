@@ -32,6 +32,8 @@ class Zenoh_LunalabManager(Zenoh_BaseManager):
 
         self.LC = LunalabController(mode=SimulatorMode.ZENOH, **environment_cfg)
         self.LC.load()
+
+        self.rocks_randomize_keyexpr = zenoh_cfg["misc"]["rocks"]["randomize"]["keyexpr"]
         self.trigger_reset = False
     
     def periodic_update(self, dt: float) -> None:
@@ -41,7 +43,7 @@ class Zenoh_LunalabManager(Zenoh_BaseManager):
         Args:
             dt (float): Time step.
         """
-        self.modifications.append([self.LC.update_stellar_engine, {"dt": dt}])
+        pass
 
     def reset(self) -> None:
         """
