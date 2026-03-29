@@ -28,7 +28,7 @@ class Zenoh_LunalabManager(Zenoh_BaseManager):
             **kwargs: Additional arguments
         """
 
-        super().__init__(environment_cfg=environment_cfg, **kwargs)
+        super().__init__(environment_cfg=environment_cfg, zenoh_cfg=zenoh_cfg, **kwargs)
 
         self.LC = LunalabController(mode=SimulatorMode.ZENOH, **environment_cfg)
         self.LC.load()

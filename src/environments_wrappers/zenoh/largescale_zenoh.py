@@ -35,7 +35,7 @@ class Zenoh_LargeScaleManager(Zenoh_BaseManager):
             **kwargs: Additional arguments.
         """
 
-        super().__init__(environment_cfg=environment_cfg, **kwargs)
+        super().__init__(environment_cfg=environment_cfg, zenoh_cfg=zenoh_cfg, **kwargs)
         
         self.LC = LargeScaleController(
             mode=SimulatorMode.ZENOH, **environment_cfg,
