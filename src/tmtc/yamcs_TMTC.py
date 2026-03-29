@@ -15,6 +15,10 @@ import omni.kit.app
 from abc import ABC, abstractmethod
 from src.tmtc.obc_handler import ObcHandler
 
+import logging
+
+logging.getLogger("urllib3").setLevel(logging.WARNING)
+
 class YamcsTMTC(ABC):
     """
     YamcsTMTC is implementation of Yamcs-TMTC framework. 
