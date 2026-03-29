@@ -22,9 +22,10 @@ class CommandsHandler():
     def __init__(self, yamcs_processor, yamcs_instance_conf, mdb_files:list[str]):
         self._yamcs_processor = yamcs_processor
         self._commands_catalogue = {}
-        self._registry = MdbParsingService.load_mdb_registry(mdb_files) #TODO: change loading of the mdb files through .yaml
+        self._registry = MdbParsingService.load_mdb_registry(mdb_files) 
         self._config_tc_socket(yamcs_instance_conf)
         self._start_tc_listener()
+
 
     def _config_tc_socket(self, yamcs_instance_conf):
         self._tc_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
