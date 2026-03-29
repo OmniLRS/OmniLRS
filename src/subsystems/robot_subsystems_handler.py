@@ -51,6 +51,7 @@ class RobotSubsystemsHandler(ABC):
 
     def get_obc_status(self):
         self._obc_metrics_model.set_inputs(self._obc_state)
+        self._obc_metrics_model.compute()
         return self._obc_metrics_model.get_outputs()
 
     @abstractmethod

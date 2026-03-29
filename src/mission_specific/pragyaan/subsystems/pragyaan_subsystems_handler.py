@@ -10,6 +10,7 @@ from enum import StrEnum, Enum
 
 from src.environments.utils import get_moon_env_name
 from src.mission_specific.pragyaan.subsystems.neutron_spectrometer_model import NeutronSpectrometerModel
+from src.mission_specific.pragyaan.subsystems.pragyaan_obc_metrics_model import PragyaanObcMetricsModel
 from src.mission_specific.pragyaan.subsystems.pragyaan_thermal_model import PragyaanThermalModel
 from src.subsystems.robot_physics_models.radio_model import RadioModel
 import math
@@ -39,7 +40,8 @@ class PragyaanSubsystemsHandler(RobotSubsystemsHandler):
 
     def __init__(self, pos_relative_to_prim):
         thermal_model = PragyaanThermalModel()
-        super().__init__(thermal_model=thermal_model)
+        obc_metrics_model = PragyaanObcMetricsModel()
+        super().__init__(thermal_model=thermal_model, obc_metrics_model=obc_metrics_model)
         self._setup_devices()
         self._setup_power_model()
         self.LANDER_PATH = pos_relative_to_prim

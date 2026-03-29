@@ -8,11 +8,13 @@ __status__ = "development"
 
 from enum import Enum
 
+# Pragyaan-specific overrides of robot enums (see src/subsystems/robot_enums.py for defaults).
+# Modify values here to tune Pragyaan's subsystem behavior.
+
 
 class GoNogoState(Enum):
     NOGO = 0
     GO = 1
-    # UNDEF = "Other"
 
 class ObcState(Enum):
     OFF = 0
