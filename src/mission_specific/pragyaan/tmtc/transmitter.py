@@ -16,22 +16,27 @@ from src.tmtc.intervals_handler import IntervalName
 
 class PragyaanTransmitter:
     """
-    This class 'transmits' the data from the simulation to the yamcs data structure. 
-    Functions as a reference implementation for the implementation of other rover transmitters.
+    Implementation of transmitter for the Pragyaan rover.
+    Functions as a reference implementation for the implementation of other rover transmitters`.
 
+    Transmitter contains methods specific to the Pragyaan rover. 
+    Functions implemented here are called by PragyaanController, and are mapped inside the start_streaming_data function.
+    
+    This class arranges the data from the simulation to the data structure expected by the transmit_func. 
+    (in this case, the transmit_func is provided by the YamcsTMTC class, and is used to transmit the data to Yamcs)
     
     """
 
     def __init__(
             self,
-            transmit_to_yamcs_func,
+            transmit_func,
             intervals_handler,
             robot, 
             robot_RG,
             robot_name,
             parameters_conf
     ):
-        self._transmit = transmit_to_yamcs_func
+        self._transmit = transmit_func
         self._robot:Robot = robot
         self._intervals_handler = intervals_handler
         self._parameters_conf = parameters_conf
