@@ -250,3 +250,176 @@ class PowerModel(RobotPhysicsModel):
         )
         voltage = self._battery_voltage()
         return power / voltage
+
+
+# ---------------------------------------------------------------------------
+# Below: standalone functions for unit-testing of the power model.
+# They enable the model to be tested in isolation, without needing to run the entire simulation
+# ---------------------------------------------------------------------------
+
+
+
+def _extract_current_samples(status: Mapping[str, Any]) -> Dict[str, float]:
+    currents: Dict[str, float] = {}
+    for key, value in status.items():
+        if "current" not in key:
+            continue
+        if key == "total_current_out_measured":
+            continue
+        if isinstance(value, MappingABC):
+            for subkey, subvalue in value.items():
+                currents[subkey] = float(subvalue)
+        elif isinstance(value, SequenceABC) and not isinstance(value, (str, bytes, bytearray)):
+            for idx, item in enumerate(value):
+                currents[f"{key}_{idx}"] = float(item)
+        else:
+            currents[key] = float(value)
+    return currents
+
+
+def run_power_profile_test(
+    on_duration: float = 800.0,
+    off_duration: float = 800.0,
+    dt: float = 1.0,
+) -> Tuple[
+    Sequence[float],
+    Sequence[float],
+    Sequence[float],
+    Sequence[float],
+    Dict[str, Sequence[float]],
+]:
+    model = PowerModel()
+
+    devices: dict[str, Device] = {}
+    devices[CommonDevice.OBC] = Device(CommonDevice.OBC, current_draw=(0.0, 7.5))
+    devices[CommonDevice.MOTOR_CONTROLLER] = Device(CommonDevice.MOTOR_CONTROLLER, current_draw=(0.0, 2.0))
+    devices["neutron_spectrometer"] = Device("neutron_spectrometer", current_draw=(0.0, 9.0))
+    devices["apxs"] = Device("apxs", current_draw=(0.0, 9.0))
+    devices["camera"] = Device("camera", current_draw=(0.0, 5.0))
+    devices[CommonDevice.RADIO] = Device(CommonDevice.RADIO, current_draw=(0.0, 5.0))
+    devices["eps"] = Device("eps", current_draw=(0.0, 1.0))
+
+    BATTERY_CAPACITY_WH = 60.0
+    SOLAR_PANEL_MAX_POWER = 30.0
+    MOTOR_COUNT = 6
+    MOTOR_POWER_W = 10.0
+
+    model.initialize(
+        battery_capacity_wh=BATTERY_CAPACITY_WH,
+        battery_charge_wh=BATTERY_CAPACITY_WH,
+        solar_panel_max_power=SOLAR_PANEL_MAX_POWER,
+        solar_panel_state=SolarPanelState.STOWED,
+        motor_count=MOTOR_COUNT,
+        motor_power_w=MOTOR_POWER_W,
+        devices=devices,
+    )
+
+    times = [0.0]
+    status = model.get_outputs()
+    percentages = [status["battery_percentage_measured"]]
+    voltages = [status["battery_voltage_measured"]]
+    solar_currents = [status["solar_input_current_measured"]]
+    current_series: Dict[str, list[float]] = {}
+    for label, value in _extract_current_samples(status).items():
+        current_series.setdefault(label, []).append(value)
+
+    SUN_DISTANCE = 1000.0
+    SUN_AZYMUTH_DEG = 65.0
+    SUN_POSITION = (
+        -SUN_DISTANCE * np.sin(np.pi * SUN_AZYMUTH_DEG / 180.0),
+        SUN_DISTANCE * np.cos(np.pi * SUN_AZYMUTH_DEG / 180.0),
+        10.0,
+    )
+    print(SUN_POSITION)
+
+    def simulate(
+        duration: float,
+        is_in_motor_state: bool,
+        sun_position: Tuple[float, float, float],
+        rover_yaw_deg: float,
+        solar_panel_state: SolarPanelState,
+    ) -> None:
+        steps = int(duration / dt)
+        rover_pos = (0.0, 0.0, 0.0)
+
+        for _ in range(steps):
+            # set inputs
+            model.set_inputs(rover_pos, sun_position, rover_yaw_deg, solar_panel_state, is_in_motor_state)
+            # perform computation
+            model.compute(dt)
+            # get results
+            status = model.get_outputs()
+
+            # for the plots
+            times.append(times[-1] + dt)
+            percentages.append(status["battery_percentage_measured"])
+            voltages.append(status["battery_voltage_measured"])
+            solar_currents.append(status["solar_input_current_measured"])
+            for label, value in _extract_current_samples(status).items():
+                series = current_series.setdefault(label, [0.0] * (len(times) - 1))
+                while len(series) < len(times) - 1:
+                    series.append(0.0)
+                series.append(value)
+            for label, series in current_series.items():
+                if len(series) < len(times):
+                    series.append(series[-1] if series else 0.0)
+
+    # phase 1: all motors on, solar panel stowed
+    simulate(on_duration, True, SUN_POSITION, 65.0, SolarPanelState.STOWED)
+    # phase 2: motors off, solar panel deployed
+    simulate(off_duration, False, SUN_POSITION, -42.0, SolarPanelState.DEPLOYED)
+    return times, percentages, voltages, solar_currents, current_series
+
+
+def _plot_battery_profile(
+    times: Sequence[float],
+    percentages: Sequence[float],
+    voltages: Sequence[float],
+    solar_currents: Sequence[float],
+    current_series: Mapping[str, Sequence[float]],
+    filename: str = "test/outputs/power_model_battery.png",
+) -> str:
+    from matplotlib import pyplot as plt  # type: ignore[import]
+
+    fig, (ax_top, ax_mid, ax_bottom) = plt.subplots(3, 1, figsize=(10, 10), sharex=True)
+
+    line_soc, = ax_top.plot(times, percentages, label="Battery %", color="tab:blue")
+    ax_top.set_ylabel("Battery [%]", color="tab:blue")
+    ax_top.set_ylim(0, 100)
+    ax_top.tick_params(axis="y", labelcolor="tab:blue")
+
+    ax_voltage = ax_top.twinx()
+    line_voltage, = ax_voltage.plot(times, voltages, label="Voltage", color="tab:red")
+    ax_voltage.set_ylabel("Voltage [V]", color="tab:red")
+    ax_voltage.tick_params(axis="y", labelcolor="tab:red")
+    ax_top.legend([line_soc, line_voltage], ["Battery %", "Voltage"], loc="upper right")
+
+    line_solar, = ax_mid.plot(times, solar_currents, label="Solar Current", color="tab:green")
+    ax_mid.set_ylabel("Solar Current [A]")
+    ax_mid.grid(True, alpha=0.3)
+    ax_mid.legend(loc="upper right")
+
+    for label, values in current_series.items():
+        ax_bottom.plot(times, values, label=label)
+    ax_bottom.set_xlabel("Time [s]")
+    ax_bottom.set_ylabel("Currents [A]")
+    ax_bottom.grid(True, alpha=0.3)
+    ax_bottom.legend(loc="upper right", ncol=2)
+
+    fig.suptitle("Battery, Solar Input, and Currents Over Time")
+    fig.tight_layout()
+    fig.savefig(filename)
+    plt.close(fig)
+    return filename
+
+
+def main() -> None:
+    import os
+    os.makedirs("test/outputs", exist_ok=True)
+    times, percentages, voltages, solar_currents, current_series = run_power_profile_test()
+    output = _plot_battery_profile(times, percentages, voltages, solar_currents, current_series)
+    print(f"Power model plot saved to {output}")
+
+
+if __name__ == "__main__":
+    main()

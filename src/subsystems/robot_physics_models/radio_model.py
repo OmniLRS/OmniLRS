@@ -66,6 +66,11 @@ class RadioModel(RobotPhysicsModel):
 
 		return math.sqrt(dx * dx + dy * dy + dz * dz)
 
+# ---------------------------------------------------------------------------
+# Below: standalone functions for unit-testing of the radio model.
+# They enable the model to be tested in isolation, without needing to run the entire simulation
+# ---------------------------------------------------------------------------
+
 def sweep_rssi(
 	steps: int = 200,
 	rover_end: Tuple[float, float, float] = (50.0, 100.0, 0.0),
@@ -73,7 +78,8 @@ def sweep_rssi(
 ) -> Tuple[Sequence[float], Sequence[float]]:
 	"""Walk the rover linearly from origin to *rover_end* and track RSSI."""
 
-	model = RadioModel(lander_position=lander_position)
+	model = RadioModel()
+	model._lander_position = lander_position
 	distances: List[float] = []
 	rssi_values: List[float] = []
 
@@ -82,14 +88,14 @@ def sweep_rssi(
 		x = rover_end[0] * alpha
 		y = rover_end[1] * alpha
 		z = rover_end[2] * alpha
-		model.rover_position = (x, y, z)
-		distances.append(model.distance())
-		rssi_values.append(model.rssi())
+		model.set_inputs(lander_position, (x, y, z))
+		distances.append(model._distance())
+		rssi_values.append(model.get_rssi())
 
 	return distances, rssi_values
 
 
-def plot_rssi_profile(distances: Sequence[float], rssi: Sequence[float], filename: str = "radio_model_rssi.png") -> str:
+def plot_rssi_profile(distances: Sequence[float], rssi: Sequence[float], filename: str = "test/outputs/radio_model_rssi.png") -> str:
 	"""Plot RSSI vs. distance."""
 
 	from matplotlib import pyplot as plt  # type: ignore[import]
@@ -108,6 +114,8 @@ def plot_rssi_profile(distances: Sequence[float], rssi: Sequence[float], filenam
 
 
 def main() -> None:
+	import os
+	os.makedirs("test/outputs", exist_ok=True)
 	distances, rssi_values = sweep_rssi()
 	output = plot_rssi_profile(distances, rssi_values)
 	print(f"Radio model plot saved to {output}")

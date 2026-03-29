@@ -159,3 +159,78 @@ class ThermalModel(RobotPhysicsModel):
             )
             for face in self._faces
         }
+
+
+# ---------------------------------------------------------------------------
+# Below: standalone functions for unit-testing of the thermal model.
+# They enable the model to be tested in isolation, without needing to run the entire simulation
+# ---------------------------------------------------------------------------
+
+
+def run_single_sun_test(total_time: float = 600.0, dt: float = 1.0) -> tuple[Sequence[float], Dict[str, Sequence[float]]]:
+    """Simulate +X sun exposure and return timelines for plotting/tests."""
+
+    steps = int(total_time / dt)
+    model = ThermalModel()
+    times = [0.0]
+    initial_snapshot = model.temperatures()
+    temps = {name: [value] for name, value in initial_snapshot.items()}
+
+    rover_pos = (0.0, 0.0, 0.0)
+    ROVER_YAW_DEG = -58.0
+
+    SUN_DISTANCE = 1000.  # m
+    SUN_AZYMUTH_DEG = 65.0
+    SUN_POSITION = (
+        -SUN_DISTANCE * np.sin(np.pi * SUN_AZYMUTH_DEG / 180.0),
+        SUN_DISTANCE * np.cos(np.pi * SUN_AZYMUTH_DEG / 180.0),
+        10.0,
+    )
+    print(SUN_POSITION)
+
+    for idx in range(steps):
+        # set inputs
+        model.set_inputs(rover_pos, SUN_POSITION, ROVER_YAW_DEG)
+        # perform computation
+        model.compute(dt)
+        # get results
+        t = model.temperatures()
+
+        # for the plots
+        times.append((idx + 1) * dt)
+        for name, value in t.items():
+            temps[name].append(value)
+
+    return times, temps
+
+
+def _plot_temperature_profile(times: Sequence[float], temps: Mapping[str, Sequence[float]], filename: str = "test/outputs/thermal_model_demo.png") -> str:
+    """Plot node temperatures versus time; returns output filename."""
+
+    from matplotlib import pyplot as plt
+
+    plt.figure(figsize=(10, 6))
+    for name, series in temps.items():
+        plt.plot(times, series, label=name)
+
+    plt.xlabel("Time [s]")
+    plt.ylabel("Temperature [°C]")
+    plt.title("Thermal Model Response")
+    plt.legend()
+    plt.grid(True, alpha=0.3)
+    plt.tight_layout()
+    plt.savefig(filename)
+    plt.close()
+    return filename
+
+
+def main() -> None:
+    import os
+    os.makedirs("test/outputs", exist_ok=True)
+    times, temps = run_single_sun_test(total_time=600.0, dt=1.0)
+    output = _plot_temperature_profile(times, temps)
+    print(f"Thermal model plot saved to {output}")
+
+
+if __name__ == "__main__":
+    main()
