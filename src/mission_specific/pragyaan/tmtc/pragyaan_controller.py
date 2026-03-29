@@ -58,7 +58,6 @@ class PragyaanController(YamcsTMTC):
             self._obc_handler, 
             self._intervals_handler
         )
-        self.setup_command_callbacks(yamcs_conf["commands"])
 
     "Performs mapping between yamcs commands and functions that affect the simulation and rover's state"
     def setup_command_callbacks(self, commands_conf):
