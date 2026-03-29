@@ -92,9 +92,9 @@ class PragyaanCommander:
         self._robot.subsystems.set_device_power_state(electronics, new_state)
 
         if electronics == CommonDevice.CAMERA:
-            self._set_activity_of_camera_streaming("START") if new_state == PowerState.ON else self._set_activity_of_camera_streaming("STOP")
+            self.set_activity_of_camera_streaming("START") if new_state == PowerState.ON else self.set_activity_of_camera_streaming("STOP")
         elif electronics == CommonDevice.NEUTRON_SPECTROMETER:
-            self._set_activity_of_neutron_streaming(new_state)
+            self.set_activity_of_neutron_streaming(new_state)
             pass
         elif electronics == CommonDevice.MOTOR_CONTROLLER:
             if (new_state == PowerState.OFF):
