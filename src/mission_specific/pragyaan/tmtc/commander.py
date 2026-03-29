@@ -8,7 +8,7 @@ __status__ = "development"
 
 from src.mission_specific.pragyaan.tmtc.enums import PragyaanCameraResolution, PragyaanYamcsArguments
 from src.subsystems.device import CommonDevice, HealthState, PowerState
-from src.subsystems.robot_enums import GoNogoState, ObcState, SolarPanelState
+from src.mission_specific.pragyaan.subsystems.pragyaan_robot_enums import GoNogoState, ObcState, SolarPanelState
 from src.tmtc.intervals_handler import IntervalName
 from src.mission_specific.pragyaan.tmtc.camera_handler import CameraViewType, PragyaanCameraHandler
 from src.mission_specific.pragyaan.tmtc.payload_handler import PayloadHandler
@@ -22,6 +22,9 @@ class PragyaanCommander:
 
     Commander contains methods specific to the Pragyaan rover. 
     Functions implemented here are called by PragyaanController, and are mapped inside setup_command_callbacks function.
+    
+    This class encodes the logic behind the execution of the received commands specific to the Pragyaan rover.
+        For example, in case of receiving command for high res camera capture, the commander checks if the camera is powered on, and only then executes the command by calling the appropriate function in the camera handler.
     """
     def __init__(self,
         robot,
@@ -89,9 +92,9 @@ class PragyaanCommander:
         self._robot.subsystems.set_device_power_state(electronics, new_state)
 
         if electronics == CommonDevice.CAMERA:
-            self._set_activity_of_camera_streaming("START") if new_state == PowerState.ON else self._set_activity_of_camera_streaming("STOP")
+            self.set_activity_of_camera_streaming("START") if new_state == PowerState.ON else self.set_activity_of_camera_streaming("STOP")
         elif electronics == CommonDevice.NEUTRON_SPECTROMETER:
-            self._set_activity_of_neutron_streaming(new_state)
+            self.set_activity_of_neutron_streaming(new_state)
             pass
         elif electronics == CommonDevice.MOTOR_CONTROLLER:
             if (new_state == PowerState.OFF):

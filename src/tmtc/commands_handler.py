@@ -50,7 +50,7 @@ class CommandsHandler():
             except socket.timeout:
                 now = time.time()
                 if now - last_heartbeat >= self.HEARTBEAT_EVERY_SEC:
-                    print("Waiting for TC on", self._tc_socket.getsockname())
+                    print("Heartbeat: waiting for TC on", self._tc_socket.getsockname())
                     last_heartbeat = now
                 continue
 

@@ -95,7 +95,6 @@ Please use the following citations if you use `OmniLRS` in your work.
 │   ├── configurations
 │   ├── environments
 │   ├── environments_wrappers
-│   │   ├── ros1
 │   │   ├── ros2
 │   │   └── sdg
 │   ├── labeling

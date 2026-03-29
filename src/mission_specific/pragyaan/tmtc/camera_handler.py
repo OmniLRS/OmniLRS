@@ -6,7 +6,7 @@ __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
 __status__ = "development"
 
-from enum import Enum
+from enum import StrEnum
 from src.environments.monitoring_cameras_manager import MonitoringCamerasManager
 from src.tmtc.yamcs_TMTC import ImagesHandler
 import omni.kit.app
@@ -14,7 +14,7 @@ import numpy as np
 from omni.isaac.sensor import Camera
 from PIL import Image
 
-class CameraViewType(Enum):
+class CameraViewType(StrEnum):
     RGBA = "RGBA"
     RGB = "RGB" # only for monitoring, as is more light weight
     DEPTH = "DEPTH"

@@ -8,15 +8,13 @@ __status__ = "development"
 
 from enum import IntEnum
 
-# IntEnum is used instead of Enum so that mission-specific submodules (e.g. pragyaan_robot_enums)
-# can define their own enum classes with the same members and still compare equal across boundaries.
-# Plain Enum instances from different classes are never equal, even with identical names/values.
+# Pragyaan-specific overrides of robot enums (see src/subsystems/robot_enums.py for defaults).
+# Modify values here to tune Pragyaan's subsystem behavior.
 
 
 class GoNogoState(IntEnum):
     NOGO = 0
     GO = 1
-    # UNDEF = -1
 
 class ObcState(IntEnum):
     OFF = 0

@@ -166,18 +166,15 @@ terrain_manager:
   resolution: ${..lunaryard_settings.resolution}
 
 robots_settings:
-  uses_nucleus: False
-  max_robots: 5
   robots_root: "/Robots"
   parameters:
-    -
-      robot_name: husky
-      usd_path: assets/USD_Assets/robots/ros2_husky_PhysX_vlp16.usd
-      pose:
-        position: [40.0, 40.0, 0.3]
-        orientation: [1, 0, 0, 0]
-      domain_id: 0
-      target_links: ["front_left_wheel_link", "front_right_wheel_link", "rear_left_wheel_link", "rear_right_wheel_link"]
-      base_link: "base_link" # core link used to determine the position of the robot
+    robot_name: husky
+    usd_path: assets/USD_Assets/robots/ros2_husky_PhysX_vlp16.usd
+    pose:
+      position: [40.0, 40.0, 0.3]
+      orientation: [1, 0, 0, 0]
+    domain_id: 0
+    target_links: ["front_left_wheel_link", "front_right_wheel_link", "rear_left_wheel_link", "rear_right_wheel_link"]
+    base_link: "base_link" # core link used to determine the position of the robot
 
 

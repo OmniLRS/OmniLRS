@@ -6,14 +6,14 @@ __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
 __status__ = "development"
 
-from enum import Enum, StrEnum
+from enum import IntEnum, StrEnum
 from typing import Tuple
 
 class PowerState(StrEnum):
     OFF = "OFF"
     ON = "ON"
 
-class HealthState(Enum):
+class HealthState(IntEnum):
     NOMINAL = 0
     FAULT = 1
 

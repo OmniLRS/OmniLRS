@@ -11,31 +11,36 @@ import math
 import omni.kit.app
 from src.subsystems.device import CommonDevice, PowerState
 from src.robots.robot import Robot
-from src.subsystems.robot_enums import SolarPanelState
+from src.mission_specific.pragyaan.subsystems.pragyaan_robot_enums import SolarPanelState
 from src.tmtc.intervals_handler import IntervalName
 
 class PragyaanTransmitter:
     """
-    This class 'transmits' the data from the simulation to the yamcs data structure. 
-    Functions as a reference implementation for the implementation of other rover transmitters.
+    Implementation of transmitter for the Pragyaan rover.
+    Functions as a reference implementation for the implementation of other rover transmitters`.
 
+    Transmitter contains methods specific to the Pragyaan rover. 
+    Functions implemented here are called by PragyaanController, and are mapped inside the start_streaming_data function.
+    
+    This class arranges the data from the simulation to the data structure expected by the transmit_func. 
+    (in this case, the transmit_func is provided by the YamcsTMTC class, and is used to transmit the data to Yamcs)
     
     """
 
     def __init__(
             self,
-            transmit_to_yamcs_func,
+            transmit_func,
             intervals_handler,
             robot, 
-            robots_RG,
+            robot_RG,
             robot_name,
             parameters_conf
     ):
-        self._transmit = transmit_to_yamcs_func
+        self._transmit = transmit_func
         self._robot:Robot = robot
         self._intervals_handler = intervals_handler
         self._parameters_conf = parameters_conf
-        self._robots_RG = robots_RG
+        self._robot_RG = robot_RG
         self._robot_name = robot_name
 
     def transmit_wheels_joint_angles(self):
@@ -53,10 +58,6 @@ class PragyaanTransmitter:
         self._transmit(self._parameters_conf["solar_panel_state"], state.value)
 
     def transmit_obc_metrics(self):
-        #TODO should be fixed based on the new updates - no need to get the state, and update it, just get the metrics and divide based on the keys
-        obc_state = self._robot.subsystems.get_obc_state()
-        self._robot.subsystems.set_obc_state(obc_state)
-
         obc_metrics = self._robot.subsystems.get_obc_status()
 
         self._transmit(self._parameters_conf["obc_cpu_usage"], int(obc_metrics["cpu_usage"]))
@@ -65,12 +66,12 @@ class PragyaanTransmitter:
         self._transmit(self._parameters_conf["obc_uptime"], obc_metrics["uptime"])
         
     def transmit_radio_signal_info(self):
-        robot_position, orientation = self._robots_RG[str(self._robot_name)].get_pose_of_base_link()
+        robot_position, orientation = self._robot_RG.get_pose_of_base_link()
         rssi = self._robot.subsystems.get_radio_status(robot_position)
         self._transmit(self._parameters_conf["rssi"], int(rssi))
 
     def transmit_thermal_info(self, interval_s):
-        robot_position, _ = self._robots_RG[str(self._robot_name)].get_pose_of_base_link()
+        robot_position, _ = self._robot_RG.get_pose_of_base_link()
         _, _, imu_orientation = self._robot.get_imu_readings()
         robot_yaw_deg = imu_orientation["yaw"]
         temperatures = self._robot.subsystems.get_thermal_status(
@@ -87,7 +88,7 @@ class PragyaanTransmitter:
         self._transmit(self._parameters_conf["temperature_elec_box"], temperatures['interior'])
 
     def transmit_power_info(self, interval_s):
-        robot_position, _ = self._robots_RG[str(self._robot_name)].get_pose_of_base_link()
+        robot_position, _ = self._robot_RG.get_pose_of_base_link()
         _, _, imu_orientation = self._robot.get_imu_readings()
         robot_yaw_deg = imu_orientation['yaw']
         obc_state = self._robot.subsystems.get_obc_state()
@@ -134,7 +135,7 @@ class PragyaanTransmitter:
         self._transmit(self._parameters_conf["go_nogo"], go_nogo_state)
 
     def transmit_pose_of_base_link(self):
-        position, orientation = self._robots_RG[str(self._robot_name)].get_pose_of_base_link()
+        position, orientation = self._robot_RG.get_pose_of_base_link()
         lander_pos = self._robot.subsystems.get_lander_position()
         position = position - lander_pos
         # euler_orient = transform_orientation_into_xyz(orientation)
