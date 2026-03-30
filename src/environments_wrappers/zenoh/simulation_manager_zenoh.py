@@ -262,6 +262,7 @@ class Zenoh_SimulationManager:
 
         if self.ZenohRobotManager.transports_inited:
             self.ZenohRobotManager.publish_cameras()
+            self.ZenohRobotManager.publish_telemetry()
 
         self.rate.sleep()
 

@@ -6,9 +6,10 @@ __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
 __status__ = "development"
 
-from typing import List, Tuple
 import os
 import sys
+from typing import List, Tuple
+
 import msgspec
 import numpy as np
 
@@ -17,10 +18,14 @@ from src.robots.robot import RobotManager
 
 module_path = os.path.abspath(f"{os.path.dirname(__file__)}/../../../external/omnilrs_artefacts/src")
 sys.path.append(module_path)
+from omnilrs_artefacts.control.articulation_controller import \
+    ArticulationController
+from omnilrs_artefacts.telemetry.joint_force_bridge import JointForceBridge
+from omnilrs_artefacts.transport.zenoh_cmd import ZenohCommandReceiver
 from omnilrs_artefacts.transport.zenoh_pub import ZenohPubTransport
 
 
-class Zenoh_RobotManager():
+class Zenoh_RobotManager:
     """
     Zenoh wrapper that manages the robots.
     """
@@ -32,33 +37,45 @@ class Zenoh_RobotManager():
 
         self.transports = []
         self.cams = {}
+        self.joint_bridges ={}
+
         for robot in RM_conf["parameters"]:
             ### TODO: each robot should have multiple cameras
             cam_pub = ZenohPubTransport(
-                keyexpr = f'{zenoh_conf["sensors"]["camera"]["base_keyexpr"]}/{robot["camera"]["name"]}',
-                json_compact = zenoh_conf["sensors"]["camera"]["json_compact"],
+                keyexpr=f'{zenoh_conf["sensors"]["camera"]["base_keyexpr"]}/{robot["camera"]["name"]}',
+                json_compact=zenoh_conf["sensors"]["camera"]["json_compact"],
             )
             self.cams[f'/{robot["robot_name"]}'] = cam_pub
             self.transports.append(cam_pub)
-        
+
+
+        for robot in RM_conf["parameters"]:
+            robot_name = f'/{robot["robot_name"]}'
+            robot_path = self.RM.robots_root + robot_name
+            self.joint_bridges[robot_name] = JointForceBridge(
+                transports=[
+                    {"type": "zenoh", "keyexpr": "husky/joint_telemetry"},
+                ],
+                robot_root_prim=robot_path
+            )
+
         self.resolution = zenoh_conf["sensors"]["camera"]["resolution"]
 
         self.transports_inited = False
-        
-    
+
     def reset(self) -> None:
         """
         Resets the robots to their initial state.
         """
         self.clear_modifications()
         self.reset_robots()
-    
+
     def clear_modifications(self) -> None:
         """
         Clears the list of modifications to be applied to the lab.
         """
         self.modifications: List[Tuple[callable, dict]] = []
-    
+
     def apply_modifications(self) -> None:
         """
         Applies the list of modifications to the lab.
@@ -84,10 +101,10 @@ class Zenoh_RobotManager():
         if self.transports_inited:
             for i, robot_name in enumerate(self.RM.robots.keys()):
                 frame = self.RM.robots[robot_name].get_rgba_camera_view(self.resolution)
-                if frame.size!=0:
+                if frame.size != 0:
                     encoded = self.encode_image(frame)
 
-                    ## TODO: add new publish_numpy() in omnilrs-artefacts 
+                    ## TODO: add new publish_numpy() in omnilrs-artefacts
                     self.cams[robot_name]._pub.put(encoded)
 
     def encode_image(self, im):
@@ -95,7 +112,13 @@ class Zenoh_RobotManager():
         encoded = msgspec.msgpack.encode(encoded)
         return encoded
 
-## TODO: move this WireNDArray to new publish_numpy() in omnilrs-artefacts 
+    def publish_telemetry(self) -> None:
+        for robot in self.RM.robots.values():
+            self.joint_bridges[robot.robot_name].maybe_initialize()
+            self.joint_bridges[robot.robot_name].update()
+
+
+## TODO: move this WireNDArray to new publish_numpy() in omnilrs-artefacts
 class WireNDArray(msgspec.Struct, array_like=True, kw_only=True):
     # ref: https://github.com/jcrist/msgspec/issues/732
     dtype: str
@@ -105,6 +128,7 @@ class WireNDArray(msgspec.Struct, array_like=True, kw_only=True):
     @classmethod
     def pack(cls, arr: np.ndarray):
         return cls(data=arr.data, dtype=str(arr.dtype), shape=arr.shape)
-    
+
     def unpack(self) -> np.ndarray:
         return np.frombuffer(self.data, dtype=self.dtype).reshape(self.shape)
+
