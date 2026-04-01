@@ -336,8 +336,23 @@ robots_settings:
       target_links: ["front_left_wheel_link", "front_right_wheel_link", "rear_left_wheel_link", "rear_right_wheel_link"]
       base_link: "base_link" # core link used to determine the position of the robot
       camera:
-        name: "cam_front"
-        prim_path: "/Robots/husky/d455/RSD455/Camera_OmniVision_OV9782_Color"
-        resolutions: 
-          low: [320, 240]
-          high: [1440, 1080]
+        -
+          name: "cam_color"
+          prim_path: "/Robots/husky/d455/RSD455/Camera_OmniVision_OV9782_Color"
+          resolutions: 
+            low: [320, 240]
+            high: [1440, 1080]
+        
+        -
+          name: "cam_left"
+          prim_path: "/Robots/husky/d455/RSD455/Camera_OmniVision_OV9782_Left"
+          resolutions: 
+            low: [320, 240]
+            high: [1440, 1080]
+        
+        -
+          name: "cam_right"
+          prim_path: "/Robots/husky/d455/RSD455/Camera_OmniVision_OV9782_Right"
+          resolutions: 
+            low: [320, 240]
+            high: [1440, 1080]

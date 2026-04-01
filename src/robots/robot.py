@@ -9,7 +9,7 @@ __status__ = "development"
 import math
 import threading
 import time
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, TYPE_CHECKING
 from scipy.spatial.transform import Rotation as R
 import numpy as np
 import warnings
@@ -32,8 +32,10 @@ from scipy.spatial.transform import Rotation as R
 from src.configurations.simulator_mode_enum import SimulatorMode
 from src.environments.utils import transform_orientation_from_xyzw_into_xyz, transform_orientation_into_xyz
 from src.robots.subsystems_manager import RobotSubsystemsManager
-from src.tmtc.yamcs_TMTC import YamcsTMTC
 from omni.isaac.sensor import Camera
+
+if TYPE_CHECKING:
+    from src.tmtc.yamcs_TMTC import YamcsTMTC
 
 from isaacsim.sensors.physics import _sensor
 
@@ -64,7 +66,7 @@ class RobotManager:
         createXform(self.stage, self.robots_root)
         self.robots: Dict[str, Robot] = {}
         self.robots_RG: Dict[str, RobotRigidGroup] = {}
-        self.TMTC: YamcsTMTC
+        self.TMTC: "YamcsTMTC | None" = None
         self.num_robots = 0
         self.yamcs_instance_conf = yamcs_instance_conf
 
@@ -382,24 +384,56 @@ class Robot:
     def _initialize_cameras(self) -> None:
         # Camera is a wrapper, therefore it just wraps around the camera instance if it already exists
         # otherwise it creates a new camera instance on the provided prim_path
-        if "resolutions" not in self._camera_conf:
-            return
         
-        resolutions = list(self._camera_conf.get("resolutions").keys())
+        if isinstance(self._camera_conf, list):
+            self._cameras = []
+            self._depth_cameras = []
 
-        for res in resolutions:
-            self._cameras[res] = Camera(self._camera_conf["prim_path"], 
-                                resolution=(self._camera_conf["resolutions"][res][0], self._camera_conf["resolutions"][res][1]))
-            self._cameras[res].initialize()
+            for camera_conf in self._camera_conf:
+                if "resolutions" not in camera_conf:
+                    continue
 
-        for res in resolutions:
-            self._depth_cameras[res] = Camera(self._camera_conf["prim_path"], 
-                                resolution=(self._camera_conf["resolutions"][res][0], self._camera_conf["resolutions"][res][1]))
-            self._depth_cameras[res].initialize()
-            self._depth_cameras[res].add_distance_to_image_plane_to_frame()
+                camera = {}
+                depth_camera = {}
+
+                resolutions = list(camera_conf.get("resolutions").keys())
+
+                for res in resolutions:
+                    camera[res] = Camera(camera_conf["prim_path"],
+                                        resolution=(camera_conf["resolutions"][res][0], camera_conf["resolutions"][res][1]))
+                    camera[res].initialize()
+
+                for res in resolutions:
+                    depth_camera[res] = Camera(camera_conf["prim_path"],
+                                        resolution=(camera_conf["resolutions"][res][0], camera_conf["resolutions"][res][1]))
+                    depth_camera[res].initialize()
+                    depth_camera[res].add_distance_to_image_plane_to_frame()
+
+                self._cameras.append(camera)
+                self._depth_cameras.append(depth_camera)
+                
+        else:
+            if "resolutions" not in self._camera_conf:
+                return
+            
+            resolutions = list(self._camera_conf.get("resolutions").keys())
+
+            for res in resolutions:
+                self._cameras[res] = Camera(self._camera_conf["prim_path"], 
+                                    resolution=(self._camera_conf["resolutions"][res][0], self._camera_conf["resolutions"][res][1]))
+                self._cameras[res].initialize()
+
+            for res in resolutions:
+                self._depth_cameras[res] = Camera(self._camera_conf["prim_path"], 
+                                    resolution=(self._camera_conf["resolutions"][res][0], self._camera_conf["resolutions"][res][1]))
+                self._depth_cameras[res].initialize()
+                self._depth_cameras[res].add_distance_to_image_plane_to_frame()
 
     def get_rgba_camera_view(self, resolution) -> np.ndarray:
         return self._cameras[resolution].get_rgba()
+    
+    def get_rgba_camera_view_by_idx(self, idx, resolution) -> np.ndarray:
+        return self._cameras[idx][resolution].get_rgba()
     
     def get_depth_camera_view(self, resolution) -> np.ndarray:
         """Returns depth image in meters as (H, W) float32 array."""
