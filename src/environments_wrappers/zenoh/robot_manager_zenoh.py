@@ -6,9 +6,11 @@ __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
 __status__ = "development"
 
-from typing import List, Tuple
 import os
 import sys
+import time
+from typing import Dict, List, Tuple
+
 import msgspec
 import numpy as np
 
@@ -17,6 +19,10 @@ from src.robots.robot import RobotManager
 
 module_path = os.path.abspath(f"{os.path.dirname(__file__)}/../../../external/omnilrs_artefacts/src")
 sys.path.append(module_path)
+from omnilrs_artefacts.control.articulation_controller import \
+    ArticulationController
+from omnilrs_artefacts.telemetry.joint_force_bridge import JointForceBridge
+from omnilrs_artefacts.transport.zenoh_cmd import ZenohCommandReceiver
 from omnilrs_artefacts.transport.zenoh_pub import ZenohPubTransport
 
 
@@ -32,24 +38,55 @@ class Zenoh_RobotManager():
 
         self.transports = []
         self.cams = {}
+        self.joint_bridges = {}
+        self.controllers = {}
+        self.cmd_receivers = {}
+        self.gts = {}
+
         for robot in RM_conf["parameters"]:
+            robot_name = f'{robot["robot_name"]}'
+            robot_path = self.RM.robots_root + "/" + robot_name
             self.cams[f'/{robot["robot_name"]}'] = []
+
             if isinstance(robot["camera"], list):
                 for i, camera in enumerate(robot["camera"]):
                     cam_pub = ZenohPubTransport(
                         keyexpr = f'{zenoh_conf["sensors"]["camera"]["base_keyexpr"]}/{robot["camera"][i]["name"]}',
                         json_compact = zenoh_conf["sensors"]["camera"]["json_compact"],
                     )
-                    self.cams[f'/{robot["robot_name"]}'].append(cam_pub)
+                    self.cams[f'/{robot_name}'].append(cam_pub)
                     self.transports.append(cam_pub)
             else:
                 cam_pub = ZenohPubTransport(
                     keyexpr = f'{zenoh_conf["sensors"]["camera"]["base_keyexpr"]}/{robot["camera"]["name"]}',
                     json_compact = zenoh_conf["sensors"]["camera"]["json_compact"],
                 )
-                self.cams[f'/{robot["robot_name"]}'].append(cam_pub)
+                self.cams[f'/{robot_name}'].append(cam_pub)
                 self.transports.append(cam_pub)
 
+            gt_pub = ZenohPubTransport(
+                keyexpr=f"{robot_name}/gt_pose",
+                json_compact=False,)
+
+            self.joint_bridges[robot_name] = JointForceBridge(
+                transports=[
+                    {"type": "zenoh", "keyexpr": f"{robot_name}/joint_telemetry"},
+                ],
+                robot_root_prim=robot_path,
+            )
+
+            self.controllers[robot_name] = ArticulationController(
+                prim_path=robot_path,
+            )
+
+            self.cmd_receivers[robot_name] = ZenohCommandReceiver(
+                controller=self.controllers[robot_name],
+                keyexpr=f"{robot_name}/joint_cmd",
+            )
+
+            self.gts[robot_name] = gt_pub
+
+            self.transports.append(gt_pub)
 
         self.resolution = zenoh_conf["sensors"]["camera"]["resolution"]
 
@@ -110,7 +147,40 @@ class Zenoh_RobotManager():
         encoded = msgspec.msgpack.encode(encoded)
         return encoded
 
-## TODO: move this WireNDArray to new publish_numpy() in omnilrs-artefacts 
+    def publish_telemetry(self) -> None:
+        for robot in self.RM.robots.values():
+            self.joint_bridges[robot.robot_name.strip("/")].maybe_initialize()
+            self.joint_bridges[robot.robot_name.strip("/")].update()
+
+    def update_controller(self) -> None:
+        for robot in self.RM.robots.values():
+            self.controllers[robot.robot_name.strip("/")].maybe_initialize()
+            self.controllers[robot.robot_name.strip("/")].update()
+
+    def update_cmd(self) -> None:
+        for robot in self.RM.robots.values():
+            self.cmd_receivers[robot.robot_name.strip("/")].start()
+
+    def publish_gt(self) -> None:
+        if self.transports_inited:
+            for robot in self.RM.robots.values():
+                pos, quat = robot.get_pose()
+
+                gt = {
+                    "stamp_s": time.time(),
+                    "robot_name": robot.robot_name,
+                    "position": [float(pos[0]), float(pos[1]), float(pos[2])],
+                    "orientation_xyzw": [
+                        float(quat[0]),
+                        float(quat[1]),
+                        float(quat[2]),
+                        float(quat[3]),
+                    ],
+                }
+
+                self.gts[robot.robot_name.strip("/")].publish(gt)
+
+## TODO: move this WireNDArray to new publish_numpy() in omnilrs-artefacts
 class WireNDArray(msgspec.Struct, array_like=True, kw_only=True):
     # ref: https://github.com/jcrist/msgspec/issues/732
     dtype: str

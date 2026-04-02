@@ -6,27 +6,27 @@ __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
 __status__ = "development"
 
-from isaacsim import SimulationApp
-from isaacsim.core.api.world import World
-import omni
+import asyncio
+import logging
 import time
 from typing import Union
-import logging
-import asyncio
 
+import omni
 from asyncio_for_robotics.zenoh.sub import Sub
+from isaacsim import SimulationApp
+from isaacsim.core.api.world import World
 
-from src.environments.utils import set_moon_env_name
-from src.physics.physics_scene import PhysicsSceneManager
 from src.configurations.procedural_terrain_confs import TerrainManagerConf
+from src.environments.utils import set_moon_env_name
+from src.environments_wrappers.zenoh.largescale_zenoh import Zenoh_LargeScaleManager
 from src.environments_wrappers.zenoh.lunalab_zenoh import Zenoh_LunalabManager
 from src.environments_wrappers.zenoh.lunaryard_zenoh import Zenoh_LunaryardManager
-from src.environments_wrappers.zenoh.largescale_zenoh import Zenoh_LargeScaleManager
 from src.environments_wrappers.zenoh.robot_manager_zenoh import Zenoh_RobotManager
-
+from src.physics.physics_scene import PhysicsSceneManager
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(format="%(asctime)s %(message)s", datefmt="%m/%d/%Y %I:%M:%S %p")
+
 
 class Rate:
     """
@@ -50,16 +50,16 @@ class Rate:
                     self.dt = 1.0 / freq
             else:
                 self.dt = dt
-            
+
             self.last_check = time.time()
-    
+
     def reset(self) -> None:
         """
         Resets the timer.
         """
         if not self.is_disabled:
             self.last_check = time.time()
-    
+
     def sleep(self) -> None:
         """
         Wait for a minimum amount of time between two iterations of a loop.
@@ -92,7 +92,7 @@ class Zenoh_LabManagerFactory:
         """
 
         self._lab_managers[name] = lab_manager
-    
+
     def __call__(
         self,
         cfg: dict,
@@ -103,7 +103,7 @@ class Zenoh_LabManagerFactory:
 
         Args:
             cfg (dict): Configuration dictionary.
-        
+
         Returns:
             Union[Zenoh_LunalabManager, Zenoh_LunaryardManager, Zenoh_LargeScaleManager]: Instance of the lab manager
         """
@@ -114,10 +114,12 @@ class Zenoh_LabManagerFactory:
             **kwargs,
         )
 
+
 Zenoh_LMF = Zenoh_LabManagerFactory()
 Zenoh_LMF.register("Lunalab", Zenoh_LunalabManager)
 Zenoh_LMF.register("Lunaryard", Zenoh_LunaryardManager)
 Zenoh_LMF.register("LargeScale", Zenoh_LargeScaleManager)
+
 
 class Zenoh_SimulationManager:
     """
@@ -167,8 +169,7 @@ class Zenoh_SimulationManager:
 
         # Lab manager thread
         self.ZenohLabManager = Zenoh_LMF(
-            cfg, is_simulation_alive=self.simulation_app.is_running,
-            close_simulation=self.simulation_app.close
+            cfg, is_simulation_alive=self.simulation_app.is_running, close_simulation=self.simulation_app.close
         )
 
         self.ZenohRobotManager = Zenoh_RobotManager(cfg["environment"]["robots_settings"], cfg["mode"])
@@ -194,15 +195,14 @@ class Zenoh_SimulationManager:
             for t in self.ZenohRobotManager.transports:
                 t.start()
             self.ZenohRobotManager.transports_inited = True
-                
+
         self.ZenohLabManager.LC.add_robot_manager(self.ZenohRobotManager.RM)
 
         for i in range(100):
             self.world.step(render=True)
         self.world.reset()
-    
-        self.entry_task_is_done = False
 
+        self.entry_task_is_done = False
 
     async def _run_zenoh_sub(self):
         """
@@ -210,7 +210,7 @@ class Zenoh_SimulationManager:
         in the main simulation loop.
         """
         sub = Sub(self.ZenohLabManager.rocks_randomize_keyexpr)
-        
+
         try:
             async for sample in sub.listen_reliable():
                 self.ZenohLabManager.randomize_rocks(sample)
@@ -231,15 +231,15 @@ class Zenoh_SimulationManager:
         # Note: cannot use asyncio.create_task() here because it will complain "RuntimeError: no running event loop" -> had to use older api
         if self._entry_task is None:
             self._entry_task = asyncio.ensure_future(self._entry_point())
-  
+
         if self._entry_task.done():
             exc = self._entry_task.exception()
             if exc:
                 logger.error(f"Exception: {repr(exc)}")
 
             # notify
-            self.entry_task_is_done = True 
-        
+            self.entry_task_is_done = True
+
         self.rate.reset()
 
         if self.world.is_playing():
@@ -263,6 +263,9 @@ class Zenoh_SimulationManager:
         if self.ZenohRobotManager.transports_inited:
             self.ZenohRobotManager.publish_cameras()
             self.ZenohRobotManager.publish_telemetry()
+            self.ZenohRobotManager.publish_gt()
+            self.ZenohRobotManager.update_controller()
+            self.ZenohRobotManager.update_cmd()
 
         self.rate.sleep()
 
@@ -291,6 +294,15 @@ class Zenoh_SimulationManager:
 
         for t in self.ZenohRobotManager.transports:
             t.close()
+
+        for bridge in self.ZenohRobotManager.joint_bridges.values():
+            bridge.close()
+
+        for controller in self.ZenohRobotManager.controllers.values():
+            controller.close()
+
+        for receiver in self.ZenohRobotManager.cmd_receivers.values():
+            receiver.close()
 
         self.world.stop()
         self.timeline.stop()
