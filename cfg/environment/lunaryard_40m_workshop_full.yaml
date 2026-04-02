@@ -130,7 +130,7 @@ terrain_manager:
       min_elevation: -0.5
       z_scale: 0.8
       seed: ${....seed}
-    
+
     deformation_engine:
       enable: False
       delay: 2.0
@@ -144,7 +144,7 @@ terrain_manager:
         x_deform_offset: 0.0
         y_deform_offset: 0.0
         deform_decay_ratio: 0.01
-      boundary_distribution: 
+      boundary_distribution:
         distribution: trapezoidal
         angle_of_repose: 1.047 #pi/3
       depth_distribution:
@@ -183,7 +183,7 @@ robots_settings:
     #     orientation: [0, 0, 0, 1]
     #   domain_id: 0
     #   target_links: ["left_front_wheel_link", "left_rear_wheel_link", "right_front_wheel_link", "right_rear_wheel_link"]
-    
+
     # -
     #   robot_name: jackal
     #   usd_path: assets/USD_Assets/robots/jackal.usd
@@ -195,7 +195,7 @@ robots_settings:
 
     -
       robot_name: pragyaan
-      usd_path: assets/USD_Assets/robots/pragyaan/nograph_pragyaan.usd  
+      usd_path: assets/USD_Assets/robots/pragyaan/nograph_pragyaan.usd
       pose:
         position: [26., 16.6, 0.8]
         orientation: [0., 0., 0.70711, 0.70711]
@@ -218,7 +218,7 @@ robots_settings:
         right: ["wheel_fr", "wheel_mr", "wheel_br"]
       camera:
         prim_path: "/Robots/pragyaan/Body/body_main/depth_cam"
-        resolutions: 
+        resolutions:
           low: [320, 240]
           high: [1440, 1080]
       imu_sensor_path: "/Robots/pragyaan/base_link/Imu_Sensor"
@@ -232,7 +232,7 @@ robots_settings:
       prim_path: "/StaticAssets/lander/Lander/Cam_Right/Lander_Camera"
       resolution: [1440, 1080]
     images:
-      no_data_image_path: "/workspace/omnilrs/assets/images/no_data_grafana.png"
+      no_data_image_path: "${oc.env:OMNILRS_ROOT,.}/assets/images/no_data_grafana.png"
       buckets:
         - name: "images_streaming"
           path: "/Rover/camera/images_streaming"
@@ -247,7 +247,7 @@ robots_settings:
     payload:
       apxs:
         resolution: [1440, 1080]
-        samples_dir: "/workspace/omnilrs/assets/images/"
+        samples_dir: "${oc.env:OMNILRS_ROOT,.}/assets/images/"
         no_data: "APXS_nodata.png"
         measurement: "APXS_measurement.png"
         bucket:
