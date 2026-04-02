@@ -1,5 +1,9 @@
 [workspace]
-authors = ["Shamistan Karimov <ahresgg@gmail.com>"]
+authors = [
+    "Shamistan Karimov <ahresgg@gmail.com>",
+    "Elian Neppel",
+    "Bach Nguyen",
+]
 channels = ["conda-forge"]
 name = "OmniLRS"
 platforms = ["linux-64"]
