@@ -9,10 +9,6 @@ __status__ = "development"
 from typing import List, Tuple
 
 ### temporary until omnilrs_artefacts is public through pip install
-import os
-import sys
-module_path = os.path.abspath(f"{os.path.dirname(__file__)}/../../../external/omnilrs_artefacts/src")
-sys.path.append(module_path)
 from omnilrs_artefacts.transport.zenoh_pub import ZenohPubTransport
 
 
