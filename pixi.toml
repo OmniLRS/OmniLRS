@@ -44,7 +44,7 @@ OmniLRS = { path = ".", editable = true }
 
 [feature.core.activation.env]
 OMNILRS_ROOT = "${PIXI_PROJECT_ROOT}"
-LD_LIBRARY_PATH="$CONDA_PREFIX/lib:$LD_LIBRARY_PATH"
+LD_LIBRARY_PATH = "$CONDA_PREFIX/lib:$LD_LIBRARY_PATH"
 
 # isaacsim-specific deps, tasks, env variables in feature "isaac"
 [feature.isaac.dependencies]
