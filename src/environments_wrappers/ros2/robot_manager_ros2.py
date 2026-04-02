@@ -8,13 +8,12 @@ __status__ = "development"
 
 from typing import List, Tuple
 
+from geometry_msgs.msg import PoseStamped
 from pxr import Gf
+from rclpy.node import Node
+from std_msgs.msg import Empty, String
 
 from src.configurations.simulator_mode_enum import SimulatorMode
-from std_msgs.msg import String, Empty
-from geometry_msgs.msg import PoseStamped
-from rclpy.node import Node
-
 from src.robots.robot import RobotManager
 
 
@@ -25,7 +24,7 @@ class ROS_RobotManager(Node):
 
     def __init__(self, RM_conf: dict) -> None:
         super().__init__("Robot_spawn_manager_node")
-        self.RM = RobotManager(RM_conf, mode=SimulatorMode.ROS2) 
+        self.RM = RobotManager(RM_conf, mode=SimulatorMode.ROS2)
         self.create_subscription(PoseStamped, "/OmniLRS/Robots/Spawn", self.spawn_robot, 1)
         self.create_subscription(PoseStamped, "/OmniLRS/Robots/Teleport", self.teleport_robot, 1)
         self.create_subscription(String, "/OmniLRS/Robots/Reset", self.reset_robot, 1)

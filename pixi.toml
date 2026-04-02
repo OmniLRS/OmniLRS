@@ -13,6 +13,9 @@ description = "Pixi environments for OmniLRS with Isaac Sim 5 and manager-specif
 [system-requirements]
 libc = { family = "glibc", version = "2.35" }
 
+[tasks]
+download_omnilrs_artefacts = "git clone git@github.com:ssf-thku/OmniLRS-artefacts.git -b CI-work omnilrs_artefacts"
+
 [pypi-options]
 index-url = "https://pypi.org/simple"
 extra-index-urls = ["https://pypi.nvidia.com"]
@@ -35,6 +38,8 @@ gdown = "*"
 em = "*"
 lark = "*"
 pandas = "*"
+# omnilrs_artefacts = {path = "omnilrs_artefacts", editable=true} # use this when you download the repo manually
+omnilrs_artefacts = {git = "ssh://git@github.com/ssf-thku/OmniLRS-artefacts.git", rev="1c6cae781d614d6264466cd4f33057e5a5caf13f"}
 OmniLRS = { path = ".", editable = true }
 
 [feature.core.activation.env]
