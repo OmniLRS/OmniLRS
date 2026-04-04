@@ -8,15 +8,7 @@ __status__ = "development"
 
 from typing import List, Tuple
 
-try:
-    import omnilrs_artefacts
-except ImportError:
-    import os
-    import sys
-    ### temporary until omnilrs_artefacts is public through pip install
-    module_path = os.path.abspath(f"{os.path.dirname(__file__)}/../../../external/omnilrs_artefacts/src")
-    sys.path.append(module_path)
-
+### temporary until omnilrs_artefacts is public through pip install
 from omnilrs_artefacts.transport.zenoh_pub import ZenohPubTransport
 
 

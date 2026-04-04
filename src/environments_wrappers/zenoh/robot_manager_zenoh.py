@@ -40,58 +40,53 @@ class Zenoh_RobotManager:
 
         self.modifications: List[Tuple[Callable, dict]] = []
 
-        self.transports = []
-        self.cams = {}
-        self.joint_bridges = {}
-        self.controllers = {}
-        self.cmd_receivers = {}
-        self.gts = {}
+        self.transports: List[ZenohPubTransport] = []
+        self.cams = []
 
-        for robot in RM_conf["parameters"]:
-            robot_name = f'{robot["robot_name"]}'
-            robot_path = self.RM.robots_root + "/" + robot_name
-            self.cams[f'/{robot["robot_name"]}'] = []
+        robot = RM_conf["parameters"]
 
-            if isinstance(robot["camera"], list):
-                for i, camera in enumerate(robot["camera"]):
-                    cam_pub = ZenohPubTransport(
-                        keyexpr=f'{zenoh_conf["sensors"]["camera"]["base_keyexpr"]}/{robot["camera"][i]["name"]}',
-                        json_compact=zenoh_conf["sensors"]["camera"]["json_compact"],
-                    )
-                    self.cams[f"/{robot_name}"].append(cam_pub)
-                    self.transports.append(cam_pub)
-            else:
+        robot_name = f'{robot["robot_name"]}'
+        robot_path = self.RM.robots_root + "/" + robot_name
+
+        if isinstance(robot["camera"], list):
+            for i, camera in enumerate(robot["camera"]):
                 cam_pub = ZenohPubTransport(
-                    keyexpr=f'{zenoh_conf["sensors"]["camera"]["base_keyexpr"]}/{robot["camera"]["name"]}',
+                    keyexpr=f'{zenoh_conf["sensors"]["camera"]["base_keyexpr"]}/{robot["camera"][i]["name"]}',
                     json_compact=zenoh_conf["sensors"]["camera"]["json_compact"],
                 )
-                self.cams[f"/{robot_name}"].append(cam_pub)
+                self.cams.append(cam_pub)
                 self.transports.append(cam_pub)
-
-            gt_pub = ZenohPubTransport(
-                keyexpr=f"{robot_name}/gt_pose",
-                json_compact=False,
+        else:
+            cam_pub = ZenohPubTransport(
+                keyexpr=f'{zenoh_conf["sensors"]["camera"]["base_keyexpr"]}/{robot["camera"]["name"]}',
+                json_compact=zenoh_conf["sensors"]["camera"]["json_compact"],
             )
+            self.cams.append(cam_pub)
+            self.transports.append(cam_pub)
 
-            self.joint_bridges[robot_name] = JointForceBridge(
-                transports=[
-                    {"type": "zenoh", "keyexpr": f"{robot_name}/joint_telemetry"},
-                ],
-                robot_root_prim=robot_path,
-            )
+        gt_pub = ZenohPubTransport(
+            keyexpr=f"{robot_name}/gt_pose",
+            json_compact=False,
+        )
+        self.gt = gt_pub
+        self.transports.append(gt_pub)
 
-            self.controllers[robot_name] = ArticulationController(
-                prim_path=robot_path,
-            )
+        self.joint_bridge = JointForceBridge(
+            transports=[
+                {"type": "zenoh", "keyexpr": f"{robot_name}/joint_telemetry"},
+            ],
+            robot_root_prim=robot_path,
+        )
 
-            self.cmd_receivers[robot_name] = ZenohCommandReceiver(
-                controller=self.controllers[robot_name],
-                keyexpr=f"{robot_name}/joint_cmd",
-            )
+        self.controller = ArticulationController(
+            prim_path=robot_path,
+        )
 
-            self.gts[robot_name] = gt_pub
+        self.cmd_receiver = ZenohCommandReceiver(
+            controller=self.controller,
+            keyexpr=f"{robot_name}/joint_cmd",
+        )
 
-            self.transports.append(gt_pub)
 
         self.resolution = zenoh_conf["sensors"]["camera"]["resolution"]
 
@@ -133,18 +128,19 @@ class Zenoh_RobotManager:
         Publish current frame from each camera
         """
         if self.transports_inited:
-            for robot_name in self.RM.robots.keys():
-                for i, cam in enumerate(self.cams[f"{robot_name}"]):
-                    if len(self.cams[f"{robot_name}"]) > 1:
-                        frame = self.RM.robots[robot_name].get_rgba_camera_view_by_idx(i, self.resolution)
-                    else:
-                        frame = self.RM.robots[robot_name].get_rgba_camera_view(self.resolution)
+            robot_name = self.RM.robot.robot_name
 
-                    if frame.size != 0:
-                        encoded = self.encode_image(frame)
+            for i, cam in enumerate(self.cams):
+                if len(self.cams) > 1:
+                    frame = self.RM.robot.get_rgba_camera_view_by_idx(i, self.resolution)
+                else:
+                    frame = self.RM.robot.get_rgba_camera_view(self.resolution)
 
-                        ## TODO: add new publish_numpy() in omnilrs-artefacts
-                        cam._pub.put(encoded)
+                if frame.size != 0:
+                    encoded = self.encode_image(frame)
+
+                    ## TODO: add new publish_numpy() in omnilrs-artefacts
+                    cam._pub.put(encoded)
 
     def encode_image(self, im):
         encoded = WireNDArray.pack(im)
@@ -152,37 +148,33 @@ class Zenoh_RobotManager:
         return encoded
 
     def publish_telemetry(self) -> None:
-        for robot in self.RM.robots.values():
-            self.joint_bridges[robot.robot_name.strip("/")].maybe_initialize()
-            self.joint_bridges[robot.robot_name.strip("/")].update()
+        self.joint_bridge.maybe_initialize()
+        self.joint_bridge.update()
 
     def update_controller(self) -> None:
-        for robot in self.RM.robots.values():
-            self.controllers[robot.robot_name.strip("/")].maybe_initialize()
-            self.controllers[robot.robot_name.strip("/")].update()
+        self.controller.maybe_initialize()
+        self.controller.update()
 
     def update_cmd(self) -> None:
-        for robot in self.RM.robots.values():
-            self.cmd_receivers[robot.robot_name.strip("/")].start()
+        self.cmd_receiver.start()
 
     def publish_gt(self) -> None:
         if self.transports_inited:
-            for robot in self.RM.robots.values():
-                pos, quat = robot.get_pose()
+            pos, quat = self.RM.robot.get_pose()
 
-                gt = {
-                    "stamp_s": time.time(),
-                    "robot_name": robot.robot_name,
-                    "position": [float(pos[0]), float(pos[1]), float(pos[2])],
-                    "orientation_xyzw": [
-                        float(quat[0]),
-                        float(quat[1]),
-                        float(quat[2]),
-                        float(quat[3]),
-                    ],
-                }
+            gt = {
+                "stamp_s": time.time(),
+                "robot_name": self.RM.robot.robot_name,
+                "position": [float(pos[0]), float(pos[1]), float(pos[2])],
+                "orientation_xyzw": [
+                    float(quat[0]),
+                    float(quat[1]),
+                    float(quat[2]),
+                    float(quat[3]),
+                ],
+            }
 
-                self.gts[robot.robot_name.strip("/")].publish(gt)
+            self.gt.publish(gt)
 
 
 ## TODO: move this WireNDArray to new publish_numpy() in omnilrs-artefacts
