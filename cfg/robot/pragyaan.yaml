@@ -1,0 +1,35 @@
+# @package environment 
+# do not remove the above comment, it injects the below configs into environment configs
+
+robots_settings:
+  parameters:
+    robot_name: pragyaan
+    usd_path: assets/USD_Assets/robots/pragyaan/nograph_pragyaan.usd  
+    pose:
+      position: [26., 16.6, 0.8]
+      orientation: [0., 0., 0.70711, 0.70711]
+    domain_id: 0
+    target_links: [
+      "Mobility/Wheel_front_left",
+      "Mobility/Wheel_front_right",
+      "Mobility/Wheel_middle_left",
+      "Mobility/Wheel_middle_right",
+      "Mobility/Wheel_back_left",
+      "Mobility/Wheel_back_right"
+    ]
+    base_link: "base_link" # core link used to determine the position of the robot
+    dimensions:
+      width: 1.6 # m
+      length: 1.5
+    pos_relative_to_prim: "/StaticAssets/lander"
+    wheel_joints:
+      left: ["wheel_fl", "wheel_ml", "wheel_bl"]
+      right: ["wheel_fr", "wheel_mr", "wheel_br"]
+    camera:
+      prim_path: "/Robots/pragyaan/Body/body_main/depth_cam"
+      resolutions: 
+        low: [320, 240]
+        high: [1440, 1080]
+    imu_sensor_path: "/Robots/pragyaan/base_link/Imu_Sensor"
+    turn_speed_coef: 19
+    solar_panel_joint: "solarJoint"  # finds it within the main robot articulation

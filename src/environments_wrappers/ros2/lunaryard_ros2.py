@@ -34,8 +34,8 @@ class ROS_LunaryardManager(ROS_BaseManager):
         """
 
         super().__init__(environment_cfg=environment_cfg, **kwargs)
-        self.LC = LunaryardController(**environment_cfg)
-        self.LC.load()
+        self.EC = LunaryardController(**environment_cfg)
+        self.EC.load()
 
         self.create_subscription(Float32, "/OmniLRS/Sun/Intensity", self.set_sun_intensity, 1)
         self.create_subscription(Pose, "/OmniLRS/Sun/Pose", self.set_sun_pose, 1)
@@ -54,7 +54,7 @@ class ROS_LunaryardManager(ROS_BaseManager):
             dt (float): Time step.
         """
 
-        self.modifications.append([self.LC.update_stellar_engine, {"dt": dt}])
+        self.modifications.append([self.EC.update_stellar_engine, {"dt": dt}])
 
     def reset(self) -> None:
         """
@@ -70,7 +70,7 @@ class ROS_LunaryardManager(ROS_BaseManager):
             data (Float32): Intensity in percentage."""
 
         assert data.data >= 0, "The intensity must be greater than or equal to 0."
-        self.modifications.append([self.LC.set_sun_intensity, {"intensity": data.data}])
+        self.modifications.append([self.EC.set_sun_intensity, {"intensity": data.data}])
 
     def set_sun_color(self, data: ColorRGBA) -> None:
         """
@@ -82,7 +82,7 @@ class ROS_LunaryardManager(ROS_BaseManager):
         color = [data.r, data.g, data.b]
         for c in color:
             assert 0 <= c <= 1, "The color must be between 0 and 1."
-        self.modifications.append([self.LC.set_sun_color, {"color": color}])
+        self.modifications.append([self.EC.set_sun_color, {"color": color}])
 
     def set_sun_color_temperature(self, data: Float32) -> None:
         """
@@ -93,7 +93,7 @@ class ROS_LunaryardManager(ROS_BaseManager):
         """
 
         assert data.data >= 0, "The color temperature must be greater than or equal to 0"
-        self.modifications.append([self.LC.set_sun_color_temperature, {"temperature": data.data}])
+        self.modifications.append([self.EC.set_sun_color_temperature, {"temperature": data.data}])
 
     def set_sun_angle(self, data: Float32) -> None:
         """
@@ -104,7 +104,7 @@ class ROS_LunaryardManager(ROS_BaseManager):
         """
 
         assert data.data >= 0, "The angle must be greater than or equal to 0"
-        self.modifications.append([self.LC.set_sun_angle, {"angle": data.data}])
+        self.modifications.append([self.EC.set_sun_angle, {"angle": data.data}])
 
     def set_sun_pose(self, data: Pose) -> None:
         """
@@ -116,7 +116,7 @@ class ROS_LunaryardManager(ROS_BaseManager):
 
         position = [data.position.x, data.position.y, data.position.z]
         orientation = [data.orientation.w, data.orientation.y, data.orientation.z, data.orientation.x]
-        self.modifications.append([self.LC.set_sun_pose, {"position": position, "orientation": orientation}])
+        self.modifications.append([self.EC.set_sun_pose, {"position": position, "orientation": orientation}])
 
     def switch_terrain(self, data: Int32) -> None:
         """
@@ -126,7 +126,7 @@ class ROS_LunaryardManager(ROS_BaseManager):
             data (Int32): 0 for the first terrain, 1 for the second terrain.
         """
 
-        self.modifications.append([self.LC.switch_terrain, {"flag": data.data}])
+        self.modifications.append([self.EC.switch_terrain, {"flag": data.data}])
         self.trigger_reset = True
 
     def enable_rocks(self, data: Bool) -> None:
@@ -137,7 +137,7 @@ class ROS_LunaryardManager(ROS_BaseManager):
             data (Bool): True to enable the rocks, False to disable them.
         """
 
-        self.modifications.append([self.LC.enable_rocks, {"flag": data.data}])
+        self.modifications.append([self.EC.enable_rocks, {"flag": data.data}])
         self.trigger_reset = True
 
     def randomize_rocks(self, data: Int32) -> None:
@@ -150,5 +150,5 @@ class ROS_LunaryardManager(ROS_BaseManager):
 
         data = int(data.data)
         assert data > 0, "The number of rocks must be greater than 0."
-        self.modifications.append([self.LC.randomize_rocks, {"num": data}])
+        self.modifications.append([self.EC.randomize_rocks, {"num": data}])
         self.trigger_reset = True

@@ -6,10 +6,10 @@ __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
 __status__ = "development"
 
-from src.robots.subsystems_manager import PowerState
 from PIL import Image, ImageDraw, ImageFont
 import os
 import omni.kit.app
+from src.subsystems.device import PowerState
 from src.tmtc.yamcs_TMTC import ImagesHandler
 
 
