@@ -6,9 +6,10 @@ __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
 __status__ = "development"
 
-from src.robots.subsystems_manager import Electronics, GoNogoState, HealthStatus, ObcState, PowerState
+from src.subsystems.device import CommonDevice, HealthState, PowerState
 import math
 import omni.kit.app
+from src.subsystems.robot_enums import GoNogoState, ObcState
 from src.tmtc.intervals_handler import IntervalName
 
 class DriveHandler:
@@ -98,11 +99,11 @@ class DriveHandler:
         self._stop_robot_after_time(turn_time)
 
     def _is_robot_able_to_drive(self):
-        motor_state:PowerState = self._robot.subsystems.get_electronics_state(Electronics.MOTOR_CONTROLLER.value)
         go_state:GoNogoState = self._robot.subsystems.get_go_nogo_state()
-        motor_health:HealthStatus = self._robot.subsystems.get_electronics_health(Electronics.MOTOR_CONTROLLER.value)
+        motor_state:PowerState = self._robot.subsystems.get_device_power_state(CommonDevice.MOTOR_CONTROLLER)
+        motor_health:HealthState = self._robot.subsystems.get_device_health_state(CommonDevice.MOTOR_CONTROLLER)
 
-        return go_state == GoNogoState.GO and motor_state == PowerState.ON and motor_health == HealthStatus.NOMINAL
+        return go_state == GoNogoState.GO and motor_state == PowerState.ON and motor_health == HealthState.NOMINAL
 
     def _calculate_turn_speed(self, angular_velocity):
         robot_width = self._robot.dimensions["width"]

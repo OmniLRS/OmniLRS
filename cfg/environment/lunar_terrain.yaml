@@ -232,15 +232,12 @@ terrain_manager:
   augmentation: True
 
 robots_settings:
-  uses_nucleus: False
-  max_robots: 5
   robots_root: "/Robots"
   parameters:
-    -
-      robot_name: husky
-      usd_path: assets/USD_Assets/robots/ros2_husky_PhysX_vlp16.usd
-      pose:
-        position: [5.0, 5.0, 0.1]
-        orientation: [0, 0, 0, 1]
-      domain_id: 0
-      target_links: ["front_left_wheel_link", "front_right_wheel_link", "rear_left_wheel_link", "rear_right_wheel_link"]
+    robot_name: husky
+    usd_path: assets/USD_Assets/robots/ros2_husky_PhysX_vlp16.usd
+    pose:
+      position: [5.0, 5.0, 0.1]
+      orientation: [0, 0, 0, 1]
+    domain_id: 0
+    target_links: ["front_left_wheel_link", "front_right_wheel_link", "rear_left_wheel_link", "rear_right_wheel_link"]
