@@ -1,0 +1,125 @@
+__author__ = "Louis Burtz, Aleksa Stanivuk"
+__copyright__ = "Copyright 2025-26, JAOPS"
+__license__ = "BSD-3-Clause"
+__version__ = "2.0.0"
+__maintainer__ = "Louis Burtz"
+__email__ = "ljburtz@jaops.com"
+__status__ = "development"
+
+"""Basic RSSI model relating rover/lander separation to signal strength."""
+
+import math
+import random
+from dataclasses import dataclass
+from typing import Dict, List, Sequence, Tuple
+from src.subsystems.robot_physics_models.robot_physics_model import RobotPhysicsModel
+
+BEST_RSSI: float = -90.0  # Strongest signal observed at zero separation.
+WORST_RSSI: float = -30.0  # Weakest accepted reading at reference distance.
+REFERENCE_DISTANCE: float = 100.0  # Distance (m) at which worst_rssi applies.
+NOISE: float = 1.0  # Standard deviation of random RSSI noise [dB].
+
+@dataclass
+class RadioModel(RobotPhysicsModel):
+	"""Proof-of-concept radio model with quadratic distance falloff.
+        To integrate this model in a simulation, see the example in sweep_rssi() below.
+        inputs / computation / outputs are clearly separated for easy use.
+    """
+
+	_lander_position: Tuple[float, float, float] = (0.0, 0.0, 0.0)
+	_rover_position: Tuple[float, float, float] = (0.0, 0.0, 0.0)
+	#NOTE the below fields are set to default values, no setters are implemented but the 
+	# values can be customized by directly accessing them from the subsystems manager if customization is needed
+	_best_rssi: float = BEST_RSSI  # Strongest signal observed at zero separation.
+	_worst_rssi: float = WORST_RSSI  # Weakest accepted reading at reference distance.
+	_reference_distance: float = REFERENCE_DISTANCE  # Distance (m) at which worst_rssi applies.
+	_noise_std: float = NOISE  # Standard deviation of random RSSI noise [dB].
+
+	def set_inputs(self, lander_position, rover_position):
+		self._lander_position = lander_position
+		self._rover_position = rover_position
+
+	def compute(self):
+		pass
+
+	def initialize(self):
+		pass
+    
+	def get_outputs(self):
+		return self.get_rssi()
+	
+	def get_rssi(self):
+		mean_rssi = self._calculate_rssi()
+		return mean_rssi + random.gauss(0.0, self._noise_std)
+	
+	def _calculate_rssi(self) -> float:
+		dist = self._distance()
+		norm = dist / self._reference_distance
+		mean_rssi = self._best_rssi + (self._worst_rssi - self._best_rssi) * (norm ** 2)
+
+		return mean_rssi
+
+	def _distance(self) -> float:
+		dx = self._rover_position[0] - self._lander_position[0]
+		dy = self._rover_position[1] - self._lander_position[1]
+		dz = self._rover_position[2] - self._lander_position[2]
+
+		return math.sqrt(dx * dx + dy * dy + dz * dz)
+
+# ---------------------------------------------------------------------------
+# Below: standalone functions for unit-testing of the radio model.
+# They enable the model to be tested in isolation, without needing to run the entire simulation
+# ---------------------------------------------------------------------------
+
+def sweep_rssi(
+	steps: int = 200,
+	rover_end: Tuple[float, float, float] = (50.0, 100.0, 0.0),
+	lander_position: Tuple[float, float, float] = (0.0, 0.0, 0.0),
+) -> Tuple[Sequence[float], Sequence[float]]:
+	"""Walk the rover linearly from origin to *rover_end* and track RSSI."""
+
+	model = RadioModel()
+	model._lander_position = lander_position
+	distances: List[float] = []
+	rssi_values: List[float] = []
+
+	for step in range(steps + 1):
+		alpha = step / steps
+		x = rover_end[0] * alpha
+		y = rover_end[1] * alpha
+		z = rover_end[2] * alpha
+		model.set_inputs(lander_position, (x, y, z))
+		distances.append(model._distance())
+		rssi_values.append(model.get_rssi())
+
+	return distances, rssi_values
+
+
+def plot_rssi_profile(distances: Sequence[float], rssi: Sequence[float], filename: str = "test/outputs/radio_model_rssi.png") -> str:
+	"""Plot RSSI vs. distance."""
+
+	from matplotlib import pyplot as plt  # type: ignore[import]
+
+	plt.figure(figsize=(8, 5))
+	plt.plot(distances, rssi, label="RSSI")
+	plt.xlabel("Distance [m]")
+	plt.ylabel("RSSI [dBm]")
+	plt.title("Radio Model RSSI vs. Distance")
+	plt.grid(True, alpha=0.3)
+	plt.legend()
+	plt.tight_layout()
+	plt.savefig(filename)
+	plt.close()
+	return filename
+
+
+def main() -> None:
+	import os
+	os.makedirs("test/outputs", exist_ok=True)
+	distances, rssi_values = sweep_rssi()
+	output = plot_rssi_profile(distances, rssi_values)
+	print(f"Radio model plot saved to {output}")
+
+
+if __name__ == "__main__":
+	main()
