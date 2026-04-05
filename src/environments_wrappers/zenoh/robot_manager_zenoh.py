@@ -41,7 +41,7 @@ class Zenoh_RobotManager:
         self.modifications: List[Tuple[Callable, dict]] = []
 
         self.transports: List[ZenohPubTransport] = []
-        self.cams = []
+        self.cams: List[ZenohPubTransport] = []
 
         robot = RM_conf["parameters"]
 
@@ -87,7 +87,6 @@ class Zenoh_RobotManager:
             keyexpr=f"{robot_name}/joint_cmd",
         )
 
-
         self.resolution = zenoh_conf["sensors"]["camera"]["resolution"]
 
         self.transports_inited = False
@@ -128,7 +127,6 @@ class Zenoh_RobotManager:
         Publish current frame from each camera
         """
         if self.transports_inited:
-            robot_name = self.RM.robot.robot_name
 
             for i, cam in enumerate(self.cams):
                 if len(self.cams) > 1:
@@ -137,15 +135,7 @@ class Zenoh_RobotManager:
                     frame = self.RM.robot.get_rgba_camera_view(self.resolution)
 
                 if frame.size != 0:
-                    encoded = self.encode_image(frame)
-
-                    ## TODO: add new publish_numpy() in omnilrs-artefacts
-                    cam._pub.put(encoded)
-
-    def encode_image(self, im):
-        encoded = WireNDArray.pack(im)
-        encoded = msgspec.msgpack.encode(encoded)
-        return encoded
+                    cam.publish_array(frame)
 
     def publish_telemetry(self) -> None:
         self.joint_bridge.maybe_initialize()
@@ -175,18 +165,3 @@ class Zenoh_RobotManager:
             }
 
             self.gt.publish(gt)
-
-
-## TODO: move this WireNDArray to new publish_numpy() in omnilrs-artefacts
-class WireNDArray(msgspec.Struct, array_like=True, kw_only=True):
-    # ref: https://github.com/jcrist/msgspec/issues/732
-    dtype: str
-    shape: tuple[int, ...]
-    data: memoryview
-
-    @classmethod
-    def pack(cls, arr: np.ndarray):
-        return cls(data=arr.data, dtype=str(arr.dtype), shape=arr.shape)
-
-    def unpack(self) -> np.ndarray:
-        return np.frombuffer(self.data, dtype=self.dtype).reshape(self.shape)
