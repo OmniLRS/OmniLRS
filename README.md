@@ -3,7 +3,7 @@
 <table>
   <tr>
     <td width="300"><img src="https://raw.githubusercontent.com/wiki/OmniLRS/OmniLRS/media/thumb/thumbnail.png" width="300"/><br/><b>V1</b>: Environment, craters, rocks, synthetic data generation, wheel traces</td>
-    <td rowspan="3" valign="top" align="center"><img src="https://raw.githubusercontent.com/wiki/OmniLRS/OmniLRS/media/OmniLRSv3.png" width="520"/><br/><b>V3</b>: Integration with Mission Control System (Yamcs), Physics Models (power, radio, thermal)</td>
+    <td rowspan="3" valign="top" align="center"><img src="https://raw.githubusercontent.com/wiki/OmniLRS/OmniLRS/media/OmniLRSv3.png" width="520"/><br/><b>V3</b>: Integration with Mission Control System (Yamcs and Grafana), Physics Models (power, radio, thermal)</td>
   </tr>
   <tr>
     <td width="300"><img src="https://raw.githubusercontent.com/wiki/OmniLRS/OmniLRS/media/Logov2.png" width="300"/><br/><b>V2</b>: Large Scale environment</td>
@@ -20,6 +20,7 @@ OmniLRS is powered by NVIDIA Omniverse Isaacsim to provide visually realistic an
 - Customizable and randomizable terrain generation and asset placement for synthetic data generation 
 - Integration with ROS2 and more
 - Multi-phyisics model framework to simulate the entire range of telemetry needed in lunar missions: Power, Radio, Thermal
+- Mission Control Software Integration (Yamcs and Grafana) for mission operations training and rehearsals
 
 
 
@@ -52,6 +53,10 @@ Large Scale update:
 
 [![Large Scale Update Demo Youtube Video](https://img.youtube.com/vi/3m78fO5uXwA/0.jpg)](https://www.youtube.com/watch?v=3m78fO5uXwA)
 
+Mission Operations Update:
+
+[![Mission Operations Workshop in Tokyo](https://img.youtube.com/vi/DtvEvpR_DWA/0.jpg)](https://www.youtube.com/watch?v=DtvEvpR_DWA)
+
 
 ## Installation
 
@@ -60,6 +65,7 @@ Follow the instruction on the Wiki: we strongly recommend following the [docker 
 Then Follow the [Getting Started steps](https://github.com/OmniLRS/OmniLRS/wiki/GettingStarted) to run your first OmniLRS simulations!
 
 ### ROS2 Integration
+
 See the separate git repository to run the ROS2 demo. \
 It supports joystick teleoperation and navigation. \
 https://github.com/jnskkmhr/omnilrs_ros2_demo
@@ -68,6 +74,11 @@ The simulation allows user to interact with the Scene through ROS topics. This a
 
 To use this simulation with SpaceROS, the ROS2 simulation docker must first be spinned up, and then in a second time, another container running SpaceROS must be launched to interact with the simulation.
 To illustrate this, we provide a simple teleop demonstration with the sim in ROS2 and SpaceROS sending velocity commands. Check the Wiki for a [step-by-step guide](https://github.com/OmniLRS/OmniLRS/wiki#run-with-spaceros) on how to run this demo.
+
+## Yamcs (Mission Control System) Integration
+See the separate git repository to run the Yamcs demo
+https://github.com/OmniLRS/yamcs-mission-control-pragyaan
+
 
 ## Citation
 Please use the following citations if you use `OmniLRS` in your work.
