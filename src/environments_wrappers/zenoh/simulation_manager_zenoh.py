@@ -184,7 +184,7 @@ class Zenoh_SimulationManager:
         # Preload the assets
         if cfg["environment"]["name"] == "LargeScale":
             height, quat = self.ZenohLabManager.LC.get_height_and_normal((0.0, 0.0, 0.0))
-            self.ZenohLabManager.RM.preload_robot_at_pose(self.world, (0, 0, height + 0.5), (1, 0, 0, 0))
+            self.ZenohRobotManager.RM.preload_robot_at_pose(self.world, (0, 0, height + 0.5), (1, 0, 0, 0))
         else:
             self.ZenohRobotManager.RM.preload_robot(self.world)
 
