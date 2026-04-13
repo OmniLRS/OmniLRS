@@ -54,19 +54,27 @@ class Zenoh_RobotManager:
 
         self.resolution = camera_sensor_cfg.get("resolution", None)
 
+        # build camera keyexprs
+        base_expr_template = camera_sensor_cfg.get("base_keyexpr", "OmniLRS/{robot_name}/Camera")
+
+        def build_camera_keyexpr(camera_name: str) -> str:
+            return base_expr_template.format(robot_name=robot_name) + f"/{camera_name}"
+
         if camera_cfg:
+            json_compact = camera_sensor_cfg.get("json_compact", False)
+
             if isinstance(camera_cfg, list):
                 for camera in camera_cfg:
                     cam_pub = ZenohPubTransport(
-                        keyexpr=f'{camera_sensor_cfg["base_keyexpr"]}/{camera["name"]}',
-                        json_compact=camera_sensor_cfg["json_compact"],
+                        keyexpr=build_camera_keyexpr(camera["name"]),
+                        json_compact=json_compact,
                     )
                     self.cams.append(cam_pub)
                     self.transports.append(cam_pub)
             else:
                 cam_pub = ZenohPubTransport(
-                    keyexpr=f'{camera_sensor_cfg["base_keyexpr"]}/{camera_cfg["name"]}',
-                    json_compact=camera_sensor_cfg["json_compact"],
+                    keyexpr=build_camera_keyexpr(camera_cfg["name"]),
+                    json_compact=json_compact,
                 )
                 self.cams.append(cam_pub)
                 self.transports.append(cam_pub)
