@@ -97,6 +97,14 @@ def startSim(cfg: dict):
     # it can also be overwritten through console, same as environment
     # mode is required to exist also @cfg/mode/[mode_name].yaml with "name" property
 
+    # Zenoh mode
+    if cfg["mode"]["name"] == "Zenoh":
+        from src.environments_wrappers.zenoh.simulation_manager_zenoh import (
+            Zenoh_SimulationManager,
+        )
+    
+        SM = Zenoh_SimulationManager(cfg, simulation_app)
+
     # Omits ROS settings, purely Yamcs-native
     if cfg["mode"]["name"] == "Yamcs":
         # Call to the environment factory to load the correct environment.
