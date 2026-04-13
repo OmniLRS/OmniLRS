@@ -139,16 +139,17 @@ class Zenoh_RobotManager:
         """
         Publish current frame from each camera
         """
-        if self.transports_inited:
+        if not self.transports_inited or not self.cams or self.resolution is None:
+            return
 
-            for i, cam in enumerate(self.cams):
-                if len(self.cams) > 1:
-                    frame = self.RM.robot.get_rgba_camera_view_by_idx(i, self.resolution)
-                else:
-                    frame = self.RM.robot.get_rgba_camera_view(self.resolution)
+        for i, cam in enumerate(self.cams):
+            if len(self.cams) > 1:
+                frame = self.RM.robot.get_rgba_camera_view_by_idx(i, self.resolution)
+            else:
+                frame = self.RM.robot.get_rgba_camera_view(self.resolution)
 
-                if frame.size != 0:
-                    cam.publish_array(frame)
+            if frame.size != 0:
+                cam.publish_array(frame)
 
     def publish_telemetry(self) -> None:
         self.joint_bridge.maybe_initialize()
