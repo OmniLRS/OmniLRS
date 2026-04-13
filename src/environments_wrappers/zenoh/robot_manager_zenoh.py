@@ -48,21 +48,28 @@ class Zenoh_RobotManager:
         robot_name = f'{robot["robot_name"]}'
         robot_path = self.RM.robots_root + "/" + robot_name
 
-        if isinstance(robot["camera"], list):
-            for i, camera in enumerate(robot["camera"]):
+        # camera config is optional
+        camera_cfg = robot.get("camera", None)
+        camera_sensor_cfg = zenoh_conf.get("sensors", {}).get("camera", {})
+
+        self.resolution = camera_sensor_cfg.get("resolution", None)
+
+        if camera_cfg:
+            if isinstance(camera_cfg, list):
+                for camera in camera_cfg:
+                    cam_pub = ZenohPubTransport(
+                        keyexpr=f'{camera_sensor_cfg["base_keyexpr"]}/{camera["name"]}',
+                        json_compact=camera_sensor_cfg["json_compact"],
+                    )
+                    self.cams.append(cam_pub)
+                    self.transports.append(cam_pub)
+            else:
                 cam_pub = ZenohPubTransport(
-                    keyexpr=f'{zenoh_conf["sensors"]["camera"]["base_keyexpr"]}/{robot["camera"][i]["name"]}',
-                    json_compact=zenoh_conf["sensors"]["camera"]["json_compact"],
+                    keyexpr=f'{camera_sensor_cfg["base_keyexpr"]}/{camera_cfg["name"]}',
+                    json_compact=camera_sensor_cfg["json_compact"],
                 )
                 self.cams.append(cam_pub)
                 self.transports.append(cam_pub)
-        else:
-            cam_pub = ZenohPubTransport(
-                keyexpr=f'{zenoh_conf["sensors"]["camera"]["base_keyexpr"]}/{robot["camera"]["name"]}',
-                json_compact=zenoh_conf["sensors"]["camera"]["json_compact"],
-            )
-            self.cams.append(cam_pub)
-            self.transports.append(cam_pub)
 
         gt_pub = ZenohPubTransport(
             keyexpr=f"{robot_name}/gt_pose",
@@ -86,8 +93,6 @@ class Zenoh_RobotManager:
             controller=self.controller,
             keyexpr=f"{robot_name}/joint_cmd",
         )
-
-        self.resolution = zenoh_conf["sensors"]["camera"]["resolution"]
 
         self.transports_inited = False
 
