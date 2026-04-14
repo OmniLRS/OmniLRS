@@ -203,20 +203,20 @@ robots_settings:
       "Mobility/Wheel_back_left",
       "Mobility/Wheel_back_right"
     ]
-    dimensions:
-      width: 1.6 # m
-      length: 1.5
-    pos_relative_to_prim: "/StaticAssets/lander"
     wheel_joints:
       left: ["wheel_fl", "wheel_ml", "wheel_bl"]
       right: ["wheel_fr", "wheel_mr", "wheel_br"]
+    dimensions:
+      width: 1.6 # m
+      length: 1.5
+    turn_speed_coef: 19
+    pos_relative_to_prim: "/StaticAssets/lander"
     camera:
       prim_path: "/Robots/pragyaan/Body/body_main/depth_cam"
       resolutions: 
         low: [320, 240]
         high: [1440, 1080]
     imu_sensor_path: "/Robots/pragyaan/base_link/Imu_Sensor"
-    turn_speed_coef: 19
     solar_panel_joint: "solarJoint"  # finds it within the main robot articulation
   yamcs_tmtc: # these settings are relevant if Yamcs mode
     intervals:
