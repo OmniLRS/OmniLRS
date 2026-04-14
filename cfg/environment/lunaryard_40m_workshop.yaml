@@ -178,6 +178,7 @@ robots_settings:
     # pose:
     #   position: [10.0, 10.0, 0.5]
     #   orientation: [0, 0, 0, 1]
+    # base_link: "base_link" # core link used to determine the position of the robot
     # target_links: ["left_front_wheel_link", "left_rear_wheel_link", "right_front_wheel_link", "right_rear_wheel_link"]
     
     # robot_name: jackal
@@ -185,12 +186,14 @@ robots_settings:
     # pose:
     #   position: [5.0, 5.0, 0.5]
     #   orientation: [1, 0, 0, 0]
+    # base_link: "base_link" # core link used to determine the position of the robot
     # target_links: ["front_left_wheel_link", "front_right_wheel_link", "rear_left_wheel_link", "rear_right_wheel_link"]
     robot_name: pragyaan
     usd_path: assets/USD_Assets/robots/pragyaan/nograph_pragyaan.usd  
     pose:
       position: [26., 16.6, 0.8]
       orientation: [0., 0., 0.70711, 0.70711]
+    base_link: "base_link" # core link used to determine the position of the robot
     target_links: [
       "Mobility/Wheel_front_left",
       "Mobility/Wheel_front_right",
@@ -199,7 +202,6 @@ robots_settings:
       "Mobility/Wheel_back_left",
       "Mobility/Wheel_back_right"
     ]
-    base_link: "base_link" # core link used to determine the position of the robot
     dimensions:
       width: 1.6 # m
       length: 1.5
