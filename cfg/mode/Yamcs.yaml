@@ -3,6 +3,6 @@ instance_conf:
   address: "localhost:8090"
   instance: "workshop"
   processor: "realtime"
-  url_full_nginx: "https://workshop.jaops.com/yamcs"
   tc_receive_address: "127.0.0.1"
   tc_receive_port: 10025
+  url_full_nginx: "https://workshop.jaops.com/yamcs"
