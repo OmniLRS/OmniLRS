@@ -72,6 +72,7 @@ yamcs-client = "*"
 
 [feature.yamcs.tasks]
 yamcs = "python run.py mode=Yamcs environment=lunaryard_40m_workshop"
+fix-tmp = "bash scripts/fix_yamcs_tmp.sh"
 
 [environments]
 default = { features = ["core", "isaac"] }
