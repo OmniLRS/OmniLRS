@@ -13,9 +13,6 @@ description = "Pixi environments for OmniLRS with Isaac Sim 5 and manager-specif
 [system-requirements]
 libc = { family = "glibc", version = "2.35" }
 
-[tasks]
-download_omnilrs_artefacts = "git clone git@github.com:ssf-thku/OmniLRS-artefacts.git -b CI-work omnilrs_artefacts"
-
 [pypi-options]
 index-url = "https://pypi.org/simple"
 extra-index-urls = ["https://pypi.nvidia.com"]
@@ -38,8 +35,6 @@ gdown = "*"
 em = "*"
 lark = "*"
 pandas = "*"
-# omnilrs_artefacts = {path = "omnilrs_artefacts", editable=true} # use this when you download the repo manually
-omnilrs_artefacts = {git = "ssh://git@github.com/ssf-thku/OmniLRS-artefacts.git", rev="1c6cae781d614d6264466cd4f33057e5a5caf13f"}
 OmniLRS = { path = ".", editable = true }
 
 [feature.core.activation.env]
@@ -78,18 +73,7 @@ yamcs-client = "*"
 [feature.yamcs.tasks]
 yamcs = "python run.py mode=Yamcs environment=lunaryard_40m_workshop"
 
-# zenoh-specific deps, tasks in feature "zenoh"
-[feature.zenoh.pypi-dependencies]
-eclipse-zenoh = "*"
-asyncio_for_robotics = "*"
-msgspec = "*"
-
-[feature.zenoh.tasks]
-zenoh = "python run.py mode=Zenoh environment=lunaryard_20m_zenoh"
-zenoh_large = "python run.py mode=Zenoh environment=largescale_zenoh"
-
 [environments]
 default = { features = ["core", "isaac"] }
 yamcs = { features = ["core", "isaac", "yamcs"] }
-zenoh = { features = ["core", "isaac", "zenoh"] }
 ros2 = { features = ["core", "isaac", "ros2"] }
