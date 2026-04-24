@@ -69,15 +69,20 @@ def apply_lens_flare(settings: FlaresConf = None) -> None:
         flare_settings (FlaresConf): The settings of the
     """
 
-    if settings is not None:
-        enable_lens_flare(settings.enable)
-        set_flare_scale(settings.scale)
-        set_flare_num_blades(settings.blades)
-        set_flare_aperture_rotation(settings.aperture_rotation)
-        set_flare_sensor_aspect_ratio(settings.sensor_aspect_ratio)
-        set_flare_sensor_diagonal(settings.sensor_diagonal)
-        set_flare_fstop(settings.fstop)
-        set_flare_focal_length(settings.focal_length)
+    if settings is None:
+        return
+    enable_lens_flare(settings.enable)
+    if not settings.enable:
+        # Skip the rest: writing /rtx/post/lensFlares/* keys when disabled
+        # crashes librtx.hydra under RT 2.0 (rt2) on Isaac Sim 5.0.
+        return
+    set_flare_scale(settings.scale)
+    set_flare_num_blades(settings.blades)
+    set_flare_aperture_rotation(settings.aperture_rotation)
+    set_flare_sensor_aspect_ratio(settings.sensor_aspect_ratio)
+    set_flare_sensor_diagonal(settings.sensor_diagonal)
+    set_flare_fstop(settings.fstop)
+    set_flare_focal_length(settings.focal_length)
 
 
 def enable_lens_flare(enable: bool = True) -> None:
@@ -199,11 +204,15 @@ def apply_chromatic_aberrations(settings: ChromaticAberrationsConf = None) -> No
     Args:
         settings (ChromaticAberrationsConf): The settings of the chromatic aberration.
     """
-    if settings is not None:
-        enable_chromatic_aberrations(settings.enable)
-        set_chromatic_aberrations_strength(settings.strength)
-        set_chromatic_aberrations_model(settings.model)
-        set_chromatic_aberrations_lanczos(settings.enable_lanczos)
+    if settings is None:
+        return
+    enable_chromatic_aberrations(settings.enable)
+    if not settings.enable:
+        # See note in apply_lens_flare: skip post writes when disabled.
+        return
+    set_chromatic_aberrations_strength(settings.strength)
+    set_chromatic_aberrations_model(settings.model)
+    set_chromatic_aberrations_lanczos(settings.enable_lanczos)
 
 
 def enable_chromatic_aberrations(enable: bool = True) -> None:
@@ -285,11 +294,15 @@ def apply_motion_blur(settings: MotionBlurConf = None) -> None:
         settings (MotionBlurConf): The settings of the motion blur.
     """
 
-    if settings is not None:
-        enable_motion_blur(settings.enable)
-        set_motion_blur_diameter_fraction(settings.max_blur_diameter_fraction)
-        set_motion_blur_exposure_fraction(settings.exposure_fraction)
-        set_motion_blur_num_samples(settings.num_samples)
+    if settings is None:
+        return
+    enable_motion_blur(settings.enable)
+    if not settings.enable:
+        # See note in apply_lens_flare: skip post writes when disabled.
+        return
+    set_motion_blur_diameter_fraction(settings.max_blur_diameter_fraction)
+    set_motion_blur_exposure_fraction(settings.exposure_fraction)
+    set_motion_blur_num_samples(settings.num_samples)
 
 
 def enable_motion_blur(enable: bool = True) -> None:

@@ -8,6 +8,16 @@ __status__ = "development"
 
 
 def startSim(cfg: dict):
+    # Inject Kit CLI args BEFORE importing SimulationApp so they take effect at app startup.
+    # Setting these after SimulationApp init triggers "you will need to restart omniverse for
+    # this to take effect" because the renderer modes are read once during Kit boot.
+    import sys
+    for arg in (
+        "--/persistent/rtx/modes/rt2/enabled=true",
+    ):
+        if arg not in sys.argv:
+            sys.argv.append(arg)
+
     from isaacsim import SimulationApp
     import omni
     from src.environments.rendering import set_lens_flares, set_chromatic_aberrations, set_motion_blur
@@ -88,7 +98,27 @@ def startSim(cfg: dict):
 
     # Starts the simulation and allows to import things related to Isaac and PXR
     renderer_cfg = cfg["rendering"]["renderer"]
-    simulation_app = SimulationApp_wait(renderer_cfg.__dict__)
+    # Use the "full" desktop experience — RT 2.0 needs extensions not present
+    # in the slim default. Stick with full (not streaming) so the proper GUI
+    # is available.
+    import os
+    experience = ""
+    for base in ("/isaac-sim/apps", "/opt/IsaacSim/apps", os.path.expanduser("~/isaacsim/apps")):
+        candidate = os.path.join(base, "isaacsim.exp.full.kit")
+        if os.path.exists(candidate):
+            experience = candidate
+            break
+    print(f"[OmniLRS] SimulationApp experience: {experience or '(default)'}")
+    # NOTE: create_new_stage=False is required to avoid a crash in
+    # omni.usd::UsdContext::newUsd -> omni.graph.image.core when rt2 is
+    # enabled with the full desktop kit. OmniLRS opens/creates its own
+    # stage downstream, so the default empty stage is unnecessary.
+    launch_cfg = dict(renderer_cfg.__dict__)
+    launch_cfg["create_new_stage"] = False
+    simulation_app = SimulationApp_wait(launch_cfg, experience=experience)
+    import omni.usd
+    omni.usd.get_context().new_stage()
+
     set_lens_flares(cfg)
     set_motion_blur(cfg)
     set_chromatic_aberrations(cfg)
