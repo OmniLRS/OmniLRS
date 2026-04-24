@@ -11,6 +11,7 @@ import numpy as np
 import dataclasses
 import threading
 import logging
+import math
 import time
 import os
 
@@ -565,7 +566,12 @@ class RockGenerator:
     """
 
     def __init__(
-        self, settings: RockGeneratorConf, sampling_func: callable, is_map_done: callable, instancer_path: str
+        self,
+        settings: RockGeneratorConf,
+        sampling_func: callable,
+        is_map_done: callable,
+        instancer_path: str,
+        world_offset: Tuple[float, float] = (0.0, 0.0),
     ):
         """
         Args:
@@ -573,12 +579,17 @@ class RockGenerator:
             sampling_func (callable): The function to sample the rocks.
             is_map_done (callable): The function to check if the map is done.
             instancer_path (str): The path to the instancer.
+            world_offset (Tuple[float, float]): Offset subtracted from rock positions
+                before they are written to the USD instancer. Used when rocks are
+                sampled in a global frame but rendered in a local frame whose origin
+                is at ``world_offset``.
         """
 
         self.settings = settings
         self.sampling_func = sampling_func
         self.is_map_done = is_map_done
         self.instancer_path = instancer_path
+        self.world_offset = (float(world_offset[0]), float(world_offset[1]))
         self.is_sampling = False
 
     def build(self) -> None:
@@ -642,32 +653,31 @@ class RockGenerator:
         y_block = int(y // self.settings.block_size) * self.settings.block_size
         return (x_block, y_block)
 
-    def define_region(self, coordinates: Tuple[float, float]) -> BoundingBox:
+    def define_region(self, block_corner: Tuple[float, float]) -> BoundingBox:
         """
-        Defines the region to sample the rocks. The region is defined by the coordinates
-        and the block span. The block span is the number of blocks to sample around the
-        coordinates.
-
-        The region is defined by the following formula:
-            x_low = coordinates[0] - (block_span + 1) * block_size
-            x_high = coordinates[0] + (block_span + 2) * block_size
-            y_low = coordinates[1] - (block_span + 1) * block_size
-            y_high = coordinates[1] + (block_span + 2) * block_size
-
-        Note the +1 on the minimum and +2 on the maximum. This is done to have a buffer of
-        blocks around the sampling region.
+        Defines the region to sample the rocks. The region is anchored on the rover's
+        block corner (NOT the raw rover position) and spans ``block_span`` blocks on
+        the negative side and ``block_span + 1`` blocks on the positive side along
+        each axis. This is intentionally identical to the layout used by the HR DEM
+        block grid (see ``HighResDEMGen.build_block_grid``), so when ``block_span``
+        equals the HR DEM's ``num_blocks`` the rock region exactly matches the
+        populated area of the high-resolution DEM.
 
         Args:
-            coordinates (Tuple[float, float]): The coordinates to define the region around.
+            block_corner (Tuple[float, float]): the rover's block corner (in the same
+                frame in which rocks will be placed). MUST be a multiple of
+                ``block_size``.
 
         Returns:
-            BoundingBox: The bounding box of the region.
+            BoundingBox: the bounding box of the region.
         """
 
-        x_low = coordinates[0] - (self.settings.block_span) * self.settings.block_size
-        x_high = coordinates[0] + (self.settings.block_span + 1) * self.settings.block_size
-        y_low = coordinates[1] - (self.settings.block_span) * self.settings.block_size
-        y_high = coordinates[1] + (self.settings.block_span + 1) * self.settings.block_size
+        block_size = self.settings.block_size
+        block_span = self.settings.block_span
+        x_low = int(block_corner[0]) - block_span * block_size
+        x_high = int(block_corner[0]) + (block_span + 1) * block_size
+        y_low = int(block_corner[1]) - block_span * block_size
+        y_high = int(block_corner[1]) + (block_span + 1) * block_size
 
         return BoundingBox(x_min=x_low, x_max=x_high, y_min=y_low, y_max=y_high)
 
@@ -701,7 +711,8 @@ class RockGenerator:
         """
         Updates the instancer with the new block data. The function gets the blocks within
         the region and aggregates the block data. It then sets the instancer's parameters
-        with the new data.
+        with the new data. Rock positions are translated by ``-world_offset`` so that
+        rocks sampled in a global frame render correctly in the local world frame.
 
         Args:
             region (BoundingBox): The region to sample the rocks.
@@ -709,30 +720,87 @@ class RockGenerator:
 
         blocks, _, _ = self.rock_db.get_blocks_within_region(region)
         position, orientation, scale, ids = self.aggregate_block_data(blocks)
+        self.check_rocks_in_fine_mesh(position, region)
+        position = position.copy()
+        position[:, 0] -= self.world_offset[0]
+        position[:, 1] -= self.world_offset[1]
         self.rock_instancer.set_instancer_parameters(position, orientation, scale, ids)
 
-    def sample(self, global_position: Tuple[float, float]) -> None:
+    def check_rocks_in_fine_mesh(self, position: np.ndarray, region: BoundingBox) -> None:
         """
-        Samples the rocks at the given position. The function casts the position to the block
-        space and defines the region around the position. It then samples the rocks within the
-        region and updates the instancer with the new data.
+        Sanity check: report whether any sampled rock has the sentinel z == 0
+        elevation, which indicates the elevation kernel sampled outside the
+        populated high-resolution DEM (i.e. a floating rock).
+
+        Note:
+            Rocks are allowed to fall slightly outside the sampling region in xy
+            because the Thomas point process scatters children around parents with
+            ``sigma`` meters of spread; ``dissect_region_blocks`` then absorbs them
+            into the boundary blocks. So an xy-out-of-region count is informational
+            only, not an error.
 
         Args:
-            position (Tuple[float, float]): The position to sample the rocks.
-            map_coordinates (Tuple[float, float]): The coordinates in the map space.
+            position (np.ndarray): Rock world-frame positions (Nx3) before
+                ``world_offset`` is subtracted.
+            region (BoundingBox): The rock sampling region in the same frame.
+        """
+
+        prefix = f"[RockGenerator/{self.settings.instancer_name}]"
+
+        if position.shape[0] == 0:
+            print(f"{prefix} no rocks sampled")
+            return
+
+        x = position[:, 0]
+        y = position[:, 1]
+        z = position[:, 2]
+
+        out_x = (x < region.x_min) | (x >= region.x_max)
+        out_y = (y < region.y_min) | (y >= region.y_max)
+        outside_xy = int(np.count_nonzero(out_x | out_y))
+        zero_z = int(np.count_nonzero(z == 0.0))
+        total = int(position.shape[0])
+
+        print(
+            f"{prefix} sampled={total} "
+            f"region=x[{region.x_min},{region.x_max}) y[{region.y_min},{region.y_max}) "
+            f"xy_outside_region={outside_xy} (expected: scatter from Thomas process) "
+            f"z==0={zero_z}"
+        )
+        if zero_z > 0:
+            logger.warning(
+                "%s %d/%d rocks have z==0 (likely sampled outside the populated HR DEM); "
+                "ensure block_span <= hr_dem_num_blocks",
+                prefix,
+                zero_z,
+                total,
+            )
+
+    def sample(self, global_position: Tuple[float, float], dem_reference: Tuple[float, float]) -> None:
+        """
+        Samples the rocks at the given position. The function defines the region around the
+        rover position and samples the rocks within the region. The elevation lookup is
+        performed using ``dem_reference`` as the kernel reference frame.
+
+        Args:
+            global_position (Tuple[float, float]): The rover position used to center the
+                sampling region. Rocks will be placed in this frame.
+            dem_reference (Tuple[float, float]): The reference position passed to the
+                elevation kernel. Must equal the block-corner of the rover (in the same
+                frame as ``global_position``) so that ``(rock_pos - dem_reference)``
+                correctly maps to a pixel in the high-resolution DEM.
         """
 
         while not self.is_map_done():
             time.sleep(0.1)
 
         self.is_sampling = True
-        coordinates = self.cast_coordinates_to_block_space(global_position)
-        region = self.define_region(coordinates)
-        self.rock_sampler.sample_rocks_by_region(region, global_position)
+        region = self.define_region(dem_reference)
+        self.rock_sampler.sample_rocks_by_region(region, dem_reference)
         self.update_instancer(region)
         self.is_sampling = False
 
-    def _sample_threaded(self, position: Tuple[float, float]) -> None:
+    def _sample_threaded(self, position: Tuple[float, float], dem_reference: Tuple[float, float]) -> None:
         """
         Internal function DO NOT CALL.
 
@@ -741,23 +809,25 @@ class RockGenerator:
 
         Args:
             position (Tuple[float, float]): The position to sample the rocks.
+            dem_reference (Tuple[float, float]): The reference position for the elevation kernel.
         """
 
         while self.is_sampling:
             time.sleep(0.1)
 
-        self.sample(position)
+        self.sample(position, dem_reference)
 
-    def sample_threaded(self, position: Tuple[float, float]) -> None:
+    def sample_threaded(self, position: Tuple[float, float], dem_reference: Tuple[float, float]) -> None:
         """
         Samples the rocks at the given position in a separate thread. The function waits for potential
         previous calls to finish before starting a new one.
 
         Args:
             position (Tuple[float, float]): The position to sample the rocks.
+            dem_reference (Tuple[float, float]): The reference position for the elevation kernel.
         """
 
-        thread = threading.Thread(target=self._sample_threaded, args=(position,))
+        thread = threading.Thread(target=self._sample_threaded, args=(position, dem_reference))
         thread.start()
 
 
@@ -790,17 +860,27 @@ class RockManager:
     rock generators and samples the rocks around a given position.
     """
 
-    def __init__(self, settings: RockManagerConf, sampling_func: callable, is_map_done: callable) -> None:
+    def __init__(
+        self,
+        settings: RockManagerConf,
+        sampling_func: callable,
+        is_map_done: callable,
+        world_offset: Tuple[float, float] = (0.0, 0.0),
+    ) -> None:
         """
         Args:
             settings (RockManagerConf): The settings for the rock manager.
             sampling_func (callable): The function to sample the rocks height and normals.
             is_map_done (callable): The function to check if the map is done.
+            world_offset (Tuple[float, float]): Offset subtracted from rock positions
+                before they are rendered. Use this when rock sampling is done in a
+                global frame whose origin differs from the rendered world's origin.
         """
 
         self.settings = settings
         self.sampling_func = sampling_func
         self.is_map_done = is_map_done
+        self.world_offset = (float(world_offset[0]), float(world_offset[1]))
         self.last_update = None
 
     def build(self) -> None:
@@ -814,7 +894,11 @@ class RockManager:
             if rock_gen_cfg.seed is None:
                 rock_gen_cfg.seed = self.settings.seed + i * 4
             rock_generator = RockGenerator(
-                rock_gen_cfg, self.sampling_func, self.is_map_done, self.settings.instancers_path
+                rock_gen_cfg,
+                self.sampling_func,
+                self.is_map_done,
+                self.settings.instancers_path,
+                world_offset=self.world_offset,
             )
             rock_generator.build()
             self.rock_generators.append(rock_generator)
@@ -855,14 +939,17 @@ class RockManager:
             x_last, y_last = self.last_update
             return (x != x_last) or (y != y_last)
 
-    def sample(self, global_position: Tuple[float, float]) -> None:
+    def sample(self, global_position: Tuple[float, float], dem_reference: Tuple[float, float]) -> None:
         """
         Samples the rocks at the given position. The function samples the rocks for each rock
         generator.
 
         Args:
-            global_position (Tuple[float, float]): The position to sample the rocks.
-            map_coordinates (Tuple[float, float]): The coordinates in the map space.
+            global_position (Tuple[float, float]): The rover position used to center the rock
+                sampling region. Rocks will be placed in this frame.
+            dem_reference (Tuple[float, float]): The reference position passed to the elevation
+                kernel. Must be the block-corner of the rover (in the same frame as
+                ``global_position``) so that elevation lookups land at the correct DEM pixel.
         """
         position = self.cast_coordinates_to_block_space(global_position)
 
@@ -870,18 +957,20 @@ class RockManager:
             self.last_update = position
             for rock_generator in self.rock_generators:
                 with ScopedTimer("RockManager sample", active=self.settings.profiling):
-                    rock_generator.sample(position)
+                    rock_generator.sample(global_position, dem_reference)
 
-    def sample_threaded(self, global_position: Tuple[float, float]) -> None:
+    def sample_threaded(self, global_position: Tuple[float, float], dem_reference: Tuple[float, float]) -> None:
         """
         Samples the rocks at the given position in a separate thread. The function samples the rocks
         for each rock generator in a separate thread.
 
         Args:
-            global_position (Tuple[float, float]): The position to sample the rocks.
+            global_position (Tuple[float, float]): The rover position used to center the rock
+                sampling region.
+            dem_reference (Tuple[float, float]): The reference position for the elevation kernel.
         """
 
         position = self.cast_coordinates_to_block_space(global_position)
         if self.check_if_update_needed(position):
             for rock_generator in self.rock_generators:
-                rock_generator.sample_threaded(position)
+                rock_generator.sample_threaded(global_position, dem_reference)
