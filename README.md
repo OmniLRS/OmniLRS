@@ -1,11 +1,28 @@
-<center>
-<img src="https://raw.githubusercontent.com/wiki/OmniLRS/OmniLRS/media/Logov2.png" width=520/>
-</center>
+# OmniLRS: Omniverse Lunar Robotics Simulator
 
-Omniverse Lunar Robotics Simulator or OmniLRS, is a simulation tools developped jointly by the Space Robotics group from the University of Luxembourg (SpaceR), and the Space Robotics Lab from Tohoku University in Japan (SRL). We are now opening it to the community and strongly encourage Space Roboticists to help us grow the feature set of this simulation! Don't be shy shoot a PR!
+<table>
+  <tr>
+    <td width="300"><img src="https://raw.githubusercontent.com/wiki/OmniLRS/OmniLRS/media/thumb/thumbnail.png" width="300"/><br/><b>V1</b>: Environment, craters, rocks, synthetic data generation, wheel traces</td>
+    <td rowspan="3" valign="center" align="center"><img src="https://raw.githubusercontent.com/wiki/OmniLRS/OmniLRS/media/OmniLRSv3.png" width="520"/><br/><b>V3</b>: Integration with Mission Control System (Yamcs and Grafana), and implementation of Physics Models (power, radio, thermal)</td>
+  </tr>
+  <tr>
+    <td width="300"><img src="https://raw.githubusercontent.com/wiki/OmniLRS/OmniLRS/media/Logov2.png" width="300"/><br/><b>V2</b>: Large Scale environment</td>
+  </tr>
+  <tr>
+    <td width="300"><img src="https://raw.githubusercontent.com/wiki/OmniLRS/OmniLRS/media/thumb/Husky_SouthPole.png" width="300"/><br/><b>V2.5</b>: Migration to Isaac Sim 5.0</td>
+  </tr>
+</table>
 
-> [!IMPORTANT]
-> This readme provides basic information on how to use the simulation. For a more complete introduction to the simulation and its inner workings please [visit our wiki](https://github.com/OmniLRS/OmniLRS/wiki)! For specific questions or to have a chat join [our discord](https://discord.gg/KfZ2uaMHqh)!
+OmniLRS is powered by NVIDIA Isaac Sim and NVIDIA Omniverse libraries to provide visually realistic and physically accurate robotics simulation of lunar rovers.
+- GPU accelerated ray tracing for real-time illumination, shadows and vision sensors
+- GPU accelerated physics for real-time rigid-body dynamics and wheel/soil interactions 
+- Base Terrain from NASA LRO Digital Elevation Models, plus generative rock and crater distributions from power laws
+- Customizable and randomizable terrain generation and asset placement for synthetic data generation 
+- Integration with ROS2 robotics ecosystem and more
+- Multi-physics model framework to simulate the entire range of telemetry needed in lunar missions: Power, Radio, Thermal
+- Mission Control Software Integration (Yamcs and Grafana) for mission operations development, training and rehearsals
+
+
 
 ## Simulation Environments Overview
 
@@ -13,11 +30,14 @@ Omniverse Lunar Robotics Simulator or OmniLRS, is a simulation tools developped 
 |  <div style="width:70px">Name</div>  |  <div style="width:230px">Description</div>  | Images            |
 |------------|-------------|---------------------------------|
 | **Lunalab**            |  <div style="width:230px"> Digital-Twin of lunar analog at the University of Luxembourg. This environment also supports terrain deformation as the rover drives on it. </div> | <img src="https://raw.githubusercontent.com/wiki/OmniLRS/OmniLRS/media/env_img/lunalab.png" width=520/> |
-| **Lunaryard**            |  <div style="width:230px">A small scale procedually generated lunar environment. If lunar coordinates and a date is provided the position of the earth and sun are computed using ephemerides resulting in realistic lighting. This feature is also available in the large scale environments. This environment also support terrain deformation as the rover drives on it.</div>  | <img src="https://raw.githubusercontent.com/wiki/OmniLRS/OmniLRS/media/env_img/lunaryard_husky_ex1.png" width=520/> |
-| **LargeScale**           |  <div style="width:230px">Semi procedural lunar environment. It uses real DEM to reconstuct the coarse terrain, usually 5meters per pixel and then uses procedural generation to augment it to 2.5cm per pixel. The terrain itself can be generated at a even higher resolution to smooth out shadows. This very fine terrain allows to reconstruct fine terrain features increasing the engineering value of the sim. The whole of this is bundled inside Geometry clip maps, allowing to render very large scenes.</div> | <img src="https://raw.githubusercontent.com/wiki/OmniLRS/OmniLRS/media/env_img/large_scale.png" width=520/>
+| **Lunaryard**            |  <div style="width:230px">A small scale procedually generated lunar environment. If lunar coordinates and a date is provided the position of the Earth and Sun are computed using ephemerides resulting in realistic lighting. This feature is also available in the large scale environments. This environment also support terrain deformation as the rover drives on it.</div>  | <img src="https://raw.githubusercontent.com/wiki/OmniLRS/OmniLRS/media/env_img/lunaryard_husky_ex1.png" width=520/> |
+| **LargeScale**           |  <div style="width:230px">Semi procedural lunar environment. It uses real DEM to reconstuct the coarse terrain, usually 5 meters per pixel and then uses procedural generation to augment it to 2.5 cm per pixel. The terrain itself can be generated at a even higher resolution to smooth out shadows. This very fine terrain allows to reconstruct fine terrain features increasing the engineering value of the sim. The whole of this is bundled inside Geometry clip maps, allowing to render very large scenes.</div> | <img src="https://raw.githubusercontent.com/wiki/OmniLRS/OmniLRS/media/env_img/large_scale.png" width=520/>
 
-> [!NOTE]
-> Please note that this is a partial release. More robots will be made available at a later date. Should you run into a bug, or would like to request a new feature, feel free to open an issue. Want to collaborate, reach out to us!
+> [!IMPORTANT]
+> This readme showcases only basic information: for a more complete introduction to the simulation and its inner workings please [visit our wiki](https://github.com/OmniLRS/OmniLRS/wiki)! 
+> For specific questions or to have a chat join [our discord](https://discord.gg/KfZ2uaMHqh)! 
+> Should you run into a bug, or would like to request a new feature, feel free to open an issue. 
+> Want to collaborate, reach out to us! PRs very welcome!
 
 ## OmniLRS in Action!
 
@@ -33,30 +53,32 @@ Large Scale update:
 
 [![Large Scale Update Demo Youtube Video](https://img.youtube.com/vi/3m78fO5uXwA/0.jpg)](https://www.youtube.com/watch?v=3m78fO5uXwA)
 
+Mission Operations Update:
+
+[![Mission Operations Workshop in Tokyo](https://img.youtube.com/vi/DtvEvpR_DWA/0.jpg)](https://www.youtube.com/watch?v=DtvEvpR_DWA)
+
 
 ## Installation
 
 Follow the instruction on the Wiki: we strongly recommend following the [docker installation](https://github.com/OmniLRS/OmniLRS/wiki/Installation#docker-installation) steps. 
 
+Then Follow the [Getting Started steps](https://github.com/OmniLRS/OmniLRS/wiki/GettingStarted) to run your first OmniLRS simulations!
 
-## Getting Started:
+### ROS2 Integration
 
-Follow the [steps in the Wiki](https://github.com/OmniLRS/OmniLRS/wiki/GettingStarted) to run your first OmniLRS simulations!
-
-### ROS Interactions with the Scene
+See the separate git repository to run the ROS2 demo. \
+It supports joystick teleoperation and navigation. \
+https://github.com/jnskkmhr/omnilrs_ros2_demo
 
 The simulation allows user to interact with the Scene through ROS topics. This allows for instance to reset or teleport a robot, or to change the intensity of a light! We provide a complete description of the interactions available with the sim from ROS on the Wiki [here](https://github.com/OmniLRS/OmniLRS/wiki/ros_topics).
 
-### ROS2 Demo
-We've prepared another separate git repository to run ROS2 demo. \
-It supports joystick teleoperation and navigation for now. \
-https://github.com/jnskkmhr/omnilrs_ros2_demo
-
-### Integration & Workflow with SpaceROS
-
-Isaac Sim is using ROS2 by default, most of the tools available in Isaac are meant for ROS2. Hence, this simulation uses ROS2. To use this simulation with SpaceROS, the ROS2 simulation docker must first be spinned up, and then in a second time, another container running SpaceROS must be launched to interact with the simulation.
-
+To use this simulation with SpaceROS, the ROS2 simulation docker must first be spinned up, and then in a second time, another container running SpaceROS must be launched to interact with the simulation.
 To illustrate this, we provide a simple teleop demonstration with the sim in ROS2 and SpaceROS sending velocity commands. Check the Wiki for a [step-by-step guide](https://github.com/OmniLRS/OmniLRS/wiki#run-with-spaceros) on how to run this demo.
+
+## Yamcs (Mission Control System) Integration
+See the separate git repository to run the Yamcs and Grafana demo
+https://github.com/OmniLRS/yamcs-mission-control-pragyaan
+
 
 ## Citation
 Please use the following citations if you use `OmniLRS` in your work.
