@@ -3,7 +3,7 @@
 <table>
   <tr>
     <td width="300"><img src="https://raw.githubusercontent.com/wiki/OmniLRS/OmniLRS/media/thumb/thumbnail.png" width="300"/><br/><b>V1</b>: Environment, craters, rocks, synthetic data generation, wheel traces</td>
-    <td rowspan="3" valign="top" align="center"><img src="https://raw.githubusercontent.com/wiki/OmniLRS/OmniLRS/media/OmniLRSv3.png" width="520"/><br/><b>V3</b>: Integration with Mission Control System (Yamcs and Grafana), and implementation of Physics Models (power, radio, thermal)</td>
+    <td rowspan="3" valign="center" align="center"><img src="https://raw.githubusercontent.com/wiki/OmniLRS/OmniLRS/media/OmniLRSv3.png" width="520"/><br/><b>V3</b>: Integration with Mission Control System (Yamcs and Grafana), and implementation of Physics Models (power, radio, thermal)</td>
   </tr>
   <tr>
     <td width="300"><img src="https://raw.githubusercontent.com/wiki/OmniLRS/OmniLRS/media/Logov2.png" width="300"/><br/><b>V2</b>: Large Scale environment</td>
