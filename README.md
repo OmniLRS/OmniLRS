@@ -3,24 +3,24 @@
 <table>
   <tr>
     <td width="300"><img src="https://raw.githubusercontent.com/wiki/OmniLRS/OmniLRS/media/thumb/thumbnail.png" width="300"/><br/><b>V1</b>: Environment, craters, rocks, synthetic data generation, wheel traces</td>
-    <td rowspan="3" valign="top" align="center"><img src="https://raw.githubusercontent.com/wiki/OmniLRS/OmniLRS/media/OmniLRSv3.png" width="520"/><br/><b>V3</b>: Integration with Mission Control System (Yamcs and Grafana), Physics Models (power, radio, thermal)</td>
+    <td rowspan="3" valign="center" align="center"><img src="https://raw.githubusercontent.com/wiki/OmniLRS/OmniLRS/media/OmniLRSv3.png" width="520"/><br/><b>V3</b>: Integration with Mission Control System (Yamcs and Grafana), and implementation of Physics Models (power, radio, thermal)</td>
   </tr>
   <tr>
     <td width="300"><img src="https://raw.githubusercontent.com/wiki/OmniLRS/OmniLRS/media/Logov2.png" width="300"/><br/><b>V2</b>: Large Scale environment</td>
   </tr>
   <tr>
-    <td width="300"><b>V2.5</b>: Migration to Isaac Sim 5.0</td>
+    <td width="300"><img src="https://raw.githubusercontent.com/wiki/OmniLRS/OmniLRS/media/thumb/Husky_SouthPole.png" width="300"/><br/><b>V2.5</b>: Migration to Isaac Sim 5.0</td>
   </tr>
 </table>
 
-OmniLRS is powered by NVIDIA Omniverse Isaacsim to provide visually realistic and physically accurate robotics simulation of lunar rovers.
-- real-time GPU accelerated ray tracing for accurate 
-- real-time GPU accelerated physics for wheel/soil interactions and rigid-body dynamics
-- Base Terrain from NASA LRO Digital Elevation Models, rock and crater distributions from power laws
+OmniLRS is powered by NVIDIA Isaac Sim and NVIDIA Omniverse libraries to provide visually realistic and physically accurate robotics simulation of lunar rovers.
+- GPU accelerated ray tracing for real-time illumination, shadows and vision sensors
+- GPU accelerated physics for real-time rigid-body dynamics and wheel/soil interactions 
+- Base Terrain from NASA LRO Digital Elevation Models, plus generative rock and crater distributions from power laws
 - Customizable and randomizable terrain generation and asset placement for synthetic data generation 
-- Integration with ROS2 and more
-- Multi-phyisics model framework to simulate the entire range of telemetry needed in lunar missions: Power, Radio, Thermal
-- Mission Control Software Integration (Yamcs and Grafana) for mission operations training and rehearsals
+- Integration with ROS2 robotics ecosystem and more
+- Multi-physics model framework to simulate the entire range of telemetry needed in lunar missions: Power, Radio, Thermal
+- Mission Control Software Integration (Yamcs and Grafana) for mission operations development, training and rehearsals
 
 
 
@@ -30,8 +30,8 @@ OmniLRS is powered by NVIDIA Omniverse Isaacsim to provide visually realistic an
 |  <div style="width:70px">Name</div>  |  <div style="width:230px">Description</div>  | Images            |
 |------------|-------------|---------------------------------|
 | **Lunalab**            |  <div style="width:230px"> Digital-Twin of lunar analog at the University of Luxembourg. This environment also supports terrain deformation as the rover drives on it. </div> | <img src="https://raw.githubusercontent.com/wiki/OmniLRS/OmniLRS/media/env_img/lunalab.png" width=520/> |
-| **Lunaryard**            |  <div style="width:230px">A small scale procedually generated lunar environment. If lunar coordinates and a date is provided the position of the earth and sun are computed using ephemerides resulting in realistic lighting. This feature is also available in the large scale environments. This environment also support terrain deformation as the rover drives on it.</div>  | <img src="https://raw.githubusercontent.com/wiki/OmniLRS/OmniLRS/media/env_img/lunaryard_husky_ex1.png" width=520/> |
-| **LargeScale**           |  <div style="width:230px">Semi procedural lunar environment. It uses real DEM to reconstuct the coarse terrain, usually 5meters per pixel and then uses procedural generation to augment it to 2.5cm per pixel. The terrain itself can be generated at a even higher resolution to smooth out shadows. This very fine terrain allows to reconstruct fine terrain features increasing the engineering value of the sim. The whole of this is bundled inside Geometry clip maps, allowing to render very large scenes.</div> | <img src="https://raw.githubusercontent.com/wiki/OmniLRS/OmniLRS/media/env_img/large_scale.png" width=520/>
+| **Lunaryard**            |  <div style="width:230px">A small scale procedually generated lunar environment. If lunar coordinates and a date is provided the position of the Earth and Sun are computed using ephemerides resulting in realistic lighting. This feature is also available in the large scale environments. This environment also support terrain deformation as the rover drives on it.</div>  | <img src="https://raw.githubusercontent.com/wiki/OmniLRS/OmniLRS/media/env_img/lunaryard_husky_ex1.png" width=520/> |
+| **LargeScale**           |  <div style="width:230px">Semi procedural lunar environment. It uses real DEM to reconstuct the coarse terrain, usually 5 meters per pixel and then uses procedural generation to augment it to 2.5 cm per pixel. The terrain itself can be generated at a even higher resolution to smooth out shadows. This very fine terrain allows to reconstruct fine terrain features increasing the engineering value of the sim. The whole of this is bundled inside Geometry clip maps, allowing to render very large scenes.</div> | <img src="https://raw.githubusercontent.com/wiki/OmniLRS/OmniLRS/media/env_img/large_scale.png" width=520/>
 
 > [!IMPORTANT]
 > This readme showcases only basic information: for a more complete introduction to the simulation and its inner workings please [visit our wiki](https://github.com/OmniLRS/OmniLRS/wiki)! 
@@ -76,7 +76,7 @@ To use this simulation with SpaceROS, the ROS2 simulation docker must first be s
 To illustrate this, we provide a simple teleop demonstration with the sim in ROS2 and SpaceROS sending velocity commands. Check the Wiki for a [step-by-step guide](https://github.com/OmniLRS/OmniLRS/wiki#run-with-spaceros) on how to run this demo.
 
 ## Yamcs (Mission Control System) Integration
-See the separate git repository to run the Yamcs demo
+See the separate git repository to run the Yamcs and Grafana demo
 https://github.com/OmniLRS/yamcs-mission-control-pragyaan
 
 
