@@ -9,7 +9,7 @@
     <td width="300"><img src="https://raw.githubusercontent.com/wiki/OmniLRS/OmniLRS/media/Logov2.png" width="300"/><br/><b>V2</b>: Large Scale environment</td>
   </tr>
   <tr>
-    <td width="300"><b>V2.5</b>: Migration to Isaac Sim 5.0</td>
+    <td width="300"><img src="https://raw.githubusercontent.com/wiki/OmniLRS/OmniLRS/media/thumb/Husky_SouthPole.png" width="300"/><br/><b>V2.5</b>: Migration to Isaac Sim 5.0</td>
   </tr>
 </table>
 
