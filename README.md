@@ -1,5 +1,19 @@
 # OmniLRS: Omniverse Lunar Robotics Simulator
 
+<center>
+<img src="https://raw.githubusercontent.com/wiki/OmniLRS/OmniLRS/media/OmniLRS_HuskySouthPole.png" width=1080/>
+</center>
+
+OmniLRS is powered by NVIDIA Isaac Sim and NVIDIA Omniverse libraries to provide visually realistic and physically accurate robotics simulation of lunar rovers.
+- GPU accelerated ray tracing for real-time illumination, shadows and vision sensors
+- GPU accelerated physics for real-time rigid-body dynamics and wheel/soil interactions 
+- Base Terrain from NASA LRO Digital Elevation Models, plus generative rock and crater distributions from power laws
+- Customizable and randomizable terrain generation and asset placement for synthetic data generation 
+- Integration with ROS2 robotics ecosystem and more
+- Multi-physics model framework to simulate the entire range of telemetry needed in lunar missions: Power, Radio, Thermal
+- Mission Control Software Integration (Yamcs and Grafana) for mission operations development, training and rehearsals
+
+
 <table>
   <tr>
     <td width="300"><img src="https://raw.githubusercontent.com/wiki/OmniLRS/OmniLRS/media/thumb/thumbnail.png" width="300"/><br/><b>V1</b>: Environment, craters, rocks, synthetic data generation, wheel traces</td>
@@ -13,14 +27,7 @@
   </tr>
 </table>
 
-OmniLRS is powered by NVIDIA Isaac Sim and NVIDIA Omniverse libraries to provide visually realistic and physically accurate robotics simulation of lunar rovers.
-- GPU accelerated ray tracing for real-time illumination, shadows and vision sensors
-- GPU accelerated physics for real-time rigid-body dynamics and wheel/soil interactions 
-- Base Terrain from NASA LRO Digital Elevation Models, plus generative rock and crater distributions from power laws
-- Customizable and randomizable terrain generation and asset placement for synthetic data generation 
-- Integration with ROS2 robotics ecosystem and more
-- Multi-physics model framework to simulate the entire range of telemetry needed in lunar missions: Power, Radio, Thermal
-- Mission Control Software Integration (Yamcs and Grafana) for mission operations development, training and rehearsals
+
 
 
 
