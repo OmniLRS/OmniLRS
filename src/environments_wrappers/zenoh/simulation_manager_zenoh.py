@@ -204,11 +204,7 @@ class Zenoh_SimulationManager:
 
         self.entry_task_is_done = False
 
-    async def _run_zenoh_sub(self):
-        """
-        Listens for Zenoh messages and enqueues them for processing
-        in the main simulation loop.
-        """
+    async def _randomize_rocks_sub(self):
         sub = Sub(self.ZenohLabManager.rocks_randomize_keyexpr)
 
         try:
@@ -219,14 +215,14 @@ class Zenoh_SimulationManager:
 
     async def _entry_point(self):
         async with asyncio.TaskGroup() as tg:
-            tg.create_task(self._run_zenoh_sub())
+            tg.create_task(self._randomize_rocks_sub())
             # tg.create_task(..)
             # tg.create_task(..)
 
     def _on_update(self, event) -> None:
         """
         Called once per app frame by Isaac Sim's update event stream.
-        Runs synchronous simulation logic and drains the Zenoh queue.
+        Runs synchronous simulation logic.
         """
         # Note: cannot use asyncio.create_task() here because it will complain "RuntimeError: no running event loop" -> had to use older api
         if self._entry_task is None:
@@ -261,7 +257,6 @@ class Zenoh_SimulationManager:
             self.ZenohLabManager.pub_sim_is_running(True)
 
         if self.ZenohRobotManager.transports_inited:
-            self.ZenohRobotManager.publish_cameras()
             self.ZenohRobotManager.publish_telemetry()
             self.ZenohRobotManager.publish_gt()
             self.ZenohRobotManager.update_controller()
@@ -292,17 +287,7 @@ class Zenoh_SimulationManager:
         if self._entry_task is not None:
             self._entry_task.cancel()
 
-        for t in self.ZenohRobotManager.transports:
-            t.close()
-
-        for bridge in self.ZenohRobotManager.joint_bridges.values():
-            bridge.close()
-
-        for controller in self.ZenohRobotManager.controllers.values():
-            controller.close()
-
-        for receiver in self.ZenohRobotManager.cmd_receivers.values():
-            receiver.close()
+        self.ZenohRobotManager.close()
 
         self.world.stop()
         self.timeline.stop()

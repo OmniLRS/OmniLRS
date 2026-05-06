@@ -44,7 +44,6 @@ class Zenoh_LargeScaleManager(Zenoh_BaseManager):
         )
         self.LC.load()
 
-        self.rocks_randomize_keyexpr = zenoh_cfg["misc"]["rocks"]["randomize"]["keyexpr"]
         self.trigger_reset = False
         
     def periodic_update(self, dt: float) -> None:

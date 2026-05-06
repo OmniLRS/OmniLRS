@@ -8,8 +8,7 @@ __status__ = "development"
 
 from typing import List, Tuple
 
-### temporary until omnilrs_artefacts is public through pip install
-from omnilrs_artefacts.transport.zenoh_pub import ZenohPubTransport
+from src.environments_wrappers.zenoh.transport.zenoh_pub import ZenohPubTransport
 
 
 class Zenoh_BaseManager():
@@ -32,11 +31,12 @@ class Zenoh_BaseManager():
 
         self.modifications: List[Tuple[callable, dict]] = []
 
+        self.rocks_randomize_keyexpr = zenoh_cfg.get("misc", {}).get("rocks", {}).get("randomize", {}).get("keyexpr", "OmniLRS/Terrain/RandomizeRocks")
+
         self.transports = []
 
         self.sim_running_pub = ZenohPubTransport(
-            keyexpr = zenoh_cfg["misc"]["sim"]["is_running_keyexpr"],
-            json_compact = zenoh_cfg["misc"]["sim"]["json_compact"]
+            keyexpr = zenoh_cfg.get("misc", {}).get("sim", {}).get("is_running_keyexpr", "OmniLRS/sim/is_running") 
         )
         self.transports.append(self.sim_running_pub)
 

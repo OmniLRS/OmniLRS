@@ -6,28 +6,18 @@ __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
 __status__ = "development"
 
-import os
-import sys
 import time
 from typing import Callable, Dict, List, Tuple
 
-import msgspec
-import numpy as np
+from src.environments_wrappers.zenoh.control.articulation_controller import ArticulationController
+from src.environments_wrappers.zenoh.telemetry.camera_bridge import CameraBridge
+from src.environments_wrappers.zenoh.telemetry.imu_bridge import IMUBridge
+from src.environments_wrappers.zenoh.telemetry.joint_force_bridge import JointForceBridge
+from src.environments_wrappers.zenoh.transport.zenoh_cmd import ZenohCommandReceiver
+from src.environments_wrappers.zenoh.transport.zenoh_pub import ZenohPubTransport
 
 from src.configurations.simulator_mode_enum import SimulatorMode
 from src.robots.robot import RobotManager
-
-try:
-    import omnilrs_artefacts
-except ImportError:
-    # just in case
-    module_path = os.path.abspath(f"{os.path.dirname(__file__)}/../../../external/omnilrs_artefacts/src")
-    sys.path.append(module_path)
-
-from omnilrs_artefacts.control.articulation_controller import ArticulationController
-from omnilrs_artefacts.telemetry.joint_force_bridge import JointForceBridge
-from omnilrs_artefacts.transport.zenoh_cmd import ZenohCommandReceiver
-from omnilrs_artefacts.transport.zenoh_pub import ZenohPubTransport
 
 
 class Zenoh_RobotManager:
@@ -48,50 +38,43 @@ class Zenoh_RobotManager:
         robot_name = f'{robot["robot_name"]}'
         robot_path = self.RM.robots_root + "/" + robot_name
 
-        # camera config is optional
-        camera_cfg = robot.get("camera", None)
-        camera_sensor_cfg = zenoh_conf.get("sensors", {}).get("camera", {})
+        ### BEGIN TELEMETRY ###
 
-        self.resolution = camera_sensor_cfg.get("resolution", None)
+        ## Camera Telemetry
+        
+        camera_cfg = robot.get("camera", None) # camera_cfg optional
+        camera_zenoh_cfg = zenoh_conf.get("sensors", {}).get("camera", {})
 
-        # build camera keyexprs
-        base_expr_template = camera_sensor_cfg.get("base_keyexpr", "OmniLRS/{robot_name}/Camera")
+        self.camera_bridge = CameraBridge(
+            camera_cfg,
+            camera_zenoh_cfg,
+            self.RM
+        )
 
-        def build_camera_keyexpr(camera_name: str) -> str:
-            return base_expr_template.format(robot_name=robot_name) + f"/{camera_name}"
+        ## IMU Telemetry
+        imu_zenoh_cfg = zenoh_conf.get("sensors", {}).get("imu", {})
 
-        if camera_cfg:
-            json_compact = camera_sensor_cfg.get("json_compact", False)
+        self.imu_bridge = IMUBridge(
+            imu_zenoh_cfg,
+            self.RM
+        )
 
-            if isinstance(camera_cfg, list):
-                for camera in camera_cfg:
-                    cam_pub = ZenohPubTransport(
-                        keyexpr=build_camera_keyexpr(camera["name"]),
-                        json_compact=json_compact,
-                    )
-                    self.cams.append(cam_pub)
-                    self.transports.append(cam_pub)
-            else:
-                cam_pub = ZenohPubTransport(
-                    keyexpr=build_camera_keyexpr(camera_cfg["name"]),
-                    json_compact=json_compact,
-                )
-                self.cams.append(cam_pub)
-                self.transports.append(cam_pub)
+        ## Joint Force Telemetry
+        joint_zenoh_cfg = zenoh_conf.get("sensors", {}).get("joint_force", {})
+
+        self.joint_bridge = JointForceBridge(
+            joint_zenoh_cfg,
+            robot_name,
+            robot_root_prim=robot_path,
+        )
+
+        ### END TELEMETRY ###
 
         gt_pub = ZenohPubTransport(
-            keyexpr=f"{robot_name}/gt_pose",
-            json_compact=False,
+            keyexpr=zenoh_conf.get("misc", {}).get("sim", {}).get("gt_pose_keyexpr", "OmniLRS/{robot_name}/gt_pose").format(robot_name = robot_name)
         )
         self.gt = gt_pub
         self.transports.append(gt_pub)
-
-        self.joint_bridge = JointForceBridge(
-            transports=[
-                {"type": "zenoh", "keyexpr": f"{robot_name}/joint_telemetry"},
-            ],
-            robot_root_prim=robot_path,
-        )
 
         self.controller = ArticulationController(
             prim_path=robot_path,
@@ -99,7 +82,7 @@ class Zenoh_RobotManager:
 
         self.cmd_receiver = ZenohCommandReceiver(
             controller=self.controller,
-            keyexpr=f"{robot_name}/joint_cmd",
+            keyexpr=zenoh_conf.get("controller", {}).get("cmd_keyexpr", "OmniLRS/{robot_name}/joint_cmd").format(robot_name = robot_name),
         )
 
         self.transports_inited = False
@@ -135,24 +118,13 @@ class Zenoh_RobotManager:
 
         self.modifications.append([self.RM.reset_robot, {}])
 
-    def publish_cameras(self) -> None:
-        """
-        Publish current frame from each camera
-        """
-        if not self.transports_inited or not self.cams or self.resolution is None:
-            return
-
-        for i, cam in enumerate(self.cams):
-            if len(self.cams) > 1:
-                frame = self.RM.robot.get_rgba_camera_view_by_idx(i, self.resolution)
-            else:
-                frame = self.RM.robot.get_rgba_camera_view(self.resolution)
-
-            if frame.size != 0:
-                cam.publish_array(frame)
-
     def publish_telemetry(self) -> None:
+        self.camera_bridge.maybe_initialize()
+        self.imu_bridge.maybe_initialize()
         self.joint_bridge.maybe_initialize()
+
+        self.camera_bridge.update()
+        self.imu_bridge.update()
         self.joint_bridge.update()
 
     def update_controller(self) -> None:
@@ -179,3 +151,13 @@ class Zenoh_RobotManager:
             }
 
             self.gt.publish(gt)
+
+    def close(self) -> None:
+        for t in self.transports:
+            t.close()
+
+        self.camera_bridge.close()
+        self.imu_bridge.close()
+        self.joint_bridge.close()
+        self.controller.close()
+        self.cmd_receiver.close()
