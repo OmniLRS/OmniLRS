@@ -332,7 +332,7 @@ robots_settings:
       domain_id: 0
       target_links: ["front_left_wheel_link", "front_right_wheel_link", "rear_left_wheel_link", "rear_right_wheel_link"]
       base_link: "base_link" # core link used to determine the position of the robot
-      imu_sensor_path: /Robots/husky/d455/RSD455/Imu_Sensor
+      imu_sensor_path: "/Robots/husky/d455/RSD455/Imu_Sensor"
       camera:
         -
           name: "cam_color"
