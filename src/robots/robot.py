@@ -9,7 +9,7 @@ __status__ = "development"
 import math
 import threading
 import time
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, TYPE_CHECKING
 from scipy.spatial.transform import Rotation as R
 import numpy as np
 import warnings
@@ -33,6 +33,9 @@ from src.environments.utils import transform_orientation_from_xyzw_into_xyz, tra
 from src.subsystems.robot_subsystems_handler import RobotSubsystemsHandler
 # from src.robots.subsystems_manager import RobotSubsystemsManager
 from omni.isaac.sensor import Camera
+
+if TYPE_CHECKING:
+    from src.tmtc.yamcs_TMTC import YamcsTMTC
 
 from isaacsim.sensors.physics import _sensor
 

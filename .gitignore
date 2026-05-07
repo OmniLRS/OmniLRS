@@ -15,6 +15,11 @@ mesh_backbone_fine.npz
 
 # Assets downloaded from S3 shall not be version controlled
 assets/Terrains/SouthPole/
+# pixi environments
+.pixi/*
+!.pixi/config.toml
+
+Session.vim
 
 # Test venv and outputs
 test/venv/
