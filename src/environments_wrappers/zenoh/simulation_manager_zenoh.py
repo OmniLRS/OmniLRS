@@ -188,13 +188,13 @@ class Zenoh_SimulationManager:
         else:
             self.ZenohRobotManager.RM.preload_robot(self.world)
 
-            for t in self.ZenohLabManager.transports:
-                t.start()
-            self.ZenohLabManager.transports_inited = True
+        for t in self.ZenohLabManager.transports:
+            t.start()
+        self.ZenohLabManager.transports_inited = True
 
-            for t in self.ZenohRobotManager.transports:
-                t.start()
-            self.ZenohRobotManager.transports_inited = True
+        for t in self.ZenohRobotManager.transports:
+            t.start()
+        self.ZenohRobotManager.transports_inited = True
 
         self.ZenohLabManager.LC.add_robot_manager(self.ZenohRobotManager.RM)
 
