@@ -13,6 +13,9 @@ description = "Pixi environments for OmniLRS with Isaac Sim 5 and manager-specif
 [system-requirements]
 libc = { family = "glibc", version = "2.35" }
 
+[tasks]
+dedup-envs = "rdfind -makehardlinks true .pixi/envs"
+
 [pypi-options]
 index-url = "https://pypi.org/simple"
 extra-index-urls = ["https://pypi.nvidia.com"]
@@ -23,6 +26,7 @@ index-strategy = "unsafe-best-match"
 python = "3.11.*"
 gdal = "*"
 libgdal = "*"
+rdfind = "*"
 
 [feature.core.pypi-dependencies]
 opencv-python = "*"
