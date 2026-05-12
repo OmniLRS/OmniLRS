@@ -278,6 +278,9 @@ class Robot:
         if robot_name == "pragyaan":
             from src.mission_specific.pragyaan.subsystems.pragyaan_subsystems_handler import PragyaanSubsystemsHandler
             self.subsystems = PragyaanSubsystemsHandler(pos_relative_to_prim)
+        elif robot_name == "husky":
+            from src.mission_specific.husky.subsystems.husky_subsystems_handler import HuskySubsystemsHandler
+            self.subsystems = HuskySubsystemsHandler(pos_relative_to_prim)
 
     def get_root_rigid_body_path(self) -> None:
         """

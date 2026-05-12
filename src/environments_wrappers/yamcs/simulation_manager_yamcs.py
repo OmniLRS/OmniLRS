@@ -85,6 +85,9 @@ class Yamcs_SimulationManager:
         if controller_name == "pragyaan-controller":
             from src.mission_specific.pragyaan.tmtc.pragyaan_controller import PragyaanController
             self.TMTC = PragyaanController(self.cfg["mode"]["instance_conf"], self.RM.RM_conf.yamcs_tmtc, robot_name, self.RM.robot_RG, self.RM.robot)
+        elif controller_name == "husky-controller":
+            from src.mission_specific.husky.tmtc.husky_controller import HuskyController
+            self.TMTC = HuskyController(self.cfg["mode"]["instance_conf"], self.RM.RM_conf.yamcs_tmtc, robot_name, self.RM.robot_RG, self.RM.robot) 
         elif controller_name == "":
             raise Exception("No robot controller was setup in yaml configurations.")
         else: 

@@ -1,0 +1,34 @@
+# @package environment
+# do not remove the above comment, it injects the below configs into environment configs
+
+robots_settings:
+  parameters:
+    robot_name: husky
+    usd_path: assets/USD_Assets/robots/nograph_husky.usd
+    pose:
+      # position: [3, 7.5, 1] commenting out the initial position to use default position defined in the environment yaml file
+      orientation: [0., 0., 0., 1.]
+    domain_id: 0
+    target_links:
+      [
+        "front_left_wheel_link",
+        "front_right_wheel_link",
+        "rear_left_wheel_link",
+        "rear_right_wheel_link",
+      ]
+    base_link: "base_link" # core link used to determine the position of the robot
+    dimensions:
+      width: 0.67 # m  (Husky nominal track width)
+      length: 0.99 # m
+    pos_relative_to_prim: "" # set to a prim path (e.g. "/StaticAssets/base_station") if a fixed base is present
+    wheel_joints:
+      left: ["front_left_wheel", "rear_left_wheel"]
+      right: ["front_right_wheel", "rear_right_wheel"]
+    camera:
+      prim_path: "/Robots/husky/d455/RSD455/Camera_OmniVision_OV9782_Color"
+      resolutions:
+        low: [320, 240]
+        high: [1280, 720]
+    imu_sensor_path: "/Robots/husky/d455/RSD455/Imu_Sensor"
+    turn_speed_coef: 10 # tune based on Husky's wheel separation
+    solar_panel_joint: "" # Husky has no solar panel
