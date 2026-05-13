@@ -9,14 +9,14 @@ large_scale_terrain:
   hr_dem_generate_craters: True
   starting_position: [-7636, 10060]
   lr_dem_name: "ldem_87s_5mpp"
-  hr_dem_num_blocks: 1
-  block_size: 10
+  hr_dem_num_blocks: 4
+  block_size: 50
   crater_gen_densities: [0.025, 0.05, 0.5]
   crater_gen_radius: [[1.5, 2.5], [0.75, 1.5], [0.25, 0.5]]
   rock_gen_cfgs:
     -
       rock_sampler_cfg: 
-        block_size: 10
+        block_size: 50
         seed: 42
         rock_dist_cfg:
           position_distribution:
@@ -39,7 +39,7 @@ large_scale_terrain:
       texture_path: "assets/Textures/seaside_rock_2k.mdl"
     -
       rock_sampler_cfg:
-        block_size: 10
+        block_size: 50
         seed: 42
         rock_dist_cfg:
           position_distribution:
@@ -56,7 +56,7 @@ large_scale_terrain:
       rock_assets_folder: "assets/USD_Assets/rocks/small_rocks"
       instancer_name: "small_rock_instancer"
       seed: 47
-      block_span: 1
+      block_span: 2
       add_colliders: True
       collider_mode: "none"
       texture_name: "seaside_rock_2k"
@@ -82,6 +82,10 @@ sun_settings:
   azimuth: 90.0
   elevation: 5.0
 
+# The environment config includes the default robot_settings (tested to work out of the box), 
+# but the best practice for development is to have a separate robot config file that overides it
+# and launch the sim with run.py environment=... robot=...
+# (do not commit edits to the robot_settings below)
 robots_settings:
   robots_root: "/Robots"
   parameters:
@@ -93,12 +97,3 @@ robots_settings:
     domain_id: 0
     target_links: ["front_left_wheel_link", "front_right_wheel_link", "rear_left_wheel_link", "rear_right_wheel_link"]
     base_link: "base_link" # core link used to determine the position of the robot
-
-    # robot_name: jackal
-    # usd_path: assets/USD_Assets/robots/ros2_jackal_PhysX_vlp16_stereo.usd
-    # # usd_path: assets/USD_Assets/robots/ros2_jackal_PhysX_vlp16.usd
-    # pose:
-    #   position: [5.0, 5.0, 0.5]
-    #   orientation: [1, 0, 0, 0]
-    # domain_id: 0
-    # target_links: ["front_left_wheel_link", "front_right_wheel_link", "rear_left_wheel_link", "rear_right_wheel_link"]
