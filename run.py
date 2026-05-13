@@ -73,7 +73,7 @@ def instantiateConfigs(cfg: dict) -> dict:
     return ret
 
 
-@hydra.main(config_name="config", config_path="cfg")
+@hydra.main(config_name="config", config_path="cfg", version_base="1.2")
 def run(cfg: DictConfig):
     cfg = omegaconfToDict(cfg)
     cfg = instantiateConfigs(cfg)
