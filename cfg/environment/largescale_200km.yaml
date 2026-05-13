@@ -82,7 +82,7 @@ sun_settings:
   azimuth: 90.0
   elevation: 5.0
 
-# The environment config includes the default robot_settings (tested to work out of the box), 
+# This environment config includes the default robot_settings (tested to work out of the box), 
 # but the best practice for development is to have a separate robot config file that overides it
 # and launch the sim with run.py environment=... robot=...
 # (do not commit edits to the robot_settings below)
@@ -94,6 +94,5 @@ robots_settings:
     pose:
       position: [0.0, 0.0, 0.5]
       orientation: [1, 0, 0, 0]
-    domain_id: 0
     target_links: ["front_left_wheel_link", "front_right_wheel_link", "rear_left_wheel_link", "rear_right_wheel_link"]
     base_link: "base_link" # core link used to determine the position of the robot

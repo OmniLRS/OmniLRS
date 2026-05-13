@@ -144,21 +144,18 @@ terrain_manager:
   sim_width: ${..lunalab_settings.lab_width}
   resolution: ${..lunalab_settings.resolution}
 
+
+# This environment config includes the default robot_settings (tested to work out of the box), 
+# but the best practice for development is to have a separate robot config file that overides it
+# and launch the sim with run.py environment=... robot=...
+# (do not commit edits to the robot_settings below)
 robots_settings:
   robots_root: "/Robots"
   parameters:
-    # robot_name: ex1
-    # usd_path: assets/USD_Assets/robots/ex1.usd
-    # pose:
-    #   position: [1.0, 1.0, 0.5]
-    #   orientation: [1, 0, 0, 0]
-    # base_link: "base_link" # core link used to determine the position of the robot
-    # target_links: ["left_front_wheel_link", "left_rear_wheel_link", "right_front_wheel_link", "right_rear_wheel_link"]
-    
     robot_name: husky
     usd_path: assets/USD_Assets/robots/ros2_husky_PhysX_vlp16.usd
     pose:
-      position: [5.0, 5.0, 0.5]
+      position: [0.0, 0.0, 0.5]
       orientation: [1, 0, 0, 0]
-    base_link: "base_link" # core link used to determine the position of the robot
     target_links: ["front_left_wheel_link", "front_right_wheel_link", "rear_left_wheel_link", "rear_right_wheel_link"]
+    base_link: "base_link" # core link used to determine the position of the robot
