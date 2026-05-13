@@ -8,6 +8,7 @@ robots_settings:
     pose:
       position: [26., 16.6, 0.8]
       orientation: [0., 0., 0.70711, 0.70711]
+    base_link: "base_link" # core link used to determine the position of the robot
     target_links: [
       "Mobility/Wheel_front_left",
       "Mobility/Wheel_front_right",
