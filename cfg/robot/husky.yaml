@@ -1,11 +1,12 @@
 # @package environment 
-# do not remove the above comment, it injects the below configs into environment configs
+# do not remove the above comment, it injects the settings below into the environment config
 
 robots_settings:
   parameters:
     robot_name: husky
     usd_path: assets/USD_Assets/robots/ros2_husky_PhysX_vlp16.usd
     # usd_path: assets/USD_Assets/robots/ros2_husky_PhysX_vlp16_mono_depth_imu.usd
+    # usd_path: assets/USD_Assets/robots/nograph_husky.usd
     pose:
         position: [26., 16.6, 0.8]
         orientation: [0., 0., 0.70711, 0.70711]
