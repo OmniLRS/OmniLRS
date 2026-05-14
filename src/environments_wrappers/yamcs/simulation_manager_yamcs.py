@@ -74,6 +74,8 @@ class Yamcs_SimulationManager:
                                mode=SimulatorMode.YAMCS)
         self._setup_terrain_manager()
         self._preload_robot()
+        if (self.EC.SE != None): #TODO find a better spot for this and add for ros2 managers
+            self.RM.robot.subsystems.set_stellar_engine(self.EC.SE)
         self._start_TMTC()
         self.EC.add_robot_manager(self.RM)
         self._step_world_and_reset()

@@ -25,12 +25,6 @@ from src.subsystems.robot_subsystems_handler import RobotSubsystemsHandler
 class PragyaanSubsystemsHandler(RobotSubsystemsHandler):
 
     SUN_DISTANCE = 1000. # m
-    SUN_AZYMUTH_DEG = 65.0
-    SUN_POSITION = (
-        - SUN_DISTANCE * math.sin(math.pi * SUN_AZYMUTH_DEG / 180.0), 
-        SUN_DISTANCE * math.cos(math.pi * SUN_AZYMUTH_DEG / 180.0), 
-        10.0
-    )
     LANDER_POSITION = (0.0, 0.0, 0.0)
 
     # for setting up the Pragyaan-specific PowerModel:
@@ -47,6 +41,7 @@ class PragyaanSubsystemsHandler(RobotSubsystemsHandler):
         self._setup_devices()
         self._setup_power_model()
         self.LANDER_PATH = pos_relative_to_prim
+        self._stellar_engine = None
         self._neutron_spectrometer = NeutronSpectrometerModel()
 
         if (pos_relative_to_prim != ""):
@@ -55,6 +50,9 @@ class PragyaanSubsystemsHandler(RobotSubsystemsHandler):
             self._lander_pos = self.LANDER_POSITION
 
         self._update_sun_position()
+
+    def set_stellar_engine(self, stellar_engine):
+        self._stellar_engine = stellar_engine
 
     def _setup_devices(self):
         # Pragyaan and workshop-specific values for the subsystem devices
@@ -78,9 +76,22 @@ class PragyaanSubsystemsHandler(RobotSubsystemsHandler):
         )
 
     def _update_sun_position(self):
-        self._sun_pos = self.SUN_POSITION
+        if self._stellar_engine is not None:
+            alt, az, _ = self._stellar_engine.get_alt_az("sun")
 
-    # define a convenient decorator
+            self._sun_pos = (
+                -self.SUN_DISTANCE * math.cos(math.radians(alt)) * math.sin(math.radians(az)),
+                self.SUN_DISTANCE * math.cos(math.radians(alt)) * math.cos(math.radians(az)),
+                self.SUN_DISTANCE * math.sin(math.radians(alt)),
+            )
+        else:
+            SUN_AZYMUTH_DEG = 65.0
+            self._sun_pos = (
+                self.SUN_DISTANCE * math.sin(math.pi * SUN_AZYMUTH_DEG / 180.0), 
+                self.SUN_DISTANCE * math.cos(math.pi * SUN_AZYMUTH_DEG / 180.0), 
+                10.0
+            )
+
     def _update_sun_position_before(func):
         def wrapper(self, *args, **kwargs):
             self._update_sun_position()
