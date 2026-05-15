@@ -77,14 +77,11 @@ class PragyaanSubsystemsHandler(RobotSubsystemsHandler):
         )
 
     def _update_sun_direction(self):
-        # if _sun_prim_path is None, sun direction stays as the default set in __init__
-        # TODO: when _sun_prim_path is None, fall back to sun direction derived from Sun settings in the conf file
         if self._sun_prim_path is not None:
             _, quat_wxyz = get_world_pose(self._sun_prim_path)
             w, x, y, z = quat_wxyz
-            # rotate the default up-vector (+Z) by the sun prim orientation to get sun direction
-            self._sun_direction = Rotation.from_quat([x, y, z, w]).apply([-1.0, 0.0, 0.0])
-
+            self._sun_direction = Rotation.from_quat([x, y, z, w]).apply([-1.0, 0.0, 0.0]) # fixed coordinates
+        # if _sun_prim_path is None, sun direction stays as the default 
 
     def _update_sun_direction_before(func):
         def wrapper(self, *args, **kwargs):
