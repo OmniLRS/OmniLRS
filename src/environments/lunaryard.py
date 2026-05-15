@@ -287,6 +287,9 @@ class LunaryardController(BaseEnv):
     # Sun control
     # ==============================================================================
 
+    def get_sun_prim_path(self) -> str:
+        return self.stage_settings.sun_path
+
     def set_sun_pose(
         self,
         position: Tuple[float, float, float] = (0.0, 0.0, 0.0),

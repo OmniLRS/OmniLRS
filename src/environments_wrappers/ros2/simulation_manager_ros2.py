@@ -155,6 +155,8 @@ class ROS2_SimulationManager:
         else:
             self.ROSRobotManager.RM.preload_robot(self.world)
         self.ROSEnvironmentManager.EC.add_robot_manager(self.ROSRobotManager.RM)
+        if self.ROSEnvironmentManager.EC.enable_stellar_engine:
+            self.ROSRobotManager.RM.robot.subsystems.set_sun_prim_path(self.ROSEnvironmentManager.EC.get_sun_prim_path())
 
         for i in range(100):
             self.world.step(render=True)
