@@ -255,6 +255,8 @@ class LunaryardController(BaseEnv):
 
                 self.set_sun_pose((0, 0, 0), quat)
                 self.set_earth_pose(earth_pos, (1, 0, 0, 0))
+                print("Updated based on stellar!!")
+                print("new sun quat:", quat)
 
     # ==============================================================================
     # Earth control
@@ -284,6 +286,9 @@ class LunaryardController(BaseEnv):
     # ==============================================================================
     # Sun control
     # ==============================================================================
+
+    def get_sun_prim_path(self) -> str:
+        return self.stage_settings.sun_path
 
     def set_sun_pose(
         self,

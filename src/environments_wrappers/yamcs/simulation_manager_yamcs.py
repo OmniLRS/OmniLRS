@@ -74,6 +74,10 @@ class Yamcs_SimulationManager:
                                mode=SimulatorMode.YAMCS)
         self._setup_terrain_manager()
         self._preload_robot()
+        if hasattr(self.EC, 'sun_settings'): 
+            # True for Lunaryard and LargeScale, False for Lunalab
+            # subsystems uses sun directions to calculate views no matter if stellar engine is enabled (sun moves) or not
+            self.RM.robot.subsystems.set_sun_prim_path(self.EC.get_sun_prim_path())
         self._start_TMTC()
         self.EC.add_robot_manager(self.RM)
         self._step_world_and_reset()
@@ -152,6 +156,7 @@ class Yamcs_SimulationManager:
             self.rate.reset()
             self.world.step(render=True)
             if self.world.is_playing():
+                self.EC.update_stellar_engine(dt=self.world.get_physics_dt())
                 if self.world.current_time_step_index == 0:
                     self.world.reset()
             self.rate.sleep()
