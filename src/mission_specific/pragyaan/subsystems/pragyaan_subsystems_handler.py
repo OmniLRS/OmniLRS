@@ -24,7 +24,7 @@ from src.subsystems.robot_subsystems_handler import RobotSubsystemsHandler
 
 class PragyaanSubsystemsHandler(RobotSubsystemsHandler):
 
-    SUN_DISTANCE = 1000. # m
+    SUN_DISTANCE = 1000. # m #TODO should this info be put in the environment?
     LANDER_POSITION = (0.0, 0.0, 0.0)
 
     # for setting up the Pragyaan-specific PowerModel:
@@ -52,6 +52,7 @@ class PragyaanSubsystemsHandler(RobotSubsystemsHandler):
         self._update_sun_position()
 
     def set_stellar_engine(self, stellar_engine):
+        #should be called from within the instance of SimulationManager after setting the EnvironmnentManager and spawning the robot
         self._stellar_engine = stellar_engine
 
     def _setup_devices(self):
@@ -80,11 +81,11 @@ class PragyaanSubsystemsHandler(RobotSubsystemsHandler):
             alt, az, _ = self._stellar_engine.get_alt_az("sun")
 
             self._sun_pos = (
-                -self.SUN_DISTANCE * math.cos(math.radians(alt)) * math.sin(math.radians(az)),
+                -self.SUN_DISTANCE * math.cos(math.radians(alt)) * math.sin(math.radians(az)), #NOTE negating for coordinates fix
                 self.SUN_DISTANCE * math.cos(math.radians(alt)) * math.cos(math.radians(az)),
                 self.SUN_DISTANCE * math.sin(math.radians(alt)),
             )
-        else:
+        else: #TODO fix into using sun settings
             SUN_AZYMUTH_DEG = 65.0
             self._sun_pos = (
                 self.SUN_DISTANCE * math.sin(math.pi * SUN_AZYMUTH_DEG / 180.0), 

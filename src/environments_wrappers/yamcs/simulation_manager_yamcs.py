@@ -154,6 +154,7 @@ class Yamcs_SimulationManager:
             self.rate.reset()
             self.world.step(render=True)
             if self.world.is_playing():
+                self.EC.update_stellar_engine(dt=self.world.get_physics_dt())
                 if self.world.current_time_step_index == 0:
                     self.world.reset()
             self.rate.sleep()
