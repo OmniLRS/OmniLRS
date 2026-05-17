@@ -1,0 +1,512 @@
+name: Lunaryard
+seed: 42
+
+# physics_dt: 0.0125 # 60 Hz
+# rendering_dt: 0.0333 # 30 Hz
+physics_dt: 0.02 # 50 Hz
+rendering_dt: 0.02 # 50 Hz
+# physics_dt: 0.0666 # 15 Hz
+# rendering_dt: 0.0666 # 15 Hz
+enforce_realtime: false
+
+# Stage settings, only edit if you know what you are doing.
+lunaryard_settings:
+  lab_length: 100.0
+  lab_width: 100.0
+  resolution: 0.04
+  coordinates:
+    latitude: 46.8
+    longitude: -26.3
+
+stellar_engine_settings:
+  start_date:
+    year: 2024
+    month: 5
+    day: 21
+    hour: 5
+    minute: 1
+  time_scale: 1
+  update_interval: 600
+
+sun_settings:
+  intensity: 1750.0
+  angle: 0.53
+  diffuse_multiplier: 1.0
+  specular_multiplier: 1.0
+  color: [1.0, 1.0, 1.0]
+  temperature: 6500.0
+  azimuth: 180.0
+  elevation: 45.0
+
+# Rocks sampling parameters.
+rocks_settings:
+  enable: True
+  instancers_path: /Lunaryard/Rocks
+  rocks_settings:
+    small_rocks:
+      seed: ${....seed}
+      collections: ["apollo_rocks"] # Where to get the rock models from.
+      use_point_instancer: True # If True, the rocks will be instanced using the PointInstancer.
+                                # If False, it will use the custom instancer that works for SDG.
+      requests: # A list of request used to distribute the rocks.
+        req_pos_xy: # The name does not matter.
+          attribute: Position
+          axes: ["x", "y"]
+          layer:
+            name: Image
+            # data: Is loaded automatically from the DEM.
+            mpp_resolution: ${.......lunaryard_settings.resolution}
+            output_space: 2
+          sampler:
+            name: ThomasCluster
+            randomization_space: 2
+            lambda_parent: 0.002
+            lambda_daughter: 17
+            sigma: 10
+            seed: ${.......seed}
+
+        req_pos_z:
+          attribute: Position
+          axes: ["z"]
+          layer:
+            name: Image
+            output_space: 1
+          sampler:
+            name: Image
+            randomization_space: 1
+            # resolution: Resolution is infered automatically from the loaded DEM.
+            # data: Is loaded automatically from the DEM.
+            mpp_resolution: ${.......lunaryard_settings.resolution}
+
+        req_random_z_rot:
+          attribute: Orientation
+          axes: ["x", "y", "z", "w"]
+          layer:
+            name: RollPitchYaw
+            rmax: 6.28318530718
+            rmin: 0
+            pmax: 6.28318530718
+            pmin: 0
+            ymax: 6.28318530718
+            ymin: 0
+          sampler:
+            name: Uniform
+            randomization_space: 3
+            seed: ${.......seed}
+
+        req_scale:
+          attribute: Scale
+          axes: ["xyz"]
+          layer:
+            name: Line
+            xmin: 2.0
+            xmax: 4.0
+          sampler:
+            name: Uniform
+            randomization_space: 1
+            seed: ${.......seed}
+            
+    medium_rocks:
+      seed: ${....seed}
+      collections: ["apollo_rocks"] # Where to get the rock models from.
+      use_point_instancer: True # If True, the rocks will be instanced using the PointInstancer.
+                                # If False, it will use the custom instancer that works for SDG.
+      requests: # A list of request used to distribute the rocks.
+        req_pos_xy: # The name does not matter.
+          attribute: Position
+          axes: ["x", "y"]
+          layer:
+            name: Image
+            # data: Is loaded automatically from the DEM.
+            mpp_resolution: ${.......lunaryard_settings.resolution}
+            output_space: 2
+          sampler:
+            name: ThomasCluster
+            randomization_space: 2
+            lambda_parent: 0.002
+            lambda_daughter: 2
+            sigma: 5
+            seed: 15
+
+        req_pos_z:
+          attribute: Position
+          axes: ["z"]
+          layer:
+            name: Image
+            output_space: 1
+          sampler:
+            name: Image
+            randomization_space: 1
+            # resolution: Resolution is infered automatically from the loaded DEM.
+            # data: Is loaded automatically from the DEM.
+            mpp_resolution: ${.......lunaryard_settings.resolution}
+
+        req_random_z_rot:
+          attribute: Orientation
+          axes: ["x", "y", "z", "w"]
+          layer:
+            name: RollPitchYaw
+            rmax: 6.28318530718
+            rmin: 0
+            pmax: 6.28318530718
+            pmin: 0
+            ymax: 6.28318530718
+            ymin: 0
+          sampler:
+            name: Uniform
+            randomization_space: 3
+            seed: ${.......seed}
+
+        req_scale:
+          attribute: Scale
+          axes: ["xyz"]
+          layer:
+            name: Line
+            xmin: 4.0
+            xmax: 10.0
+          sampler:
+            name: Uniform
+            randomization_space: 1
+            seed: ${.......seed}
+ 
+    large_rocks:
+      seed: ${....seed}
+      collections: ["apollo_rocks"] # Where to get the rock models from.
+      use_point_instancer: True # If True, the rocks will be instanced using the PointInstancer.
+                                # If False, it will use the custom instancer that works for SDG.
+      requests: # A list of request used to distribute the rocks.
+        req_pos_xy: # The name does not matter.
+          attribute: Position
+          axes: ["x", "y"]
+          layer:
+            name: Image
+            # data: Is loaded automatically from the DEM.
+            mpp_resolution: ${.......lunaryard_settings.resolution}
+            output_space: 2
+          sampler:
+            name: ThomasCluster
+            randomization_space: 2
+            lambda_parent: 0.002
+            lambda_daughter: 0.07
+            sigma: 5
+            seed: 16
+
+        req_pos_z:
+          attribute: Position
+          axes: ["z"]
+          layer:
+            name: Image
+            output_space: 1
+          sampler:
+            name: Image
+            randomization_space: 1
+            # resolution: Resolution is infered automatically from the loaded DEM.
+            # data: Is loaded automatically from the DEM.
+            mpp_resolution: ${.......lunaryard_settings.resolution}
+
+        req_random_z_rot:
+          attribute: Orientation
+          axes: ["x", "y", "z", "w"]
+          layer:
+            name: RollPitchYaw
+            rmax: 6.28318530718
+            rmin: 0
+            pmax: 6.28318530718
+            pmin: 0
+            ymax: 6.28318530718
+            ymin: 0
+          sampler:
+            name: Uniform
+            randomization_space: 3
+            seed: ${.......seed}
+
+        req_scale:
+          attribute: Scale
+          axes: ["xyz"]
+          layer:
+            name: Line
+            xmin: 10.0
+            xmax: 30.0
+          sampler:
+            name: Uniform
+            randomization_space: 1
+            seed: ${.......seed}
+
+    ejecta_small_rocks:
+      seed: ${....seed}
+      collections: ["apollo_rocks"] # Where to get the rock models from.
+      use_point_instancer: True # If True, the rocks will be instanced using the PointInstancer.
+                                # If False, it will use the custom instancer that works for SDG.
+      requests: # A list of request used to distribute the rocks.
+        req_pos_xy: # The name does not matter.
+          attribute: Position
+          axes: ["x", "y"]
+          layer:
+            name: Ejecta
+            # data: Is loaded automatically from the DEM.
+            mpp_resolution: ${.......lunaryard_settings.resolution}
+            output_space: 2
+          sampler:
+            name: ThomasCluster
+            randomization_space: 2
+            lambda_parent: 0.13
+            lambda_daughter: 1
+            sigma: 1
+            seed: ${....seed}
+
+        req_pos_z:
+          attribute: Position
+          axes: ["z"]
+          layer:
+            name: Image
+            output_space: 1
+          sampler:
+            name: Image
+            randomization_space: 1
+            # resolution: Resolution is infered automatically from the loaded DEM.
+            # data: Is loaded automatically from the DEM.
+            mpp_resolution: ${.......lunaryard_settings.resolution}
+
+        req_random_z_rot:
+          attribute: Orientation
+          axes: ["x", "y", "z", "w"]
+          layer:
+            name: RollPitchYaw
+            rmax: 6.28318530718
+            rmin: 0
+            pmax: 6.28318530718
+            pmin: 0
+            ymax: 6.28318530718
+            ymin: 0
+          sampler:
+            name: Uniform
+            randomization_space: 3
+            seed: ${.......seed}
+
+        req_scale:
+          attribute: Scale
+          axes: ["xyz"]
+          layer:
+            name: Line
+            xmin: 2.0
+            xmax: 4.0
+          sampler:
+            name: Uniform
+            randomization_space: 1
+            seed: ${.......seed}
+            
+    ejecta_medium_rocks:
+      seed: ${....seed}
+      collections: ["apollo_rocks"] # Where to get the rock models from.
+      use_point_instancer: True # If True, the rocks will be instanced using the PointInstancer.
+                                # If False, it will use the custom instancer that works for SDG.
+      requests: # A list of request used to distribute the rocks.
+        req_pos_xy: # The name does not matter.
+          attribute: Position
+          axes: ["x", "y"]
+          layer:
+            name: Ejecta
+            # data: Is loaded automatically from the DEM.
+            mpp_resolution: ${.......lunaryard_settings.resolution}
+            output_space: 2
+          sampler:
+            name: ThomasCluster
+            randomization_space: 2
+            lambda_parent: 0.01
+            lambda_daughter: 1
+            sigma: 1
+            seed: 15
+
+        req_pos_z:
+          attribute: Position
+          axes: ["z"]
+          layer:
+            name: Image
+            output_space: 1
+          sampler:
+            name: Image
+            randomization_space: 1
+            # resolution: Resolution is infered automatically from the loaded DEM.
+            # data: Is loaded automatically from the DEM.
+            mpp_resolution: ${.......lunaryard_settings.resolution}
+
+        req_random_z_rot:
+          attribute: Orientation
+          axes: ["x", "y", "z", "w"]
+          layer:
+            name: RollPitchYaw
+            rmax: 6.28318530718
+            rmin: 0
+            pmax: 6.28318530718
+            pmin: 0
+            ymax: 6.28318530718
+            ymin: 0
+          sampler:
+            name: Uniform
+            randomization_space: 3
+            seed: ${.......seed}
+
+        req_scale:
+          attribute: Scale
+          axes: ["xyz"]
+          layer:
+            name: Line
+            xmin: 4.0
+            xmax: 10.0
+          sampler:
+            name: Uniform
+            randomization_space: 1
+            seed: ${.......seed}
+
+    ejecta_large_rocks:
+      seed: ${....seed}
+      collections: ["apollo_rocks"] # Where to get the rock models from.
+      use_point_instancer: True # If True, the rocks will be instanced using the PointInstancer.
+                                # If False, it will use the custom instancer that works for SDG.
+      requests: # A list of request used to distribute the rocks.
+        req_pos_xy: # The name does not matter.
+          attribute: Position
+          axes: ["x", "y"]
+          layer:
+            name: Ejecta
+            # data: Is loaded automatically from the DEM.
+            mpp_resolution: ${.......lunaryard_settings.resolution}
+            output_space: 2
+          sampler:
+            name: ThomasCluster
+            randomization_space: 2
+            lambda_parent: 0.0006
+            lambda_daughter: 1
+            sigma: 1
+            seed: 16
+
+        req_pos_z:
+          attribute: Position
+          axes: ["z"]
+          layer:
+            name: Image
+            output_space: 1
+          sampler:
+            name: Image
+            randomization_space: 1
+            # resolution: Resolution is infered automatically from the loaded DEM.
+            # data: Is loaded automatically from the DEM.
+            mpp_resolution: ${.......lunaryard_settings.resolution}
+
+        req_random_z_rot:
+          attribute: Orientation
+          axes: ["x", "y", "z", "w"]
+          layer:
+            name: RollPitchYaw
+            rmax: 6.28318530718
+            rmin: 0
+            pmax: 6.28318530718
+            pmin: 0
+            ymax: 6.28318530718
+            ymin: 0
+          sampler:
+            name: Uniform
+            randomization_space: 3
+            seed: ${.......seed}
+
+        req_scale:
+          attribute: Scale
+          axes: ["xyz"]
+          layer:
+            name: Line
+            xmin: 10.0
+            xmax: 30.0
+          sampler:
+            name: Uniform
+            randomization_space: 1
+            seed: ${.......seed}
+            
+
+terrain_manager:
+  moon_yard:
+    crater_generator:
+      profiles_path: assets/Terrains/crater_spline_profiles.pkl
+      min_xy_ratio: 0.85
+      max_xy_ratio: 1.0
+      resolution: ${....lunaryard_settings.resolution}
+      pad_size: 1000
+      random_rotation: True
+      z_scale: 1.0
+      seed: ${....seed}
+
+    crater_distribution:
+      x_size: ${....lunaryard_settings.lab_length}
+      y_size: ${....lunaryard_settings.lab_width}
+      # Distribution based on survey data from Highlands AVG survey
+      densities: []
+      radius: []
+      radius_range: [0.5, 20]
+      dist_exp: -2.132
+      dist_coef: 76192.0
+      radius_step: 0.5
+      radius_step_factor: 1.5
+      num_repeat: 0      
+      seed: ${....seed}
+
+    base_terrain_generator:
+      x_size: ${....lunaryard_settings.lab_length}
+      y_size: ${....lunaryard_settings.lab_width}
+      resolution: ${....lunaryard_settings.resolution}
+      max_elevation: 1.0
+      min_elevation: -1.0
+      z_scale: 1.0
+      seed: ${....seed}
+    
+    deformation_engine:
+      enable: False
+      delay: 2.0
+      terrain_width: ${....lunaryard_settings.lab_width}
+      terrain_height: ${....lunaryard_settings.lab_length}
+      terrain_resolution: ${....lunaryard_settings.resolution}
+      footprint:
+        width: 0.25
+        height: 0.1
+      deform_constrain:
+        x_deform_offset: 0.0
+        y_deform_offset: 0.0
+        deform_decay_ratio: 0.01
+      boundary_distribution: 
+        distribution: trapezoidal
+        angle_of_repose: 1.047 #pi/3
+      depth_distribution: 
+        distribution: sinusoidal
+        wave_frequency: 4.14 # num_grouser/pi (no slip)
+      force_depth_regression:
+        amplitude_slope: 0.00006
+        amplitude_intercept: 0.008
+        mean_slope: -0.00046
+        mean_intercept: -0.0013
+      num_links: 4 # num_robots * num_target_links
+
+    is_yard: True
+    is_lab: False
+
+  root_path: /Lunaryard
+  texture_path: /Looks/LunarRegolith8k
+  dems_path: Terrains/Lunaryard
+  mesh_position: [0, 0, 0]
+  mesh_orientation: [0, 0, 0, 1] # Quaternion x,y,z,w
+  mesh_scale: [1, 1, 1]
+  sim_length: ${..lunaryard_settings.lab_length}
+  sim_width: ${..lunaryard_settings.lab_width}
+  resolution: ${..lunaryard_settings.resolution}
+
+robots_settings:
+  uses_nucleus: False
+  is_ROS2: True
+  max_robots: 5
+  robots_root: "/Robots"
+  parameters:  
+    -
+      robot_name: viper
+      usd_path: assets/USD_Assets/robots/viper_lidar_only.usd
+      pose:
+        position: [5.0, 5.0, 0.5]
+        orientation: [1, 0, 0, 0]
+      domain_id: 0
+      target_links: ["front_left_wheel_link", "front_right_wheel_link", "rear_left_wheel_link", "rear_right_wheel_link"]

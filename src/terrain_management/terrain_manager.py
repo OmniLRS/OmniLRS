@@ -47,6 +47,9 @@ class TerrainManager:
         self._dems = {}
         self._DEM = None
         self._mask = None
+        self._background_mask = None
+        self._crater_mask = None
+        self._crater_ejecta_mask = None
         self._material = None
 
         self._sim_width = int(cfg.sim_width / cfg.resolution)
@@ -126,9 +129,9 @@ class TerrainManager:
             mask = np.load(mask_path)
 
         self._DEM = np.zeros((self._sim_length, self._sim_width), dtype=np.float32)
-        self._mask = np.zeros((self._sim_length, self._sim_width), dtype=np.float32)
+        self._crater_mask = np.zeros((self._sim_length, self._sim_width), dtype=np.float32)
         self._DEM[: DEM.shape[0], : DEM.shape[1]] = DEM[: self._sim_length, : self._sim_width]
-        self._mask[: mask.shape[0], : mask.shape[1]] = mask[: self._sim_length, : self._sim_width]
+        self._crater_mask[: mask.shape[0], : mask.shape[1]] = mask[: self._sim_length, : self._sim_width]
 
     @staticmethod
     def gridIndex(x: int, y: int, stride: int) -> int:
@@ -271,7 +274,7 @@ class TerrainManager:
         Randomizes the terrain (update mesh, collider, semantic).
         """
 
-        self._DEM, self._mask, self._craters_data = self._G.randomize()
+        self._DEM, self._background_mask, self._crater_mask, self._crater_ejecta_mask, self._craters_data = self._G.randomize()
         self.update(update_collider=True)
 
     def deformTerrain(
@@ -286,7 +289,7 @@ class TerrainManager:
             contact_forces (np.ndarray): the contact forces of the bodies.
         """
 
-        self._DEM, self._mask = self._G.deform(world_positions, world_orientations, contact_forces)
+        self._DEM, self._background_mask, self._crater_mask, self._crater_ejecta_mask = self._G.deform(world_positions, world_orientations, contact_forces)
         self.update(update_collider=False)
 
     def loadTerrainByName(self, name: str) -> None:
@@ -299,9 +302,10 @@ class TerrainManager:
 
         self.loadDEMAndMask(name)
         if self._augmentation:
-            self._DEM, self._mask, self._craters_data = self._G.augment(self._DEM, self._mask)
+            self._DEM, self._background_mask, self._crater_mask, self._crater_ejecta_mask, self._craters_data = self._G.augment(self._DEM, self._background_mask,
+                                                                                                                                self._crater_mask, self._crater_ejecta_mask)
         else:
-            self._G.register_terrain(self._DEM, self._mask)
+            self._G.register_terrain(self._DEM, self._crater_mask)
         self.update(update_collider=True)
 
     def loadTerrainId(self, idx: int) -> None:
@@ -333,15 +337,35 @@ class TerrainManager:
 
         return self._DEM
 
-    def getMask(self):
+    def getCraterMask(self):
         """
-        Returns the mask of the terrain.
+        Returns the crater mask of the terrain.
 
         Returns:
-            np.ndarray: the mask of the terrain.
+            np.ndarray: the crater mask of the terrain.
         """
 
-        return self._mask
+        return self._crater_mask
+    
+    def getBackgroundMask(self):
+        """
+        Returns the uniform background mask of the terrain.
+
+        Returns:
+            np.ndarray: the uniform background mask of the terrain.
+        """
+
+        return self._background_mask
+    
+    def getCraterEjectaMask(self):
+        """
+        Returns the crater ejecta mask of the terrain.
+
+        Returns:
+            np.ndarray: the crater ejecta mask of the terrain.
+        """
+
+        return self._crater_ejecta_mask
 
 
 if __name__ == "__main__":
