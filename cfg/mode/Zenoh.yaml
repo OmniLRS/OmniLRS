@@ -1,0 +1,32 @@
+name: Zenoh
+sensors:
+  camera:
+    base_keyexpr: "OmniLRS/{robot_name}/camera"
+    resolution: "high" # "low" or "high"
+    publish_period_s: 0.0333 # 30 hz
+
+  imu:
+    keyexpr: "OmniLRS/{robot_name}/imu"
+    publish_period_s: 0.02
+
+  joint_force:
+    keyexpr: "OmniLRS/{robot_name}/joint_telemetry"
+    publish_period_s: 0.1
+    init_retry_s: 0.5
+    not_ready_log_period_s: 1.0
+    keep_history: False
+    history_len: 200
+    contact_force_threshold_n: 0.0
+    publish_json_frame: False
+
+controller:
+    cmd_keyexpr: "OmniLRS/{robot_name}/joint_cmd"
+
+misc:
+  sim:
+    is_running_keyexpr: "OmniLRS/sim/is_running"
+    gt_pose_keyexpr: "OmniLRS/{robot_name}/gt_pose"
+
+  rocks:
+    randomize:
+      keyexpr: "OmniLRS/Terrain/RandomizeRocks"
