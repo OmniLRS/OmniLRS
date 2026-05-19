@@ -4,29 +4,22 @@ __license__ = "BSD-3-Clause"
 __version__ = "3.0.0"
 __status__ = "development"
 
-import math
+import numpy as np
+from scipy.spatial.transform import Rotation
 
 from isaacsim.core.utils.xforms import get_world_pose
 
 from src.subsystems.device import CommonDevice, Device, HealthState, PowerState
 from src.subsystems.robot_physics_models.obc_metrics_model import ObcMetricsModel
-from src.subsystems.robot_physics_models.power_model import PowerModel
 from src.subsystems.robot_physics_models.radio_model import RadioModel
 from src.subsystems.robot_physics_models.thermal_model import ThermalModel
 from src.subsystems.robot_subsystems_handler import RobotSubsystemsHandler
-from src.subsystems.robot_enums import ObcState
+from src.mission_specific.husky.subsystems.husky_power_model import HuskyPowerModel
+from src.mission_specific.husky.subsystems.husky_robot_enums import ObcState
 from src.mission_specific.pragyaan.subsystems.neutron_spectrometer_model import NeutronSpectrometerModel
 
 
 class HuskySubsystemsHandler(RobotSubsystemsHandler):
-    SUN_DISTANCE = 1000.0  # m
-    SUN_AZIMUTH_DEG = 65.0
-    SUN_POSITION = (
-        -SUN_DISTANCE * math.sin(math.pi * SUN_AZIMUTH_DEG / 180.0),
-        SUN_DISTANCE * math.cos(math.pi * SUN_AZIMUTH_DEG / 180.0),
-        10.0,
-    )
-
     BATTERY_CAPACITY_WH = 389.0   # Wh  (Husky uses 24 V / 16.2 Ah ≈ 389 Wh)
     SOLAR_PANEL_MAX_POWER = 0.0   # W   (Husky has no solar panel)
     MOTOR_COUNT = 4
@@ -35,7 +28,7 @@ class HuskySubsystemsHandler(RobotSubsystemsHandler):
     def __init__(self, pos_relative_to_prim: str = ""):
         thermal_model = ThermalModel()
         obc_metrics_model = ObcMetricsModel()
-        power_model = PowerModel()
+        power_model = HuskyPowerModel()
         super().__init__(
             thermal_model=thermal_model,
             obc_metrics_model=obc_metrics_model,
@@ -51,7 +44,8 @@ class HuskySubsystemsHandler(RobotSubsystemsHandler):
         else:
             self._base_station_pos = (0.0, 0.0, 0.0)
 
-        self._sun_pos = self.SUN_POSITION
+        self._sun_prim_path = None
+        self._sun_direction = np.array((0.0, 1.0, 0.0))  # default: sun along +Y
 
     def _setup_devices(self):
         self._devices[CommonDevice.OBC] = Device(
@@ -87,19 +81,37 @@ class HuskySubsystemsHandler(RobotSubsystemsHandler):
             devices=self._devices,
         )
 
+    def set_sun_prim_path(self, sun_prim_path: str):
+        # should be called from within the instance of SimulationManager after setting the EnvironmentManager and spawning the robot
+        self._sun_prim_path = sun_prim_path
+
+    def _update_sun_direction(self):
+        if self._sun_prim_path is not None:
+            _, quat_wxyz = get_world_pose(self._sun_prim_path)
+            w, x, y, z = quat_wxyz
+            self._sun_direction = Rotation.from_quat([x, y, z, w]).apply([-1.0, 0.0, 0.0])  # fixed coordinates
+        # if _sun_prim_path is None, sun direction stays as the default
+
+    def _update_sun_direction_before(func):
+        def wrapper(self, *args, **kwargs):
+            self._update_sun_direction()
+            return func(self, *args, **kwargs)
+        return wrapper
+
     def get_radio_status(self, robot_position):
         self._radio_model.set_inputs(robot_position, self._base_station_pos)
         return self._radio_model.get_rssi()
 
-    def get_thermal_status(self, robot_position, robot_yaw_deg, interval_s):
-        self._thermal_model.set_inputs(robot_position, self._sun_pos, robot_yaw_deg)
+    @_update_sun_direction_before
+    def get_thermal_status(self, robot_yaw_deg, interval_s):
+        self._thermal_model.set_inputs(self._sun_direction, robot_yaw_deg)
         self._thermal_model.compute(interval_s)
         return self._thermal_model.temperatures()
 
-    def get_power_status(self, robot_position, robot_yaw_deg, interval_s, obc_state):
+    @_update_sun_direction_before
+    def get_power_status(self, robot_yaw_deg, interval_s, obc_state):
         self._power_model.set_inputs(
-            rover_position=robot_position,
-            sun_position=self._sun_pos,
+            sun_direction=self._sun_direction,
             rover_yaw_deg=robot_yaw_deg,
             solar_panel_state=self._solar_panel_state,
             is_in_motor_state=(obc_state == ObcState.MOTOR),
