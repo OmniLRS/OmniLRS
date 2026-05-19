@@ -111,6 +111,8 @@ class HuskyTransmitter:
         self._transmit(self._parameters_conf["current_draw_camera"], power_status["device_currents_measured"][CommonDevice.CAMERA])
         self._transmit(self._parameters_conf["current_draw_radio"], power_status["device_currents_measured"][CommonDevice.RADIO])
         self._transmit(self._parameters_conf["current_draw_eps"], power_status["device_currents_measured"][CommonDevice.EPS])
+        self._transmit(self._parameters_conf["current_draw_neutron_spectrometer"], power_status["device_currents_measured"][CommonDevice.NEUTRON_SPECTROMETER])
+        self._transmit(self._parameters_conf["current_draw_apxs"], power_status["device_currents_measured"][CommonDevice.APXS])
         self._transmit(self._parameters_conf["motor_current"], power_status["motor_currents_measured"])
 
     def transmit_wheels_joint_angles(self):
@@ -131,7 +133,3 @@ class HuskyTransmitter:
         is_streaming = self._intervals_handler.does_exist(IntervalName.CAMERA_STREAMING.value)
         state = PowerState.ON if is_streaming else PowerState.OFF
         self._transmit(self._parameters_conf["camera_streaming_state"], state)
-
-    def transmit_go_nogo(self):
-        go_nogo_state = self._robot.subsystems.get_go_nogo_state().value
-        self._transmit(self._parameters_conf["go_nogo"], go_nogo_state)
