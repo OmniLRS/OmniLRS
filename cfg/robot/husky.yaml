@@ -4,14 +4,48 @@
 robots_settings:
   parameters:
     robot_name: husky
-    usd_path: assets/USD_Assets/robots/ros2_husky_PhysX_vlp16.usd
+    # usd_path: assets/USD_Assets/robots/ros2_husky_PhysX_vlp16.usd
     # usd_path: assets/USD_Assets/robots/ros2_husky_PhysX_vlp16_mono_depth_imu.usd
-    # usd_path: assets/USD_Assets/robots/nograph_husky.usd
+    usd_path: assets/USD_Assets/robots/nograph_husky.usd
     pose:
         position: [26., 16.6, 0.8]
         orientation: [0., 0., 0.70711, 0.70711]
     base_link: "base_link" # core link used to determine the position of the robot
     target_links: ["front_left_wheel_link", "front_right_wheel_link", "rear_left_wheel_link", "rear_right_wheel_link"]
+
+    dimensions:
+      width: 1.6 # m
+      length: 1.5
+    # pos_relative_to_prim: "/StaticAssets/lander" # add comment - do we need this? does the husky come with a lander
+    wheel_joints:
+      left: ["wheel_fl", "wheel_ml", "wheel_bl"]
+      right: ["wheel_fr", "wheel_mr", "wheel_br"]
+    camera:
+      prim_path: "/Robots/husky/d455/RSD455/Camera_OmniVision_OV9782_Color"
+      resolutions: 
+        low: [320, 240]
+        high: [1280, 720]
+    imu_sensor_path: "/Robots/husky/d455/RSD455/Imu_Sensor"
+    turn_speed_coef: 19
+    solar_panel_joint: ""  # the husky does not have a solar panel
+
+
+
+
+# @package environment 
+# do not remove the above comment, it injects the settings below into the environment config
+
+# robots_settings:
+#   parameters:
+#     robot_name: husky
+#     usd_path: assets/USD_Assets/robots/ros2_husky_PhysX_vlp16.usd
+#     # usd_path: assets/USD_Assets/robots/ros2_husky_PhysX_vlp16_mono_depth_imu.usd
+#     # usd_path: assets/USD_Assets/robots/nograph_husky.usd
+#     pose:
+#         position: [26., 16.6, 0.8]
+#         orientation: [0., 0., 0.70711, 0.70711]
+#     base_link: "base_link" # core link used to determine the position of the robot
+#     target_links: ["front_left_wheel_link", "front_right_wheel_link", "rear_left_wheel_link", "rear_right_wheel_link"]
 
     # base_link: "base_link" # core link used to determine the position of the robot
     # dimensions:
