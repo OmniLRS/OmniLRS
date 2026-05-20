@@ -25,7 +25,6 @@ from src.subsystems.robot_subsystems_handler import RobotSubsystemsHandler
 
 class PragyaanSubsystemsHandler(RobotSubsystemsHandler):
 
-    SUN_DISTANCE = 1000. # m #TODO should this info be put in the environment?
     LANDER_POSITION = (0.0, 0.0, 0.0)
 
     # for setting up the Pragyaan-specific PowerModel:

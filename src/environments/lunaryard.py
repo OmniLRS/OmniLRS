@@ -102,6 +102,7 @@ class LunaryardController(BaseEnv):
 
         # Creates an empty xform with the name lunaryard
         lunaryard = self.stage.DefinePrim(self.scene_name, "Xform")
+
         # Creates the sun
         sun = self.stage.DefinePrim(self.stage_settings.sun_path, "Xform")
         self._sun_prim = sun.GetPrim()
@@ -255,7 +256,7 @@ class LunaryardController(BaseEnv):
 
                 self.set_sun_pose((0, 0, 0), quat)
                 self.set_earth_pose(earth_pos, (1, 0, 0, 0))
-                print("Updated based on stellar!!")
+                print("Updated based on stellar!")
                 print("new sun quat:", quat)
 
     # ==============================================================================
