@@ -83,10 +83,11 @@ class HuskyTransmitter:
         self._transmit(self._parameters_conf["rssi"], int(rssi))
 
     def transmit_thermal_info(self, interval_s):
+        robot_position, _ = self._robot_RG.get_pose_of_base_link()
         _, _, imu_orientation = self._robot.get_imu_readings()
         robot_yaw_deg = imu_orientation["yaw"]
         temperatures = self._robot.subsystems.get_thermal_status(
-            robot_yaw_deg, interval_s
+            robot_position, robot_yaw_deg, interval_s
         )
         self._transmit(self._parameters_conf["temperature_front"], temperatures["+X"])
         self._transmit(self._parameters_conf["temperature_back"], temperatures["-X"])
@@ -96,11 +97,12 @@ class HuskyTransmitter:
         self._transmit(self._parameters_conf["temperature_bottom"], temperatures["-Z"])
 
     def transmit_power_info(self, interval_s):
+        robot_position, _ = self._robot_RG.get_pose_of_base_link()
         _, _, imu_orientation = self._robot.get_imu_readings()
         robot_yaw_deg = imu_orientation["yaw"]
         obc_state = self._robot.subsystems.get_obc_state()
         power_status = self._robot.subsystems.get_power_status(
-            robot_yaw_deg, interval_s, obc_state
+            robot_position, robot_yaw_deg, interval_s, obc_state
         )
         self._transmit(self._parameters_conf["battery_charge"], int(power_status["battery_percentage_measured"]))
         self._transmit(self._parameters_conf["battery_voltage"], power_status["battery_voltage_measured"])
