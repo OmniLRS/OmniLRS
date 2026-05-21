@@ -28,7 +28,7 @@ class Yamcs_SimulationManager:
     """
     Manages the simulation. This class is responsible for:
     - Initializing the simulation
-    - Running the lab manager 
+    - Running the environment manager 
     - Running the robot manager 
     - Running the simulation
     - Cleaning the simulation
