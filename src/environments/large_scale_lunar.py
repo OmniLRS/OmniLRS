@@ -171,7 +171,7 @@ class LargeScaleController(BaseEnv):
             self.SE.set_lat_lon(*self.LSTM.get_lat_lon())
 
         if self.SAM:
-            self.SAM.spawn()
+            self.SAM.spawn(get_height_func=self.LSTM.get_height_local)
 
         if self.MCM:
             self.MCM.spawn()
