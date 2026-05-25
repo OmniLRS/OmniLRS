@@ -6,7 +6,8 @@ robots_settings:
     robot_name: pragyaan
     usd_path: assets/USD_Assets/robots/pragyaan/nograph_pragyaan.usd  
     pose:
-      position: [26., 16.6, 0.8]
+      position: [26., 16.6, 0.8] # Lunaryard, LargeScale
+      # position: [5.0, 5.0, 0.1] # Lunalab
       orientation: [0., 0., 0.70711, 0.70711]
     base_link: "base_link" # core link used to determine the position of the robot
     target_links: [
@@ -24,7 +25,7 @@ robots_settings:
       width: 1.6 # m
       length: 1.5
     turn_speed_coef: 19
-    pos_relative_to_prim: "/StaticAssets/lander"
+    pos_relative_to_prim: "/StaticAssets/lander"  # comment out for LargeScale and Lunalab (by default they do not have a lander)
     camera:
       prim_path: "/Robots/pragyaan/Body/body_main/depth_cam"
       resolutions: 
