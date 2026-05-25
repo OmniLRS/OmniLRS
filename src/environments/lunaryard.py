@@ -254,7 +254,7 @@ class LunaryardController(BaseEnv):
                 alt, az, _ = self.SE.get_alt_az("sun")
                 quat = self.SE.convert_alt_az_to_quat(alt, az)
 
-                self.set_sun_pose(quat)
+                self.set_sun_pose((0,0,0), quat)
                 self.set_earth_pose(earth_pos, (1, 0, 0, 0))
                 print("Updated based on stellar!")
                 print("new sun quat:", quat)
@@ -293,12 +293,14 @@ class LunaryardController(BaseEnv):
 
     def set_sun_pose(
         self,
+        position: Tuple[float, float, float] = (0.0, 0.0, 0.0),
         orientation: Tuple[float, float, float, float] = (1.0, 0.0, 0.0, 0.0),
     ) -> None:
         """
         Sets the pose of the sun.
 
         Args:
+            position (Tuple[float,float,float]): The position of the sun. In meters. (x,y,z)
             orientation (Tuple[float,float,float,float]): The orientation of the sun. (w,x,y,z)
         """
 

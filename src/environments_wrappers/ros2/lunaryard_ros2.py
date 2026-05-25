@@ -114,8 +114,9 @@ class ROS_LunaryardManager(ROS_BaseManager):
             data (Pose): Pose in ROS2 Pose format.
         """
 
+        position = [data.position.x, data.position.y, data.position.z ]
         orientation = [data.orientation.w, data.orientation.y, data.orientation.z, data.orientation.x]
-        self.modifications.append([self.EC.set_sun_pose, {"orientation": orientation}])
+        self.modifications.append([self.EC.set_sun_pose, {"position":position, "orientation": orientation}])
 
     def switch_terrain(self, data: Int32) -> None:
         """
