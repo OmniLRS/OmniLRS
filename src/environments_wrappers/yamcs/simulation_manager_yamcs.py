@@ -141,8 +141,11 @@ class Yamcs_SimulationManager:
 
     def _preload_robot(self):
         if self.cfg["environment"]["name"] == "LargeScale":
-            height, quat = self.EC.get_height_and_normal((0.0, 0.0, 0.0))
-            self.RM.preload_robot_at_pose(self.world, (0, 0, height + 0.5), (1, 0, 0, 0))
+            robot_pos = self.RM.robot_parameters.pose.position
+            robot_ori = self.RM.robot_parameters.pose.orientation
+            height, _ = self.EC.get_height_and_normal((robot_pos[0], robot_pos[1], 0.0))
+            self.RM.preload_robot_at_pose(self.world, (robot_pos[0], robot_pos[1], height + 0.5), robot_ori)
+        
         else:
             self.RM.preload_robot(self.world)
 
