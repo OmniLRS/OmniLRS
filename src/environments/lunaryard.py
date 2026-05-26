@@ -105,7 +105,7 @@ class LunaryardController(BaseEnv, StellarEngineEnvExtension, TerrainControlExte
         self.build_scene()
 
         # Generates the instancer for the rocks
-        self.RM.build(self.dem, self.mask)
+        self.build_RM()  #TODO should first call switch_terrain() as it calls load_DEM() which sets up self.dem and self.mask that are used inside build_RM(), otherwise they are just None (but either ways inside RM.build() neither of those params are being utilized)
         # Loads the DEM and the mask
         self.switch_terrain(self.stage_settings.terrain_id)
         if self.enable_stellar_engine:

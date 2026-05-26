@@ -84,7 +84,7 @@ class LunalabController(BaseEnv, TerrainControlExtension):
         self.build_scene()
         # Fetches the interactive elements
         self.collect_interactive_assets()
-        self.RM.build(self.dem, self.mask)
+        self.build_RM()    #TODO should first call switch_terrain() as it calls load_DEM() which sets up self.dem and self.mask that are used inside build_RM(), otherwise they are just None (but either ways inside RM.build() neither of those params are being utilized)
         # Loads the DEM and the mask
         self.switch_terrain(0)
 

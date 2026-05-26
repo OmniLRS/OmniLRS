@@ -22,6 +22,15 @@ from src.physics.terramechanics_solver import TerramechanicsSolver
 from src.terrain_management.terrain_manager import TerrainManager
 
 class TerrainControlExtension(ABC):
+    """
+    This class extends BaseEnv behaviour by providing functions for controlling the terrain. 
+    Child classes of BaseEnv (LunalabController, LunaryardController, LargeScaleController) 
+    may inherit from this class and utilize the implemented logic.
+
+    If you wish to customize the behaviour of a certain class, 
+    create the class of the same name in the env class and write the desired logic.
+    """
+
     def init_terrain_control(
         self,
         terrain_manager:TerrainManagerConf=None,
@@ -32,6 +41,8 @@ class TerrainControlExtension(ABC):
             stellar_engine_settings (StellarEngineConf): The settings of the stellar engine.
         """
 
+        self.dem = None
+        self.mask = None
         self.robotManager = None # should be added to the environment itself (BaseEnv.add_robot_manager())
         self.T = TerrainManager(terrain_manager)
         self.RM = RockManager(**rocks_settings)
@@ -44,6 +55,9 @@ class TerrainControlExtension(ABC):
     # ==============================================================================
     # Terrain control
     # ==============================================================================
+
+    def build_RM(self):
+        self.RM.build(self.dem, self.mask)
 
     def load_DEM(self) -> None:
         """
