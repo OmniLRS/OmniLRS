@@ -25,9 +25,9 @@ class StaticAssetsManager:
         self._stage = omni.usd.get_context().get_stage()
         self._stage.DefinePrim(self._root_path, "Xform")
 
-    def spawn(self):
+    def spawn(self, get_height_func=None):
         if "parameters" not in self._cfg:
-            return 
+            return
 
         for a in self._cfg["parameters"]:
             name = a["asset_name"]
@@ -35,10 +35,14 @@ class StaticAssetsManager:
             self._create_reference(prim_path, a["usd_path"])
             pose = a.get("pose", {})
 
+            position = list(pose["position"])
+            if get_height_func is not None:
+                position[2] = get_height_func((position[0], position[1])) + position[2]
+
             prim = self._stage.GetPrimAtPath(prim_path)
             xform = UsdGeom.Xformable(prim)
 
-            set_xform_pose(xform, pose["position"], pose["orientation"])
+            set_xform_pose(xform, position, pose["orientation"])
             self._set_collision(prim_path, a.get("collision", True))
 
     def _create_reference(self, prim_path: str, usd_path: str):
