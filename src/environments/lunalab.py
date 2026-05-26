@@ -129,15 +129,6 @@ class LunalabController(BaseEnv):
         if self.MCM:
             self.MCM.spawn()
 
-    def add_robot_manager(self, robotManager: RobotManager) -> None:
-        """
-        Adds the robot manager to the environment.
-
-        Args:
-            robotManager (RobotManager): The robot manager to be added.
-        """
-
-        self.robotManager = robotManager
 
     def get_lux_assets(self, prim: "Usd.Prim") -> List[Usd.Prim]:
         """

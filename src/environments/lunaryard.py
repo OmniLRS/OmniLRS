@@ -19,6 +19,7 @@ from pxr import UsdGeom, UsdLux, Gf, Usd
 
 from src.environments.monitoring_cameras_manager import MonitoringCamerasManager
 from src.environments.static_assets_manager import StaticAssetsManager
+from src.environments.stellar_engine_env_extension import StellarEngineEnvExtension
 from src.terrain_management.large_scale_terrain.pxr_utils import set_xform_ops, load_material, set_texture_path
 from src.physics.terramechanics_parameters import RobotParameter, TerrainMechanicalParameter
 from src.configurations.stellar_engine_confs import StellarEngineConf, SunConf
@@ -27,13 +28,11 @@ from src.physics.terramechanics_solver import TerramechanicsSolver
 from src.terrain_management.terrain_manager import TerrainManager
 from src.configurations.environments import LunaryardConf
 from src.environments.rock_manager import RockManager
-from src.stellar.stellar_engine import StellarEngine
 from src.environments.base_env import BaseEnv
 from src.configurations.simulator_mode_enum import SimulatorMode
-from src.robots.robot import RobotManager
 
 
-class LunaryardController(BaseEnv):
+class LunaryardController(BaseEnv, StellarEngineEnvExtension):
     """
     This class is used to control the lab interactive elements.
     """
@@ -69,11 +68,9 @@ class LunaryardController(BaseEnv):
         self.stage_settings = lunaryard_settings
         self.sun_settings = sun_settings
 
-        if stellar_engine_settings is not None:
-            self.SE = StellarEngine(stellar_engine_settings)
-            self.enable_stellar_engine = True
-        else:
-            self.enable_stellar_engine = False
+        self.init_stellar_engine(earth_scale=self.stage_settings.earth_scale, 
+                                  sun_path=self.stage_settings.sun_path, 
+                                  stellar_engine_settings=stellar_engine_settings)
 
         self.T = TerrainManager(terrain_manager)
         self.RM = RockManager(**rocks_settings)
@@ -189,9 +186,6 @@ class LunaryardController(BaseEnv):
         if self.MCM:
             self.MCM.spawn()
 
-    def add_robot_manager(self, robotManager: RobotManager) -> None:
-        self.robotManager = robotManager
-
     def load_DEM(self) -> None:
         """
         Loads the DEM and the mask from the TerrainManager.
@@ -199,154 +193,6 @@ class LunaryardController(BaseEnv):
 
         self.dem = self.T.getDEM()
         self.mask = self.T.getMask()
-
-    # ==============================================================================
-    # Stellar engine control
-    # ==============================================================================
-
-    def set_coordinates(self, latlong: Tuple[float, float] = (0.0, 0.0)) -> None:
-        """
-        Sets the coordinates of the lab.
-
-        Args:
-            latlong (Tuple[float,float]): The latitude and longitude of the scene on the moon.
-        """
-
-        if self.enable_stellar_engine:
-            self.SE.set_lat_lon(latlong[1], latlong[0])
-
-    def set_time(self, time: float = 0.0) -> None:
-        """
-        Sets the time of the stellar engine.
-
-        Args:
-            time (float): The time in seconds.
-        """
-
-        if self.enable_stellar_engine:
-            self.SE.set_time(time)
-
-    def set_time_scale(self, scale: float = 1.0) -> None:
-        """
-        Sets the time scale of the stellar engine.
-
-        Args:
-            scale (float): The time scale.
-        """
-
-        if self.enable_stellar_engine:
-            self.SE.set_time_scale(scale)
-
-    def update_stellar_engine(self, dt: float = 0.0) -> None:
-        """
-        Updates the sun and earth pose.
-
-        Args:
-            dt (float): The time step.
-        """
-
-        if self.enable_stellar_engine:
-            update = self.SE.update(dt)
-            if update:
-                # Unscaled earth position
-                earth_pos = self.SE.get_local_position("earth")
-                # Sun altitude and azimuth
-                alt, az, _ = self.SE.get_alt_az("sun")
-                quat = self.SE.convert_alt_az_to_quat(alt, az)
-
-                self.set_sun_pose((0,0,0), quat)
-                self.set_earth_pose(earth_pos, (1, 0, 0, 0))
-                print("Updated based on stellar!")
-                print("new sun quat:", quat)
-
-    # ==============================================================================
-    # Earth control
-    # ==============================================================================
-
-    def set_earth_pose(
-        self,
-        position: Tuple[float, float, float] = (0.0, 0.0, 0.0),
-        orientation: Tuple[float, float, float, float] = (1.0, 0.0, 0.0, 0.0),
-    ) -> None:
-        """
-        Sets the pose of the earth.
-
-        Args:
-            position (Tuple[float,float,float]): The position of the earth. In meters. (x,y,z) (unscaled)
-            orientation (Tuple[float,float,float,float]): The orientation of the earth. (w,x,y,z)
-        """
-
-        w, x, y, z = (orientation[0], orientation[1], orientation[2], orientation[3])
-        px, py, pz = (
-            position[0] * self.stage_settings.earth_scale,
-            position[1] * self.stage_settings.earth_scale,
-            position[2] * self.stage_settings.earth_scale,
-        )
-        set_xform_ops(self._earth_prim, translate=Gf.Vec3d(px, py, pz), orient=Gf.Quatd(w, Gf.Vec3d(x, y, z)))
-
-    # ==============================================================================
-    # Sun control
-    # ==============================================================================
-
-    def get_sun_prim_path(self) -> str:
-        return self.stage_settings.sun_path
-
-    def set_sun_pose(
-        self,
-        position: Tuple[float, float, float] = (0.0, 0.0, 0.0),
-        orientation: Tuple[float, float, float, float] = (1.0, 0.0, 0.0, 0.0),
-    ) -> None:
-        """
-        Sets the pose of the sun.
-
-        Args:
-            position (Tuple[float,float,float]): The position of the sun. In meters. (x,y,z)
-            orientation (Tuple[float,float,float,float]): The orientation of the sun. (w,x,y,z)
-        """
-
-        w, x, y, z = (orientation[0], orientation[1], orientation[2], orientation[3])
-        set_xform_ops(self._sun_prim, orient=Gf.Quatd(w, Gf.Vec3d(x, y, z)))
-
-    def set_sun_intensity(self, intensity: float = 0.0) -> None:
-        """
-        Sets the intensity of the sun.
-
-        Args:
-            intensity (float): The intensity of the projector (arbitrary unit).
-        """
-
-        self._sun_lux.GetIntensityAttr().Set(intensity)
-
-    def set_sun_color(self, color: Tuple[float, float, float] = (1.0, 1.0, 1.0)) -> None:
-        """
-        Sets the color of the projector.
-
-        Args:
-            color (Tuple[float,float,float]): The color of the projector. (r,g,b)
-        """
-
-        color = Gf.Vec3d(color[0], color[1], color[2])
-        self._sun_lux.GetColorAttr().Set(color)
-
-    def set_sun_color_temperature(self, temperature: float = 6500.0) -> None:
-        """
-        Sets the color temperature of the projector.
-
-        Args:
-            temperature (float): The color temperature of the projector in Kelvin.
-        """
-
-        self._sun_lux.GetColorTemperatureAttr().Set(temperature)
-
-    def set_sun_angle(self, angle: float = 0.53) -> None:
-        """
-        Sets the angle of the sun. Larger values make the sun larger, and soften the shadows.
-
-        Args:
-            angle (float): The angle of the projector.
-        """
-
-        self._sun_lux.GetAngleAttr().Set(angle)
 
     # ==============================================================================
     # Terrain control
