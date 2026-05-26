@@ -72,7 +72,6 @@ class Yamcs_SimulationManager:
 
         self.RM = RobotManager(cfg["environment"]["robots_settings"], 
                                mode=SimulatorMode.YAMCS)
-        self.EC.add_robot_manager(self.RM)
         
         self._setup_terrain_manager()
         self._preload_robot()
@@ -81,6 +80,7 @@ class Yamcs_SimulationManager:
             # subsystems uses sun directions to calculate views no matter if stellar engine is enabled (sun moves) or not
             self.RM.robot.subsystems.set_sun_prim_path(self.EC.get_sun_prim_path())
         self._start_TMTC()
+        self.EC.add_robot_manager(self.RM)
         self._step_world_and_reset()
 
     def _start_TMTC(self):
