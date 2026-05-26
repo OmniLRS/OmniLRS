@@ -21,14 +21,10 @@ from src.environments.monitoring_cameras_manager import MonitoringCamerasManager
 from src.environments.static_assets_manager import StaticAssetsManager
 from src.environments.stellar_engine_env_extension import StellarEngineEnvExtension
 from src.environments.terrain_control_extension import TerrainControlExtension
-from src.terrain_management.large_scale_terrain.pxr_utils import set_xform_ops, load_material, set_texture_path
-from src.physics.terramechanics_parameters import RobotParameter, TerrainMechanicalParameter
+from src.terrain_management.large_scale_terrain.pxr_utils import load_material
 from src.configurations.stellar_engine_confs import StellarEngineConf, SunConf
 from src.configurations.procedural_terrain_confs import TerrainManagerConf
-from src.physics.terramechanics_solver import TerramechanicsSolver
-from src.terrain_management.terrain_manager import TerrainManager
 from src.configurations.environments import LunaryardConf
-from src.environments.rock_manager import RockManager
 from src.environments.base_env import BaseEnv
 from src.configurations.simulator_mode_enum import SimulatorMode
 

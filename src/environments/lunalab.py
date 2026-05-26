@@ -17,19 +17,15 @@ from pxr import UsdGeom, UsdLux, Gf, Usd
 from src.environments.monitoring_cameras_manager import MonitoringCamerasManager
 from src.configurations.simulator_mode_enum import SimulatorMode
 from src.environments.static_assets_manager import StaticAssetsManager
-from src.physics.terramechanics_parameters import RobotParameter, TerrainMechanicalParameter
+from src.environments.terrain_control_extension import TerrainControlExtension
 from src.terrain_management.large_scale_terrain.pxr_utils import set_xform_ops
 from src.configurations.procedural_terrain_confs import TerrainManagerConf
-from src.physics.terramechanics_solver import TerramechanicsSolver
-from src.terrain_management.terrain_manager import TerrainManager
 from src.configurations.environments import LunalabConf
-from src.environments.rock_manager import RockManager
 from src.environments.base_env import BaseEnv
-from src.robots.robot import RobotManager
 from assets import get_assets_path
 
 
-class LunalabController(BaseEnv):
+class LunalabController(BaseEnv, TerrainControlExtension):
     """
     This class is used to control the environment's interactive elements."""
 
