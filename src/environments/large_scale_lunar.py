@@ -7,15 +7,10 @@ __email__ = "ljburtz@jaops.com"
 __status__ = "development"
 
 from scipy.spatial.transform import Rotation as SSTR
-from typing import Dict, List, Tuple
+from typing import Dict, Tuple
 import numpy as np
-import math
-import os
 
-from isaacsim.core.utils.stage import add_reference_to_stage
 import omni
-
-from pxr import UsdLux, Gf, Usd
 
 from src.environments.monitoring_cameras_manager import MonitoringCamerasManager
 from src.configurations.simulator_mode_enum import SimulatorMode
@@ -27,7 +22,6 @@ from src.configurations.stellar_engine_confs import StellarEngineConf, SunConf
 from src.configurations.environments import LargeScaleTerrainConf
 from src.environments.base_env import BaseEnv
 from src.robots.robot import RobotManager
-from assets import get_assets_path
 
 
 class LargeScaleController(BaseEnv, StellarEngineEnvExtension):

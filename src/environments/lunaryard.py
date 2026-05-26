@@ -7,15 +7,11 @@ __email__ = "ljburtz@jaops.com"
 __status__ = "development"
 
 from scipy.spatial.transform import Rotation as SSTR
-from typing import List, Tuple, Union, Dict
-import numpy as np
-import math
+from typing import Dict
 import os
 
-from isaacsim.core.utils.stage import add_reference_to_stage
 import omni
 
-from pxr import UsdGeom, UsdLux, Gf, Usd
 
 from src.environments.monitoring_cameras_manager import MonitoringCamerasManager
 from src.environments.static_assets_manager import StaticAssetsManager

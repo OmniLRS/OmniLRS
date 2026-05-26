@@ -10,6 +10,7 @@ robots_settings:
       # position: [5.0, 5.0, 0.1] # Lunalab
       orientation: [0., 0., 0.70711, 0.70711]
     base_link: "base_link" # core link used to determine the position of the robot
+    pos_relative_to_prim: "/StaticAssets/lander"  # if no lander in environment, rover position will be reported in world frame and a warning will be printed at initialization
     target_links: [
       "Mobility/Wheel_front_left",
       "Mobility/Wheel_front_right",
@@ -25,7 +26,6 @@ robots_settings:
       width: 1.6 # m
       length: 1.5
     turn_speed_coef: 19
-    pos_relative_to_prim: "/StaticAssets/lander"  # comment out for LargeScale and Lunalab (by default they do not have a lander)
     camera:
       prim_path: "/Robots/pragyaan/Body/body_main/depth_cam"
       resolutions: 

@@ -6,8 +6,6 @@ __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
 __status__ = "development"
 
-from enum import StrEnum, Enum
-
 from src.environments.utils import get_moon_env_name
 from src.mission_specific.pragyaan.subsystems.neutron_spectrometer_model import NeutronSpectrometerModel
 from src.mission_specific.pragyaan.subsystems.pragyaan_obc_metrics_model import PragyaanObcMetricsModel
@@ -16,6 +14,7 @@ from src.mission_specific.pragyaan.subsystems.pragyaan_thermal_model import Prag
 from src.subsystems.robot_physics_models.radio_model import RadioModel
 import numpy as np
 from isaacsim.core.utils.xforms import get_world_pose
+from isaacsim.core.utils.prims import is_prim_path_valid
 from scipy.spatial.transform import Rotation
 import random
 import time
@@ -45,9 +44,14 @@ class PragyaanSubsystemsHandler(RobotSubsystemsHandler):
         self._sun_direction = np.array((0.0, 1.0, 0.0))  # default: sun along +Y
         self._neutron_spectrometer = NeutronSpectrometerModel()
 
-        if (pos_relative_to_prim != ""):
+        # handle reporting of the rover position relative to the lander. If no prim path provided or path is invalid, default to reporting global position
+        if is_prim_path_valid(self.LANDER_PATH):
             self._lander_pos, rot = get_world_pose(self.LANDER_PATH)
         else:
+            if pos_relative_to_prim == "":
+                print("[PragyaanSubsystemsHandler] WARNING: no lander prim path provided. Defaulting to global position reporting.")
+            else:
+                print(f"[PragyaanSubsystemsHandler] WARNING: lander prim path '{self.LANDER_PATH}' not found in the world. Defaulting to global position reporting.")
             self._lander_pos = self.LANDER_POSITION
 
     def set_sun_prim_path(self, sun_prim_path: str):

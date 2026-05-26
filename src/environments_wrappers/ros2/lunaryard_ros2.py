@@ -38,7 +38,7 @@ class ROS_LunaryardManager(ROS_BaseManager):
         self.EC.load()
 
         self.create_subscription(Float32, "/OmniLRS/Sun/Intensity", self.set_sun_intensity, 1)
-        self.create_subscription(Pose, "/OmniLRS/Sun/Pose", self.set_sun_pose, 1) #TODO discuss if Pose should be renamed into Orientation as Sun no longer has any Pose, they do not matter, after testing first
+        self.create_subscription(Pose, "/OmniLRS/Sun/Pose", self.set_sun_pose, 1)  # Note: in lunaryard and largescale, Sun is directional light so only orientation matters, position is ignored
         self.create_subscription(ColorRGBA, "/OmniLRS/Sun/Color", self.set_sun_color, 1)
         self.create_subscription(Float32, "/OmniLRS/Sun/ColorTemperature", self.set_sun_color_temperature, 1)
         self.create_subscription(Float32, "/OmniLRS/Sun/AngularSize", self.set_sun_angle, 1)
