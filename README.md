@@ -69,7 +69,7 @@ Mission Operations Update:
 
 Follow the instruction on the Wiki: we strongly recommend following the [docker installation](https://github.com/OmniLRS/OmniLRS/wiki/Installation#docker-installation) steps. 
 
-Then Follow the [Getting Started steps](https://github.com/OmniLRS/OmniLRS/wiki/GettingStarted) to run your first OmniLRS simulations!
+Then Follow the [Getting Started steps](https://github.com/OmniLRS/OmniLRS/wiki/getting_started) to run your first OmniLRS simulations!
 
 ### ROS2 Integration
 
