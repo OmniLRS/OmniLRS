@@ -20,6 +20,7 @@ from pxr import UsdGeom, UsdLux, Gf, Usd
 from src.environments.monitoring_cameras_manager import MonitoringCamerasManager
 from src.environments.static_assets_manager import StaticAssetsManager
 from src.environments.stellar_engine_env_extension import StellarEngineEnvExtension
+from src.environments.terrain_control_extension import TerrainControlExtension
 from src.terrain_management.large_scale_terrain.pxr_utils import set_xform_ops, load_material, set_texture_path
 from src.physics.terramechanics_parameters import RobotParameter, TerrainMechanicalParameter
 from src.configurations.stellar_engine_confs import StellarEngineConf, SunConf
@@ -32,7 +33,7 @@ from src.environments.base_env import BaseEnv
 from src.configurations.simulator_mode_enum import SimulatorMode
 
 
-class LunaryardController(BaseEnv, StellarEngineEnvExtension):
+class LunaryardController(BaseEnv, StellarEngineEnvExtension, TerrainControlExtension):
     """
     This class is used to control the lab interactive elements.
     """
@@ -65,31 +66,20 @@ class LunaryardController(BaseEnv, StellarEngineEnvExtension):
         """
 
         super().__init__(mode, **kwargs)
-        self.stage_settings = lunaryard_settings
-        self.sun_settings = sun_settings
-
-        self.init_stellar_engine(stage_settings=self.stage_settings, 
-                                  stellar_engine_settings=stellar_engine_settings)
-
-        self.T = TerrainManager(terrain_manager)
-        self.RM = RockManager(**rocks_settings)
-        self.TS = TerramechanicsSolver(
-            robot_param=RobotParameter(),
-            terrain_param=TerrainMechanicalParameter(),
-        )
-        self.dem = None
-        self.mask = None
         self.scene_name = "/Lunaryard"
-        self.deformation_conf = terrain_manager.moon_yard.deformation_engine
-
-        self.SAM = None
-        self.MCM = None
+        self.stage_settings = lunaryard_settings
 
         if static_assets_settings:
             self.SAM = StaticAssetsManager(static_assets_settings)
 
         if monitoring_cameras_settings and monitoring_cameras_settings["enabled"]:
             self.MCM = MonitoringCamerasManager(self._mode, monitoring_cameras_settings)
+
+        self._sun_settings = sun_settings
+        self.init_stellar_engine(stage_settings=self.stage_settings, 
+                                  stellar_engine_settings=stellar_engine_settings)
+
+        self.init_terrain_control(terrain_manager=terrain_manager, rocks_settings=rocks_settings)
 
     def build_scene(self) -> None:
         """
@@ -99,7 +89,7 @@ class LunaryardController(BaseEnv, StellarEngineEnvExtension):
         # Creates an empty xform with the name lunaryard
         lunaryard = self.stage.DefinePrim(self.scene_name, "Xform")
 
-        self.create_sun(self.sun_settings)
+        self.create_sun(self._sun_settings)
         self.create_earth()
 
         # Load default textures
@@ -108,28 +98,6 @@ class LunaryardController(BaseEnv, StellarEngineEnvExtension):
         load_material("Basalt", "assets/Textures/GravelStones.mdl", looks_path)
         load_material("Sand", "assets/Textures/Sand.mdl", looks_path)
         load_material("LunarRegolith8k", "assets/Textures/LunarRegolith8k.mdl", looks_path)
-
-    def instantiate_scene(self) -> None:
-        """
-        Instantiates the scene. Applies any operations that need to be done after the scene is built and
-        the renderer has been stepped.
-        """
-
-        pass
-
-    def reset(self) -> None:
-        """
-        Resets the environment. Implement the logic to reset the environment.
-        """
-
-        pass
-
-    def update(self) -> None:
-        """
-        Updates the environment.
-        """
-
-        pass
 
     def load(self) -> None:
         """
@@ -153,87 +121,3 @@ class LunaryardController(BaseEnv, StellarEngineEnvExtension):
 
         if self.MCM:
             self.MCM.spawn()
-
-    def load_DEM(self) -> None:
-        """
-        Loads the DEM and the mask from the TerrainManager.
-        """
-
-        self.dem = self.T.getDEM()
-        self.mask = self.T.getMask()
-
-    # ==============================================================================
-    # Terrain control
-    # ==============================================================================
-
-    def switch_terrain(self, flag: int = -1) -> None:
-        """
-        Switches the terrain to a new DEM.
-
-        Args:
-            flag (int): The id of the DEM to be loaded. If negative, a random DEM is generated.
-        """
-
-        if flag < 0:
-            self.T.randomizeTerrain()
-        else:
-            self.T.loadTerrainId(flag)
-        self.load_DEM()
-        self.RM.updateImageData(self.dem, self.mask)
-        self.RM.randomizeInstancers(10)
-
-    def enable_rocks(self, flag: bool = True) -> None:
-        """
-        Turns the rocks on or off.
-
-        Args:
-            flag (bool): True to turn the rocks on, False to turn them off.
-        """
-
-        self.RM.setVisible(flag)
-
-    def randomize_rocks(self, num: int = 8) -> None:
-        """
-        Randomizes the placement of the rocks.
-
-        Args:
-            num (int): The number of rocks to be placed.
-        """
-
-        num = int(num)
-        if num == 0:
-            num += 1
-        self.RM.randomizeInstancers(num)
-
-    def deform_terrain(self) -> None:
-        """
-        Deforms the terrain.
-        Args:
-            world_poses (np.ndarray): The world poses of the contact points.
-            contact_forces (np.ndarray): The contact forces in local frame reported by rigidprimview.
-        """
-        world_positions = []
-        world_orientations = []
-        contact_forces = []
-        position, orientation = self.robotManager.robot_RG.get_pose()
-        world_positions.append(position)
-        world_orientations.append(orientation)
-        contact_forces.append(self.robotManager.robot_RG.get_net_contact_forces())
-        world_positions = np.concatenate(world_positions, axis=0)
-        world_orientations = np.concatenate(world_orientations, axis=0)
-        contact_forces = np.concatenate(contact_forces, axis=0)
-
-        self.T.deformTerrain(
-            world_positions,
-            world_orientations,
-            contact_forces,
-        )
-        self.load_DEM()
-        self.RM.updateImageData(self.dem, self.mask)
-
-    def apply_terramechanics(self) -> None:
-        linear_velocities, angular_velocities = self.robotManager.robot_RG.get_velocities()
-        sinkages = np.zeros((linear_velocities.shape[0],))
-        force, torque = self.TS.compute_force_and_torque(linear_velocities, angular_velocities, sinkages)
-        self.robotManager.robot_RG.apply_force_torque(force, torque)
-        self.robotManager.robot_RG.apply_force_torque(force, torque)

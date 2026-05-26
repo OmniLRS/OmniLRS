@@ -60,24 +60,15 @@ class LunalabController(BaseEnv):
 
         super().__init__(mode, **kwargs)
         self.stage_settings = lunalab_settings
-        self.T = TerrainManager(terrain_manager)
-        self.RM = RockManager(**rocks_settings)
-        self.TS = TerramechanicsSolver(
-            robot_param=RobotParameter(),
-            terrain_param=TerrainMechanicalParameter(),
-        )
-        self.dem = None
-        self.mask = None
         self.scene_name = "/Lunalab"
-        self.deformation_conf = terrain_manager.moon_yard.deformation_engine
-        self.SAM = None
-        self.MCM = None
 
         if static_assets_settings:
             self.SAM = StaticAssetsManager(static_assets_settings)
 
         if monitoring_cameras_settings and monitoring_cameras_settings["enabled"]:
             self.MCM = MonitoringCamerasManager(self._mode, monitoring_cameras_settings)
+
+        self.init_terrain_control(terrain_manager=terrain_manager, rocks_settings=rocks_settings)
 
     def build_scene(self) -> None:
         """
@@ -87,28 +78,6 @@ class LunalabController(BaseEnv):
         scene_path = get_assets_path() + "/USD_Assets/environments/Lunalab.usd"
         # Loads the Lunalab
         add_reference_to_stage(scene_path, self.scene_name)
-
-    def instantiate_scene(self) -> None:
-        """
-        Instantiates the scene. Applies any operations that need to be done after the scene is built and
-        the renderer has been stepped.
-        """
-
-        pass
-
-    def reset(self) -> None:
-        """
-        Resets the environment. Implement the logic to reset the environment.
-        """
-
-        pass
-
-    def update(self) -> None:
-        """
-        Updates the environment.
-        """
-
-        pass
 
     def load(self) -> None:
         """
@@ -129,6 +98,9 @@ class LunalabController(BaseEnv):
         if self.MCM:
             self.MCM.spawn()
 
+    # ==============================================================================
+    # Lunalab-specific configs
+    # ==============================================================================
 
     def get_lux_assets(self, prim: "Usd.Prim") -> List[Usd.Prim]:
         """
@@ -150,14 +122,6 @@ class LunalabController(BaseEnv):
             if prim.IsA(UsdLux.DiskLight):
                 lights.append(prim)
         return lights
-
-    def load_DEM(self) -> None:
-        """
-        Loads the DEM and the mask from the TerrainManager.
-        """
-
-        self.dem = self.T.getDEM()
-        self.mask = self.T.getMask()
 
     def collect_interactive_assets(self) -> None:
         """
@@ -326,83 +290,3 @@ class LunalabController(BaseEnv):
         else:
             self._curtain_prims["extended"].GetAttribute("visibility").Set("invisible")
             self._curtain_prims["folded"].GetAttribute("visibility").Set("visible")
-
-    # ==============================================================================
-    # Terrain control
-    # ==============================================================================
-    def switch_terrain(self, flag: int = -1) -> None:
-        """
-        Switches the terrain to a new DEM.
-
-        Args:
-            flag (int): The id of the DEM to be loaded. If negative, a random DEM is generated.
-        """
-
-        if flag < 0:
-            self.T.randomizeTerrain()
-        else:
-            self.T.loadTerrainId(flag)
-
-        self.load_DEM()
-        self.RM.updateImageData(self.dem, self.mask)
-        self.RM.randomizeInstancers(10)
-
-    def enable_rocks(self, flag: bool = True) -> None:
-        """
-        Turns the rocks on or off.
-
-        Args:
-            flag (bool): True to turn the rocks on, False to turn them off.
-        """
-
-        self.RM.setVisible(flag)
-
-    def randomize_rocks(self, num: int = 8) -> None:
-        """
-        Randomizes the placement of the rocks.
-
-        Args:
-            num (int): The number of rocks to be placed.
-        """
-
-        num = int(num)
-        if num == 0:
-            num += 1
-        self.RM.randomizeInstancers(num)
-
-    def deform_terrain(self) -> None:
-        """
-        Deforms the terrain.
-        Args:
-            world_poses (np.ndarray): The world poses of the contact points.
-            contact_forces (np.ndarray): The contact forces in local frame reported by rigidprimview.
-        """
-        world_positions = []
-        world_orientations = []
-        contact_forces = []
-        position, orientation = self.robotManager.robot_RG.get_pose()
-        world_positions.append(position)
-        world_orientations.append(orientation)
-        contact_forces.append(self.robotManager.robot_RG.get_net_contact_forces())
-        world_positions = np.concatenate(world_positions, axis=0)
-        world_orientations = np.concatenate(world_orientations, axis=0)
-        contact_forces = np.concatenate(contact_forces, axis=0)
-
-        self.T.deformTerrain(
-            world_positions,
-            world_orientations,
-            contact_forces,
-        )
-        self.load_DEM()
-        self.RM.updateImageData(self.dem, self.mask)
-
-    def apply_terramechanics(self) -> None:
-        """
-        Applies the terramechanics solver to the robot.
-        """
-
-        linear_velocities, angular_velocities = self.robotManager.robot_RG.get_velocities()
-        sinkages = np.zeros((linear_velocities.shape[0],))
-        force, torque = self.TS.compute_force_and_torque(linear_velocities, angular_velocities, sinkages)
-        self.robotManager.robot_RG.apply_force_torque(force, torque)
-        self.robotManager.robot_RG.apply_force_torque(force, torque)

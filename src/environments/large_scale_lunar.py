@@ -60,26 +60,19 @@ class LargeScaleController(BaseEnv, StellarEngineEnvExtension):
         """
 
         super().__init__(mode, **kwargs)
-        self.stage_settings = large_scale_terrain
-        self.sun_settings = sun_settings
-
-        self.is_simulation_alive = is_simulation_alive
-
-        self.init_stellar_engine(stage_settings=self.stage_settings, 
-                                  stellar_engine_settings=stellar_engine_settings)
-
-        self.dem = None
-        self.mask = None
         self.scene_name = "/LargeScaleLunar"
-
-        self.SAM = None
-        self.MCM = None
+        self.stage_settings = large_scale_terrain
+        self.is_simulation_alive = is_simulation_alive
 
         if static_assets_settings:
             self.SAM = StaticAssetsManager(static_assets_settings)
 
         if monitoring_cameras_settings and monitoring_cameras_settings["enabled"]:
             self.MCM = MonitoringCamerasManager(self._mode, monitoring_cameras_settings)
+
+        self._sun_settings = sun_settings
+        self.init_stellar_engine(stage_settings=self.stage_settings, 
+                                  stellar_engine_settings=stellar_engine_settings)
 
     def build_scene(self) -> None:
         """
@@ -89,23 +82,8 @@ class LargeScaleController(BaseEnv, StellarEngineEnvExtension):
         # Creates an empty xform with the name lunaryard
         large_scale = self.stage.DefinePrim(self.scene_name, "Xform")
 
-        self.create_sun(self.sun_settings)
+        self.create_sun(self._sun_settings)
         self.create_earth()
-
-    def instantiate_scene(self) -> None:
-        """
-        Instantiates the scene. Applies any operations that need to be done after the scene is built and
-        the renderer has been stepped.
-        """
-
-        pass
-
-    def reset(self) -> None:
-        """
-        Resets the environment. Implement the logic to reset the environment.
-        """
-
-        pass
 
     def update(self) -> None:
         """
@@ -181,15 +159,3 @@ class LargeScaleController(BaseEnv, StellarEngineEnvExtension):
         RM = SSTR.from_matrix(RNorm)
 
         return (self.LSTM.get_height_local(position), RM.as_quat())
-
-    def deform_derrain(self) -> None:
-        """
-        Deforms the terrain.
-        Args:
-            world_poses (np.ndarray): The world poses of the contact points.
-            contact_forces (np.ndarray): The contact forces in local frame reported by rigidprimview.
-        """
-        pass
-
-    def apply_terramechanics(self) -> None:
-        pass

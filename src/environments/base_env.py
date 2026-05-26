@@ -29,6 +29,10 @@ class BaseEnv:
         """
         self._mode:SimulatorMode = mode
         self.stage: Usd.Stage = omni.usd.get_context().get_stage()
+        self.dem = None
+        self.mask = None
+        self.SAM = None
+        self.MCM = None
 
     def build_scene(self) -> None:
         """
