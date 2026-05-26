@@ -7,31 +7,32 @@ __email__ = "ljburtz@jaops.com"
 __status__ = "development"
 
 from abc import ABC
+import math
+import os
 
 from scipy.spatial.transform import Rotation as SSTR
 from typing import List, Tuple
 import omni
-from pxr import Gf
-from src.terrain_management.large_scale_terrain.pxr_utils import set_xform_ops
+from pxr import Gf, UsdLux
+from src.terrain_management.large_scale_terrain.pxr_utils import set_texture_path, set_xform_ops
 from src.configurations.stellar_engine_confs import StellarEngineConf, SunConf
-from src.configurations.environments import LargeScaleTerrainConf
+from src.configurations.environments import LargeScaleTerrainConf, LunaryardConf
 from src.stellar.stellar_engine import StellarEngine
 
 class StellarEngineEnvExtension(ABC):
     def init_stellar_engine(
         self,
-        earth_scale = None,
-        sun_path = None,
+        stage_settings:LunaryardConf | LargeScaleTerrainConf = None,
         stellar_engine_settings: StellarEngineConf = None,
     ) -> None:
         """
         Args:
             stellar_engine_settings (StellarEngineConf): The settings of the stellar engine.
-            sun_settings (SunConf): The settings of the sun.
         """
 
-        self._earth_scale = earth_scale     # stage_settings.earth_scale
-        self._sun_path = sun_path           # stage_settings.sun_path
+        self._stage_settings = stage_settings
+        self._earth_scale = stage_settings.earth_scale     # stage_settings.earth_scale
+        self._sun_path = stage_settings.sun_path           # stage_settings.sun_path
         self._sun_lux = None
         self._sun_prim = None
         self._earth_prim = None
@@ -41,6 +42,43 @@ class StellarEngineEnvExtension(ABC):
             self.enable_stellar_engine = True
         else:
             self.enable_stellar_engine = False
+
+    def create_sun(self, sun_settings:SunConf):
+        # Should be called inside env's build_scene()
+        sun = self.stage.DefinePrim(self._sun_path, "Xform")
+        self._sun_prim = sun.GetPrim()
+        self._sun_lux: UsdLux.DistantLight = UsdLux.DistantLight.Define(
+            self.stage, os.path.join(self._sun_path, "sun")
+        )
+        self._sun_lux.CreateIntensityAttr(sun_settings.intensity)
+        self._sun_lux.CreateAngleAttr(sun_settings.angle)
+        self._sun_lux.CreateDiffuseAttr(sun_settings.diffuse_multiplier)
+        self._sun_lux.CreateSpecularAttr(sun_settings.specular_multiplier)
+        self._sun_lux.CreateColorAttr(
+            Gf.Vec3f(sun_settings.color[0], sun_settings.color[1], sun_settings.color[2])
+        )
+        self._sun_lux.CreateColorTemperatureAttr(sun_settings.temperature)
+        x, y, z, w = SSTR.from_euler(
+            "xyz", [0, sun_settings.elevation, sun_settings.azimuth - 90], degrees=True
+        ).as_quat()
+        set_xform_ops(
+            self._sun_lux.GetPrim(), Gf.Vec3d(0, 0, 0), Gf.Quatd(0.5, Gf.Vec3d(0.5, -0.5, -0.5)), Gf.Vec3d(1, 1, 1)
+        )
+        set_xform_ops(self._sun_prim.GetPrim(), Gf.Vec3d(0, 0, 0), Gf.Quatd(w, Gf.Vec3d(x, y, z)), Gf.Vec3d(1, 1, 1))
+
+    def create_earth(self):
+        # Should be called inside env's build_scene()
+        self._earth_prim = self.stage.DefinePrim(os.path.join(self.scene_name, "Earth"), "Xform")
+        self._earth_prim.GetReferences().AddReference(self._stage_settings.earth_usd_path)
+        earth_texture_path = os.path.abspath("assets/Textures/Earth/earth_color_with_clouds.tif")
+        material_path = f"{self._stage_settings.earth_path}/Looks/OmniPBR"
+        set_texture_path(self.stage, material_path, "Shader", earth_texture_path)
+        dist = self._stage_settings.earth_distance * self._earth_scale
+        px = math.cos(math.radians(self._stage_settings.earth_azimuth)) * dist
+        py = math.sin(math.radians(self._stage_settings.earth_azimuth)) * dist
+        pz = math.sin(math.radians(self._stage_settings.earth_elevation)) * dist
+        set_xform_ops(self._earth_prim, Gf.Vec3d(px, py, pz), Gf.Quatd(0, 0, 0, 1))
+        pass
 
     # ==============================================================================
     # Stellar engine control

@@ -68,8 +68,7 @@ class LunaryardController(BaseEnv, StellarEngineEnvExtension):
         self.stage_settings = lunaryard_settings
         self.sun_settings = sun_settings
 
-        self.init_stellar_engine(earth_scale=self.stage_settings.earth_scale, 
-                                  sun_path=self.stage_settings.sun_path, 
+        self.init_stellar_engine(stage_settings=self.stage_settings, 
                                   stellar_engine_settings=stellar_engine_settings)
 
         self.T = TerrainManager(terrain_manager)
@@ -100,39 +99,8 @@ class LunaryardController(BaseEnv, StellarEngineEnvExtension):
         # Creates an empty xform with the name lunaryard
         lunaryard = self.stage.DefinePrim(self.scene_name, "Xform")
 
-        # Creates the sun
-        sun = self.stage.DefinePrim(self.stage_settings.sun_path, "Xform")
-        self._sun_prim = sun.GetPrim()
-        self._sun_lux: UsdLux.DistantLight = UsdLux.DistantLight.Define(
-            self.stage, os.path.join(self.stage_settings.sun_path, "sun")
-        )
-        self._sun_lux.CreateIntensityAttr(self.sun_settings.intensity)
-        self._sun_lux.CreateAngleAttr(self.sun_settings.angle)
-        self._sun_lux.CreateDiffuseAttr(self.sun_settings.diffuse_multiplier)
-        self._sun_lux.CreateSpecularAttr(self.sun_settings.specular_multiplier)
-        self._sun_lux.CreateColorAttr(
-            Gf.Vec3f(self.sun_settings.color[0], self.sun_settings.color[1], self.sun_settings.color[2])
-        )
-        self._sun_lux.CreateColorTemperatureAttr(self.sun_settings.temperature)
-        x, y, z, w = SSTR.from_euler(
-            "xyz", [0, self.sun_settings.elevation, self.sun_settings.azimuth - 90], degrees=True
-        ).as_quat()
-        set_xform_ops(
-            self._sun_lux.GetPrim(), Gf.Vec3d(0, 0, 0), Gf.Quatd(0.5, Gf.Vec3d(0.5, -0.5, -0.5)), Gf.Vec3d(1, 1, 1)
-        )
-        set_xform_ops(self._sun_prim.GetPrim(), Gf.Vec3d(0, 0, 0), Gf.Quatd(w, Gf.Vec3d(x, y, z)), Gf.Vec3d(1, 1, 1))
-
-        # Creates the earth
-        self._earth_prim = self.stage.DefinePrim(self.stage_settings.earth_path, "Xform")
-        self._earth_prim.GetReferences().AddReference(self.stage_settings.earth_usd_path)
-        earth_texture_path = os.path.abspath("assets/Textures/Earth/earth_color_with_clouds.tif")
-        material_path = f"{self.stage_settings.earth_path}/Looks/OmniPBR"
-        set_texture_path(self.stage, material_path, "Shader", earth_texture_path)
-        dist = self.stage_settings.earth_distance * self.stage_settings.earth_scale
-        px = math.cos(math.radians(self.stage_settings.earth_azimuth)) * dist
-        py = math.sin(math.radians(self.stage_settings.earth_azimuth)) * dist
-        pz = math.sin(math.radians(self.stage_settings.earth_elevation)) * dist
-        set_xform_ops(self._earth_prim, Gf.Vec3d(px, py, pz), Gf.Quatd(0, 0, 0, 1))
+        self.create_sun(self.sun_settings)
+        self.create_earth()
 
         # Load default textures
         looks_path = os.path.join(self.scene_name, "Looks")
