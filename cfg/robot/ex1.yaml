@@ -1,0 +1,13 @@
+# @package environment 
+# do not remove the above comment, it injects the settings below into the environment config
+
+robots_settings:
+  robots_root: "/Robots"
+  parameters:
+    robot_name: ex1
+    usd_path: assets/USD_Assets/robots/ex1/ex1_spheres.usd
+    pose:
+      position: [5.0, 5.0, 0.5]
+      orientation: [1, 0, 0, 0]
+    base_link: "base_link" # core link used to determine the position of the robot
+    target_links: ["left_front_wheel_link", "left_rear_wheel_link", "right_front_wheel_link", "right_rear_wheel_link"]

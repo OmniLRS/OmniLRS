@@ -62,12 +62,15 @@ class LargeScaleController(BaseEnv):
         super().__init__(mode, **kwargs)
         self.stage_settings = large_scale_terrain
         self.sun_settings = sun_settings
+
         self.is_simulation_alive = is_simulation_alive
+
         if stellar_engine_settings is not None:
             self.SE = StellarEngine(stellar_engine_settings)
             self.enable_stellar_engine = True
         else:
             self.enable_stellar_engine = False
+
         self.dem = None
         self.mask = None
         self.scene_name = "/LargeScaleLunar"
@@ -90,9 +93,10 @@ class LargeScaleController(BaseEnv):
         large_scale = self.stage.DefinePrim(self.scene_name, "Xform")
 
         # Creates the sun
-        self._sun_prim = self.stage.DefinePrim(os.path.join(self.scene_name, "Sun"), "Xform")
+        sun = self.stage.DefinePrim(self.stage_settings.sun_path, "Xform")
+        self._sun_prim = sun.GetPrim()
         self._sun_lux: UsdLux.DistantLight = UsdLux.DistantLight.Define(
-            self.stage, os.path.join(self.scene_name, "Sun", "sun")
+            self.stage, os.path.join(self.stage_settings.sun_path, "sun")
         )
         self._sun_lux.CreateIntensityAttr(self.sun_settings.intensity)
         self._sun_lux.CreateAngleAttr(self.sun_settings.angle)
@@ -167,7 +171,7 @@ class LargeScaleController(BaseEnv):
             self.SE.set_lat_lon(*self.LSTM.get_lat_lon())
 
         if self.SAM:
-            self.SAM.spawn()
+            self.SAM.spawn(get_height_func=self.LSTM.get_height_local)
 
         if self.MCM:
             self.MCM.spawn()
@@ -235,8 +239,10 @@ class LargeScaleController(BaseEnv):
                 alt, az, _ = self.SE.get_alt_az("sun")
                 quat = self.SE.convert_alt_az_to_quat(alt, az)
 
-                self.set_sun_pose((0, 0, 0), quat)
+                self.set_sun_pose((0,0,0), quat)
                 self.set_earth_pose(earth_pos, (0, 0, 0, 1))
+                print("Updated based on stellar!")
+                print("new sun quat:", quat)
 
     # ==============================================================================
     # Earth control
@@ -266,6 +272,9 @@ class LargeScaleController(BaseEnv):
     # ==============================================================================
     # Sun control
     # ==============================================================================
+    
+    def get_sun_prim_path(self) -> str:
+        return self.stage_settings.sun_path
 
     def set_sun_pose(
         self,

@@ -155,6 +155,10 @@ class ROS2_SimulationManager:
         else:
             self.ROSRobotManager.RM.preload_robot(self.world)
         self.ROSEnvironmentManager.EC.add_robot_manager(self.ROSRobotManager.RM)
+        if hasattr(self.ROSEnvironmentManager.EC, 'sun_settings'):
+            # True for Lunaryard and LargeScale, False for Lunalab
+            # subsystems uses sun directions to calculate views no matter if stellar engine is enabled (sun moves) or not
+            self.ROSRobotManager.RM.robot.subsystems.set_sun_prim_path(self.ROSEnvironmentManager.EC.get_sun_prim_path())
 
         for i in range(100):
             self.world.step(render=True)

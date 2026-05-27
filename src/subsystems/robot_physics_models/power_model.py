@@ -61,9 +61,8 @@ class PowerModel(RobotPhysicsModel):
     def __init__(self):
         super().__init__()
         self._solar_input_power: float = 0.0
-        self._rover_yaw_deg: float = 0.0 
-        self._rover_position: Tuple[float, float, float] = (0.0, 0.0, 0.0)
-        self._sun_position: Tuple[float, float, float] = (0.0, -10.0, 0.0)
+        self._rover_yaw_deg: float = 0.0
+        self._sun_direction: np.ndarray = np.array((0.0, 1.0, 0.0))
         self._battery_voltage_v: float = self.BATTERY_VOLTAGE_CURVE[-1][1]
     
     def initialize(self, *, battery_capacity_wh:float, battery_charge_wh:float,
@@ -81,9 +80,8 @@ class PowerModel(RobotPhysicsModel):
         self._motor_count = motor_count
         self._motor_power_w = motor_power_w
 	
-    def set_inputs(self, rover_position, sun_position, rover_yaw_deg, solar_panel_state, is_in_motor_state):  
-        self._rover_position = rover_position
-        self._sun_position  = sun_position
+    def set_inputs(self, sun_direction, rover_yaw_deg, solar_panel_state, is_in_motor_state):
+        self._sun_direction = np.asarray(sun_direction, dtype=float)
         self._rover_yaw_deg = rover_yaw_deg
         self._solar_panel_state = solar_panel_state
         self._is_in_motor_state = is_in_motor_state
@@ -91,7 +89,7 @@ class PowerModel(RobotPhysicsModel):
     def compute(self, dt: float) -> None:
         """Advance the battery state by *dt* seconds."""
 
-        view_factor = self._compute_view_factor(self._rover_position, self._sun_position)
+        view_factor = self._compute_view_factor(self._sun_direction)
         self._solar_input_power = self._solar_panel_max_power * view_factor
         net_power = self._solar_input_power - self._total_load_power()
         self._battery_charge_wh += net_power * (dt / 3600.0)
@@ -121,14 +119,11 @@ class PowerModel(RobotPhysicsModel):
         self._battery_charge_wh = _clamp(self._battery_charge_wh, 0.0, self._battery_capacity_wh)
         self._update_battery_voltage()
 
-    def set_rover_position(self, position: Tuple[float, float, float]) -> None:
-        self._rover_position = position
-
     def set_rover_yaw(self, yaw_deg: float) -> None:
         self._rover_yaw_deg = yaw_deg
 
-    def set_sun_position(self, position: Tuple[float, float, float]) -> None:
-        self._sun_position = position
+    def set_sun_direction(self, direction: np.ndarray) -> None:
+        self._sun_direction = np.asarray(direction, dtype=float)
 
     def set_solar_panel_state(self, state: SolarPanelState) -> None:
         self._solar_panel_state = state
@@ -168,21 +163,13 @@ class PowerModel(RobotPhysicsModel):
         motor_power = self._motor_power_w * self._motor_count if self._is_in_motor_state else 0.0
         return battery_power_for_regulated + motor_power
 
-    def _compute_view_factor(
-        self,
-        rover_position: Tuple[float, float, float],
-        sun_position: Tuple[float, float, float],
-    ) -> float:
-        rover = np.asarray(rover_position, dtype=float)
-        sun = np.asarray(sun_position, dtype=float)
-        vector = sun - rover
-        magnitude = np.linalg.norm(vector)
+    def _compute_view_factor(self, sun_direction: np.ndarray) -> float:
+        magnitude = np.linalg.norm(sun_direction)
         if magnitude == 0.0:
             return 0.0
-        unit = vector / magnitude
+        unit = sun_direction / magnitude
         panel_normal = self._current_panel_normal()
-        clamp = float(_clamp(float(np.dot(unit, panel_normal)), 0.0, 1.0))
-        return clamp
+        return float(_clamp(float(np.dot(unit, panel_normal)), 0.0, 1.0))
 
     def _battery_percentage(self) -> float:
         if self._battery_capacity_wh <= 0.0:
@@ -323,28 +310,26 @@ def run_power_profile_test(
     for label, value in _extract_current_samples(status).items():
         current_series.setdefault(label, []).append(value)
 
-    SUN_DISTANCE = 1000.0
     SUN_AZYMUTH_DEG = 65.0
-    SUN_POSITION = (
-        -SUN_DISTANCE * np.sin(np.pi * SUN_AZYMUTH_DEG / 180.0),
-        SUN_DISTANCE * np.cos(np.pi * SUN_AZYMUTH_DEG / 180.0),
-        10.0,
-    )
-    print(SUN_POSITION)
+    SUN_ALTITUDE_DEG = 0.5
+    SUN_DIRECTION = np.array([
+        -np.cos(np.radians(SUN_ALTITUDE_DEG)) * np.sin(np.radians(SUN_AZYMUTH_DEG)),
+        np.cos(np.radians(SUN_ALTITUDE_DEG)) * np.cos(np.radians(SUN_AZYMUTH_DEG)),
+        np.sin(np.radians(SUN_ALTITUDE_DEG)),
+    ])
 
     def simulate(
         duration: float,
         is_in_motor_state: bool,
-        sun_position: Tuple[float, float, float],
+        sun_direction: np.ndarray,
         rover_yaw_deg: float,
         solar_panel_state: SolarPanelState,
     ) -> None:
         steps = int(duration / dt)
-        rover_pos = (0.0, 0.0, 0.0)
 
         for _ in range(steps):
             # set inputs
-            model.set_inputs(rover_pos, sun_position, rover_yaw_deg, solar_panel_state, is_in_motor_state)
+            model.set_inputs(sun_direction, rover_yaw_deg, solar_panel_state, is_in_motor_state)
             # perform computation
             model.compute(dt)
             # get results
@@ -365,9 +350,9 @@ def run_power_profile_test(
                     series.append(series[-1] if series else 0.0)
 
     # phase 1: all motors on, solar panel stowed
-    simulate(on_duration, True, SUN_POSITION, 65.0, SolarPanelState.STOWED)
+    simulate(on_duration, True, SUN_DIRECTION, 65.0, SolarPanelState.STOWED)
     # phase 2: motors off, solar panel deployed
-    simulate(off_duration, False, SUN_POSITION, -42.0, SolarPanelState.DEPLOYED)
+    simulate(off_duration, False, SUN_DIRECTION, -42.0, SolarPanelState.DEPLOYED)
     return times, percentages, voltages, solar_currents, current_series
 
 

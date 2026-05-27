@@ -1,5 +1,19 @@
 # OmniLRS: Omniverse Lunar Robotics Simulator
 
+<center>
+<img src="https://raw.githubusercontent.com/wiki/OmniLRS/OmniLRS/media/OmniLRS_HuskySouthPole.png" width=1080/>
+</center>
+
+OmniLRS is powered by NVIDIA Isaac Sim and NVIDIA Omniverse libraries to provide visually realistic and physically accurate robotics simulation of lunar rovers.
+- GPU accelerated ray tracing for real-time illumination, shadows and vision sensors
+- GPU accelerated physics for real-time rigid-body dynamics and wheel/soil interactions 
+- Base Terrain from NASA LRO Digital Elevation Models, plus generative rock and crater distributions from power laws
+- Customizable and randomizable terrain generation and asset placement for synthetic data generation 
+- Integration with ROS2 robotics ecosystem and more
+- Multi-physics model framework to simulate the entire range of telemetry needed in lunar missions: Power, Radio, Thermal
+- Mission Control Software Integration (Yamcs and Grafana) for mission operations development, training and rehearsals
+
+
 <table>
   <tr>
     <td width="300"><img src="https://raw.githubusercontent.com/wiki/OmniLRS/OmniLRS/media/thumb/thumbnail.png" width="300"/><br/><b>V1</b>: Environment, craters, rocks, synthetic data generation, wheel traces</td>
@@ -13,14 +27,7 @@
   </tr>
 </table>
 
-OmniLRS is powered by NVIDIA Isaac Sim and NVIDIA Omniverse libraries to provide visually realistic and physically accurate robotics simulation of lunar rovers.
-- GPU accelerated ray tracing for real-time illumination, shadows and vision sensors
-- GPU accelerated physics for real-time rigid-body dynamics and wheel/soil interactions 
-- Base Terrain from NASA LRO Digital Elevation Models, plus generative rock and crater distributions from power laws
-- Customizable and randomizable terrain generation and asset placement for synthetic data generation 
-- Integration with ROS2 robotics ecosystem and more
-- Multi-physics model framework to simulate the entire range of telemetry needed in lunar missions: Power, Radio, Thermal
-- Mission Control Software Integration (Yamcs and Grafana) for mission operations development, training and rehearsals
+
 
 
 
@@ -62,7 +69,7 @@ Mission Operations Update:
 
 Follow the instruction on the Wiki: we strongly recommend following the [docker installation](https://github.com/OmniLRS/OmniLRS/wiki/Installation#docker-installation) steps. 
 
-Then Follow the [Getting Started steps](https://github.com/OmniLRS/OmniLRS/wiki/GettingStarted) to run your first OmniLRS simulations!
+Then Follow the [Getting Started steps](https://github.com/OmniLRS/OmniLRS/wiki/getting_started) to run your first OmniLRS simulations!
 
 ### ROS2 Integration
 
@@ -102,27 +109,12 @@ Please use the following citations if you use `OmniLRS` in your work.
 }
 ```
 
-## Directory Structure
-```bash
-.
-├── assets
-├── cfg
-│   ├── environment
-│   ├── mode
-│   ├── physics
-│   └── rendering
-├── docs
-├── scripts
-├── src
-│   ├── configurations
-│   ├── environments
-│   ├── environments_wrappers
-│   │   ├── ros2
-│   │   └── sdg
-│   ├── labeling
-│   ├── physics
-│   ├── robots
-│   ├── stellar
-│   └── terrain_management
-└── WorldBuilders
-```
+## Star History
+
+<a href="https://www.star-history.com/?repos=OmniLRS%2FOmniLRS&type=date&logscale=&legend=top-left">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=OmniLRS/OmniLRS&type=date&theme=dark&legend=top-left" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=OmniLRS/OmniLRS&type=date&legend=top-left" />
+   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=OmniLRS/OmniLRS&type=date&legend=top-left" />
+ </picture>
+</a>

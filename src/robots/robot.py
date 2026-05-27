@@ -63,8 +63,8 @@ class RobotManager:
         self.robot_parameters = self.RM_conf.parameters
         self.robots_root = self.RM_conf.robots_root
         createXform(self.stage, self.robots_root)
-        self.robot: Robot = None   # TODO for v4: if only 1 robot, no need for a dict, just an instance
-        self.robot_RG: RobotRigidGroup = None # TODO for v4: if only 1 robot, no need for a dict, just an instance
+        self.robot: Robot = None   
+        self.robot_RG: RobotRigidGroup = None
 
     def preload_robot(
         self,
@@ -75,11 +75,6 @@ class RobotManager:
         Args:
             world (Usd.Stage): The usd stage scene.
         """
-        print("self.robot_parameters")
-
-        print(self.robot_parameters)
-
-
         self.add_robot(
             self.robot_parameters.usd_path,
             self.robot_parameters.robot_name,
