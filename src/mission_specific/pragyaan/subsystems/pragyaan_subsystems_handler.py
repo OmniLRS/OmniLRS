@@ -94,24 +94,24 @@ class PragyaanSubsystemsHandler(RobotSubsystemsHandler):
             return func(self, *args, **kwargs)
         return wrapper
 
-    def get_obc_status(self):
+    def get_obc_model_outputs(self):
         self._obc_metrics_model.set_inputs(self._obc_state)
         self._obc_metrics_model.compute(dt=0.0) # obc model is stateless; dt is unused
         return self._obc_metrics_model.get_outputs()
     
-    def get_radio_status(self, robot_position):
+    def get_radio_model_outputs(self, robot_position):
         self._radio_model.set_inputs(robot_position, self._lander_pos)
         self._radio_model.compute(dt=0.0)  # radio model is stateless; dt is unused
         return self._radio_model.get_outputs()
     
     @_update_sun_direction_before
-    def get_thermal_status(self, robot_yaw_deg, interval_s):
+    def get_thermal_model_outputs(self, robot_yaw_deg, interval_s):
         self._thermal_model.set_inputs(self._sun_direction, robot_yaw_deg)
         self._thermal_model.compute(interval_s)
         return self._thermal_model.get_outputs()
 
     @_update_sun_direction_before
-    def get_power_status(self, robot_yaw_deg, interval_s, obc_state):
+    def get_power_model_outputs(self, robot_yaw_deg, interval_s, obc_state):
         # device states are reflected between the handler and power model, as they use the same dict
         self._power_model.set_inputs(
             sun_direction=self._sun_direction,
