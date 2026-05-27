@@ -11,10 +11,10 @@ import os
 import omni
 from pxr import UsdGeom, Gf
 import omni.replicator.core as rep
-import omni.syntheticdata as sd
+import omni.syntheticdata as sd #TODO deprecated -> use omni.replicator.core annotators; sd.SyntheticData.convert_sensor_type_to_rendervar() -> rep.annotators.get(type)
 from src.configurations.simulator_mode_enum import SimulatorMode
 from src.environments.utils import set_xform_pose
-from omni.isaac.sensor import Camera
+from omni.isaac.sensor import Camera #TODO deprecated -> isaacsim.sensors.camera.Camera
 
 class MonitoringCamerasManager:
     """

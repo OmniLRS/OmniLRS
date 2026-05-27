@@ -11,7 +11,7 @@ import logging
 
 from pxr import UsdGeom, Gf, Usd, Vt, UsdShade, UsdPhysics
 
-from omni.physx.scripts import utils as physx_utils
+from omni.physx.scripts import utils as physx_utils #TODO deprecated -> use UsdPhysics schema directly (UsdPhysics.CollisionAPI.Apply / .Remove) or omni.physx commands
 import omni
 
 logger = logging.getLogger(__name__)
