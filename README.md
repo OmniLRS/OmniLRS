@@ -109,27 +109,12 @@ Please use the following citations if you use `OmniLRS` in your work.
 }
 ```
 
-## Directory Structure
-```bash
-.
-├── assets
-├── cfg
-│   ├── environment
-│   ├── mode
-│   ├── physics
-│   └── rendering
-├── docs
-├── scripts
-├── src
-│   ├── configurations
-│   ├── environments
-│   ├── environments_wrappers
-│   │   ├── ros2
-│   │   └── sdg
-│   ├── labeling
-│   ├── physics
-│   ├── robots
-│   ├── stellar
-│   └── terrain_management
-└── WorldBuilders
-```
+## Star History
+
+<a href="https://www.star-history.com/?repos=OmniLRS%2FOmniLRS&type=date&logscale=&legend=top-left">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=OmniLRS/OmniLRS&type=date&theme=dark&legend=top-left" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=OmniLRS/OmniLRS&type=date&legend=top-left" />
+   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=OmniLRS/OmniLRS&type=date&legend=top-left" />
+ </picture>
+</a>
