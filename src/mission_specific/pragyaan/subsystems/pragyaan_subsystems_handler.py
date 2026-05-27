@@ -94,9 +94,14 @@ class PragyaanSubsystemsHandler(RobotSubsystemsHandler):
             return func(self, *args, **kwargs)
         return wrapper
 
+    def get_obc_status(self):
+        self._obc_metrics_model.set_inputs(self._obc_state)
+        self._obc_metrics_model.compute(dt=0.0) # obc model is stateless; dt is unused
+        return self._obc_metrics_model.get_outputs()
+    
     def get_radio_status(self, robot_position):
         self._radio_model.set_inputs(robot_position, self._lander_pos)
-        self._radio_model.compute(0.0)  # radio model is stateless; dt is unused
+        self._radio_model.compute(dt=0.0)  # radio model is stateless; dt is unused
         return self._radio_model.get_outputs()
     
     @_update_sun_direction_before

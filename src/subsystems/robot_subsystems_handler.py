@@ -38,23 +38,20 @@ class RobotSubsystemsHandler(ABC):
         self._solar_panel_state = solar_panel_state
 
     @abstractmethod
-    def get_radio_status(self):
+    def get_obc_status(self, *args, **kwargs) -> dict[str, float]:
         pass
     
     @abstractmethod
-    def get_thermal_status(self):
-        pass
-    
-    @abstractmethod
-    def get_power_status(self):
+    def get_radio_status(self, *args, **kwargs) -> dict[str, float]:
         pass
 
-    def get_obc_status(self):
-        self._obc_metrics_model.set_inputs(self._obc_state)
-        # dt is unused by the current OBC metrics model (uptime is derived from monotonic time),
-        # but the base contract requires it.
-        self._obc_metrics_model.compute(dt=0.0)
-        return self._obc_metrics_model.get_outputs()
+    @abstractmethod
+    def get_thermal_status(self, *args, **kwargs) -> dict[str, float]:
+        pass
+
+    @abstractmethod
+    def get_power_status(self, *args, **kwargs) -> dict[str, float]:
+        pass
 
     @abstractmethod
     def _setup_devices(self):
