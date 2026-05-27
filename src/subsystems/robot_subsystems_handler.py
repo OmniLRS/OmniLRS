@@ -51,7 +51,9 @@ class RobotSubsystemsHandler(ABC):
 
     def get_obc_status(self):
         self._obc_metrics_model.set_inputs(self._obc_state)
-        self._obc_metrics_model.compute()
+        # dt is unused by the current OBC metrics model (uptime is derived from monotonic time),
+        # but the base contract requires it.
+        self._obc_metrics_model.compute(dt=0.0)
         return self._obc_metrics_model.get_outputs()
 
     @abstractmethod

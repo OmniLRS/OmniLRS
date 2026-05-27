@@ -96,17 +96,14 @@ class PragyaanSubsystemsHandler(RobotSubsystemsHandler):
 
     def get_radio_status(self, robot_position):
         self._radio_model.set_inputs(robot_position, self._lander_pos)
-        rssi = self._radio_model.get_rssi()
-
-        return rssi
-
+        self._radio_model.compute(0.0)  # radio model is stateless; dt is unused
+        return self._radio_model.get_outputs()
+    
     @_update_sun_direction_before
     def get_thermal_status(self, robot_yaw_deg, interval_s):
         self._thermal_model.set_inputs(self._sun_direction, robot_yaw_deg)
         self._thermal_model.compute(interval_s)
-        t = self._thermal_model.temperatures()
-
-        return t
+        return self._thermal_model.get_outputs()
 
     @_update_sun_direction_before
     def get_power_status(self, robot_yaw_deg, interval_s, obc_state):
@@ -118,9 +115,7 @@ class PragyaanSubsystemsHandler(RobotSubsystemsHandler):
             is_in_motor_state=(obc_state == ObcState.MOTOR)
         )
         self._power_model.compute(interval_s)
-        status = self._power_model.get_outputs()
-
-        return status
+        return self._power_model.get_outputs()
 
     def get_lander_position(self):
         return self._lander_pos

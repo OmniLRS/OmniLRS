@@ -67,8 +67,8 @@ class PragyaanTransmitter:
         
     def transmit_radio_signal_info(self):
         robot_position, orientation = self._robot_RG.get_pose_of_base_link()
-        rssi = self._robot.subsystems.get_radio_status(robot_position)
-        self._transmit(self._parameters_conf["rssi"], int(rssi))
+        radio_status = self._robot.subsystems.get_radio_status(robot_position)
+        self._transmit(self._parameters_conf["rssi"], int(radio_status["rssi"]))
 
     def transmit_thermal_info(self, interval_s):
         _, _, imu_orientation = self._robot.get_imu_readings()
