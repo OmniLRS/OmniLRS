@@ -6,12 +6,7 @@ __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
 __status__ = "development"
 
-import math
-import os
-
-from scipy.spatial.transform import Rotation as SSTR
-from typing import Dict, List, Tuple
-import omni
+from typing import Dict, TYPE_CHECKING
 
 import numpy as np
 from src.configurations.procedural_terrain_confs import TerrainManagerConf
@@ -19,6 +14,8 @@ from src.environments.rock_manager import RockManager
 from src.physics.terramechanics_parameters import RobotParameter, TerrainMechanicalParameter
 from src.physics.terramechanics_solver import TerramechanicsSolver
 from src.terrain_management.terrain_manager import TerrainManager
+from src.robots.robot import RobotManager
+
 
 class TerrainControlMixin:
     """
@@ -33,6 +30,8 @@ class TerrainControlMixin:
     If you wish to customize the behaviour of a certain class,
     override the corresponding method in the host class.
     """
+
+    robotManager: "RobotManager" # Provided by BaseEnv via ``add_robot_manager``; type hint for static analysis
 
     def init_terrain_control(
         self,

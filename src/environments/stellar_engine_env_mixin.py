@@ -11,7 +11,6 @@ import os
 
 from scipy.spatial.transform import Rotation as SSTR
 from typing import List, Tuple
-import omni
 from pxr import Gf, UsdLux
 from src.terrain_management.large_scale_terrain.pxr_utils import set_texture_path, set_xform_ops
 from src.configurations.stellar_engine_confs import StellarEngineConf, SunConf

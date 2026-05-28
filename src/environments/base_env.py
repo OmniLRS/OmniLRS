@@ -78,20 +78,3 @@ class BaseEnv:
             robotManager (RobotManager): The robot manager.
         """
         self.robotManager = robotManager
-
-    def deform_terrain(self) -> None:
-        """
-        Deforms the terrain.
-        Args:
-            world_poses (np.ndarray): The world poses of the contact points.
-            contact_forces (np.ndarray): The contact forces in local frame reported by rigidprimview.
-        """
-
-        raise NotImplementedError()
-
-    def apply_terramechanics(self) -> None:
-        """
-        Applies the terramechanics.
-        """
-
-        raise NotImplementedError()

@@ -6,11 +6,8 @@ __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
 __status__ = "development"
 
-from scipy.spatial.transform import Rotation as SSTR
 from typing import Dict
 import os
-
-import omni
 
 
 from src.environments.monitoring_cameras_manager import MonitoringCamerasManager
