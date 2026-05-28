@@ -6,7 +6,6 @@ __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
 __status__ = "development"
 
-from abc import ABC
 import math
 import os
 
@@ -21,14 +20,18 @@ from src.physics.terramechanics_parameters import RobotParameter, TerrainMechani
 from src.physics.terramechanics_solver import TerramechanicsSolver
 from src.terrain_management.terrain_manager import TerrainManager
 
-class TerrainControlExtension(ABC):
+class TerrainControlMixin:
     """
-    This class extends BaseEnv behaviour by providing functions for controlling the terrain. 
-    Child classes of BaseEnv (LunalabController, LunaryardController, LargeScaleController) 
-    may inherit from this class and utilize the implemented logic.
+    Mixin providing terrain / rock / terramechanics control for BaseEnv subclasses.
 
-    If you wish to customize the behaviour of a certain class, 
-    create the class of the same name in the env class and write the desired logic.
+    Host class contract:
+        - must also inherit from BaseEnv (provides ``self.stage``)
+        - must call ``self.init_terrain_control(...)`` from its ``__init__``
+        - ``self.robotManager`` is expected to be set (via ``BaseEnv.add_robot_manager``)
+          before ``deform_terrain()`` / ``apply_terramechanics()`` are called
+
+    If you wish to customize the behaviour of a certain class,
+    override the corresponding method in the host class.
     """
 
     def init_terrain_control(

@@ -6,7 +6,6 @@ __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
 __status__ = "development"
 
-from abc import ABC
 import math
 import os
 
@@ -19,14 +18,18 @@ from src.configurations.stellar_engine_confs import StellarEngineConf, SunConf
 from src.configurations.environments import LargeScaleTerrainConf, LunaryardConf
 from src.stellar.stellar_engine import StellarEngine
 
-class StellarEngineEnvExtension(ABC):
+class StellarEngineEnvMixin:
     """
-    This class extends BaseEnv behaviour by providing functions for utilization of StellarEngine. 
-    Child classes of BaseEnv (LunalabController, LunaryardController, LargeScaleController) 
-    may inherit from this class and utilize the implemented logic.
+    Mixin providing StellarEngine integration for BaseEnv subclasses.
 
-    If you wish to customize the behaviour of a certain class, 
-    create the class of the same name in the env class and write the desired logic.
+    Host class contract:
+        - must also inherit from BaseEnv (provides ``self.stage``)
+        - must set ``self.scene_name`` before any mixin method that uses it is called
+        - must call ``self.init_stellar_engine(...)`` from its ``__init__``
+        - must call ``self.create_sun(...)`` and ``self.create_earth()`` from its ``build_scene()``
+
+    If you wish to customize the behaviour of a certain class,
+    override the corresponding method in the host class.
     """
     def init_stellar_engine(
         self,
