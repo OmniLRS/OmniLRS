@@ -76,10 +76,11 @@ class StellarEngineEnvExtension(ABC):
 
     def create_earth(self):
         # Should be called inside env's build_scene()
-        self._earth_prim = self.stage.DefinePrim(os.path.join(self.scene_name, "Earth"), "Xform")
+        earth_prim_path = self._stage_settings.earth_path
+        self._earth_prim = self.stage.DefinePrim(earth_prim_path, "Xform")
         self._earth_prim.GetReferences().AddReference(self._stage_settings.earth_usd_path)
         earth_texture_path = os.path.abspath("assets/Textures/Earth/earth_color_with_clouds.tif")
-        material_path = f"{self._stage_settings.earth_path}/Looks/OmniPBR"
+        material_path = f"{earth_prim_path}/Looks/OmniPBR"
         set_texture_path(self.stage, material_path, "Shader", earth_texture_path)
         dist = self._stage_settings.earth_distance * self._earth_scale
         px = math.cos(math.radians(self._stage_settings.earth_azimuth)) * dist
