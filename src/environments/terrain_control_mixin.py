@@ -41,12 +41,12 @@ class TerrainControlMixin:
     ) -> None:
         """
         Args:
-            stellar_engine_settings (StellarEngineConf): The settings of the stellar engine.
+            terrain_manager (TerrainManagerConf): The settings of the terrain manager.
+            rocks_settings (Dict): The settings of the rocks.
         """
 
-        self.dem = None
-        self.mask = None
-        self.robotManager = None # should be added to the environment itself (BaseEnv.add_robot_manager())
+        self.dem = None   # Digital Elevation Model
+        self.mask = None  # Mask for the terrain, used for the rocks placement and deformation
         self.T = TerrainManager(terrain_manager)
         self.RM = RockManager(**rocks_settings)
         self.TS = TerramechanicsSolver(

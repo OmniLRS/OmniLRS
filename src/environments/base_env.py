@@ -29,10 +29,9 @@ class BaseEnv:
         """
         self._mode:SimulatorMode = mode
         self.stage: Usd.Stage = omni.usd.get_context().get_stage()
-        self.dem = None   # Digial Elevation Model
-        self.mask = None  # Mask for the terrain, used for the rocks placement and deformation
-        self.SAM = None   # Static Assets Manager
-        self.MCM = None   # Monitoring Cameras Manager
+        self.SAM = None          # Static Assets Manager
+        self.MCM = None          # Monitoring Cameras Manager
+        self.robotManager = None # Set later via add_robot_manager()
 
     def build_scene(self) -> None:
         """
