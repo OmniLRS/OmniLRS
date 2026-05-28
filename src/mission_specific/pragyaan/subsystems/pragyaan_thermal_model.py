@@ -6,7 +6,6 @@ __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
 __status__ = "development"
 
-from src.subsystems.robot_physics_models.robot_physics_model import RobotPhysicsModel
 from src.subsystems.robot_physics_models.thermal_model import ThermalModel
 from dataclasses import dataclass
 

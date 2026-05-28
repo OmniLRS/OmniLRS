@@ -12,10 +12,7 @@ import numpy as np
 import math
 import os
 
-from isaacsim.core.utils.stage import add_reference_to_stage
-import omni
-
-from pxr import UsdLux, Gf, Usd
+from pxr import UsdLux, Gf
 
 from src.environments.monitoring_cameras_manager import MonitoringCamerasManager
 from src.configurations.simulator_mode_enum import SimulatorMode

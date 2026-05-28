@@ -6,22 +6,19 @@ __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
 __status__ = "development"
 
-from enum import StrEnum, Enum
 
-from src.environments.utils import get_moon_env_name
 from src.mission_specific.pragyaan.subsystems.neutron_spectrometer_model import NeutronSpectrometerModel
 from src.mission_specific.pragyaan.subsystems.pragyaan_obc_metrics_model import PragyaanObcMetricsModel
 from src.mission_specific.pragyaan.subsystems.pragyaan_power_model import PragyaanPowerModel
 from src.mission_specific.pragyaan.subsystems.pragyaan_thermal_model import PragyaanThermalModel
-from src.subsystems.robot_physics_models.radio_model import RadioModel
+
 import numpy as np
 from isaacsim.core.utils.xforms import get_world_pose
 from isaacsim.core.utils.prims import is_prim_path_valid
 from scipy.spatial.transform import Rotation
-import random
-import time
+
 from src.subsystems.device import CommonDevice, Device, HealthState, PowerState
-from src.mission_specific.pragyaan.subsystems.pragyaan_robot_enums import ObcState, SolarPanelState
+from src.mission_specific.pragyaan.subsystems.pragyaan_robot_enums import ObcState
 from src.subsystems.robot_subsystems_handler import RobotSubsystemsHandler
 
 class PragyaanSubsystemsHandler(RobotSubsystemsHandler):
@@ -88,6 +85,7 @@ class PragyaanSubsystemsHandler(RobotSubsystemsHandler):
             self._sun_direction = Rotation.from_quat([x, y, z, w]).apply([-1.0, 0.0, 0.0]) # fixed coordinates
         # if _sun_prim_path is None, sun direction stays as the default 
 
+    @staticmethod
     def _update_sun_direction_before(func):
         def wrapper(self, *args, **kwargs):
             self._update_sun_direction()
