@@ -85,8 +85,11 @@ class StellarEngineEnvExtension(ABC):
         px = math.cos(math.radians(self._stage_settings.earth_azimuth)) * dist
         py = math.sin(math.radians(self._stage_settings.earth_azimuth)) * dist
         pz = math.sin(math.radians(self._stage_settings.earth_elevation)) * dist
+        # TODO: setting the Earth orientation from stage_settings is not implemented yet
+        # (no earth_orientation field exists on LunaryardConf / LargeScaleTerrainConf).
+        # Hard-coded to (0, 0, 0, 1) for now; 
+        # note that update_stellar_engine() is also TODO for Earth orientation and currently just overides.
         set_xform_ops(self._earth_prim, Gf.Vec3d(px, py, pz), Gf.Quatd(0, 0, 0, 1))
-        pass
 
     # ==============================================================================
     # Stellar engine control
@@ -141,6 +144,9 @@ class StellarEngineEnvExtension(ABC):
                 quat = self.SE.convert_alt_az_to_quat(alt, az)
 
                 self.set_sun_pose((0,0,0), quat)
+                # TODO: StellarEngine does not yet compute Earth's body orientation
+                # (only its position/alt-az). Re-asserting the build-time orientation
+                # (0, 0, 0, 1) here is a placeholder until an Earth attitude model is added.
                 self.set_earth_pose(earth_pos, (0, 0, 0, 1))
                 print("Updated stellar engine")
                 print("Earth:", earth_pos)
