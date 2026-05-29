@@ -16,6 +16,7 @@ from src.configurations.simulator_mode_enum import SimulatorMode
 from src.environments.large_scale_lunar import LargeScaleController
 from src.environments.lunalab import LunalabController
 from src.environments.lunaryard import LunaryardController
+from src.environments.stellar_engine_env_mixin import StellarEngineEnvMixin
 from src.environments.utils import set_moon_env_name
 from src.configurations.procedural_terrain_confs import TerrainManagerConf
 from src.environments_wrappers.rate import Rate
@@ -72,9 +73,10 @@ class Yamcs_SimulationManager:
 
         self.RM = RobotManager(cfg["environment"]["robots_settings"], 
                                mode=SimulatorMode.YAMCS)
+        
         self._setup_terrain_manager()
         self._preload_robot()
-        if hasattr(self.EC, 'sun_settings'): 
+        if isinstance(self.EC, StellarEngineEnvMixin):
             # True for Lunaryard and LargeScale, False for Lunalab
             # subsystems uses sun directions to calculate views no matter if stellar engine is enabled (sun moves) or not
             self.RM.robot.subsystems.set_sun_prim_path(self.EC.get_sun_prim_path())
