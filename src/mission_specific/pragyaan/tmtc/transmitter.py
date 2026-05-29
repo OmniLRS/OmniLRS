@@ -58,7 +58,7 @@ class PragyaanTransmitter:
         self._transmit(self._parameters_conf["solar_panel_state"], state.value)
 
     def transmit_obc_metrics(self):
-        obc_metrics = self._robot.subsystems.get_obc_status()
+        obc_metrics = self._robot.subsystems.get_obc_model_outputs()
 
         self._transmit(self._parameters_conf["obc_cpu_usage"], int(obc_metrics["cpu_usage"]))
         self._transmit(self._parameters_conf["obc_ram_usage"], int(obc_metrics["ram_usage"]))
@@ -67,13 +67,13 @@ class PragyaanTransmitter:
         
     def transmit_radio_signal_info(self):
         robot_position, orientation = self._robot_RG.get_pose_of_base_link()
-        rssi = self._robot.subsystems.get_radio_status(robot_position)
-        self._transmit(self._parameters_conf["rssi"], int(rssi))
+        radio_status = self._robot.subsystems.get_radio_model_outputs(robot_position)
+        self._transmit(self._parameters_conf["rssi"], int(radio_status["rssi"]))
 
     def transmit_thermal_info(self, interval_s):
         _, _, imu_orientation = self._robot.get_imu_readings()
         robot_yaw_deg = imu_orientation["yaw"]
-        temperatures = self._robot.subsystems.get_thermal_status(
+        temperatures = self._robot.subsystems.get_thermal_model_outputs(
             robot_yaw_deg,
             interval_s
         )
@@ -89,7 +89,7 @@ class PragyaanTransmitter:
         _, _, imu_orientation = self._robot.get_imu_readings()
         robot_yaw_deg = imu_orientation['yaw']
         obc_state = self._robot.subsystems.get_obc_state()
-        power_status = self._robot.subsystems.get_power_status(
+        power_status = self._robot.subsystems.get_power_model_outputs(
             robot_yaw_deg,
             interval_s,
             obc_state

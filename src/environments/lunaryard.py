@@ -9,6 +9,7 @@ __status__ = "development"
 from typing import Dict
 import os
 
+from pxr import UsdGeom, UsdLux, Gf, Usd
 
 from src.environments.monitoring_cameras_manager import MonitoringCamerasManager
 from src.environments.static_assets_manager import StaticAssetsManager

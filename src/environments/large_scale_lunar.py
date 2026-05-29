@@ -9,6 +9,10 @@ __status__ = "development"
 from scipy.spatial.transform import Rotation as SSTR
 from typing import Dict, Tuple
 import numpy as np
+import math
+import os
+
+from pxr import UsdLux, Gf
 
 from src.environments.monitoring_cameras_manager import MonitoringCamerasManager
 from src.configurations.simulator_mode_enum import SimulatorMode
