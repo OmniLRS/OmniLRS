@@ -38,21 +38,20 @@ class RobotSubsystemsHandler(ABC):
         self._solar_panel_state = solar_panel_state
 
     @abstractmethod
-    def get_radio_status(self):
+    def get_obc_model_outputs(self, *args, **kwargs) -> dict[str, float]:
         pass
     
     @abstractmethod
-    def get_thermal_status(self):
-        pass
-    
-    @abstractmethod
-    def get_power_status(self):
+    def get_radio_model_outputs(self, *args, **kwargs) -> dict[str, float]:
         pass
 
-    def get_obc_status(self):
-        self._obc_metrics_model.set_inputs(self._obc_state)
-        self._obc_metrics_model.compute()
-        return self._obc_metrics_model.get_outputs()
+    @abstractmethod
+    def get_thermal_model_outputs(self, *args, **kwargs) -> dict[str, float]:
+        pass
+
+    @abstractmethod
+    def get_power_model_outputs(self, *args, **kwargs) -> dict[str, float]:
+        pass
 
     @abstractmethod
     def _setup_devices(self):
