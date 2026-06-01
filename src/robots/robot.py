@@ -32,7 +32,7 @@ from src.configurations.simulator_mode_enum import SimulatorMode
 from src.environments.utils import transform_orientation_from_xyzw_into_xyz, transform_orientation_into_xyz
 from src.subsystems.robot_subsystems_handler import RobotSubsystemsHandler
 # from src.robots.subsystems_manager import RobotSubsystemsManager
-from omni.isaac.sensor import Camera #TODO deprecated -> isaacsim.sensors.camera.Camera
+from isaacsim.sensors.camera import Camera
 
 from isaacsim.sensors.physics import _sensor
 

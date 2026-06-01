@@ -14,7 +14,7 @@ import omni.replicator.core as rep
 import omni.syntheticdata as sd #TODO deprecated -> use omni.replicator.core annotators; sd.SyntheticData.convert_sensor_type_to_rendervar() -> rep.annotators.get(type)
 from src.configurations.simulator_mode_enum import SimulatorMode
 from src.environments.utils import set_xform_pose
-from omni.isaac.sensor import Camera #TODO deprecated -> isaacsim.sensors.camera.Camera
+from isaacsim.sensors.camera import Camera
 
 class MonitoringCamerasManager:
     """
