@@ -9,9 +9,8 @@ __status__ = "development"
 import os
 import logging
 
-from pxr import UsdGeom, Gf, Usd, Vt, UsdShade, UsdPhysics
+from pxr import UsdGeom, Gf, Usd, Vt, UsdShade, UsdPhysics, PhysxSchema
 
-from omni.physx.scripts import utils as physx_utils #TODO deprecated -> use UsdPhysics schema directly (UsdPhysics.CollisionAPI.Apply / .Remove) or omni.physx commands
 import omni
 
 logger = logging.getLogger(__name__)
@@ -164,8 +163,28 @@ def add_collider(
     # Checks that the mode selected by the user is correct.
     assert mode in collider_modes, "Decimation mode: " + mode + " for colliders unknown."
     # Get the prim and add collisions.
+    _MESH_APPROXIMATIONS = {
+        "none": PhysxSchema.PhysxTriangleMeshCollisionAPI,
+        "convexHull": PhysxSchema.PhysxConvexHullCollisionAPI,
+        "convexDecomposition": PhysxSchema.PhysxConvexDecompositionCollisionAPI,
+        "meshSimplification": PhysxSchema.PhysxTriangleMeshSimplificationCollisionAPI,
+        "convexMeshSimplification": PhysxSchema.PhysxTriangleMeshSimplificationCollisionAPI,
+        "boundingCube": None,
+        "boundingSphere": None,
+        "sphereFill": PhysxSchema.PhysxSphereFillCollisionAPI,
+    }
+
     prim = stage.GetPrimAtPath(path)
-    physx_utils.setCollider(prim, approximationShape=mode)
+    collision_api = UsdPhysics.CollisionAPI.Apply(prim)
+    PhysxSchema.PhysxCollisionAPI.Apply(prim)
+    collision_api.CreateCollisionEnabledAttr().Set(True)
+
+    if prim.IsA(UsdGeom.Mesh):
+        api = _MESH_APPROXIMATIONS.get(mode)
+        if api is not None:
+            api.Apply(prim)
+        mesh_collision_api = UsdPhysics.MeshCollisionAPI.Apply(prim)
+        mesh_collision_api.CreateApproximationAttr().Set(mode)
 
 
 def remove_collider(
@@ -180,9 +199,15 @@ def remove_collider(
         path (str): The path to the prim.
     """
 
-    # Get the prim and remove collisions.
     prim = stage.GetPrimAtPath(path)
-    physx_utils.removeCollider(prim)
+    prim.RemoveAPI(UsdPhysics.CollisionAPI)
+    prim.RemoveAPI(PhysxSchema.PhysxCollisionAPI)
+    if prim.IsA(UsdGeom.Mesh):
+        prim.RemoveAPI(UsdPhysics.MeshCollisionAPI)
+        prim.RemoveAPI(PhysxSchema.PhysxConvexHullCollisionAPI)
+        prim.RemoveAPI(PhysxSchema.PhysxConvexDecompositionCollisionAPI)
+        prim.RemoveAPI(PhysxSchema.PhysxTriangleMeshSimplificationCollisionAPI)
+        prim.RemoveAPI(PhysxSchema.PhysxTriangleMeshCollisionAPI)
 
 
 def delete_prim(
