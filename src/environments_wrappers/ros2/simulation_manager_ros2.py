@@ -14,6 +14,7 @@ from typing import Union
 import logging
 import omni
 
+from src.environments.stellar_engine_env_mixin import StellarEngineEnvMixin
 from src.environments.utils import set_moon_env_name
 from src.environments_wrappers.rate import Rate
 from src.environments_wrappers.ros2.largescale_ros2 import ROS_LargeScaleManager
@@ -155,7 +156,7 @@ class ROS2_SimulationManager:
         else:
             self.ROSRobotManager.RM.preload_robot(self.world)
         self.ROSEnvironmentManager.EC.add_robot_manager(self.ROSRobotManager.RM)
-        if hasattr(self.ROSEnvironmentManager.EC, 'sun_settings'):
+        if isinstance(self.EC, StellarEngineEnvMixin):
             # True for Lunaryard and LargeScale, False for Lunalab
             # subsystems uses sun directions to calculate views no matter if stellar engine is enabled (sun moves) or not
             self.ROSRobotManager.RM.robot.subsystems.set_sun_prim_path(self.ROSEnvironmentManager.EC.get_sun_prim_path())

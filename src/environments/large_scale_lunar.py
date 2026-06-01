@@ -10,21 +10,20 @@ from scipy.spatial.transform import Rotation as SSTR
 from typing import Dict, Tuple
 import numpy as np
 
-import omni
+from pxr import UsdLux, Gf
 
 from src.environments.monitoring_cameras_manager import MonitoringCamerasManager
 from src.configurations.simulator_mode_enum import SimulatorMode
 from src.environments.static_assets_manager import StaticAssetsManager
-from src.environments.stellar_engine_env_extension import StellarEngineEnvExtension
+from src.environments.stellar_engine_env_mixin import StellarEngineEnvMixin
 from src.terrain_management.large_scale_terrain_manager import LargeScaleTerrainManager
-from src.terrain_management.large_scale_terrain.pxr_utils import set_xform_ops, set_texture_path
 from src.configurations.stellar_engine_confs import StellarEngineConf, SunConf
 from src.configurations.environments import LargeScaleTerrainConf
 from src.environments.base_env import BaseEnv
 from src.robots.robot import RobotManager
 
 
-class LargeScaleController(BaseEnv, StellarEngineEnvExtension):
+class LargeScaleController(BaseEnv, StellarEngineEnvMixin):
     """
     This class is used to control the environment's interactive elements.
     """

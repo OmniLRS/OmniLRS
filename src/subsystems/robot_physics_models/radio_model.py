@@ -39,14 +39,14 @@ class RadioModel(RobotPhysicsModel):
 		self._lander_position = lander_position
 		self._rover_position = rover_position
 
-	def compute(self):
+	def compute(self, dt: float) -> None:
 		pass
 
-	def initialize(self):
+	def initialize(self) -> None:
 		pass
     
-	def get_outputs(self):
-		return self.get_rssi()
+	def get_outputs(self) -> Dict[str, float]:
+		return {"rssi": self.get_rssi()}
 	
 	def get_rssi(self):
 		mean_rssi = self._calculate_rssi()

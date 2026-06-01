@@ -6,17 +6,15 @@ __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
 __status__ = "development"
 
-from scipy.spatial.transform import Rotation as SSTR
 from typing import Dict
 import os
 
-import omni
-
+from pxr import UsdGeom, UsdLux, Gf, Usd
 
 from src.environments.monitoring_cameras_manager import MonitoringCamerasManager
 from src.environments.static_assets_manager import StaticAssetsManager
-from src.environments.stellar_engine_env_extension import StellarEngineEnvExtension
-from src.environments.terrain_control_extension import TerrainControlExtension
+from src.environments.stellar_engine_env_mixin import StellarEngineEnvMixin
+from src.environments.terrain_control_mixin import TerrainControlMixin
 from src.terrain_management.large_scale_terrain.pxr_utils import load_material
 from src.configurations.stellar_engine_confs import StellarEngineConf, SunConf
 from src.configurations.procedural_terrain_confs import TerrainManagerConf
@@ -25,7 +23,7 @@ from src.environments.base_env import BaseEnv
 from src.configurations.simulator_mode_enum import SimulatorMode
 
 
-class LunaryardController(BaseEnv, StellarEngineEnvExtension, TerrainControlExtension):
+class LunaryardController(BaseEnv, StellarEngineEnvMixin, TerrainControlMixin):
     """
     This class is used to control the lab interactive elements.
     """

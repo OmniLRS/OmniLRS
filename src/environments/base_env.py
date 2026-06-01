@@ -29,10 +29,9 @@ class BaseEnv:
         """
         self._mode:SimulatorMode = mode
         self.stage: Usd.Stage = omni.usd.get_context().get_stage()
-        self.dem = None
-        self.mask = None
-        self.SAM = None
-        self.MCM = None
+        self.SAM = None          # Static Assets Manager
+        self.MCM = None          # Monitoring Cameras Manager
+        self.robotManager = None # Set later via add_robot_manager()
 
     def build_scene(self) -> None:
         """
@@ -79,20 +78,3 @@ class BaseEnv:
             robotManager (RobotManager): The robot manager.
         """
         self.robotManager = robotManager
-
-    def deform_terrain(self) -> None:
-        """
-        Deforms the terrain.
-        Args:
-            world_poses (np.ndarray): The world poses of the contact points.
-            contact_forces (np.ndarray): The contact forces in local frame reported by rigidprimview.
-        """
-
-        raise NotImplementedError()
-
-    def apply_terramechanics(self) -> None:
-        """
-        Applies the terramechanics.
-        """
-
-        raise NotImplementedError()
