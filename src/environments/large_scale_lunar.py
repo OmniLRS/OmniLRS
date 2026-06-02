@@ -9,8 +9,6 @@ __status__ = "development"
 from scipy.spatial.transform import Rotation as SSTR
 from typing import Dict, Tuple
 import numpy as np
-import math
-import os
 
 from pxr import UsdLux, Gf
 

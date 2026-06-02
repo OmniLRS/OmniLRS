@@ -11,7 +11,7 @@ from src.environments.monitoring_cameras_manager import MonitoringCamerasManager
 from src.tmtc.yamcs_TMTC import ImagesHandler
 import omni.kit.app
 import numpy as np
-from omni.isaac.sensor import Camera
+from isaacsim.sensors.camera import Camera
 from PIL import Image
 
 class CameraViewType(StrEnum):

@@ -76,9 +76,10 @@ class Yamcs_SimulationManager:
         
         self._setup_terrain_manager()
         self._preload_robot()
-        if isinstance(self.EC, StellarEngineEnvMixin):
+        if isinstance(self.EC, StellarEngineEnvMixin) and self.RM.robot.subsystems is not None:
             # True for Lunaryard and LargeScale, False for Lunalab
             # subsystems uses sun directions to calculate views no matter if stellar engine is enabled (sun moves) or not
+            # subsystems is only initialized for mission-specific robots (e.g. pragyaan); skip otherwise.
             self.RM.robot.subsystems.set_sun_prim_path(self.EC.get_sun_prim_path())
         self._start_TMTC()
         self.EC.add_robot_manager(self.RM)

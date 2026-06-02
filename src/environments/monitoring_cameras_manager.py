@@ -11,10 +11,9 @@ import os
 import omni
 from pxr import UsdGeom, Gf
 import omni.replicator.core as rep
-import omni.syntheticdata as sd
 from src.configurations.simulator_mode_enum import SimulatorMode
 from src.environments.utils import set_xform_pose
-from omni.isaac.sensor import Camera
+from isaacsim.sensors.camera import Camera
 
 class MonitoringCamerasManager:
     """
@@ -57,17 +56,7 @@ class MonitoringCamerasManager:
             # NOTE render products do not work, because it requires rep.orchestrator.step() which classhes with world.step()
             # rp = rep.create.render_product(prim_path, (c["resolution"][0], c["resolution"][1])) 
 
-            # if self._mode == SimulatorMode.ROS2:
-            #     self._set_ros2_publisher(rp, c["ros2"], c["type"])
-
-
-    def _set_ros2_publisher(self, render_product, ros2_cfg:Dict, type:str):
-        # inspired by https://docs.isaacsim.omniverse.nvidia.com/5.0.0/ros2_tutorials/tutorial_ros2_camera_publishing.html
-        # but simplified
-        rv = sd.SyntheticData.convert_sensor_type_to_rendervar(type)
-        w = rep.writers.get(rv + "ROS2PublishImage")
-        w.initialize(topicName=ros2_cfg["topic"], frameId=ros2_cfg["frame_id"], queueSize=1, nodeNamespace="")
-        w.attach([render_product])
+            #TODO implement camera streaming in ROS mode
 
     def  _set_camera_attributes(self, camera, cfg_params):
         camera.CreateFocalLengthAttr().Set(float(cfg_params["focal_length"]))
