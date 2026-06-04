@@ -58,8 +58,8 @@ class RobotManager:
         self.robot_parameters = self.RM_conf.parameters
         self.robots_root = self.RM_conf.robots_root
         createXform(self.stage, self.robots_root)
-        self.robot: Robot = None  # TODO for v4: if only 1 robot, no need for a dict, just an instance
-        self.robot_RG: RobotRigidGroup = None  # TODO for v4: if only 1 robot, no need for a dict, just an instance
+        self.robot: Robot = None
+        self.robot_RG: RobotRigidGroup = None
 
     def preload_robot(
         self,
@@ -285,11 +285,6 @@ class Robot:
             from src.mission_specific.pragyaan.subsystems.pragyaan_subsystems_handler import PragyaanSubsystemsHandler
 
             self.subsystems = PragyaanSubsystemsHandler(pos_relative_to_prim)
-
-        elif robot_name == "pioneer":
-            from src.mission_specific.pioneer.subsystems.pioneer_subsystems_handler import PioneerSubsystemsHandler
-
-            self.subsystems = PioneerSubsystemsHandler(pos_relative_to_prim)
 
     def edit_graphs(self) -> None:
         """
@@ -814,7 +809,7 @@ class RobotRigidGroup:
         Initialize the rigidprims and rigidprimviews of the robot.
 
         Args:
-            world (World): A Omni.isaac.core.world.World object.
+            world (World): A isaacsim.core.api.world.World object.
         """
 
         self.dt = world.get_physics_dt()
