@@ -1,4 +1,4 @@
-__author__ = "Antoine Richard, Junnosuke Kamohara, Aleksa Stanivuk"
+__author__ = "Antoine Richard, Junnosuke Kamohara, Aleksa Stanivuk, Shamistan Karimov"
 __copyright__ = "Copyright 2023-26, JAOPS, Space Robotics Lab, SnT, University of Luxembourg, SpaceR"
 __license__ = "BSD-3-Clause"
 __version__ = "2.0.0"
