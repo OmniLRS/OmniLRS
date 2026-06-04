@@ -87,6 +87,7 @@ class ROS_RobotManager(Node):
 
         p = [data.pose.position.x, data.pose.position.y, data.pose.position.z]
         q = [data.pose.orientation.x, data.pose.orientation.y, data.pose.orientation.z, data.pose.orientation.w]
+        print(f"received {data.pose.position}")
         self.modifications.append([self.RM.teleport_robot, {"position": p, "orientation": q}])
 
     def reset_robot(self) -> None:
