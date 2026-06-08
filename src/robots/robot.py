@@ -70,10 +70,6 @@ class RobotManager:
         Args:
             world (Usd.Stage): The usd stage scene.
         """
-        print("self.robot_parameters")
-
-        print(self.robot_parameters)
-
         self.add_robot(
             self.robot_parameters.usd_path,
             self.robot_parameters.robot_name,
