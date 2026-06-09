@@ -308,6 +308,7 @@ class RockManager:
         self.execution_order = [i[-1] for i in sorted(paths, key=lambda i: len(i))]
 
     def build(self, image: np.ndarray, mask: np.ndarray) -> None:
+        #TODO neither dem (image) nor mask are beingutilized
         """
         Builds the rock manager.
         It first creates the mixers, and then creates the instancers.

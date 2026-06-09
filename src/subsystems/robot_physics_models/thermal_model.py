@@ -58,7 +58,7 @@ class ThermalModel(RobotPhysicsModel):
         self._sun_direction: np.ndarray = np.array((0.0, 1.0, 0.0))
         self._faces: Iterable[str] = FACES
         self._node_temps: Dict[str, float] = {}
-        #NOTE the following fileds were set to default values, as these values depend on the environment (Moon), not so much on the rover
+        #NOTE the following fields were set to default values, as these values depend on the environment (Moon), not so much on the rover
         # no setters were implemented, but the values may be directly accessed from a subsystems manager if need for customization exists
         self._min_temp: float = MIN_TEMP
         self._max_temp: float = MAX_TEMP
@@ -81,12 +81,9 @@ class ThermalModel(RobotPhysicsModel):
         self._rover_yaw_deg = rover_yaw_deg
 
     def compute(self, dt: float) -> None:
-        # override in your custom model if needed
-        # may call super().step() if you wish to reuse the face logic
-        """Advance the model by *dt* seconds using stored sun direction."""
+        """Advance the model by *dt* seconds using stored rover/sun positions."""
 
         view_factors = self._compute_view_factors(self._sun_direction)
-
         for face in self._faces:
             exposure = _clamp(view_factors.get(face, 0.0), 0.0, 1.0)
             target = self._target_temperature(exposure)

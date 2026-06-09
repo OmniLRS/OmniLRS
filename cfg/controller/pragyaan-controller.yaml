@@ -5,9 +5,9 @@ robots_settings:
   robot_controller: "pragyaan-controller"
   yamcs_tmtc: # these settings are relevant if Yamcs mode
     mdb:
-      - "cfg/mdb/rover.xml"
-      - "cfg/mdb/lander.xml"
-      - "cfg/mdb/admin.xml"
+      - "cfg/mdb/pragyaan/rover.xml"
+      - "cfg/mdb/pragyaan/lander.xml"
+      - "cfg/mdb/pragyaan/admin.xml"
     intervals:
       robot_stats: 1
       camera_streaming: 2

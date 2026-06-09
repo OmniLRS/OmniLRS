@@ -6,22 +6,18 @@ __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
 __status__ = "development"
 
-from enum import StrEnum, Enum
-
-from src.environments.utils import get_moon_env_name
 from src.mission_specific.pragyaan.subsystems.neutron_spectrometer_model import NeutronSpectrometerModel
 from src.mission_specific.pragyaan.subsystems.pragyaan_obc_metrics_model import PragyaanObcMetricsModel
 from src.mission_specific.pragyaan.subsystems.pragyaan_power_model import PragyaanPowerModel
 from src.mission_specific.pragyaan.subsystems.pragyaan_thermal_model import PragyaanThermalModel
-from src.subsystems.robot_physics_models.radio_model import RadioModel
+
 import numpy as np
 from isaacsim.core.utils.xforms import get_world_pose
 from isaacsim.core.utils.prims import is_prim_path_valid
 from scipy.spatial.transform import Rotation
-import random
-import time
+
 from src.subsystems.device import CommonDevice, Device, HealthState, PowerState
-from src.mission_specific.pragyaan.subsystems.pragyaan_robot_enums import ObcState, SolarPanelState
+from src.mission_specific.pragyaan.subsystems.pragyaan_robot_enums import ObcState
 from src.subsystems.robot_subsystems_handler import RobotSubsystemsHandler
 
 class PragyaanSubsystemsHandler(RobotSubsystemsHandler):
@@ -88,28 +84,31 @@ class PragyaanSubsystemsHandler(RobotSubsystemsHandler):
             self._sun_direction = Rotation.from_quat([x, y, z, w]).apply([-1.0, 0.0, 0.0]) # fixed coordinates
         # if _sun_prim_path is None, sun direction stays as the default 
 
+    @staticmethod
     def _update_sun_direction_before(func):
         def wrapper(self, *args, **kwargs):
             self._update_sun_direction()
             return func(self, *args, **kwargs)
         return wrapper
 
-    def get_radio_status(self, robot_position):
+    def get_obc_model_outputs(self):
+        self._obc_metrics_model.set_inputs(self._obc_state)
+        self._obc_metrics_model.compute(dt=0.0) # obc model is stateless; dt is unused
+        return self._obc_metrics_model.get_outputs()
+    
+    def get_radio_model_outputs(self, robot_position):
         self._radio_model.set_inputs(robot_position, self._lander_pos)
-        rssi = self._radio_model.get_rssi()
-
-        return rssi
-
+        self._radio_model.compute(dt=0.0)  # radio model is stateless; dt is unused
+        return self._radio_model.get_outputs()
+    
     @_update_sun_direction_before
-    def get_thermal_status(self, robot_yaw_deg, interval_s):
+    def get_thermal_model_outputs(self, robot_yaw_deg, interval_s):
         self._thermal_model.set_inputs(self._sun_direction, robot_yaw_deg)
         self._thermal_model.compute(interval_s)
-        t = self._thermal_model.temperatures()
-
-        return t
+        return self._thermal_model.get_outputs()
 
     @_update_sun_direction_before
-    def get_power_status(self, robot_yaw_deg, interval_s, obc_state):
+    def get_power_model_outputs(self, robot_yaw_deg, interval_s, obc_state):
         # device states are reflected between the handler and power model, as they use the same dict
         self._power_model.set_inputs(
             sun_direction=self._sun_direction,
@@ -118,9 +117,7 @@ class PragyaanSubsystemsHandler(RobotSubsystemsHandler):
             is_in_motor_state=(obc_state == ObcState.MOTOR)
         )
         self._power_model.compute(interval_s)
-        status = self._power_model.get_outputs()
-
-        return status
+        return self._power_model.get_outputs()
 
     def get_lander_position(self):
         return self._lander_pos

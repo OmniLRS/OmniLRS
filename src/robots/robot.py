@@ -19,7 +19,7 @@ import omni
 from isaacsim.core.api.world import World
 import omni.graph.core as og
 from isaacsim.core.utils.rotations import quat_to_rot_matrix
-from omni.isaac.dynamic_control import _dynamic_control
+from omni.isaac.dynamic_control import _dynamic_control #TODO deprecated
 from isaacsim.core.prims import SingleRigidPrim, SingleXFormPrim, RigidPrim
 from pxr import Gf, Usd
 
@@ -32,7 +32,7 @@ from src.configurations.simulator_mode_enum import SimulatorMode
 from src.environments.utils import transform_orientation_from_xyzw_into_xyz, transform_orientation_into_xyz
 from src.subsystems.robot_subsystems_handler import RobotSubsystemsHandler
 # from src.robots.subsystems_manager import RobotSubsystemsManager
-from omni.isaac.sensor import Camera
+from isaacsim.sensors.camera import Camera
 
 if TYPE_CHECKING:
     from src.tmtc.yamcs_TMTC import YamcsTMTC
@@ -548,7 +548,7 @@ class RobotRigidGroup:
         Initialize the rigidprims and rigidprimviews of the robot.
 
         Args:
-            world (World): A Omni.isaac.core.world.World object.
+            world (World): A isaacsim.core.api.world.World object.
         """
 
         self.dt = world.get_physics_dt()
