@@ -15,7 +15,6 @@ from typing import Any, Dict, List, Optional
 
 import numpy as np
 from isaacsim.core.prims import SingleArticulation
-from isaacsim.core.utils.stage import get_current_stage
 
 logger = logging.getLogger(__name__)
 
@@ -67,7 +66,6 @@ class ArticulationTelemetry:
 
         self.log = logger.info
 
-        self.stage = None
         self.articulation: Optional[SingleArticulation] = None
 
         self.joint_names: List[str] = []
@@ -106,8 +104,6 @@ class ArticulationTelemetry:
         self._t_last_init_try = now
 
         try:
-            self.stage = get_current_stage()
-
             self.articulation = SingleArticulation(
                 prim_path=self.prim_path,
                 name=self.name,
@@ -242,7 +238,6 @@ class ArticulationTelemetry:
         return {name: sample.wrench for name, sample in self.last_frame.contacts.items()}
 
     def close(self) -> None:
-        self.stage = None
         self.articulation = None
 
         self.joint_names = []
