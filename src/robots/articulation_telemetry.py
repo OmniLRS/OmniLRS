@@ -45,6 +45,27 @@ class ArticulationTelemetryFrame:
 
 
 class ArticulationTelemetry:
+    """
+    OmniLRS wrapper for reading Isaac Sim articulation telemetry.
+
+    This class owns a `SingleArticulation` view for one robot articulation and
+    samples joint positions, joint velocities, measured efforts, and measured
+    joint/link forces.
+
+    Simulation managers should call `maybe_initialize()` and `sample()` from the
+    simulation update loop after the world has stepped. Other code should access
+    data through the cached getters such as `get_joint_positions()` and
+    `get_contact_wrenches()` instead of directly reading Isaac state.
+
+    If `keep_history` is enabled, recent joint/contact samples are stored in
+    bounded buffers. `contact_force_threshold_n` filters out contact samples
+    whose force norm is below the configured threshold.
+
+    Isaac Sim articulation reference:
+    https://docs.isaacsim.omniverse.nvidia.com/5.0.0/robot_simulation/articulation_controller.html
+    https://docs.isaacsim.omniverse.nvidia.com/5.0.0/py/source/extensions/isaacsim.core.prims/docs/index.html#isaacsim.core.prims.SingleArticulation
+    """
+
     def __init__(
         self,
         prim_path: str,
@@ -56,6 +77,29 @@ class ArticulationTelemetry:
         history_len: int = 200,
         logger=logger,
     ):
+        """
+        Create an articulation telemetry reader.
+
+        Args:
+            prim_path:
+                USD prim path of the articulation root to read.
+            name:
+                Name assigned to the Isaac `SingleArticulation` wrapper.
+            init_retry_s:
+                Minimum wall-clock time between initialization attempts.
+            sample_period_s:
+                Minimum wall-clock time between telemetry samples. A value of 0.0
+                allows every call to `sample()` to read telemetry.
+            contact_force_threshold_n:
+                Minimum contact force norm required for a contact sample to be kept.
+            keep_history:
+                If True, keep bounded joint/contact sample histories.
+            history_len:
+                Maximum number of samples stored per history buffer.
+            logger:
+                Logger-like object used for status messages.
+        """
+
         self.prim_path = prim_path
         self.name = name
         self.init_retry_s = float(init_retry_s)
@@ -81,8 +125,11 @@ class ArticulationTelemetry:
         self.joints_history: Dict[str, List[JointSample]] = {}
         self.contacts_history: Dict[str, List[ContactSample]] = {}
 
-        self.last_frame = ArticulationTelemetryFrame(
-            stamp_s=0.0,
+        self.last_frame = self._make_empty_frame()
+
+    def _make_empty_frame(self) -> ArticulationTelemetryFrame:
+        return ArticulationTelemetryFrame(
+            stamp_s=time.time(),
             prim_path=self.prim_path,
             joint_names=[],
             joints={},
@@ -110,19 +157,12 @@ class ArticulationTelemetry:
             )
             self.articulation.initialize()
 
-            q = self._safe_array(self.articulation.get_joint_positions())
             dof_names = self.articulation.dof_names
 
             if dof_names is None:
                 raise RuntimeError(f"No DOF names found for articulation {self.prim_path}")
 
             self.joint_names = list(dof_names)
-
-            if q is not None and len(q) != len(self.joint_names):
-                raise RuntimeError(
-                    f"DOF mismatch for {self.prim_path}: " f"positions={len(q)} names={len(self.joint_names)}"
-                )
-
             self.joint_name_to_index = {name: i for i, name in enumerate(self.joint_names)}
 
             if self.keep_history:
@@ -142,7 +182,21 @@ class ArticulationTelemetry:
             return False
 
     def sample(self, force: bool = False) -> Optional[ArticulationTelemetryFrame]:
-        if not self.is_ready:
+        """
+        Sample articulation telemetry from Isaac.
+
+        This reads joint positions, velocities, measured efforts, and measured
+        joint/link forces from the `SingleArticulation` view. The result is stored
+        in `last_frame` and returned to the caller.
+
+        Args:
+            force:
+                If True, ignore `sample_period_s` and sample immediately.
+
+        Returns:
+            A telemetry frame if sampling succeeded, otherwise None.
+        """
+        if not self.is_ready or self.articulation is None:
             return None
 
         now = time.time()
@@ -152,19 +206,17 @@ class ArticulationTelemetry:
 
         self._t_last_sample = now
 
-        assert self.articulation is not None
+        articulation = self.articulation
 
-        q = self._safe_array(self.articulation.get_joint_positions())
-        dq = self._safe_array(self.articulation.get_joint_velocities())
+        q = self._safe_array(articulation.get_joint_positions())
+        if q is None:
+            return None  # instead of publishing all zeros
 
-        efforts = self.articulation.get_measured_joint_efforts()
-        efforts_arr = self._safe_array(efforts) if efforts is not None else None
-
-        forces = self.articulation.get_measured_joint_forces()
-        forces_arr = self._safe_array(forces) if forces is not None else None
+        dq = self._safe_array(articulation.get_joint_velocities())
+        efforts_arr = self._safe_array(articulation.get_measured_joint_efforts())
+        forces_arr = self._safe_array(articulation.get_measured_joint_forces())
 
         forces_ready = efforts_arr is not None and forces_arr is not None
-
         joints: Dict[str, JointSample] = {}
 
         for name, i in self.joint_name_to_index.items():
@@ -250,14 +302,7 @@ class ArticulationTelemetry:
 
         self._inited = False
 
-        self.last_frame = ArticulationTelemetryFrame(
-            stamp_s=0.0,
-            prim_path=self.prim_path,
-            joint_names=[],
-            joints={},
-            contacts={},
-            forces_ready=False,
-        )
+        self.last_frame = self._make_empty_frame()
 
         self.log(f"ArticulationTelemetry closed: {self.prim_path}")
 
