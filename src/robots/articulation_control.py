@@ -80,6 +80,7 @@ class ArticulationControl:
 
     Isaac Sim articulation reference:
     https://docs.isaacsim.omniverse.nvidia.com/5.0.0/robot_simulation/articulation_controller.html
+    https://docs.isaacsim.omniverse.nvidia.com/5.0.0/py/source/extensions/isaacsim.core.prims/docs/index.html#isaacsim.core.prims.SingleArticulation
     """
 
     def __init__(
