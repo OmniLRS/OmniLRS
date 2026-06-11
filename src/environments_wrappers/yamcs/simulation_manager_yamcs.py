@@ -10,12 +10,15 @@ from isaacsim import SimulationApp
 from isaacsim.core.api.world import World
 from typing import Union
 import logging
+import time
 import omni
+from yamcs.client import YamcsClient
 
 from src.configurations.simulator_mode_enum import SimulatorMode
 from src.environments.large_scale_lunar import LargeScaleController
 from src.environments.lunalab import LunalabController
 from src.environments.lunaryard import LunaryardController
+from src.environments.stellar_engine_env_mixin import StellarEngineEnvMixin
 from src.environments.utils import set_moon_env_name
 from src.configurations.procedural_terrain_confs import TerrainManagerConf
 from src.environments_wrappers.rate import Rate
@@ -28,7 +31,7 @@ class Yamcs_SimulationManager:
     """
     Manages the simulation. This class is responsible for:
     - Initializing the simulation
-    - Running the lab manager 
+    - Running the environment manager 
     - Running the robot manager 
     - Running the simulation
     - Cleaning the simulation
@@ -57,6 +60,13 @@ class Yamcs_SimulationManager:
         self.cfg = cfg
         self.simulation_app = simulation_app
         self.timeline = omni.timeline.get_timeline_interface()
+
+        # Block here until the Yamcs server is reachable. This avoids the
+        # ConnectionFailure crash users hit when launching the sim before the
+        # Yamcs server is up. We do this before creating the World/scene so no
+        # simulation state can drift while we wait.
+        self._wait_for_yamcs(cfg["mode"]["instance_conf"]["address"])
+
         self.world = World(
             stage_units_in_meters=1.0,
             physics_dt=cfg["environment"]["physics_dt"],
@@ -72,11 +82,54 @@ class Yamcs_SimulationManager:
 
         self.RM = RobotManager(cfg["environment"]["robots_settings"], 
                                mode=SimulatorMode.YAMCS)
+        
         self._setup_terrain_manager()
         self._preload_robot()
+        if isinstance(self.EC, StellarEngineEnvMixin) and self.RM.robot.subsystems is not None:
+            # True for Lunaryard and LargeScale, False for Lunalab
+            # subsystems uses sun directions to calculate views no matter if stellar engine is enabled (sun moves) or not
+            # subsystems is only initialized for mission-specific robots (e.g. pragyaan); skip otherwise.
+            self.RM.robot.subsystems.set_sun_prim_path(self.EC.get_sun_prim_path())
         self._start_TMTC()
         self.EC.add_robot_manager(self.RM)
         self._step_world_and_reset()
+
+    def _wait_for_yamcs(self, address: str, poll_interval: float = 1.0) -> None:
+        """
+        Block until the Yamcs server at ``address`` responds, polling every
+        ``poll_interval`` seconds. Pumps ``simulation_app.update()`` between
+        polls so the Isaac Sim window stays responsive while waiting.
+        """
+        # Silence urllib3's per-connection DEBUG spam during polling. The
+        # main YamcsTMTC module also sets this, but it hasn't been imported yet.
+        logging.getLogger("urllib3").setLevel(logging.WARNING)
+
+        probe_client = YamcsClient(address)
+        attempt = 0
+        announced_waiting = False
+        while True:
+            try:
+                probe_client.get_server_info()
+                print(f"[Yamcs] Server at {address} is reachable. Continuing startup.", flush=True)
+                return
+            except Exception as e:
+                if not announced_waiting:
+                    print(
+                        f"[Yamcs] Server at {address} is not reachable yet ({e.__class__.__name__}). "
+                        f"Waiting... Press Ctrl-C to abort.",
+                        flush=True,
+                    )
+                    announced_waiting = True
+                elif attempt % 10 == 0:
+                    # Re-announce every ~10 polls so the user knows we're still waiting.
+                    print(f"[Yamcs] Still waiting for server at {address}...", flush=True)
+            attempt += 1
+            # Keep the Isaac Sim window responsive while we wait.
+            try:
+                self.simulation_app.update()
+            except Exception:
+                pass
+            time.sleep(poll_interval)
 
     def _start_TMTC(self):
         robot_name = self.RM.robot.robot_name.replace("/","") 
@@ -140,8 +193,11 @@ class Yamcs_SimulationManager:
 
     def _preload_robot(self):
         if self.cfg["environment"]["name"] == "LargeScale":
-            height, quat = self.EC.get_height_and_normal((0.0, 0.0, 0.0))
-            self.RM.preload_robot_at_pose(self.world, (0, 0, height + 0.5), (1, 0, 0, 0))
+            robot_pos = self.RM.robot_parameters.pose.position
+            robot_ori = self.RM.robot_parameters.pose.orientation
+            height, _ = self.EC.get_height_and_normal((robot_pos[0], robot_pos[1], 0.0))
+            self.RM.preload_robot_at_pose(self.world, (robot_pos[0], robot_pos[1], height + 0.5), robot_ori)
+        
         else:
             self.RM.preload_robot(self.world)
 
@@ -155,6 +211,8 @@ class Yamcs_SimulationManager:
             self.rate.reset()
             self.world.step(render=True)
             if self.world.is_playing():
+                if hasattr(self.EC, 'enable_stellar_engine') and self.EC.enable_stellar_engine:
+                    self.EC.update_stellar_engine(dt=self.world.get_physics_dt())
                 if self.world.current_time_step_index == 0:
                     self.world.reset()
             self.rate.sleep()

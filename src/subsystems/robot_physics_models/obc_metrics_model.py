@@ -43,23 +43,25 @@ class ObcMetricsModel(RobotPhysicsModel):
     DISK_LEVELS = DiskUsageLevel
 
     def __init__(self):
+        super().__init__()
         self._state = ObcState.IDLE
         self._boot_ts = time.monotonic()
-    
-    def initialize(self):
+        self._obc_metrics: dict = {}
+
+    def initialize(self) -> None:
         pass
 
     def set_inputs(self, state:ObcState):
         self._input_obc_state(state)
 
-    def compute(self):
-         self._obc_metrics = {
+    def compute(self, dt: float) -> None:
+        self._obc_metrics = {
             "cpu_usage": self._get_obc_cpu_usage(),
             "ram_usage": self._get_obc_ram_usage(),
             "disk_usage": self._get_obc_disk_usage(),
             "uptime": self._get_obc_uptime(),
         }
-        
+
     def get_outputs(self):
         return self._obc_metrics
     

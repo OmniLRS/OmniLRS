@@ -54,12 +54,11 @@ class ThermalModel(RobotPhysicsModel):
 
     def __init__(self):
         super().__init__()
-        self._rover_position: Tuple[float, float, float] = (0.0, 0.0, 0.0)
         self._rover_yaw_deg: float = 0.0
-        self._sun_position: Tuple[float, float, float] = (1.0, 0.0, 0.0)
+        self._sun_direction: np.ndarray = np.array((0.0, 1.0, 0.0))
         self._faces: Iterable[str] = FACES
         self._node_temps: Dict[str, float] = {}
-        #NOTE the following fileds were set to default values, as these values depend on the environment (Moon), not so much on the rover
+        #NOTE the following fields were set to default values, as these values depend on the environment (Moon), not so much on the rover
         # no setters were implemented, but the values may be directly accessed from a subsystems manager if need for customization exists
         self._min_temp: float = MIN_TEMP
         self._max_temp: float = MAX_TEMP
@@ -77,18 +76,14 @@ class ThermalModel(RobotPhysicsModel):
             for face in self._faces:
                 self._node_temps.setdefault(face, self._initial_temp)
 
-    def set_inputs(self, rover_position, sun_position, rover_yaw_deg):  
-        self._rover_position = rover_position
-        self._sun_position  = sun_position
+    def set_inputs(self, sun_direction, rover_yaw_deg):
+        self._sun_direction = np.asarray(sun_direction, dtype=float)
         self._rover_yaw_deg = rover_yaw_deg
 
     def compute(self, dt: float) -> None:
-        # override in your custom model if needed
-        # may call super().step() if you wish to reuse the face logic
         """Advance the model by *dt* seconds using stored rover/sun positions."""
 
-        view_factors = self._compute_view_factors(self._rover_position, self._sun_position)
-
+        view_factors = self._compute_view_factors(self._sun_direction)
         for face in self._faces:
             exposure = _clamp(view_factors.get(face, 0.0), 0.0, 1.0)
             target = self._target_temperature(exposure)
@@ -113,11 +108,8 @@ class ThermalModel(RobotPhysicsModel):
     def set_rover_yaw(self, yaw_deg: float) -> None:
         self._rover_yaw_deg = yaw_deg
 
-    def set_rover_position(self, position: Tuple[float, float, float]) -> None:
-        self._rover_position = position
-
-    def set_sun_position(self, position: Tuple[float, float, float]) -> None:
-        self._sun_position = position
+    def set_sun_direction(self, direction: np.ndarray) -> None:
+        self._sun_direction = np.asarray(direction, dtype=float)
 
     def _target_temperature(self, view_factor: float) -> float:
         """Return the sigmoid-based target temperature for a view factor."""
@@ -127,21 +119,14 @@ class ThermalModel(RobotPhysicsModel):
 
         return self._min_temp + (self._max_temp - self._min_temp) * sigmoid
 
-    def _compute_view_factors(
-        self,
-        rover_position: Tuple[float, float, float],
-        sun_position: Tuple[float, float, float],
-    ) -> Dict[str, float]:
-        """Compute cosine-based per-face view factors given rover and sun positions."""
+    def _compute_view_factors(self, sun_direction: np.ndarray) -> Dict[str, float]:
+        """Compute cosine-based per-face view factors given a sun direction unit vector."""
 
-        rover = np.asarray(rover_position, dtype=float)
-        sun = np.asarray(sun_position, dtype=float)
-        vector = sun - rover
-        magnitude = np.linalg.norm(vector)
+        magnitude = np.linalg.norm(sun_direction)
         if magnitude == 0.0:
             return {face: 0.0 for face in self._faces}
 
-        unit = vector / magnitude
+        unit = sun_direction / magnitude
         yaw_rad = math.radians(self._rover_yaw_deg)
         cos_yaw = math.cos(yaw_rad)
         sin_yaw = math.sin(yaw_rad)
@@ -176,21 +161,19 @@ def run_single_sun_test(total_time: float = 600.0, dt: float = 1.0) -> tuple[Seq
     initial_snapshot = model.temperatures()
     temps = {name: [value] for name, value in initial_snapshot.items()}
 
-    rover_pos = (0.0, 0.0, 0.0)
     ROVER_YAW_DEG = -58.0
 
-    SUN_DISTANCE = 1000.  # m
     SUN_AZYMUTH_DEG = 65.0
-    SUN_POSITION = (
-        -SUN_DISTANCE * np.sin(np.pi * SUN_AZYMUTH_DEG / 180.0),
-        SUN_DISTANCE * np.cos(np.pi * SUN_AZYMUTH_DEG / 180.0),
-        10.0,
-    )
-    print(SUN_POSITION)
+    SUN_ALTITUDE_DEG = 0.5
+    SUN_DIRECTION = np.array([
+        -np.cos(np.radians(SUN_ALTITUDE_DEG)) * np.sin(np.radians(SUN_AZYMUTH_DEG)),
+        np.cos(np.radians(SUN_ALTITUDE_DEG)) * np.cos(np.radians(SUN_AZYMUTH_DEG)),
+        np.sin(np.radians(SUN_ALTITUDE_DEG)),
+    ])
 
     for idx in range(steps):
         # set inputs
-        model.set_inputs(rover_pos, SUN_POSITION, ROVER_YAW_DEG)
+        model.set_inputs(SUN_DIRECTION, ROVER_YAW_DEG)
         # perform computation
         model.compute(dt)
         # get results
