@@ -207,7 +207,7 @@ class ArticulationControl:
             True if at least one valid target was applied, otherwise False.
         """
 
-        if not self.is_ready or self.articulation is None:
+        if not self.is_ready:
             return False
 
         now = time.time()
