@@ -115,8 +115,6 @@ class HuskyTransmitter:
         self._transmit(self._parameters_conf["current_draw_camera"], power_status["device_currents_measured"][CommonDevice.CAMERA])
         self._transmit(self._parameters_conf["current_draw_radio"], power_status["device_currents_measured"][CommonDevice.RADIO])
         self._transmit(self._parameters_conf["current_draw_eps"], power_status["device_currents_measured"][CommonDevice.EPS])
-        self._transmit(self._parameters_conf["current_draw_neutron_spectrometer"], power_status["device_currents_measured"][CommonDevice.NEUTRON_SPECTROMETER])
-        self._transmit(self._parameters_conf["current_draw_apxs"], power_status["device_currents_measured"][CommonDevice.APXS])
         self._transmit(self._parameters_conf["motor_current"], power_status["motor_currents_measured"])
 
     def transmit_wheels_joint_angles(self):
@@ -128,10 +126,6 @@ class HuskyTransmitter:
         for i in range(len(angles)):
             modulo = angles[i] % (2 * math.pi)
             angles[i] = int(modulo * (1024.0 / (2 * math.pi)))
-
-    def transmit_neutron_count(self):
-        count = self._robot.subsystems.get_neutron_count()
-        self._transmit(self._parameters_conf["neutron_counts"], int(count))
 
     def transmit_camera_streaming_state(self):
         is_streaming = self._intervals_handler.does_exist(IntervalName.CAMERA_STREAMING.value)

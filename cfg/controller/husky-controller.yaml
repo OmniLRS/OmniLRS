@@ -5,8 +5,7 @@ robots_settings:
   robot_controller: "husky-controller"
   yamcs_tmtc:
     mdb:
-      - "cfg/mdb/rover.xml"
-      - "cfg/mdb/admin.xml"
+      - "cfg/mdb/husky/rover.xml"
     intervals:
       robot_stats: 1
       camera_streaming: 2
@@ -19,17 +18,6 @@ robots_settings:
           path: "/Rover/camera/images_oncommand"
         - name: "images_depth"
           path: "/Rover/camera/images_depth"
-        - name: "images_monitoring"
-          path: "/Admin/camera/images_monitoring"
-    payload:
-      apxs:
-        resolution: [1440, 1080]
-        samples_dir: "/workspace/omnilrs/assets/images/"
-        no_data: "APXS_nodata.png"
-        measurement: "APXS_measurement.png"
-        bucket:
-          name: "images_apxs"
-          path: "/Rover/payload/images_apxs"
     parameters:
       pose_of_base_link: "/Rover/pose_ground_truth"
       go_nogo: "/Rover/go_nogo"
@@ -58,9 +46,6 @@ robots_settings:
       current_draw_camera: "/Rover/current_draw_camera"
       current_draw_radio: "/Rover/current_draw_radio"
       current_draw_eps: "/Rover/current_draw_eps"
-      current_draw_neutron_spectrometer: "/Rover/current_draw_neutron_spectrometer"
-      current_draw_apxs: "/Rover/current_draw_apxs"
-      neutron_counts: "/Rover/neutron_counts"
       camera_streaming_state: "/Rover/camera/images_streaming/state"
       motor_encoder: "/Rover/motor_encoder"
     commands:
@@ -69,6 +54,3 @@ robots_settings:
       camera_capture_high: "/Rover/camera/camera_capture_high"
       camera_streaming_on_off: "/Rover/camera/camera_streaming"
       camera_capture_depth: "/Rover/camera/camera_capture_depth"
-      capture_apxs: "/Rover/payload/payload_capture_apxs"
-      admin_battery_percentage: "/Admin/admin_set_battery_percentage"
-      admin_water_detection: "/Admin/admin_water_detection"

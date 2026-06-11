@@ -12,8 +12,6 @@ from src.mission_specific.husky.tmtc.camera_handler import HuskyCameraHandler
 from src.mission_specific.husky.tmtc.husky_commander import HuskyCommander
 from src.mission_specific.husky.tmtc.husky_drive_handler import HuskyDriveHandler
 from src.mission_specific.husky.tmtc.transmitter import HuskyTransmitter
-from src.mission_specific.pragyaan.tmtc.payload_handler import PayloadHandler
-from src.subsystems.device import PowerState
 from src.tmtc.yamcs_TMTC import YamcsTMTC
 
 
@@ -43,8 +41,6 @@ class HuskyController(YamcsTMTC):
 
         self._camera_handler = HuskyCameraHandler(self._images_handler, robot)
 
-        self._payload_handler = PayloadHandler(self._images_handler, yamcs_conf["payload"])
-
         self._transmitter = HuskyTransmitter(
             self.transmit_to_yamcs,
             self._intervals_handler,
@@ -62,7 +58,6 @@ class HuskyController(YamcsTMTC):
             self._drive_handler,
             self._obc_handler,
             self._intervals_handler,
-            self._payload_handler,
         )
 
     def setup_command_callbacks(self, commands_conf):
@@ -90,26 +85,10 @@ class HuskyController(YamcsTMTC):
             commands_conf["camera_capture_depth"],
             self._commander.handle_depth_capture,
         )
-        self._commands_handler.add_command(
-            commands_conf["admin_battery_percentage"],
-            self._commander.handle_battery_perc_change,
-            args=["battery_percentage"],
-        )
-        self._commands_handler.add_command(
-            commands_conf["capture_apxs"],
-            self._commander.snap_apxs,
-        )
-        self._commands_handler.add_command(
-            commands_conf["admin_water_detection"],
-            self._commander.set_is_near_water,
-            args=["trigger_water_detection"],
-        )
 
     def start_streaming_data(self):
         """Schedule periodic telemetry intervals."""
-        self._payload_handler.snap_apxs()
         self._images_handler.snap_no_data_images()
-        self._commander.set_activity_of_neutron_streaming(PowerState.ON)
 
         interval = self._intervals["robot_stats"]
 
@@ -177,11 +156,4 @@ class HuskyController(YamcsTMTC):
             is_repeating=True,
             execute_immediately=True,
             function=self._transmitter.transmit_wheels_joint_angles,
-        )
-        self._intervals_handler.add_new_interval(
-            name="Monitoring camera stream",
-            seconds=interval,
-            is_repeating=True,
-            execute_immediately=True,
-            function=self._camera_handler.transmit_monitoring_camera_view,
         )
