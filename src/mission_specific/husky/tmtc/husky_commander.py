@@ -11,7 +11,7 @@ import omni.kit.app
 from src.mission_specific.husky.tmtc.enums import HuskyYamcsArguments, HuskyCameraResolution
 from src.mission_specific.husky.tmtc.camera_handler import CameraViewType, HuskyCameraHandler
 from src.mission_specific.husky.tmtc.transmitter import HuskyTransmitter
-from src.mission_specific.husky.subsystems.husky_robot_enums import ObcState
+from src.subsystems.robot_enums import ObcState
 from src.tmtc.intervals_handler import IntervalName
 
 

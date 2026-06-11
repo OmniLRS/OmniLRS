@@ -16,7 +16,7 @@ from src.subsystems.robot_physics_models.radio_model import RadioModel
 from src.subsystems.robot_physics_models.thermal_model import ThermalModel
 from src.subsystems.robot_subsystems_handler import RobotSubsystemsHandler
 from src.mission_specific.husky.subsystems.husky_power_model import HuskyPowerModel
-from src.mission_specific.husky.subsystems.husky_robot_enums import ObcState
+from src.subsystems.robot_enums import ObcState
 from src.mission_specific.pragyaan.subsystems.neutron_spectrometer_model import NeutronSpectrometerModel
 
 
