@@ -140,7 +140,7 @@ class ArticulationTelemetry:
             return True
 
         except Exception as e:
-            self.log(f"ArticulationTelemetry init failed, retrying: {e}")
+            self.log(f"ArticulationTelemetry init failed, retrying in {self.init_retry_s} s. Exception was: {e}")
             self._inited = False
             self.articulation = None
             return False
