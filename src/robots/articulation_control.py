@@ -16,13 +16,28 @@ from typing import Dict, List, Optional
 
 import numpy as np
 from isaacsim.core.prims import SingleArticulation
-from isaacsim.core.utils.stage import get_current_stage
 from isaacsim.core.utils.types import ArticulationAction
 
 logger = logging.getLogger(__name__)
 
 
 class JointControlMode(str, Enum):
+    """
+    Supported joint command modes.
+
+    POSITION:
+        Command only joint position targets.
+    VELOCITY:
+        Command only joint velocity targets.
+    EFFORT:
+        Command only joint effort/torque targets.
+    MIXED:
+        Allow position, velocity, and effort targets in the same high-level
+        command. This is useful for robots where different joints are driven in
+        different ways, for example a rover with velocity-controlled wheels and
+        a position-controlled deployment mechanism such as a solar panel.
+    """
+
     POSITION = "position"
     VELOCITY = "velocity"
     EFFORT = "effort"
@@ -51,6 +66,22 @@ class JointCommandStatus:
 
 
 class ArticulationControl:
+    """
+    OmniLRS wrapper around Isaac Sim Articulation Controller.
+
+    In Isaac Sim, an articulation is a robot/mechanism made of rigid bodies
+    connected by joints and controlled from an articulation root. This class
+    wraps one robot articulation with `SingleArticulation` and applies joint
+    commands through Isaac Sim's `ArticulationAction` API.
+
+    The class is transport-agnostic and should be used through `Robot`;
+    simulation managers are responsible for initializing/updating it
+    after the world is stepped and after resets.
+
+    Isaac Sim articulation reference:
+    https://docs.isaacsim.omniverse.nvidia.com/5.0.0/robot_simulation/articulation_controller.html
+    """
+
     def __init__(
         self,
         prim_path: str,
@@ -59,6 +90,28 @@ class ArticulationControl:
         apply_period_s: float = 0.0,
         logger=logger,
     ):
+        """
+        Create an articulation joint controller.
+
+        Args:
+            prim_path:
+                USD prim path of the articulation root to control.
+            name:
+                Name assigned to the Isaac `SingleArticulation` wrapper.
+            init_retry_s:
+                Minimum wall-clock time between initialization attempts. This
+                avoids spamming Isaac initialization while the stage or physics
+                view is not ready yet.
+            apply_period_s:
+                Minimum wall-clock time between command applications. A value
+                of 0.0 means every call to `apply_command()` is allowed to send
+                an action. A positive value rate-limits command application,
+                which is useful when commands arrive faster than the desired
+                simulation/control rate.
+            logger:
+                Logger-like object used for status messages.
+        """
+
         self.prim_path = prim_path
         self.name = name
         self.init_retry_s = float(init_retry_s)
@@ -66,7 +119,6 @@ class ArticulationControl:
 
         self.log = logger.info
 
-        self.stage = None
         self.articulation: Optional[SingleArticulation] = None
 
         self.joint_names: List[str] = []
@@ -75,8 +127,6 @@ class ArticulationControl:
         self._inited = False
         self._t_last_init_try = 0.0
         self._t_last_apply = 0.0
-
-        self._pending_command: Optional[JointCommand] = None
 
         self.last_status = JointCommandStatus(
             stamp_s=0.0,
@@ -94,6 +144,21 @@ class ArticulationControl:
         return self._inited and self.articulation is not None
 
     def maybe_initialize(self) -> bool:
+        """
+        Initialize the Isaac articulation wrapper if it is not ready yet.
+
+        Returns:
+            True when the controller has a valid `SingleArticulation` wrapper
+            and joint-name/index mapping, False otherwise.
+
+        Notes:
+            This method intentionally does not read joint positions or other
+            physics state. Those reads require Isaac's physics simulation view
+            to be created, which usually happens only after the world has been
+            stepped/playing. Initialization only needs the articulation DOF
+            names so commands can later be mapped from joint names to indices.
+        """
+
         if self.is_ready:
             return True
 
@@ -103,27 +168,18 @@ class ArticulationControl:
         self._t_last_init_try = now
 
         try:
-            self.stage = get_current_stage()
-
             self.articulation = SingleArticulation(
                 prim_path=self.prim_path,
                 name=self.name,
             )
             self.articulation.initialize()
 
-            q = self._safe_array(self.articulation.get_joint_positions())
             dof_names = self.articulation.dof_names
 
             if dof_names is None:
                 raise RuntimeError(f"No DOF names found for articulation {self.prim_path}")
 
             self.joint_names = list(dof_names)
-
-            if q is not None and len(q) != len(self.joint_names):
-                raise RuntimeError(
-                    f"DOF mismatch for {self.prim_path}: " f"positions={len(q)} names={len(self.joint_names)}"
-                )
-
             self.joint_name_to_index = {name: i for i, name in enumerate(self.joint_names)}
 
             self._inited = True
@@ -138,20 +194,20 @@ class ArticulationControl:
             self.articulation = None
             return False
 
-    def set_command(self, command: JointCommand) -> None:
-        self._pending_command = command
-
-    def clear_command(self) -> None:
-        self._pending_command = None
-
-    def update(self) -> bool:
-        if self._pending_command is None:
-            return False
-
-        return self.apply_command(self._pending_command)
-
     def apply_command(self, command: JointCommand) -> bool:
-        if not self.is_ready:
+        """
+        Apply one JointCommand to the articulation.
+
+        The command is given by joint name and may contain position, velocity,
+        effort, or mixed targets. The method validates the command mode, filters
+        unknown joints, converts joint names to Isaac DOF indices, and sends the
+        corresponding `ArticulationAction`.
+
+        Returns:
+            True if at least one valid target was applied, otherwise False.
+        """
+
+        if not self.is_ready or self.articulation is None:
             return False
 
         now = time.time()
@@ -161,7 +217,7 @@ class ArticulationControl:
 
         self._t_last_apply = now
 
-        assert self.articulation is not None
+        articulation = self.articulation
 
         position_targets = dict(command.position_targets or {})
         velocity_targets = dict(command.velocity_targets or {})
@@ -186,7 +242,7 @@ class ArticulationControl:
 
         if position_targets:
             self._apply_targets(
-                articulation=self.articulation,
+                articulation=articulation,
                 kind=JointControlMode.POSITION,
                 targets=position_targets,
             )
@@ -194,7 +250,7 @@ class ArticulationControl:
 
         if velocity_targets:
             self._apply_targets(
-                articulation=self.articulation,
+                articulation=articulation,
                 kind=JointControlMode.VELOCITY,
                 targets=velocity_targets,
             )
@@ -202,7 +258,7 @@ class ArticulationControl:
 
         if effort_targets:
             self._apply_targets(
-                articulation=self.articulation,
+                articulation=articulation,
                 kind=JointControlMode.EFFORT,
                 targets=effort_targets,
             )
@@ -265,13 +321,11 @@ class ArticulationControl:
         )
 
     def close(self) -> None:
-        self.stage = None
         self.articulation = None
 
         self.joint_names = []
         self.joint_name_to_index = {}
 
-        self._pending_command = None
         self._inited = False
 
         self.last_status = JointCommandStatus(
@@ -355,12 +409,3 @@ class ArticulationControl:
             raise ValueError(f"Cannot apply target kind: {kind}")
 
         articulation.apply_action(action)
-
-    @staticmethod
-    def _safe_array(x):
-        if x is None:
-            return None
-        try:
-            return np.asarray(x)
-        except Exception:
-            return None
