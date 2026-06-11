@@ -398,58 +398,25 @@ class Robot:
     def _initialize_cameras(self) -> None:
         # Camera is a wrapper, therefore it just wraps around the camera instance if it already exists
         # otherwise it creates a new camera instance on the provided prim_path
+        if "resolutions" not in self._camera_conf:
+            return
 
-        if isinstance(self._camera_conf, list):
-            self._cameras = []
-            self._depth_cameras = []
+        resolutions = list(self._camera_conf.get("resolutions").keys())
 
-            for camera_conf in self._camera_conf:
-                if "resolutions" not in camera_conf:
-                    continue
+        for res in resolutions:
+            self._cameras[res] = Camera(
+                self._camera_conf["prim_path"],
+                resolution=(self._camera_conf["resolutions"][res][0], self._camera_conf["resolutions"][res][1]),
+            )
+            self._cameras[res].initialize()
 
-                camera = {}
-                depth_camera = {}
-
-                resolutions = list(camera_conf.get("resolutions").keys())
-
-                for res in resolutions:
-                    camera[res] = Camera(
-                        camera_conf["prim_path"],
-                        resolution=(camera_conf["resolutions"][res][0], camera_conf["resolutions"][res][1]),
-                    )
-                    camera[res].initialize()
-
-                for res in resolutions:
-                    depth_camera[res] = Camera(
-                        camera_conf["prim_path"],
-                        resolution=(camera_conf["resolutions"][res][0], camera_conf["resolutions"][res][1]),
-                    )
-                    depth_camera[res].initialize()
-                    depth_camera[res].add_distance_to_image_plane_to_frame()
-
-                self._cameras.append(camera)
-                self._depth_cameras.append(depth_camera)
-
-        else:
-            if "resolutions" not in self._camera_conf:
-                return
-
-            resolutions = list(self._camera_conf.get("resolutions").keys())
-
-            for res in resolutions:
-                self._cameras[res] = Camera(
-                    self._camera_conf["prim_path"],
-                    resolution=(self._camera_conf["resolutions"][res][0], self._camera_conf["resolutions"][res][1]),
-                )
-                self._cameras[res].initialize()
-
-            for res in resolutions:
-                self._depth_cameras[res] = Camera(
-                    self._camera_conf["prim_path"],
-                    resolution=(self._camera_conf["resolutions"][res][0], self._camera_conf["resolutions"][res][1]),
-                )
-                self._depth_cameras[res].initialize()
-                self._depth_cameras[res].add_distance_to_image_plane_to_frame()
+        for res in resolutions:
+            self._depth_cameras[res] = Camera(
+                self._camera_conf["prim_path"],
+                resolution=(self._camera_conf["resolutions"][res][0], self._camera_conf["resolutions"][res][1]),
+            )
+            self._depth_cameras[res].initialize()
+            self._depth_cameras[res].add_distance_to_image_plane_to_frame()
 
     def get_rgba_camera_view(self, resolution) -> np.ndarray:
         return self._cameras[resolution].get_rgba()
