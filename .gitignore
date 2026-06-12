@@ -20,9 +20,9 @@ assets/Terrains/SouthPole/
 !.pixi/config.toml
 
 Session.vim
+results.txt
 
 # Test venv and outputs
 test/venv/
 test/outputs/
 
-Session.vim
