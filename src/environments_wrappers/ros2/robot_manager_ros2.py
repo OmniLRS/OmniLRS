@@ -1,4 +1,4 @@
-__author__ = "Antoine Richard, Aleksa Stanivuk"
+__author__ = "Antoine Richard, Aleksa Stanivuk, Shamistan Karimov"
 __copyright__ = "Copyright 2023-26, JAOPS, Space Robotics Lab, SnT, University of Luxembourg, SpaceR"
 __license__ = "BSD-3-Clause"
 __version__ = "1.0.0"
@@ -86,17 +86,16 @@ class ROS_RobotManager(Node):
 
         p = [data.pose.position.x, data.pose.position.y, data.pose.position.z]
         q = [data.pose.orientation.x, data.pose.orientation.y, data.pose.orientation.z, data.pose.orientation.w]
+        # print(f"received {data.pose.position}")
         self.modifications.append([self.RM.teleport_robot, {"position": p, "orientation": q}])
 
-    def reset_robot(self) -> None:
+    def reset_robot(self, msg=None) -> None:
         """
         Resets a robot.
-
-        Args:
-            data (String): Name of the robot to reset.
         """
 
-        self.modifications.append([self.RM.reset_robot])
+        self.modifications.append([self.RM.reset_robot, {}])
+
 
     def cleanRobots(self) -> None:
         """
