@@ -75,7 +75,8 @@ ros2 = "python run.py mode=ROS2"
 yamcs-client = "*"
 
 [feature.yamcs.tasks]
-yamcs = "python run.py mode=Yamcs environment=lunaryard_40m_workshop"
+yamcs = "python run.py mode=Yamcs"
+yamcs-pragyaan= "python run.py mode=Yamcs environment=lunaryard_40m_workshop robot=pragyaan controller=pragyaan-controller"
 fix-tmp = "bash scripts/fix_yamcs_tmp.sh"
 
 [environments]
