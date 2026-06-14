@@ -26,7 +26,7 @@ class RobotSubsystemsHandler(ABC):
         obc_state:ObcState = ObcState.IDLE,
         go_nogo_state:GoNogoState = GoNogoState.NOGO,
         devices:dict[str, Device] = {},
-        solar_panel_state:SolarPanelState = SolarPanelState.STOWED,
+        solar_panel_state:SolarPanelState = None,
     ) -> None:
         self._power_model:PowerModel = power_model
         self._thermal_model:ThermalModel = thermal_model
@@ -35,7 +35,9 @@ class RobotSubsystemsHandler(ABC):
         self._obc_state = obc_state
         self._go_nogo_state = go_nogo_state
         self._devices:dict[str, Device] = devices
-        self._solar_panel_state = solar_panel_state
+
+        if solar_panel_state is not None:
+            self._solar_panel_state = solar_panel_state
 
     @abstractmethod
     def get_obc_model_outputs(self, *args, **kwargs) -> dict[str, float]:
