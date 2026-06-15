@@ -10,7 +10,7 @@ robots_settings:
       robot_stats: 1
       camera_streaming: 2
     images:
-      no_data_image_path: "/workspace/omnilrs/assets/images/no_data_grafana.png"
+      no_data_image_path: "${oc.env:OMNILRS_ROOT,.}/assets/images/no_data_grafana.png"
       buckets:
         - name: "images_streaming"
           path: "/Rover/camera/images_streaming"
