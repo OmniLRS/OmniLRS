@@ -1,38 +1,40 @@
-__author__ = "Aleksa Stanivuk"
-__copyright__ = "Copyright 2026, JAOPS"
+__author__ = "Aleksa Stanivuk, Shamistan Karimov, Bach Nguyen"
+__copyright__ = "Copyright 2026, JAOPS, AsteriaART/Artefacts"
 __license__ = "BSD-3-Clause"
 __version__ = "2.0.0"
 __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
 __status__ = "development"
 
-from isaacsim import SimulationApp
-from isaacsim.core.api.world import World
-from typing import Union
 import logging
 import time
+from typing import Union
+
 import omni
+from isaacsim import SimulationApp
+from isaacsim.core.api.world import World
 from yamcs.client import YamcsClient
 
+from src.configurations.procedural_terrain_confs import TerrainManagerConf
 from src.configurations.simulator_mode_enum import SimulatorMode
 from src.environments.large_scale_lunar import LargeScaleController
 from src.environments.lunalab import LunalabController
 from src.environments.lunaryard import LunaryardController
 from src.environments.stellar_engine_env_mixin import StellarEngineEnvMixin
 from src.environments.utils import set_moon_env_name
-from src.configurations.procedural_terrain_confs import TerrainManagerConf
 from src.environments_wrappers.rate import Rate
 from src.robots.robot import RobotManager
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(format="%(asctime)s %(message)s", datefmt="%m/%d/%Y %I:%M:%S %p")
 
+
 class Yamcs_SimulationManager:
     """
     Manages the simulation. This class is responsible for:
     - Initializing the simulation
-    - Running the environment manager 
-    - Running the robot manager 
+    - Running the environment manager
+    - Running the robot manager
     - Running the simulation
     - Cleaning the simulation
 
@@ -80,9 +82,8 @@ class Yamcs_SimulationManager:
         self.EC = self._get_environment_controller(self.cfg["environment"]["name"])
         self.EC.load()
 
-        self.RM = RobotManager(cfg["environment"]["robots_settings"], 
-                               mode=SimulatorMode.YAMCS)
-        
+        self.RM = RobotManager(cfg["environment"]["robots_settings"], mode=SimulatorMode.YAMCS)
+
         self._setup_terrain_manager()
         self._preload_robot()
         if isinstance(self.EC, StellarEngineEnvMixin) and self.RM.robot.subsystems is not None:
@@ -132,42 +133,59 @@ class Yamcs_SimulationManager:
             time.sleep(poll_interval)
 
     def _start_TMTC(self):
-        robot_name = self.RM.robot.robot_name.replace("/","") 
+        robot_name = self.RM.robot.robot_name.replace("/", "")
         controller_name = self.RM.RM_conf.robot_controller
 
         if controller_name == "pragyaan-controller":
             from src.mission_specific.pragyaan.tmtc.pragyaan_controller import PragyaanController
-            self.TMTC = PragyaanController(self.cfg["mode"]["instance_conf"], self.RM.RM_conf.yamcs_tmtc, robot_name, self.RM.robot_RG, self.RM.robot)
+
+            self.TMTC = PragyaanController(
+                self.cfg["mode"]["instance_conf"],
+                self.RM.RM_conf.yamcs_tmtc,
+                robot_name,
+                self.RM.robot_RG,
+                self.RM.robot,
+            )
         elif controller_name == "husky-controller":
             from src.mission_specific.husky.tmtc.husky_controller import HuskyController
-            self.TMTC = HuskyController(self.cfg["mode"]["instance_conf"], self.RM.RM_conf.yamcs_tmtc, robot_name, self.RM.robot_RG, self.RM.robot) 
+
+            self.TMTC = HuskyController(
+                self.cfg["mode"]["instance_conf"],
+                self.RM.RM_conf.yamcs_tmtc,
+                robot_name,
+                self.RM.robot_RG,
+                self.RM.robot,
+            )
         elif controller_name == "":
             raise Exception("No robot controller was setup in yaml configurations.")
-        else: 
-            raise Exception("Settings for '" + str(controller_name)  + "' robot controller are not specified.")
+        else:
+            raise Exception("Settings for '" + str(controller_name) + "' robot controller are not specified.")
 
         self.TMTC.setup_command_callbacks(self.RM.RM_conf.yamcs_tmtc["commands"])
         self.TMTC.start_streaming_data()
 
-    def _get_environment_controller(self, environment_name:str):
-        self.EC= None
+    def _get_environment_controller(self, environment_name: str):
+        self.EC = None
         if environment_name == "LargeScale":
             self.EC = LargeScaleController(
-                mode=SimulatorMode.YAMCS, **self.cfg["environment"], 
-                is_simulation_alive=self.simulation_app.is_running, 
-                close_simulation=self.simulation_app.close
+                mode=SimulatorMode.YAMCS,
+                **self.cfg["environment"],
+                is_simulation_alive=self.simulation_app.is_running,
+                close_simulation=self.simulation_app.close,
             )
         elif environment_name == "Lunaryard":
             self.EC = LunaryardController(
-                mode=SimulatorMode.YAMCS, **self.cfg["environment"], 
-                is_simulation_alive=self.simulation_app.is_running, 
-                close_simulation=self.simulation_app.close
+                mode=SimulatorMode.YAMCS,
+                **self.cfg["environment"],
+                is_simulation_alive=self.simulation_app.is_running,
+                close_simulation=self.simulation_app.close,
             )
         elif environment_name == "Lunalab":
             self.EC = LunalabController(
-                mode=SimulatorMode.YAMCS, **self.cfg["environment"], 
-                is_simulation_alive=self.simulation_app.is_running, 
-                close_simulation=self.simulation_app.close
+                mode=SimulatorMode.YAMCS,
+                **self.cfg["environment"],
+                is_simulation_alive=self.simulation_app.is_running,
+                close_simulation=self.simulation_app.close,
             )
 
         return self.EC
@@ -197,7 +215,7 @@ class Yamcs_SimulationManager:
             robot_ori = self.RM.robot_parameters.pose.orientation
             height, _ = self.EC.get_height_and_normal((robot_pos[0], robot_pos[1], 0.0))
             self.RM.preload_robot_at_pose(self.world, (robot_pos[0], robot_pos[1], height + 0.5), robot_ori)
-        
+
         else:
             self.RM.preload_robot(self.world)
 
@@ -210,11 +228,28 @@ class Yamcs_SimulationManager:
         while self.simulation_app.is_running():
             self.rate.reset()
             self.world.step(render=True)
+
             if self.world.is_playing():
-                if hasattr(self.EC, 'enable_stellar_engine') and self.EC.enable_stellar_engine:
+                did_reset = False
+
+                if hasattr(self.EC, "enable_stellar_engine") and self.EC.enable_stellar_engine:
                     self.EC.update_stellar_engine(dt=self.world.get_physics_dt())
+
                 if self.world.current_time_step_index == 0:
                     self.world.reset()
+
+                    did_reset = True
+
+                    if self.RM.robot is not None:
+                        self.RM.robot.invalidate_articulation_api()
+
+                if not did_reset and self.RM.robot is not None:
+                    self.RM.robot.update_articulation_api()
+
             self.rate.sleep()
+
+        if self.RM.robot is not None:
+            self.RM.robot.invalidate_articulation_api()
+
         self.world.stop()
         self.timeline.stop()
