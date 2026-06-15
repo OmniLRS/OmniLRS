@@ -1,4 +1,4 @@
-__author__ = "Antoine Richard, Aleksa Stanivuk"
+__author__ = "Antoine Richard, Aleksa Stanivuk, Shamistan Karimov"
 __copyright__ = "Copyright 2023-26, JAOPS, Space Robotics Lab, SnT, University of Luxembourg, SpaceR"
 __license__ = "BSD-3-Clause"
 __version__ = "1.0.0"
@@ -8,13 +8,12 @@ __status__ = "development"
 
 from typing import List, Tuple
 
+from geometry_msgs.msg import PoseStamped
 from pxr import Gf
+from rclpy.node import Node
+from std_msgs.msg import Empty, String
 
 from src.configurations.simulator_mode_enum import SimulatorMode
-from std_msgs.msg import String, Empty
-from geometry_msgs.msg import PoseStamped
-from rclpy.node import Node
-
 from src.robots.robot import RobotManager
 
 
@@ -25,7 +24,7 @@ class ROS_RobotManager(Node):
 
     def __init__(self, RM_conf: dict) -> None:
         super().__init__("Robot_spawn_manager_node")
-        self.RM = RobotManager(RM_conf, mode=SimulatorMode.ROS2) 
+        self.RM = RobotManager(RM_conf, mode=SimulatorMode.ROS2)
         self.create_subscription(PoseStamped, "/OmniLRS/Robots/Spawn", self.spawn_robot, 1)
         self.create_subscription(PoseStamped, "/OmniLRS/Robots/Teleport", self.teleport_robot, 1)
         self.create_subscription(String, "/OmniLRS/Robots/Reset", self.reset_robot, 1)
@@ -87,17 +86,16 @@ class ROS_RobotManager(Node):
 
         p = [data.pose.position.x, data.pose.position.y, data.pose.position.z]
         q = [data.pose.orientation.x, data.pose.orientation.y, data.pose.orientation.z, data.pose.orientation.w]
+        # print(f"received {data.pose.position}")
         self.modifications.append([self.RM.teleport_robot, {"position": p, "orientation": q}])
 
-    def reset_robot(self) -> None:
+    def reset_robot(self, msg=None) -> None:
         """
         Resets a robot.
-
-        Args:
-            data (String): Name of the robot to reset.
         """
 
-        self.modifications.append([self.RM.reset_robot])
+        self.modifications.append([self.RM.reset_robot, {}])
+
 
     def cleanRobots(self) -> None:
         """
