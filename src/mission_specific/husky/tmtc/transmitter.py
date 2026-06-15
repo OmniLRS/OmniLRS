@@ -111,7 +111,6 @@ class HuskyTransmitter:
         )
         self._transmit(self._parameters_conf["battery_charge"], int(power_status["battery_percentage_measured"]))
         self._transmit(self._parameters_conf["battery_voltage"], power_status["battery_voltage_measured"])
-        self._transmit(self._parameters_conf["total_current_in"], power_status["solar_input_current_measured"])
         self._transmit(self._parameters_conf["total_current_out"], power_status["total_current_out_measured"])
         self._transmit(self._parameters_conf["current_draw_obc"], power_status["device_currents_measured"][CommonDevice.OBC])
         self._transmit(self._parameters_conf["current_draw_motor_controller"], power_status["device_currents_measured"][CommonDevice.MOTOR_CONTROLLER])
