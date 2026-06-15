@@ -21,6 +21,7 @@ from scipy.spatial.transform import Rotation
 
 from src.subsystems.device import CommonDevice, Device, HealthState, PowerState
 from src.mission_specific.pragyaan.subsystems.pragyaan_robot_enums import ObcState
+from src.subsystems.robot_enums import SolarPanelState
 from src.subsystems.robot_subsystems_handler import RobotSubsystemsHandler
 
 class PragyaanSubsystemsHandler(RobotSubsystemsHandler):
@@ -37,7 +38,7 @@ class PragyaanSubsystemsHandler(RobotSubsystemsHandler):
         thermal_model = PragyaanThermalModel()
         obc_metrics_model = PragyaanObcMetricsModel()
         power_model = PragyaanPowerModel()
-        super().__init__(thermal_model=thermal_model, obc_metrics_model=obc_metrics_model, power_model=power_model)
+        super().__init__(thermal_model=thermal_model, obc_metrics_model=obc_metrics_model, power_model=power_model, solar_panel_state=SolarPanelState.STOWED)
         self._setup_devices()
         self._setup_power_model()
         self.LANDER_PATH = pos_relative_to_prim
@@ -73,11 +74,11 @@ class PragyaanSubsystemsHandler(RobotSubsystemsHandler):
         self._power_model.initialize(
             battery_capacity_wh=self.BATTERY_CAPACITY_WH, 
             battery_charge_wh=self.BATTERY_CAPACITY_WH, 
-            solar_panel_max_power=self.SOLAR_PANEL_MAX_POWER, 
-            solar_panel_state=self._solar_panel_state, 
             motor_count=self.MOTOR_COUNT, 
             motor_power_w=self.MOTOR_POWER_W,
-            devices=self._devices
+            devices=self._devices,
+            solar_panel_max_power=self.SOLAR_PANEL_MAX_POWER, 
+            solar_panel_state=self._solar_panel_state
         )
 
     def _update_sun_direction(self):
@@ -114,10 +115,10 @@ class PragyaanSubsystemsHandler(RobotSubsystemsHandler):
     def get_power_model_outputs(self, robot_yaw_deg, interval_s, obc_state):
         # device states are reflected between the handler and power model, as they use the same dict
         self._power_model.set_inputs(
-            sun_direction=self._sun_direction,
             rover_yaw_deg=robot_yaw_deg,
+            is_in_motor_state=(obc_state == ObcState.MOTOR),
             solar_panel_state=self._solar_panel_state,
-            is_in_motor_state=(obc_state == ObcState.MOTOR)
+            sun_direction=self._sun_direction
         )
         self._power_model.compute(interval_s)
         return self._power_model.get_outputs()

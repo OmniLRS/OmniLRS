@@ -138,7 +138,7 @@ class RobotManager:
         dimensions: dict = {},
         turn_speed_coef: float = 1,
         pos_relative_to_prim: str = "",
-        solar_panel_joint: str = "",
+        solar_panel_joint: str = None,
     ) -> None:
         """
         Add a robot to the scene.
@@ -230,7 +230,7 @@ class Robot:
         dimensions: dict = {},
         turn_speed_coef: float = 1,
         pos_relative_to_prim: str = "",
-        solar_panel_joint: str = "",
+        solar_panel_joint: str = None,
     ) -> None:
         """
         Args:
@@ -714,8 +714,8 @@ class Robot:
 
         return list(self._last_joint_positions.keys())
 
-    def _check_solar_panel_joint(self) -> None:
-        if self._solar_panel_joint == "":
+    def _verify_solar_panel_joint(self) -> None:
+        if not self._solar_panel_joint:
             raise Exception(
                 "Solar panel joint is not specified. "
                 "Please check your .yaml configuration file. "
@@ -735,11 +735,11 @@ class Robot:
             )
 
     def deploy_solar_panel(self):
-        self._check_solar_panel_joint()
+        self._verify_solar_panel_joint()
         self.set_joint_positions({self._solar_panel_joint: math.radians(0)})
 
     def stow_solar_panel(self):
-        self._check_solar_panel_joint()
+        self._verify_solar_panel_joint()
         self.set_joint_positions({self._solar_panel_joint: math.radians(-80)})
 
 
