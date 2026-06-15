@@ -28,7 +28,6 @@ class HuskySubsystemsHandler(RobotSubsystemsHandler):
     BASE_STATION_POSITION = (0.0, 0.0, 0.0)
 
     BATTERY_CAPACITY_WH = 389.0   # Wh  (Husky uses 24 V / 16.2 Ah ≈ 389 Wh)
-    SOLAR_PANEL_MAX_POWER = 0.0   # W   (Husky has no solar panel)
     MOTOR_COUNT = 4
     MOTOR_POWER_W = 50.0          # W per motor (rough estimate)
 
@@ -100,8 +99,6 @@ class HuskySubsystemsHandler(RobotSubsystemsHandler):
         self._power_model.initialize(
             battery_capacity_wh=self.BATTERY_CAPACITY_WH,
             battery_charge_wh=self.BATTERY_CAPACITY_WH,
-            solar_panel_max_power=self.SOLAR_PANEL_MAX_POWER,
-            solar_panel_state=self._solar_panel_state,
             motor_count=self.MOTOR_COUNT,
             motor_power_w=self.MOTOR_POWER_W,
             devices=self._devices,
@@ -138,12 +135,9 @@ class HuskySubsystemsHandler(RobotSubsystemsHandler):
         self._thermal_model.compute(interval_s)
         return self._thermal_model.get_outputs()
 
-    @_update_sun_direction_before
     def get_power_model_outputs(self, robot_yaw_deg, interval_s, obc_state):
         self._power_model.set_inputs(
-            sun_direction=self._sun_direction,
             rover_yaw_deg=robot_yaw_deg,
-            solar_panel_state=self._solar_panel_state,
             is_in_motor_state=(obc_state == ObcState.MOTOR),
         )
         self._power_model.compute(interval_s)

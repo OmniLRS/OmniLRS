@@ -16,7 +16,6 @@ class HuskyPowerModelDefaults(float, Enum):
     DEVICE_CURRENT_NOISE = PowerModelDefaults.DEVICE_CURRENT_NOISE
     BATTERY_PERCENTAGE_NOISE = 0.05   # smaller than default 0.5 — Husky's large 389 Wh battery makes noise dominate otherwise
     BATTERY_VOLTAGE_NOISE = 0.02      # smaller than default 0.05
-    SOLAR_INPUT_NOISE = PowerModelDefaults.SOLAR_INPUT_NOISE
     REGULATED_BUS_VOLTAGE = 24.0      # Husky runs on a 24 V bus
     DC_DC_EFFICIENCY = PowerModelDefaults.DC_DC_EFFICIENCY
     DEVICE_FAULT_EXTRA_POWER = PowerModelDefaults.DEVICE_FAULT_EXTRA_POWER

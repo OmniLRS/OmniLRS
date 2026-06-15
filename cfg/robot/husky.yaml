@@ -29,4 +29,3 @@ robots_settings:
         high: [1280, 720]
     imu_sensor_path: "/Robots/husky/d455/RSD455/Imu_Sensor"
     turn_speed_coef: 6.5
-    solar_panel_joint: ""  # the husky does not have a solar panel
