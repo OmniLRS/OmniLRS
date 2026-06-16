@@ -732,14 +732,9 @@ class Robot:
                 f"{self.robot_path}. Available joints: {self.control.joint_names}"
             )
 
-    def deploy_solar_panel(self):
+    def set_solar_panel_angle(self, angle_deg: float):
         self._verify_solar_panel_joint()
-        self.set_joint_positions({self._solar_panel_joint: math.radians(0)})
-
-    def stow_solar_panel(self):
-        self._verify_solar_panel_joint()
-        self.set_joint_positions({self._solar_panel_joint: math.radians(-80)})
-
+        self.set_joint_positions({self._solar_panel_joint: math.radians(angle_deg)})
 
 # TODO for v4: rethink which methods should be in RRG, what should be in Robot
 # TODO for v4: separate into a different file (very complex and lengthy classes)

@@ -261,7 +261,7 @@ class PowerModel(RobotPhysicsModel):
     def _measured_solar_input_current(self) -> float:
         if not self._has_solar_panel:
             raise Exception(
-                "Can not be computed as solar panel is not defined for this power model."
+                "Measured solar input current can not be computed as solar panel is not defined for this power model."
             )
 
         power = _clamp(
