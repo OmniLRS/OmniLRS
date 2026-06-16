@@ -66,32 +66,53 @@ class PowerModel(RobotPhysicsModel):
         self._battery_voltage_v: float = self.BATTERY_VOLTAGE_CURVE[-1][1]
     
     def initialize(self, *, battery_capacity_wh:float, battery_charge_wh:float,
-				   solar_panel_max_power:float, solar_panel_state:SolarPanelState, 
 				   motor_count:int, motor_power_w:float, is_in_motor_state:bool=False,
-				   devices:dict[str,Device]):
+				   devices:dict[str,Device],
+                   solar_panel_max_power:float = None, solar_panel_state:SolarPanelState = None):
         #NOTE should be called from within rover subsystems handler
         #   setup for specific rover use-case
         self._battery_capacity_wh = battery_capacity_wh
         self._battery_charge_wh = battery_charge_wh
-        self._solar_panel_max_power = solar_panel_max_power
-        self._solar_panel_state = solar_panel_state
         self._devices = devices
         self._is_in_motor_state:bool = is_in_motor_state #NOTE rover is in motor state if its obc_state is MOTOR
         self._motor_count = motor_count
         self._motor_power_w = motor_power_w
+        self._configure_solar_panel_existance(solar_panel_max_power, solar_panel_state)
+
+    def _configure_solar_panel_existance(self, solar_panel_max_power:float, solar_panel_state:SolarPanelState):
+        if solar_panel_max_power is not None:
+            self._has_solar_panel = True
+            self._solar_panel_max_power = solar_panel_max_power
+        else:
+            self._has_solar_panel = False
+
+        if self._has_solar_panel and solar_panel_state is not None:
+            self._solar_panel_state = solar_panel_state
+        elif self._has_solar_panel and self._solar_panel_state is None:
+            raise Exception(
+                "Power model is configured to have a solar panel, but solar panel state is not defined."
+            )
 	
-    def set_inputs(self, sun_direction, rover_yaw_deg, solar_panel_state, is_in_motor_state):
-        self._sun_direction = np.asarray(sun_direction, dtype=float)
+    def set_inputs(self, rover_yaw_deg, is_in_motor_state, solar_panel_state=None, sun_direction=None):
         self._rover_yaw_deg = rover_yaw_deg
-        self._solar_panel_state = solar_panel_state
         self._is_in_motor_state = is_in_motor_state
+
+        if not self._has_solar_panel:
+            return
+
+        self._solar_panel_state = solar_panel_state
+        self._sun_direction = np.asarray(sun_direction, dtype=float)
 
     def compute(self, dt: float) -> None:
         """Advance the battery state by *dt* seconds."""
 
-        view_factor = self._compute_view_factor(self._sun_direction)
-        self._solar_input_power = self._solar_panel_max_power * view_factor
-        net_power = self._solar_input_power - self._total_load_power()
+        if self._has_solar_panel:
+            view_factor = self._compute_view_factor(self._sun_direction)
+            self._solar_input_power = self._solar_panel_max_power * view_factor
+            net_power = self._solar_input_power - self._total_load_power()
+        else:
+            net_power = - self._total_load_power()
+
         self._battery_charge_wh += net_power * (dt / 3600.0)
         self._battery_charge_wh = _clamp(self._battery_charge_wh, 0.0, self._battery_capacity_wh)
         self._update_battery_voltage()
@@ -106,13 +127,16 @@ class PowerModel(RobotPhysicsModel):
         total_current_out = device_current_at_battery + sum(motor_currents)
         status: Dict[str, float | Dict[str, float] | Sequence[float]] = {
             "net_power": self._solar_input_power - self._total_load_power(),
-            "solar_input_current_measured": self._measured_solar_input_current(),
             "battery_percentage_measured": self._measured_battery_percentage(),
             "battery_voltage_measured": self._measured_battery_voltage(),
             "motor_currents_measured": motor_currents,
             "total_current_out_measured": total_current_out,
         }
         status["device_currents_measured"] = device_currents
+
+        if self._has_solar_panel: 
+            status["solar_input_current_measured"] = self._measured_solar_input_current()
+
         return status
 
     def __post_init__(self) -> None:
@@ -164,6 +188,11 @@ class PowerModel(RobotPhysicsModel):
         return battery_power_for_regulated + motor_power
 
     def _compute_view_factor(self, sun_direction: np.ndarray) -> float:
+        if not self._has_solar_panel:
+            raise Exception(
+                "View factor can not be computed as solar panel is not defined for this power model."
+            )
+
         magnitude = np.linalg.norm(sun_direction)
         if magnitude == 0.0:
             return 0.0
@@ -230,6 +259,11 @@ class PowerModel(RobotPhysicsModel):
         ]
 
     def _measured_solar_input_current(self) -> float:
+        if not self._has_solar_panel:
+            raise Exception(
+                "Measured solar input current can not be computed as solar panel is not defined for this power model."
+            )
+
         power = _clamp(
             self._solar_input_power + random.gauss(0.0, self.PM.SOLAR_INPUT_NOISE),
             0.0,

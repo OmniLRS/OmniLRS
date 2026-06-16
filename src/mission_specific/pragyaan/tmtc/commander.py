@@ -26,6 +26,10 @@ class PragyaanCommander:
     This class encodes the logic behind the execution of the received commands specific to the Pragyaan rover.
         For example, in case of receiving command for high res camera capture, the commander checks if the camera is powered on, and only then executes the command by calling the appropriate function in the camera handler.
     """
+    #TODO for v4: find the optimal place to store the angle values (potentially will refactor robot)
+    SOLAR_PANEL_ANGLE_DEPLOYED = 0
+    SOLAR_PANEL_ANGLE_STOWED = -80
+
     def __init__(self,
         robot,
         intervals,
@@ -75,10 +79,10 @@ class PragyaanCommander:
 
         if command == PragyaanYamcsArguments.DEPLOY.value:
             self._robot.subsystems.set_solar_panel_state(SolarPanelState.DEPLOYED)
-            self._robot.deploy_solar_panel()
+            self._robot.set_solar_panel_angle(self.SOLAR_PANEL_ANGLE_DEPLOYED)
         elif command == PragyaanYamcsArguments.STOW.value:
             self._robot.subsystems.set_solar_panel_state(SolarPanelState.STOWED)
-            self._robot.stow_solar_panel()
+            self._robot.set_solar_panel_angle(self.SOLAR_PANEL_ANGLE_STOWED)
         else:
             print("Command for solar panel is unknown:", command)
             return
