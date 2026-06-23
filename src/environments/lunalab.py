@@ -7,7 +7,6 @@ __email__ = "ljburtz@jaops.com"
 __status__ = "development"
 
 from typing import List, Tuple, Dict
-import numpy as np
 
 from isaacsim.core.utils.stage import open_stage, add_reference_to_stage
 import omni
@@ -179,7 +178,7 @@ class LunalabController(BaseEnv, TerrainControlMixin):
             radius (float): The radius of the projector (in meters).
         """
 
-        self._projector_lux[0].GetAttribute("radius").Get(radius)
+        self._projector_lux[0].GetAttribute("radius").Set(radius)
 
     def set_projector_color(self, color: Tuple[float, float, float] = (1.0, 1.0, 1.0)) -> None:
         """

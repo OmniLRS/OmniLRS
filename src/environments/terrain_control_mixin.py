@@ -139,4 +139,4 @@ class TerrainControlMixin:
         sinkages = np.zeros((linear_velocities.shape[0],))
         force, torque = self.TS.compute_force_and_torque(linear_velocities, angular_velocities, sinkages)
         self.robotManager.robot_RG.apply_force_torque(force, torque)
-        self.robotManager.robot_RG.apply_force_torque(force, torque)
+        self.robotManager.robot_RG.apply_force_torque(force, torque) #TODO @Louis should be called twice?
