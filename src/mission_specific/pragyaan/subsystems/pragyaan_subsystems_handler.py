@@ -17,7 +17,7 @@ from isaacsim.core.utils.prims import is_prim_path_valid
 from scipy.spatial.transform import Rotation
 
 from src.subsystems.device import CommonDevice, Device, HealthState, PowerState
-from src.mission_specific.pragyaan.subsystems.pragyaan_robot_enums import ObcState
+from src.subsystems.robot_enums import ObcState
 from src.subsystems.robot_enums import SolarPanelState
 from src.subsystems.robot_subsystems_handler import RobotSubsystemsHandler
 
