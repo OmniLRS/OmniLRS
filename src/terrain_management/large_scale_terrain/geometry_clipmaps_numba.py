@@ -6,9 +6,9 @@ __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
 __status__ = "development"
 
-import numba as nb
-import numpy as np
 import logging
+
+import numba as nb
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(format="%(asctime)s %(message)s", datefmt="%m/%d/%Y %I:%M:%S %p")

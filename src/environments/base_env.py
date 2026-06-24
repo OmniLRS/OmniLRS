@@ -8,8 +8,10 @@ __status__ = "development"
 
 import omni
 from pxr import Usd
+
 from src.configurations.simulator_mode_enum import SimulatorMode
 from src.robots.robot import RobotManager
+
 
 class BaseEnv:
     """
@@ -18,7 +20,7 @@ class BaseEnv:
 
     def __init__(
         self,
-        mode:SimulatorMode = SimulatorMode.ROS2,
+        mode: SimulatorMode = SimulatorMode.ROS2,
         **kwargs,
     ) -> None:
         """
@@ -27,11 +29,11 @@ class BaseEnv:
         Args:
             **kwargs: Arbitrary keyword arguments.
         """
-        self._mode:SimulatorMode = mode
+        self._mode: SimulatorMode = mode
         self.stage: Usd.Stage = omni.usd.get_context().get_stage()
-        self.SAM = None          # Static Assets Manager
-        self.MCM = None          # Monitoring Cameras Manager
-        self.robotManager = None # Set later via add_robot_manager()
+        self.SAM = None  # Static Assets Manager
+        self.MCM = None  # Monitoring Cameras Manager
+        self.robotManager = None  # Set later via add_robot_manager()
 
     def build_scene(self) -> None:
         """

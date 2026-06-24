@@ -10,33 +10,38 @@ __status__ = "development"
 
 import math
 import random
-from collections.abc import Mapping as MappingABC, Sequence as SequenceABC
-from dataclasses import dataclass, field
+from collections.abc import Mapping as MappingABC
+from collections.abc import Sequence as SequenceABC
+from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Dict, Mapping, Sequence, Tuple
-from src.subsystems.robot_physics_models.robot_physics_model import RobotPhysicsModel
-from src.subsystems.device import CommonDevice, Device, HealthState, PowerState
-from src.subsystems.robot_enums import SolarPanelState
 
 import numpy as np
 
+from src.subsystems.device import CommonDevice, Device, HealthState, PowerState
+from src.subsystems.robot_enums import SolarPanelState
+from src.subsystems.robot_physics_models.robot_physics_model import RobotPhysicsModel
+
+
 def _clamp(value: float, lower: float, upper: float) -> float:
-	return max(lower, min(upper, value))
+    return max(lower, min(upper, value))
+
 
 class PowerModelDefaults(float, Enum):
     DEVICE_CURRENT_NOISE = 0.02
     BATTERY_PERCENTAGE_NOISE = 0.5
     BATTERY_VOLTAGE_NOISE = 0.05
     SOLAR_INPUT_NOISE = 0.1
-    REGULATED_BUS_VOLTAGE = 5.0        # Volts
-    DC_DC_EFFICIENCY = 0.95            # 95% efficient battery -> 5V conversion
-    DEVICE_FAULT_EXTRA_POWER = 2.5     # Watts added when device is faulted
+    REGULATED_BUS_VOLTAGE = 5.0  # Volts
+    DC_DC_EFFICIENCY = 0.95  # 95% efficient battery -> 5V conversion
+    DEVICE_FAULT_EXTRA_POWER = 2.5  # Watts added when device is faulted
+
 
 @dataclass
 class PowerModel(RobotPhysicsModel):
     """Track battery charge based on solar input and device consumption.
-        To integrate this model in a simulation, see the example in run_power_profile_test() below.
-        inputs / computation / outputs are clearly separated for easy use.
+    To integrate this model in a simulation, see the example in run_power_profile_test() below.
+    inputs / computation / outputs are clearly separated for easy use.
     """
 
     PM = PowerModelDefaults
@@ -57,29 +62,37 @@ class PowerModel(RobotPhysicsModel):
         (0.9, 16.6),
         (1.0, 16.8),
     )
-	
+
     def __init__(self):
         super().__init__()
         self._solar_input_power: float = 0.0
         self._rover_yaw_deg: float = 0.0
         self._sun_direction: np.ndarray = np.array((0.0, 1.0, 0.0))
         self._battery_voltage_v: float = self.BATTERY_VOLTAGE_CURVE[-1][1]
-    
-    def initialize(self, *, battery_capacity_wh:float, battery_charge_wh:float,
-				   motor_count:int, motor_power_w:float, is_in_motor_state:bool=False,
-				   devices:dict[str,Device],
-                   solar_panel_max_power:float = None, solar_panel_state:SolarPanelState = None):
-        #NOTE should be called from within rover subsystems handler
+
+    def initialize(
+        self,
+        *,
+        battery_capacity_wh: float,
+        battery_charge_wh: float,
+        motor_count: int,
+        motor_power_w: float,
+        is_in_motor_state: bool = False,
+        devices: dict[str, Device],
+        solar_panel_max_power: float = None,
+        solar_panel_state: SolarPanelState = None,
+    ):
+        # NOTE should be called from within rover subsystems handler
         #   setup for specific rover use-case
         self._battery_capacity_wh = battery_capacity_wh
         self._battery_charge_wh = battery_charge_wh
         self._devices = devices
-        self._is_in_motor_state:bool = is_in_motor_state #NOTE rover is in motor state if its obc_state is MOTOR
+        self._is_in_motor_state: bool = is_in_motor_state  # NOTE rover is in motor state if its obc_state is MOTOR
         self._motor_count = motor_count
         self._motor_power_w = motor_power_w
         self._configure_solar_panel_existance(solar_panel_max_power, solar_panel_state)
 
-    def _configure_solar_panel_existance(self, solar_panel_max_power:float, solar_panel_state:SolarPanelState):
+    def _configure_solar_panel_existance(self, solar_panel_max_power: float, solar_panel_state: SolarPanelState):
         if solar_panel_max_power is not None:
             self._has_solar_panel = True
             self._solar_panel_max_power = solar_panel_max_power
@@ -89,10 +102,8 @@ class PowerModel(RobotPhysicsModel):
         if self._has_solar_panel and solar_panel_state is not None:
             self._solar_panel_state = solar_panel_state
         elif self._has_solar_panel and self._solar_panel_state is None:
-            raise Exception(
-                "Power model is configured to have a solar panel, but solar panel state is not defined."
-            )
-	
+            raise Exception("Power model is configured to have a solar panel, but solar panel state is not defined.")
+
     def set_inputs(self, rover_yaw_deg, is_in_motor_state, solar_panel_state=None, sun_direction=None):
         self._rover_yaw_deg = rover_yaw_deg
         self._is_in_motor_state = is_in_motor_state
@@ -111,7 +122,7 @@ class PowerModel(RobotPhysicsModel):
             self._solar_input_power = self._solar_panel_max_power * view_factor
             net_power = self._solar_input_power - self._total_load_power()
         else:
-            net_power = - self._total_load_power()
+            net_power = -self._total_load_power()
 
         self._battery_charge_wh += net_power * (dt / 3600.0)
         self._battery_charge_wh = _clamp(self._battery_charge_wh, 0.0, self._battery_capacity_wh)
@@ -134,7 +145,7 @@ class PowerModel(RobotPhysicsModel):
         }
         status["device_currents_measured"] = device_currents
 
-        if self._has_solar_panel: 
+        if self._has_solar_panel:
             status["solar_input_current_measured"] = self._measured_solar_input_current()
 
         return status
@@ -152,13 +163,13 @@ class PowerModel(RobotPhysicsModel):
     def set_solar_panel_state(self, state: SolarPanelState) -> None:
         self._solar_panel_state = state
 
-    def set_is_in_motor_state(self, is_in_motor_state:bool) -> None: #TODO fix this, no if the controller is ON, but if OBC state is MOTOR
+    def set_is_in_motor_state(
+        self, is_in_motor_state: bool
+    ) -> None:  # TODO fix this, no if the controller is ON, but if OBC state is MOTOR
         self._is_in_motor_state = is_in_motor_state
 
     def _current_panel_normal(self) -> np.ndarray:
-        base_normal = self.SOLAR_PANEL_NORMALS.get(
-            self._solar_panel_state.name, self.SOLAR_PANEL_NORMALS["DEPLOYED"]
-        )
+        base_normal = self.SOLAR_PANEL_NORMALS.get(self._solar_panel_state.name, self.SOLAR_PANEL_NORMALS["DEPLOYED"])
         yaw_rad = math.radians(self._rover_yaw_deg)
         rotation = np.array(
             [
@@ -173,7 +184,7 @@ class PowerModel(RobotPhysicsModel):
     def _device_power(self, name: str) -> float:
         device = self._devices[name]
         lo, hi = device.get_current_draw()
-		
+
         if device.get_power_state() == PowerState.OFF:
             return lo
         elif device.get_health_state() == HealthState.FAULT:
@@ -189,9 +200,7 @@ class PowerModel(RobotPhysicsModel):
 
     def _compute_view_factor(self, sun_direction: np.ndarray) -> float:
         if not self._has_solar_panel:
-            raise Exception(
-                "View factor can not be computed as solar panel is not defined for this power model."
-            )
+            raise Exception("View factor can not be computed as solar panel is not defined for this power model.")
 
         magnitude = np.linalg.norm(sun_direction)
         if magnitude == 0.0:
@@ -226,7 +235,7 @@ class PowerModel(RobotPhysicsModel):
                 return
         self._battery_voltage_v = curve[-1][1]
 
-	### Measured outputs (adds noise) ###
+    ### Measured outputs (adds noise) ###
     def _measured_battery_percentage(self) -> float:
         value = self._battery_percentage()
         return _clamp(value + random.gauss(0.0, self.PM.BATTERY_PERCENTAGE_NOISE), 0.0, 100.0)
@@ -244,8 +253,7 @@ class PowerModel(RobotPhysicsModel):
             device_power_w = self._device_power(name)
             currents[name] = device_power_w / self.PM.REGULATED_BUS_VOLTAGE
         currents = {
-            name: max(0.0, value + random.gauss(0.0, self.PM.DEVICE_CURRENT_NOISE))
-            for name, value in currents.items()
+            name: max(0.0, value + random.gauss(0.0, self.PM.DEVICE_CURRENT_NOISE)) for name, value in currents.items()
         }
         return currents
 
@@ -253,10 +261,7 @@ class PowerModel(RobotPhysicsModel):
         voltage = self._battery_voltage()
         base_current = (self._motor_power_w / voltage) if self._is_in_motor_state else 0.0
         currents = [base_current for _ in range(self._motor_count)]
-        return [
-            max(0.0, value + random.gauss(0.0, self.PM.DEVICE_CURRENT_NOISE))
-            for value in currents
-        ]
+        return [max(0.0, value + random.gauss(0.0, self.PM.DEVICE_CURRENT_NOISE)) for value in currents]
 
     def _measured_solar_input_current(self) -> float:
         if not self._has_solar_panel:
@@ -277,7 +282,6 @@ class PowerModel(RobotPhysicsModel):
 # Below: standalone functions for unit-testing of the power model.
 # They enable the model to be tested in isolation, without needing to run the entire simulation
 # ---------------------------------------------------------------------------
-
 
 
 def _extract_current_samples(status: Mapping[str, Any]) -> Dict[str, float]:
@@ -346,11 +350,13 @@ def run_power_profile_test(
 
     SUN_AZYMUTH_DEG = 65.0
     SUN_ALTITUDE_DEG = 0.5
-    SUN_DIRECTION = np.array([
-        -np.cos(np.radians(SUN_ALTITUDE_DEG)) * np.sin(np.radians(SUN_AZYMUTH_DEG)),
-        np.cos(np.radians(SUN_ALTITUDE_DEG)) * np.cos(np.radians(SUN_AZYMUTH_DEG)),
-        np.sin(np.radians(SUN_ALTITUDE_DEG)),
-    ])
+    SUN_DIRECTION = np.array(
+        [
+            -np.cos(np.radians(SUN_ALTITUDE_DEG)) * np.sin(np.radians(SUN_AZYMUTH_DEG)),
+            np.cos(np.radians(SUN_ALTITUDE_DEG)) * np.cos(np.radians(SUN_AZYMUTH_DEG)),
+            np.sin(np.radians(SUN_ALTITUDE_DEG)),
+        ]
+    )
 
     def simulate(
         duration: float,
@@ -402,18 +408,18 @@ def _plot_battery_profile(
 
     fig, (ax_top, ax_mid, ax_bottom) = plt.subplots(3, 1, figsize=(10, 10), sharex=True)
 
-    line_soc, = ax_top.plot(times, percentages, label="Battery %", color="tab:blue")
+    (line_soc,) = ax_top.plot(times, percentages, label="Battery %", color="tab:blue")
     ax_top.set_ylabel("Battery [%]", color="tab:blue")
     ax_top.set_ylim(0, 100)
     ax_top.tick_params(axis="y", labelcolor="tab:blue")
 
     ax_voltage = ax_top.twinx()
-    line_voltage, = ax_voltage.plot(times, voltages, label="Voltage", color="tab:red")
+    (line_voltage,) = ax_voltage.plot(times, voltages, label="Voltage", color="tab:red")
     ax_voltage.set_ylabel("Voltage [V]", color="tab:red")
     ax_voltage.tick_params(axis="y", labelcolor="tab:red")
     ax_top.legend([line_soc, line_voltage], ["Battery %", "Voltage"], loc="upper right")
 
-    line_solar, = ax_mid.plot(times, solar_currents, label="Solar Current", color="tab:green")
+    (line_solar,) = ax_mid.plot(times, solar_currents, label="Solar Current", color="tab:green")
     ax_mid.set_ylabel("Solar Current [A]")
     ax_mid.grid(True, alpha=0.3)
     ax_mid.legend(loc="upper right")
@@ -434,6 +440,7 @@ def _plot_battery_profile(
 
 def main() -> None:
     import os
+
     os.makedirs("test/outputs", exist_ok=True)
     times, percentages, voltages, solar_currents, current_series = run_power_profile_test()
     output = _plot_battery_profile(times, percentages, voltages, solar_currents, current_series)

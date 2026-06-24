@@ -29,9 +29,9 @@ class Coordinates:
         assert type(self.latitude) == float, "The latitude must be a float."
         assert type(self.longitude) == float, "The longitude must be a float."
         assert self.latitude >= -90.0 and self.latitude <= 90.0, "The latitude must be between -90 and 90 degrees."
-        assert (
-            self.longitude >= -180.0 and self.longitude <= 180.0
-        ), "The longitude must be between -180 and 180 degrees."
+        assert self.longitude >= -180.0 and self.longitude <= 180.0, (
+            "The longitude must be between -180 and 180 degrees."
+        )
 
 
 @dataclasses.dataclass
@@ -230,27 +230,27 @@ class LargeScaleTerrainConf:
 
         assert type(self.crater_gen_densities) == list, "crater_gen_densities must be a list."
         assert len(self.crater_gen_densities) > 0, "crater_gen_densities must have at least one element."
-        assert all(
-            [type(d) == float for d in self.crater_gen_densities]
-        ), "crater_gen_densities must be a list of floats."
-        assert all(
-            [d > 0 for d in self.crater_gen_densities]
-        ), "crater_gen_densities must be a list of positive floats."
+        assert all([type(d) == float for d in self.crater_gen_densities]), (
+            "crater_gen_densities must be a list of floats."
+        )
+        assert all([d > 0 for d in self.crater_gen_densities]), (
+            "crater_gen_densities must be a list of positive floats."
+        )
         assert type(self.crater_gen_radius) == list, "crater_gen_radius must be a list."
         assert len(self.crater_gen_radius) > 0, "crater_gen_radius must have at least one element."
         assert all(type(r) == list for r in self.crater_gen_radius), "crater_gen_radius must be a list of list."
-        assert all(
-            len(r) == 2 for r in self.crater_gen_radius
-        ), "crater_gen_radius must be a list of tuples of length 2."
-        assert all(
-            r[0] < r[1] for r in self.crater_gen_radius
-        ), "crater_gen_radius must be a list of tuples with the first element smaller than the second."
-        assert all(
-            (r[0] > 0) for r in self.crater_gen_radius
-        ), "crater_gen_radius must be a list of list with the first element greater than 0."
-        assert len(self.crater_gen_radius) == len(
-            self.crater_gen_densities
-        ), "crater_gen_radius and crater_gen_densities must have the same length."
+        assert all(len(r) == 2 for r in self.crater_gen_radius), (
+            "crater_gen_radius must be a list of tuples of length 2."
+        )
+        assert all(r[0] < r[1] for r in self.crater_gen_radius), (
+            "crater_gen_radius must be a list of tuples with the first element smaller than the second."
+        )
+        assert all((r[0] > 0) for r in self.crater_gen_radius), (
+            "crater_gen_radius must be a list of list with the first element greater than 0."
+        )
+        assert len(self.crater_gen_radius) == len(self.crater_gen_densities), (
+            "crater_gen_radius and crater_gen_densities must have the same length."
+        )
         assert type(self.crater_gen_profiles_path) == str, "crater_gen_profiles_path must be a string."
         assert os.path.exists(self.crater_gen_profiles_path), "crater_gen_profiles_path does not exist."
         assert type(self.crater_gen_padding) == float, "crater_gen_padding must be a float."
@@ -259,16 +259,16 @@ class LargeScaleTerrainConf:
         assert type(self.crater_gen_max_xy_ratio) == float, "crater_gen_max_xy_ratio must be a float."
         assert self.crater_gen_min_xy_ratio > 0, "crater_gen_min_xy_ratio must be a positive float."
         assert self.crater_gen_max_xy_ratio <= 1, "crater_gen_max_xy_ratio must be smaller or equal to 1."
-        assert (
-            self.crater_gen_max_xy_ratio > self.crater_gen_min_xy_ratio
-        ), "crater_gen_max_xy_ratio must be greater than crater_gen_min_xy_ratio."
+        assert self.crater_gen_max_xy_ratio > self.crater_gen_min_xy_ratio, (
+            "crater_gen_max_xy_ratio must be greater than crater_gen_min_xy_ratio."
+        )
         assert type(self.crater_gen_random_rotation) == bool, "crater_gen_random_rotation must be a boolean."
-        assert (
-            type(self.crater_gen_num_unique_profiles) == int
-        ), "crater_gen_rater_gen_num_unique_profiles must be an integer."
-        assert (
-            self.crater_gen_num_unique_profiles > 0
-        ), "crater_gen_rater_gen_num_unique_profiles must be a positive integer."
+        assert type(self.crater_gen_num_unique_profiles) == int, (
+            "crater_gen_rater_gen_num_unique_profiles must be an integer."
+        )
+        assert self.crater_gen_num_unique_profiles > 0, (
+            "crater_gen_rater_gen_num_unique_profiles must be a positive integer."
+        )
 
         if self.crater_gen_metadata_seed is None:
             self.crater_gen_metadata_seed = self.seed + 2
@@ -374,9 +374,9 @@ class LargeScaleTerrainConf:
             "bilinear",
             "bicubic",
         ], "geo_cm_fine_interpolation_method must be either 'bilinear' or 'bicubic'."
-        assert (
-            type(self.geo_cm_coarse_interpolation_method) == str
-        ), "geo_cm_coarse_interpolation_method must be a string."
+        assert type(self.geo_cm_coarse_interpolation_method) == str, (
+            "geo_cm_coarse_interpolation_method must be a string."
+        )
         assert self.geo_cm_coarse_interpolation_method in [
             "bilinear",
             "bicubic",
@@ -411,15 +411,15 @@ class LargeScaleTerrainConf:
         assert type(self.terrain_collider_mode) == str, "terrain_collider_mode must be a string."
         assert type(self.terrain_collider_cache_size) == int, "terrain_collider_cache_size must be an integer."
         assert self.terrain_collider_cache_size >= 4, "terrain_collider_cache_size must be greater or equal to 4."
-        assert (
-            type(self.terrain_collider_building_threshold) == float
-        ), "terrain_colliders_building_threshold must be a float."
-        assert (
-            self.terrain_collider_building_threshold > 0
-        ), "terrain_colliders_building_threshold must be a positive float."
-        assert (
-            self.terrain_collider_building_threshold < self.block_size
-        ), "terrain_colliders_building_threshold must be smaller than block_size."
+        assert type(self.terrain_collider_building_threshold) == float, (
+            "terrain_colliders_building_threshold must be a float."
+        )
+        assert self.terrain_collider_building_threshold > 0, (
+            "terrain_colliders_building_threshold must be a positive float."
+        )
+        assert self.terrain_collider_building_threshold < self.block_size, (
+            "terrain_colliders_building_threshold must be smaller than block_size."
+        )
 
         CBConf_D = {
             "resolution": self.terrain_collider_resolution,

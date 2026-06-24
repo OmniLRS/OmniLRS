@@ -6,8 +6,8 @@ __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
 __status__ = "development"
 
-from typing import Tuple
 import dataclasses
+from typing import Tuple
 
 
 @dataclasses.dataclass

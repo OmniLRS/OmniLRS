@@ -7,7 +7,6 @@ __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
 
 import math
-import omni.kit.app
 
 from src.robots.robot import Robot
 from src.subsystems.device import CommonDevice, PowerState
@@ -81,9 +80,7 @@ class HuskyTransmitter:
 
     def transmit_radio_signal_info(self):
         robot_position, _ = self._robot_RG.get_pose_of_base_link()
-        radio_status = self._robot.subsystems.get_radio_model_outputs(
-            robot_position
-        )
+        radio_status = self._robot.subsystems.get_radio_model_outputs(robot_position)
         self._transmit(
             self._parameters_conf["rssi"],
             int(radio_status["rssi"]),
@@ -92,9 +89,7 @@ class HuskyTransmitter:
     def transmit_thermal_info(self, interval_s):
         _, _, imu_orientation = self._robot.get_imu_readings()
         robot_yaw_deg = imu_orientation["yaw"]
-        temperatures = self._robot.subsystems.get_thermal_model_outputs(
-            robot_yaw_deg, interval_s
-        )
+        temperatures = self._robot.subsystems.get_thermal_model_outputs(robot_yaw_deg, interval_s)
         self._transmit(self._parameters_conf["temperature_front"], temperatures["+X"])
         self._transmit(self._parameters_conf["temperature_back"], temperatures["-X"])
         self._transmit(self._parameters_conf["temperature_left"], temperatures["+Y"])
@@ -106,17 +101,26 @@ class HuskyTransmitter:
         _, _, imu_orientation = self._robot.get_imu_readings()
         robot_yaw_deg = imu_orientation["yaw"]
         obc_state = self._robot.subsystems.get_obc_state()
-        power_status = self._robot.subsystems.get_power_model_outputs(
-            robot_yaw_deg, interval_s, obc_state
-        )
+        power_status = self._robot.subsystems.get_power_model_outputs(robot_yaw_deg, interval_s, obc_state)
         self._transmit(self._parameters_conf["battery_charge"], int(power_status["battery_percentage_measured"]))
         self._transmit(self._parameters_conf["battery_voltage"], power_status["battery_voltage_measured"])
         self._transmit(self._parameters_conf["total_current_out"], power_status["total_current_out_measured"])
-        self._transmit(self._parameters_conf["current_draw_obc"], power_status["device_currents_measured"][CommonDevice.OBC])
-        self._transmit(self._parameters_conf["current_draw_motor_controller"], power_status["device_currents_measured"][CommonDevice.MOTOR_CONTROLLER])
-        self._transmit(self._parameters_conf["current_draw_camera"], power_status["device_currents_measured"][CommonDevice.CAMERA])
-        self._transmit(self._parameters_conf["current_draw_radio"], power_status["device_currents_measured"][CommonDevice.RADIO])
-        self._transmit(self._parameters_conf["current_draw_eps"], power_status["device_currents_measured"][CommonDevice.EPS])
+        self._transmit(
+            self._parameters_conf["current_draw_obc"], power_status["device_currents_measured"][CommonDevice.OBC]
+        )
+        self._transmit(
+            self._parameters_conf["current_draw_motor_controller"],
+            power_status["device_currents_measured"][CommonDevice.MOTOR_CONTROLLER],
+        )
+        self._transmit(
+            self._parameters_conf["current_draw_camera"], power_status["device_currents_measured"][CommonDevice.CAMERA]
+        )
+        self._transmit(
+            self._parameters_conf["current_draw_radio"], power_status["device_currents_measured"][CommonDevice.RADIO]
+        )
+        self._transmit(
+            self._parameters_conf["current_draw_eps"], power_status["device_currents_measured"][CommonDevice.EPS]
+        )
         self._transmit(self._parameters_conf["motor_current"], power_status["motor_currents_measured"])
 
     def transmit_wheels_joint_angles(self):

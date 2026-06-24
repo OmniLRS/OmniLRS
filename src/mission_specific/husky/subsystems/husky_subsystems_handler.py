@@ -11,25 +11,25 @@ from isaacsim.core.utils.prims import is_prim_path_valid
 from isaacsim.core.utils.xforms import get_world_pose
 from scipy.spatial.transform import Rotation
 
+from src.mission_specific.husky.subsystems.husky_power_model import (
+    HuskyPowerModel,
+)
 from src.subsystems.device import CommonDevice, Device, PowerState
+from src.subsystems.robot_enums import ObcState
 from src.subsystems.robot_physics_models.obc_metrics_model import (
     ObcMetricsModel,
 )
 from src.subsystems.robot_physics_models.radio_model import RadioModel
 from src.subsystems.robot_physics_models.thermal_model import ThermalModel
 from src.subsystems.robot_subsystems_handler import RobotSubsystemsHandler
-from src.mission_specific.husky.subsystems.husky_power_model import (
-    HuskyPowerModel,
-)
-from src.subsystems.robot_enums import ObcState
 
 
 class HuskySubsystemsHandler(RobotSubsystemsHandler):
     BASE_STATION_POSITION = (0.0, 0.0, 0.0)
 
-    BATTERY_CAPACITY_WH = 389.0   # Wh  (Husky uses 24 V / 16.2 Ah ≈ 389 Wh)
+    BATTERY_CAPACITY_WH = 389.0  # Wh  (Husky uses 24 V / 16.2 Ah ≈ 389 Wh)
     MOTOR_COUNT = 4
-    MOTOR_POWER_W = 50.0          # W per motor (rough estimate)
+    MOTOR_POWER_W = 50.0  # W per motor (rough estimate)
 
     def __init__(self, pos_relative_to_prim: str = ""):
         thermal_model = ThermalModel()
@@ -108,15 +108,14 @@ class HuskySubsystemsHandler(RobotSubsystemsHandler):
         if self._sun_prim_path is not None:
             _, quat_wxyz = get_world_pose(self._sun_prim_path)
             w, x, y, z = quat_wxyz
-            self._sun_direction = Rotation.from_quat([x, y, z, w]).apply(
-                [-1.0, 0.0, 0.0]
-            )
+            self._sun_direction = Rotation.from_quat([x, y, z, w]).apply([-1.0, 0.0, 0.0])
 
     @staticmethod
     def _update_sun_direction_before(func):
         def wrapper(self, *args, **kwargs):
             self._update_sun_direction()
             return func(self, *args, **kwargs)
+
         return wrapper
 
     def get_obc_model_outputs(self):

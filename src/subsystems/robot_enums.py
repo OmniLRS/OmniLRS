@@ -18,6 +18,7 @@ class GoNogoState(IntEnum):
     GO = 1
     # UNDEF = -1
 
+
 class ObcState(IntEnum):
     OFF = 0
     BOOT = 1
@@ -26,6 +27,7 @@ class ObcState(IntEnum):
     MOTOR = 4
     SAFE = 5
     ERROR = 6
+
 
 class SolarPanelState(IntEnum):
     STOWED = 0

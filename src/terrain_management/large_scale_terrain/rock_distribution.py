@@ -6,18 +6,19 @@ __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
 __status__ = "development"
 
-from matplotlib import pyplot as plt
-from typing import List, Tuple
-import dataclasses
-import numpy as np
 import colorsys
+import dataclasses
+from typing import List, Tuple
 
+import numpy as np
+from matplotlib import pyplot as plt
+
+from src.terrain_management.large_scale_terrain.rock_database import RockDB
 from src.terrain_management.large_scale_terrain.utils import (
     BoundingBox,
     RockBlockData,
     ScopedTimer,
 )
-from src.terrain_management.large_scale_terrain.rock_database import RockDB
 
 # TODO (antoine.richard / JAOPS): The current implementation can be extremely costly in terms of memory.
 # For small rocks, whose density can be very high, the memory footprint will be very large.
@@ -763,7 +764,7 @@ class RockSampler:
             coordinates (Tuple[float,float]): coordinates of the block.
         """
 
-        fig = plt.figure(figsize=(10, 10), dpi=300)
+        plt.figure(figsize=(10, 10), dpi=300)
         if self.rock_db.check_block_exists(coordinates):
             block = self.rock_db.get_block_data(coordinates)
             coordinates = self.rock_dist_gen.get_xy_coordinates_from_block(block)
@@ -778,7 +779,7 @@ class RockSampler:
             coords (List[Tuple[float,float]]): list of coordinates of the blocks.
         """
 
-        fig = plt.figure(figsize=(10, 10), dpi=300)
+        plt.figure(figsize=(10, 10), dpi=300)
         blocks = [self.rock_db.get_block_data(coord) for coord in coords]
 
         color_interp = np.linspace(0, 1, len(blocks), endpoint=False)
@@ -796,7 +797,7 @@ class RockSampler:
             region (BoundingBox): region to display.
         """
 
-        fig = plt.figure(figsize=(10, 10), dpi=300)
+        plt.figure(figsize=(10, 10), dpi=300)
         blocks, _, _ = self.rock_db.get_blocks_within_region(region)
 
         color_interp = np.linspace(0, 1, len(blocks), endpoint=False)

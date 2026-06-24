@@ -8,7 +8,7 @@ __status__ = "development"
 
 import os
 from dataclasses import dataclass, field
-from typing import List, Dict
+from typing import Dict, List
 
 
 @dataclass
@@ -37,11 +37,14 @@ class RobotParameters:
         self.usd_path = os.path.join(os.getcwd(), self.usd_path)
         self.pose = Pose(**self.pose)
 
+
 @dataclass
 class RobotManagerConf:
     robots_root: str = "/Robots"
     parameters: RobotParameters = None
-    yamcs_tmtc: Dict = field(default_factory=dict) #TODO for v4: separate yamcs_tmtc and robot_controller into separate dataclass (and don't merge with environment configs)
+    yamcs_tmtc: Dict = field(
+        default_factory=dict
+    )  # TODO for v4: separate yamcs_tmtc and robot_controller into separate dataclass (and don't merge with environment configs)
     robot_controller: str = field(default_factory=str)
 
     def __post_init__(self):

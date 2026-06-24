@@ -8,7 +8,6 @@ __status__ = "development"
 
 import logging
 import time
-from typing import Union
 
 import omni
 from isaacsim import SimulationApp

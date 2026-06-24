@@ -6,18 +6,19 @@ __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
 __status__ = "development"
 
-import multiprocessing.managers
-from typing import List, Tuple, Dict
-import multiprocessing
-import numpy as np
-import dataclasses
-import threading
-import logging
-import signal
-import time
 import copy
-import PIL
+import dataclasses
+import logging
+import multiprocessing
+import multiprocessing.managers
+import signal
+import threading
+import time
+from typing import Dict, List, Tuple
+
 import cv2
+import numpy as np
+import PIL
 
 from src.terrain_management.large_scale_terrain.crater_generation import (
     CraterBuilder,
@@ -560,7 +561,7 @@ class BaseWorkerManager:
         # Try except to avoid multiple calls to shutdown
         try:
             self.shutdown()
-        except Exception as e:
+        except Exception:
             pass
 
 
@@ -606,9 +607,9 @@ class CraterBuilderWorker(BaseWorker):
                     try:
                         self.output_queue.put(out, timeout=0.1)
                         data_not_in_queue = False
-                    except Exception as e:
+                    except Exception:
                         pass
-            except Exception as e:
+            except Exception:
                 pass
         logger.debug("Crater Builder Worker exited processing loop.")
 
@@ -706,9 +707,9 @@ class BicubicInterpolatorWorker(BaseWorker):
                     try:
                         self.output_queue.put(out, timeout=0.1)
                         data_not_in_queue = False
-                    except Exception as e:
+                    except Exception:
                         pass
-            except Exception as e:
+            except Exception:
                 pass
         logger.debug("Bicubic Interpolator Worker exited processing loop.")
 

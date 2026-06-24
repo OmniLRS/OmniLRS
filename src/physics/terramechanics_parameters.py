@@ -6,9 +6,8 @@ __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
 __status__ = "development"
 
-from dataclasses import dataclass
 import math
-import numpy as np
+from dataclasses import dataclass
 
 
 @dataclass

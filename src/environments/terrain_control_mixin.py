@@ -6,15 +6,16 @@ __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
 __status__ = "development"
 
-from typing import Dict, TYPE_CHECKING
+from typing import Dict
 
 import numpy as np
+
 from src.configurations.procedural_terrain_confs import TerrainManagerConf
 from src.environments.rock_manager import RockManager
 from src.physics.terramechanics_parameters import RobotParameter, TerrainMechanicalParameter
 from src.physics.terramechanics_solver import TerramechanicsSolver
-from src.terrain_management.terrain_manager import TerrainManager
 from src.robots.robot import RobotManager
+from src.terrain_management.terrain_manager import TerrainManager
 
 
 class TerrainControlMixin:
@@ -31,12 +32,12 @@ class TerrainControlMixin:
     override the corresponding method in the host class.
     """
 
-    robotManager: "RobotManager" # Provided by BaseEnv via ``add_robot_manager``; type hint for static analysis
+    robotManager: "RobotManager"  # Provided by BaseEnv via ``add_robot_manager``; type hint for static analysis
 
     def init_terrain_control(
         self,
-        terrain_manager:TerrainManagerConf=None,
-        rocks_settings:Dict=None,
+        terrain_manager: TerrainManagerConf = None,
+        rocks_settings: Dict = None,
     ) -> None:
         """
         Args:
@@ -44,7 +45,7 @@ class TerrainControlMixin:
             rocks_settings (Dict): The settings of the rocks.
         """
 
-        self.dem = None   # Digital Elevation Model
+        self.dem = None  # Digital Elevation Model
         self.mask = None  # Mask for the terrain, used for the rocks placement and deformation
         self.T = TerrainManager(terrain_manager)
         self.RM = RockManager(**rocks_settings)

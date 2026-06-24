@@ -6,12 +6,13 @@ __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
 __status__ = "development"
 
+import os
+
 import numpy as np
 import omni
-import os
 from isaacsim.core.utils.prims import delete_prim
 from isaacsim.core.utils.semantics import add_update_semantics
-from pxr import UsdGeom, Gf
+from pxr import Gf, UsdGeom
 from WorldBuilders.pxr_utils import createObject, createXform
 
 

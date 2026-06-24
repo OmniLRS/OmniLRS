@@ -6,9 +6,9 @@ __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
 __status__ = "development"
 
-from src.configurations.physics_confs import PhysicsSceneConf
-
 from isaacsim.core.api.physics_context.physics_context import PhysicsContext
+
+from src.configurations.physics_confs import PhysicsSceneConf
 
 
 class PhysicsSceneManager:

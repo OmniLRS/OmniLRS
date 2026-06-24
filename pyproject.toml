@@ -10,7 +10,6 @@ authors = [
 ]
 
 dependencies = [
-    "black>=22.0.0",
     "skyfield",
     "zfpy",
     "warp-lang",
@@ -22,8 +21,16 @@ dependencies = [
     "opencv-python",
 ]
 
-[tool.black]
+[tool.ruff]
 line-length = 120
+target-version = "py311"
+# WorldBuilders is a vendored git submodule — don't lint/format third-party code.
+extend-exclude = ["WorldBuilders"]
+
+[tool.ruff.lint]
+# Start minimal: Pyflakes (real bugs / dead code) + import sorting (I).
+# Expand to the pycodestyle `E` rules in follow-up PRs once the baseline is green.
+select = ["F", "I"]
 
 [build-system]
 requires = ["setuptools>=42", "wheel"]

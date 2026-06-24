@@ -6,7 +6,7 @@ Quick usage:
 
     Generate preview PNGs for all DEMs under assets/Terrains/SouthPole, saving preview.png next to each dem.npy.
     python scripts/generate_dem_previews.py
-        
+
     Generate a mosaic preview of all DEMs under assets/Terrains/SouthPole, saving to preview_mosaic.png:
     python scripts/generate_dem_previews.py \
         --mode mosaic \
@@ -240,7 +240,9 @@ def _extract_metadata_values(metadata: dict[str, Any] | None) -> dict[str, str]:
     return values
 
 
-def _prepare_dem_preview_data(dem_path: Path, size: int) -> tuple[np.ndarray, np.ndarray, np.ndarray, float, float, dict[str, Any] | None]:
+def _prepare_dem_preview_data(
+    dem_path: Path, size: int
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, float, float, dict[str, Any] | None]:
     dem = np.load(dem_path, mmap_mode="r")
     if dem.ndim != 2:
         raise ValueError(f"Expected 2D DEM array, got shape {dem.shape}")
@@ -497,7 +499,6 @@ def main() -> int:
 
     for dem_path in dem_paths:
         output_path = dem_path.parent / args.output_name
-
 
         try:
             render_dem_preview(dem_path, output_path, args.size)

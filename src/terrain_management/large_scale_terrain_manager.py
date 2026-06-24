@@ -6,29 +6,28 @@ __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
 __status__ = "development"
 
-from typing import Tuple
-import dataclasses
-import numpy as np
-import math
 import copy
+import math
+from typing import Tuple
+
+import numpy as np
 
 from src.configurations.environments import LargeScaleTerrainConf
-
-from src.terrain_management.large_scale_terrain.nested_geometry_clipmaps_manager import (
-    NestedGeometryClipmapManagerConf,
-    NestedGeometryClipmapManager,
-)
 from src.terrain_management.large_scale_terrain.collider_manager import (
-    ColliderManagerConf,
     ColliderManager,
-)
-from src.terrain_management.large_scale_terrain.rock_manager import (
-    RockManagerConf,
-    RockManager,
+    ColliderManagerConf,
 )
 from src.terrain_management.large_scale_terrain.map_manager import (
-    MapManagerConf,
     MapManager,
+    MapManagerConf,
+)
+from src.terrain_management.large_scale_terrain.nested_geometry_clipmaps_manager import (
+    NestedGeometryClipmapManager,
+    NestedGeometryClipmapManagerConf,
+)
+from src.terrain_management.large_scale_terrain.rock_manager import (
+    RockManager,
+    RockManagerConf,
 )
 
 
@@ -202,10 +201,6 @@ class LargeScaleTerrainManager:
             global_corrected_coordinates = (
                 corrected_coordinates[0] + self.settings.starting_position[0],
                 corrected_coordinates[1] + self.settings.starting_position[1],
-            )
-            global_coordinates = (
-                local_coordinates[0] + self.settings.starting_position[0],
-                local_coordinates[1] + self.settings.starting_position[1],
             )
             # print("initial_coordinates", self.initial_coordinates)
             # print("global_coordinates", global_coordinates)

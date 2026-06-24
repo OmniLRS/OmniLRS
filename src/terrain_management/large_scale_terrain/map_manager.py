@@ -6,22 +6,21 @@ __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
 __status__ = "development"
 
-from typing import Tuple
 import dataclasses
-import numpy as np
 import logging
 import math
-import yaml
-import time
 import os
+import time
+from typing import Tuple
+
+import numpy as np
+import yaml
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(format="%(asctime)s %(message)s", datefmt="%m/%d/%Y %I:%M:%S %p")
 
 from src.terrain_management.large_scale_terrain.high_resolution_DEM_generator import (
     HighResDEMGen,
-)
-from src.terrain_management.large_scale_terrain.high_resolution_DEM_generator import (
     HighResDEMGenConf,
 )
 
@@ -342,12 +341,6 @@ class MapManager:
             Tuple[float, float]: coordinates of the high resolution DEM center's block top left corner.
         """
 
-        height = self.lr_dem_info.size[0] * self.lr_dem_info.pixel_size[0]
-        width = self.lr_dem_info.size[1] * abs(self.lr_dem_info.pixel_size[1])
-
-        top = height / 2 - self.settings.hrdem_settings.high_res_dem_cfg.block_size / 2
-        left = width / 2 - self.settings.hrdem_settings.high_res_dem_cfg.block_size / 2
-
         return self.hr_dem_gen.get_center_top_left()
 
     def update_hr_dem(self, coordinates: Tuple[float, float]) -> bool:
@@ -434,7 +427,6 @@ if __name__ == "__main__":
         "resolution": 0.05,
         "z_scale": 1.0,
         "source_resolution": 5.0,
-        "resolution": 0.05,
         "interpolation_padding": 2,
         "generate_craters": True,
     }

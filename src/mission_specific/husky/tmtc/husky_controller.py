@@ -6,7 +6,6 @@ __status__ = "development"
 __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
 
-import omni.kit.app
 
 from src.mission_specific.husky.tmtc.camera_handler import HuskyCameraHandler
 from src.mission_specific.husky.tmtc.husky_commander import HuskyCommander

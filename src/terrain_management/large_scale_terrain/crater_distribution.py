@@ -6,20 +6,21 @@ __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
 __status__ = "development"
 
-from scipy.interpolate import CubicSpline
-from matplotlib import pyplot as plt
-from typing import List, Tuple
-import dataclasses
-import numpy as np
 import colorsys
+import dataclasses
 import logging
 import pickle
+from typing import List, Tuple
+
+import numpy as np
+from matplotlib import pyplot as plt
+from scipy.interpolate import CubicSpline
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(format="%(asctime)s %(message)s", datefmt="%m/%d/%Y %I:%M:%S %p")
 
-from src.terrain_management.large_scale_terrain.utils import BoundingBox, CraterMetadata
 from src.terrain_management.large_scale_terrain.crater_database import CraterDB
+from src.terrain_management.large_scale_terrain.utils import BoundingBox, CraterMetadata
 
 
 @dataclasses.dataclass
@@ -706,7 +707,7 @@ class CraterSampler:
         Args:
             coordinates (Tuple[float,float]): coordinates of the block.
         """
-        fig = plt.figure(figsize=(10, 10), dpi=300)
+        plt.figure(figsize=(10, 10), dpi=300)
         if self.crater_db.check_block_exists(coordinates):
             block = self.crater_db.get_block_data(coordinates)
             coordinates, radius = self.crater_metadata_gen.castMetadata(block)
@@ -721,7 +722,7 @@ class CraterSampler:
         Args:
             coords (List[Tuple[float,float]]): list of coordinates of the blocks.
         """
-        fig = plt.figure(figsize=(10, 10), dpi=300)
+        plt.figure(figsize=(10, 10), dpi=300)
         blocks = [self.crater_db.get_block_data(coord) for coord in coords]
 
         color_interp = np.linspace(0, 1, len(blocks), endpoint=False)
@@ -741,7 +742,7 @@ class CraterSampler:
             region (BoundingBox): region to display.
         """
 
-        fig = plt.figure(figsize=(10, 10), dpi=300)
+        plt.figure(figsize=(10, 10), dpi=300)
         blocks, _, _ = self.crater_db.get_blocks_within_region(region)
         coordinates, radius = self.crater_metadata_gen.castMetadata(blocks)
         blocks, block_coordinates = self.dissect_region_blocks((coordinates, radius), region)

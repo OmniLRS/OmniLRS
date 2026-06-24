@@ -7,8 +7,10 @@ __email__ = "ljburtz@jaops.com"
 __status__ = "development"
 
 from enum import Enum
-import omni.timeline
+
 import omni.kit.app
+import omni.timeline
+
 
 class IntervalName(Enum):
     # use for intervals that are repeatedly created or removed
@@ -18,13 +20,16 @@ class IntervalName(Enum):
     CONTROLLED_DRIVE = "controlled_drive"
     NEUTRON_COUNT = "neutron_count"
 
+
 class IntervalsHandler:
     def __init__(self):
         self._intervals = {}
         self._timeline = omni.timeline.get_timeline_interface()
         self._update_stream = omni.kit.app.get_app().get_update_event_stream()
 
-    def add_new_interval(self, *, name: str, seconds: int, is_repeating: bool, execute_immediately: bool, function, f_args=()):
+    def add_new_interval(
+        self, *, name: str, seconds: int, is_repeating: bool, execute_immediately: bool, function, f_args=()
+    ):
         if name in self._intervals:
             raise ValueError(f"Interval '{name}' already exists")
 
@@ -53,13 +58,15 @@ class IntervalsHandler:
                 self._intervals.pop(_name, None)
 
         interval["sub"] = self._update_stream.create_subscription_to_pop(
-                callback,
-                name= name + "_callback", 
-            )
+            callback,
+            name=name + "_callback",
+        )
 
         self._intervals[name] = interval
 
-        if interval["execute_immediately"]: # makes sense for repeating intervals, as not to have to wait for the first interval to pass before executing func
+        if interval[
+            "execute_immediately"
+        ]:  # makes sense for repeating intervals, as not to have to wait for the first interval to pass before executing func
             interval["func"](*interval["args"])
 
     def update_next_time(self, interval_name, new_interval_time=None):
@@ -76,11 +83,11 @@ class IntervalsHandler:
 
     def does_exist(self, interval_name):
         return interval_name in self._intervals
-    
+
     def remove_interval(self, interval_name):
         if interval_name not in self._intervals:
             return
-        
+
         interval = self._intervals[interval_name]
 
         if interval["sub"] is not None:

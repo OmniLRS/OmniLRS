@@ -6,13 +6,12 @@ __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
 __status__ = "development"
 
-from typing import Tuple, List
 import dataclasses
-import numpy as np
+from typing import List, Tuple
+
 import cv2
-
+import numpy as np
 import omni
-
 
 from src.terrain_management.large_scale_terrain.collider_builder import ColliderBuilder, ColliderBuilderConf
 from src.terrain_management.large_scale_terrain.utils import ScopedTimer
@@ -40,9 +39,9 @@ class ColliderManagerConf:
 
     def __post_init__(self):
         assert self.build_colliders_n_meters_ahead > 0, "build_colliders_n_meters_ahead must be greater than 0"
-        assert (
-            self.build_colliders_n_meters_ahead < self.block_size
-        ), "build_colliders_n_meters_ahead must be smaller than block_size"
+        assert self.build_colliders_n_meters_ahead < self.block_size, (
+            "build_colliders_n_meters_ahead must be smaller than block_size"
+        )
         assert self.cache_size >= 4, "collider_cache_size must be greater or equal to 4"
 
         self.collider_builder_conf = ColliderBuilderConf(**self.collider_builder_conf)

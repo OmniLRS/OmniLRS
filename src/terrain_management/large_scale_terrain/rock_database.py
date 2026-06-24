@@ -6,15 +6,16 @@ __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
 __status__ = "development"
 
-from typing import Tuple, List
-import numpy as np
 import dataclasses
 import sys
+from typing import List, Tuple
+
+import numpy as np
 
 from src.terrain_management.large_scale_terrain.utils import (
     BoundingBox,
-    RockBlockData,
     CompressedRockBlockData,
+    RockBlockData,
 )
 
 
@@ -58,12 +59,12 @@ class RockDB:
             block_coordinates (Tuple[float, float]): coordinates of the block.
         """
 
-        assert (
-            block_coordinates[0] % self.rock_db_config.block_size == 0
-        ), "Block x-coordinate must be a multiple of the block size."
-        assert (
-            block_coordinates[1] % self.rock_db_config.block_size == 0
-        ), "Block y-coordinate must be a multiple of the block size."
+        assert block_coordinates[0] % self.rock_db_config.block_size == 0, (
+            "Block x-coordinate must be a multiple of the block size."
+        )
+        assert block_coordinates[1] % self.rock_db_config.block_size == 0, (
+            "Block y-coordinate must be a multiple of the block size."
+        )
 
         self.rock_db[block_coordinates] = block_data.compress()
 
@@ -82,12 +83,12 @@ class RockDB:
             AssertionError: if the block coordinates are not valid.
         """
 
-        assert (
-            block_coordinates[0] % self.rock_db_config.block_size == 0
-        ), "Block x-coordinate must be a multiple of the block size."
-        assert (
-            block_coordinates[1] % self.rock_db_config.block_size == 0
-        ), "Block y-coordinate must be a multiple of the block size."
+        assert block_coordinates[0] % self.rock_db_config.block_size == 0, (
+            "Block x-coordinate must be a multiple of the block size."
+        )
+        assert block_coordinates[1] % self.rock_db_config.block_size == 0, (
+            "Block y-coordinate must be a multiple of the block size."
+        )
         return True
 
     def get_block_data(self, block_coordinates: Tuple[float, float]) -> RockBlockData:
@@ -277,8 +278,6 @@ class RockDB:
         y_min = region.y_min - y_min_rem - self.rock_db_config.block_size
         x_max = region.x_max - x_max_rem + self.rock_db_config.block_size
         y_max = region.y_max - y_max_rem + self.rock_db_config.block_size
-
-        new_region = BoundingBox(x_min, x_max, y_min, y_max)
 
         occupied_block_matrix = np.zeros(
             (

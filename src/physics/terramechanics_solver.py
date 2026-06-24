@@ -7,7 +7,6 @@ __email__ = "ljburtz@jaops.com"
 __status__ = "development"
 
 import numpy as np
-import torch
 import scipy.integrate as integ
 
 from src.physics.terramechanics_parameters import RobotParameter, TerrainMechanicalParameter

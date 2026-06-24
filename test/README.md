@@ -1,6 +1,6 @@
 # Model Unit Tests
 
-Standalone tests for the physics models (power, thermal, radio).  
+Standalone tests for the physics models (power, thermal, radio).
 They exercise each model in isolation and produce diagnostic plots.
 
 ## Setup

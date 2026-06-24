@@ -6,34 +6,35 @@ __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
 __status__ = "development"
 
-from typing import List, Tuple, Dict
-import numpy as np
-import dataclasses
-import threading
-import logging
-import time
 import copy
+import dataclasses
+import logging
 import sys
+import threading
+import time
+from typing import List, Tuple
 
-from src.terrain_management.large_scale_terrain.utils import ScopedTimer, BoundingBox, CraterMetadata
-from src.terrain_management.large_scale_terrain.crater_generation import (
-    CraterBuilder,
-    CraterDB,
-    CraterBuilderConf,
-    CraterDBConf,
-)
+import numpy as np
+
 from src.terrain_management.large_scale_terrain.crater_distribution import (
     CraterSampler,
     CraterSamplerConf,
 )
-from src.terrain_management.large_scale_terrain.high_resolution_DEM_workers import (
-    CraterBuilderManager,
-    BicubicInterpolatorManager,
-    WorkerManagerConf,
-    InterpolatorConf,
-    CPUInterpolator_PIL,
-    ThreadMonitor,
+from src.terrain_management.large_scale_terrain.crater_generation import (
+    CraterBuilder,
+    CraterBuilderConf,
+    CraterDB,
+    CraterDBConf,
 )
+from src.terrain_management.large_scale_terrain.high_resolution_DEM_workers import (
+    BicubicInterpolatorManager,
+    CPUInterpolator_PIL,
+    CraterBuilderManager,
+    InterpolatorConf,
+    ThreadMonitor,
+    WorkerManagerConf,
+)
+from src.terrain_management.large_scale_terrain.utils import BoundingBox, ScopedTimer
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(format="%(asctime)s %(message)s", datefmt="%m/%d/%Y %I:%M:%S %p")
@@ -711,12 +712,10 @@ class HighResDEMGen:
             int(coordinates[1] / self.settings.source_resolution + self.lr_dem_px_offset[1]),
         )
         return self.low_res_dem[
-            lr_dem_coordinates[0]
-            - self.settings.interpolation_padding : lr_dem_coordinates[0]
+            lr_dem_coordinates[0] - self.settings.interpolation_padding : lr_dem_coordinates[0]
             + self.lr_dem_block_size
             + self.settings.interpolation_padding,
-            lr_dem_coordinates[1]
-            - self.settings.interpolation_padding : lr_dem_coordinates[1]
+            lr_dem_coordinates[1] - self.settings.interpolation_padding : lr_dem_coordinates[1]
             + self.lr_dem_block_size
             + self.settings.interpolation_padding,
         ]
@@ -791,11 +790,13 @@ class HighResDEMGen:
             x_c, y_c = self.map_grid_block2coords[(x_i, y_i)]
             local_coords = (x_c, y_c)
             self.high_res_dem[
-                int(x_c / self.settings.resolution)
-                + offset : int((x_c + self.settings.block_size) / self.settings.resolution)
+                int(x_c / self.settings.resolution) + offset : int(
+                    (x_c + self.settings.block_size) / self.settings.resolution
+                )
                 + offset,
-                int(y_c / self.settings.resolution)
-                + offset : int((y_c + self.settings.block_size) / self.settings.resolution)
+                int(y_c / self.settings.resolution) + offset : int(
+                    (y_c + self.settings.block_size) / self.settings.resolution
+                )
                 + offset,
             ] += data
             self.block_grid_tracker[local_coords]["has_crater_data"] = True
@@ -807,11 +808,13 @@ class HighResDEMGen:
             x_c, y_c = self.map_grid_block2coords[(x_i, y_i)]
             local_coords = (x_c, y_c)
             self.high_res_dem[
-                int(x_c / self.settings.resolution)
-                + offset : int((x_c + self.settings.block_size) / self.settings.resolution)
+                int(x_c / self.settings.resolution) + offset : int(
+                    (x_c + self.settings.block_size) / self.settings.resolution
+                )
                 + offset,
-                int(y_c / self.settings.resolution)
-                + offset : int((y_c + self.settings.block_size) / self.settings.resolution)
+                int(y_c / self.settings.resolution) + offset : int(
+                    (y_c + self.settings.block_size) / self.settings.resolution
+                )
                 + offset,
             ] += data
             self.block_grid_tracker[local_coords]["has_terrain_data"] = True
@@ -835,7 +838,7 @@ class HighResDEMGen:
         # Try except to avoid errors when the shutdown is called multiple times
         try:
             self.shutdown()
-        except Exception as e:
+        except Exception:
             pass
 
 
@@ -849,7 +852,6 @@ if __name__ == "__main__":
         "resolution": 0.05,
         "z_scale": 1.0,
         "source_resolution": 5.0,
-        "resolution": 0.05,
         "interpolation_padding": 2,
         "generate_craters": True,
     }
@@ -916,9 +918,10 @@ if __name__ == "__main__":
     low_res_dem = np.load("assets/Terrains/SouthPole/NPD_final_adj_5mpp_surf/dem.npy")
     HRDEMGen = HighResDEMGen(low_res_dem, settings)
 
-    from matplotlib import pyplot as plt
-    import matplotlib.colors as mcolors
     import time
+
+    import matplotlib.colors as mcolors
+    from matplotlib import pyplot as plt
 
     # Initial Generation
     HRDEMGen.shift((0, 0))
@@ -1048,7 +1051,7 @@ if __name__ == "__main__":
     while not HRDEMGen.is_map_done():
         time.sleep(0.1)
     e = time.time()
-    print(f"Time to update entire map: {e-s}")
+    print(f"Time to update entire map: {e - s}")
     plt.title("High Resolution DEM. Close that window to continue.")
     plt.imshow(HRDEMGen.high_res_dem, cmap="terrain")
     plt.show()
@@ -1057,7 +1060,7 @@ if __name__ == "__main__":
     while not HRDEMGen.is_map_done():
         time.sleep(0.1)
     e = time.time()
-    print(f"Time to update one band: {e-s}")
+    print(f"Time to update one band: {e - s}")
     plt.title("High Resolution DEM. Close that window to continue.")
     plt.imshow(HRDEMGen.high_res_dem, cmap="terrain")
     plt.show()
@@ -1066,7 +1069,7 @@ if __name__ == "__main__":
     while not HRDEMGen.is_map_done():
         time.sleep(0.1)
     e = time.time()
-    print(f"Time to update one band: {e-s}")
+    print(f"Time to update one band: {e - s}")
     plt.title("High Resolution DEM. Close that window to continue.")
     plt.imshow(HRDEMGen.high_res_dem, cmap="terrain")
     plt.show()
@@ -1075,7 +1078,7 @@ if __name__ == "__main__":
     while not HRDEMGen.is_map_done():
         time.sleep(0.1)
     e = time.time()
-    print(f"Time to update two bands: {e-s}")
+    print(f"Time to update two bands: {e - s}")
     plt.title("High Resolution DEM. Close that window to continue.")
     plt.imshow(HRDEMGen.high_res_dem, cmap="terrain")
     plt.show()

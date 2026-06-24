@@ -1,7 +1,8 @@
-from typing import Tuple
 import argparse
-import yaml
 import os
+from typing import Tuple
+
+import yaml
 
 
 def parse_args():
@@ -12,9 +13,7 @@ def parse_args():
         default="tmp/ldem_87s_5mpp.info",
         help="Path to DEM info",
     )
-    parser.add_argument(
-        "--output_dir", type=str, default="tmp", help="Path to save preprocessed info"
-    )
+    parser.add_argument("--output_dir", type=str, default="tmp", help="Path to save preprocessed info")
     parser.add_argument(
         "--output_name",
         type=str,
@@ -111,9 +110,7 @@ def get_size(line: str) -> Tuple[int, int]:
     return x_size, y_size
 
 
-def process_info(
-    info_path: str = "", output_dir: str = "", output_name: str = ""
-) -> None:
+def process_info(info_path: str = "", output_dir: str = "", output_name: str = "") -> None:
     """
     Process the DEM info file and save the processed info as a YAML file.
 

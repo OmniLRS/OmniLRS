@@ -6,16 +6,17 @@ __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
 __status__ = "development"
 
-from typing import List, Tuple
-from matplotlib import pyplot as plt
+from typing import Tuple
+
 import numpy as np
+from matplotlib import pyplot as plt
 
 from src.configurations.procedural_terrain_confs import (
-    FootprintConf,
-    DeformConstrainConf,
-    DepthDistributionConf,
     BoundaryDistributionConf,
     DeformationEngineConf,
+    DeformConstrainConf,
+    DepthDistributionConf,
+    FootprintConf,
 )
 
 
@@ -267,7 +268,6 @@ class TrapezoidalDepthDistributionGenerator(DepthDistributionGenerator):
         rise_time = 0.25 * period
         high_time = 0.25 * period
         fall_time = 0.25 * period
-        low_time = 0.25 * period
 
         # Shift t by half a period to center the waveform around x=0
         t_shifted = t + 0.5 * period
@@ -648,8 +648,12 @@ class DeformationEngine:
         n is the number of links.
         num_points = n * num_point_sample
         """
-        self.headings[:, 0] = 2.0 * (world_orientations[:, 0] * world_orientations[:, 3] + world_orientations[:, 1] * world_orientations[:, 2])
-        self.headings[:, 1] = 1.0 - 2.0 * (world_orientations[:, 2] * world_orientations[:, 2] + world_orientations[:, 3] * world_orientations[:, 3])
+        self.headings[:, 0] = 2.0 * (
+            world_orientations[:, 0] * world_orientations[:, 3] + world_orientations[:, 1] * world_orientations[:, 2]
+        )
+        self.headings[:, 1] = 1.0 - 2.0 * (
+            world_orientations[:, 2] * world_orientations[:, 2] + world_orientations[:, 3] * world_orientations[:, 3]
+        )
         projection_points = np.zeros((world_positions.shape[0], self.profile.shape[0], 2))
         projection_points[:, :, 0] = (
             self.profile[:, 0] * self.headings[:, 1, None]
@@ -689,7 +693,9 @@ class DeformationEngine:
         """
         depth = np.zeros((normal_forces.shape[0], self.profile.shape[0]))
         amplitude, mean_value = self.force_depth_regression_model(normal_forces)
-        depth = self.boundary_dist[None, :] * (amplitude[:, None]/2.0 * self.depth_dist[None, :] - mean_value[:, None])
+        depth = self.boundary_dist[None, :] * (
+            amplitude[:, None] / 2.0 * self.depth_dist[None, :] - mean_value[:, None]
+        )
         self.depth = depth.reshape(-1)
 
     def deform(
