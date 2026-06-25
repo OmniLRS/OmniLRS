@@ -14,7 +14,7 @@ lunaryard_settings:
     latitude: -84.8
     longitude: 29.2
 
-stellar_engine_settings:
+stellar_engine_settings: # is the source of truth for the Sun orientation if set
   start_date:
     year: 2025
     month: 3
@@ -26,13 +26,13 @@ stellar_engine_settings:
 
 sun_settings:
   intensity: 1750.0
-  angle: 0.53
+  angle: 0.53 # angular size of the sun disk (softens shadows) - not direction
   diffuse_multiplier: 1.0
   specular_multiplier: 1.0
   color: [1.0, 1.0, 1.0]
   temperature: 6500.0
-  azimuth: 180.0
-  elevation: 45.0
+  azimuth: 180.0 # Orientation of the Sun Xform -> sun direction AND if stellar_engine_settings is set, this config is ignored and the stellar engine will set the sun direction
+  elevation: 45.0 # Orientation of the Sun Xform ->Z sun direction AND if stellar_engine_settings is set, this config is ignored and the stellar engine will set the sun direction
 
 # Rocks sampling parameters.
 rocks_settings:
