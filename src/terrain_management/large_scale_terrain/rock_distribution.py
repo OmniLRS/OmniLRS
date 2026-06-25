@@ -90,10 +90,9 @@ class Poisson(BaseDistribution):
     seed: int = None
 
     def __post_init__(self) -> None:
-        assert self.density > 0, "density must be larger than 0."
-        assert type(self.density) is float, "density must be a float."
-
         self.density = float(self.density)
+        assert self.density > 0, "density must be larger than 0."
+
         if self.seed is not None:
             self.seed = int(self.seed)
             self.rng = np.random.default_rng(self.seed)
@@ -153,11 +152,11 @@ class ThomasPointProcess(BaseDistribution):
     seed: int = None
 
     def __post_init__(self):
-        assert type(self.parent_density) is float, "parent_density must be a float."
+        self.parent_density = float(self.parent_density)
         assert self.parent_density > 0, "parent_density must be larger than 0."
-        assert type(self.child_density) is float, "child_density must be a float."
+        self.child_density = float(self.child_density)
         assert self.child_density > 0, "child_density must be larger than 0."
-        assert type(self.sigma) is float, "sigma must be a float."
+        self.sigma = float(self.sigma)
         assert self.sigma > 0, "sigma must be larger than 0."
 
         self.parent = Poisson(name="poisson", density=self.parent_density, seed=self.seed)
