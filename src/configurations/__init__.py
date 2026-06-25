@@ -8,7 +8,8 @@ Well, I'm glad you asked.
 Configuarions are used to enforce that the correct type of parameters are being passed onto the different modules of the simulation.
 Python is not a strongly typed language, so this can go wrong real fast.
 This does not mean that it's foul proof, but it should help debugging config files.
-When possible, the parameter values are also checked to make sure they are within the correct range."""
+When possible, the parameter values are also checked to make sure they are within the correct range.
+"""
 
 __author__ = "Antoine Richard"
 __copyright__ = "Copyright 2023-26, JAOPS, Space Robotics Lab, SnT, University of Luxembourg, SpaceR"
@@ -46,7 +47,7 @@ class ConfigFactory:
         return self.configs[config_name](**kwargs)
 
     def getConfigs(self) -> list:
-        return self.configs.keys()
+        return list(self.configs.keys())
 
 
 configFactory = ConfigFactory()

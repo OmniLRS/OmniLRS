@@ -1,5 +1,3 @@
-"""Basic thermal model for a six-faced box with a single interior node."""
-
 __author__ = "Louis Burtz, Aleksa Stanivuk"
 __copyright__ = "Copyright 2025-26, JAOPS"
 __license__ = "BSD-3-Clause"
