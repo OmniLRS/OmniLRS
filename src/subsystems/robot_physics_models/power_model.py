@@ -6,8 +6,6 @@ __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
 __status__ = "development"
 
-"""Simple power model with battery, solar charging, and device loads."""
-
 import math
 import random
 from collections.abc import Mapping as MappingABC
@@ -39,7 +37,8 @@ class PowerModelDefaults(float, Enum):
 
 @dataclass
 class PowerModel(RobotPhysicsModel):
-    """Track battery charge based on solar input and device consumption.
+    """
+    Simple power model with battery, solar charging, and device loads.
     To integrate this model in a simulation, see the example in run_power_profile_test() below.
     inputs / computation / outputs are clearly separated for easy use.
     """

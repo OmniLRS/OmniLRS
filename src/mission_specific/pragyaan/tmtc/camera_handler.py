@@ -58,7 +58,7 @@ class PragyaanCameraHandler:
         self._initialize_monitoring_cam()
 
     def _initialize_lander_cam(self, lander_camera_conf) -> None:
-        if lander_camera_conf == None:
+        if lander_camera_conf is None:
             return
 
         self._lander_cam = Camera(
@@ -101,7 +101,7 @@ class PragyaanCameraHandler:
         return Image.fromarray(d_uint8, mode="L")
 
     def _snap_lander_camera_view(self) -> Image:
-        if self._lander_cam == None:
+        if self._lander_cam is None:
             return
 
         frame = self._lander_cam.get_rgba()
@@ -111,7 +111,7 @@ class PragyaanCameraHandler:
         return camera_view
 
     def _snap_monitoring_camera_view(self) -> Image:
-        if self._monitoring_cam == None:
+        if self._monitoring_cam is None:
             return
 
         frame = self._monitoring_cam.get_rgb()  # get_rgba()
@@ -140,7 +140,7 @@ class PragyaanCameraHandler:
         self._images_handler.save_image(camera_view, bucket)
 
     def transmit_lander_camera_view(self):
-        if self._lander_cam == None:
+        if self._lander_cam is None:
             return
 
         camera_view: Image = self._snap_lander_camera_view()
@@ -149,7 +149,7 @@ class PragyaanCameraHandler:
     def transmit_monitoring_camera_view(self):
         camera_view: Image = self._snap_monitoring_camera_view()
 
-        if camera_view == None:
+        if camera_view is None:
             return
 
         self._images_handler.save_image(camera_view, self.BUCKET_MONITORING)

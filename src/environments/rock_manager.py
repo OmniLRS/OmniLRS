@@ -266,7 +266,7 @@ class RockManager:
             self.root_nodes = []
             self.nodes = []
             self.buildDependencyGraph()
-            self.children_nodes = [i for l in self.dependency_graph.values() for i in l]
+            self.children_nodes = [i for sublist in self.dependency_graph.values() for i in sublist]
             # From there we compute the order in which the nodes need to be executed.
             self.execution_order = []
             self.buildExecutionOrder()
@@ -281,7 +281,7 @@ class RockManager:
         for name, settings in self.settings.items():
             self.nodes.append(name)
             if "parent" in settings.keys():
-                if not settings["parent"] is None:
+                if settings["parent"] is not None:
                     assert settings["parent"] in self.settings.keys(), (
                         "the name of the parent must match the name of an existing process."
                     )
@@ -292,7 +292,7 @@ class RockManager:
                         self.settings[settings["parent"]]["children"] = [name]
             else:
                 self.root_nodes.append(name)
-                if not name in self.dependency_graph.keys():
+                if name not in self.dependency_graph.keys():
                     self.dependency_graph[name] = []
 
     def findPath(self, start: str, end: str, path: List[str] = []) -> Union[None, List[str]]:
@@ -312,7 +312,7 @@ class RockManager:
         path = path + [start]
         if start == end:
             return path
-        if not start in self.dependency_graph.keys():
+        if start not in self.dependency_graph.keys():
             return None
         for node in self.dependency_graph[start]:
             if node not in path:

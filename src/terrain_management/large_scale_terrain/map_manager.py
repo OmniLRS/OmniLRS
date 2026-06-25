@@ -16,13 +16,13 @@ from typing import Tuple
 import numpy as np
 import yaml
 
-logger = logging.getLogger(__name__)
-logging.basicConfig(format="%(asctime)s %(message)s", datefmt="%m/%d/%Y %I:%M:%S %p")
-
 from src.terrain_management.large_scale_terrain.high_resolution_DEM_generator import (
     HighResDEMGen,
     HighResDEMGenConf,
 )
+
+logger = logging.getLogger(__name__)
+logging.basicConfig(format="%(asctime)s %(message)s", datefmt="%m/%d/%Y %I:%M:%S %p")
 
 
 @dataclasses.dataclass

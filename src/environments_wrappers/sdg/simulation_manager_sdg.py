@@ -76,7 +76,7 @@ class SDG_SimulationManager:
                 try:
                     self.AL.record()
                     self.count += 1
-                except:
+                except Exception:
                     pass
                 self.LC.randomize()
         self.timeline.stop()

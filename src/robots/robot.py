@@ -292,8 +292,8 @@ class Robot:
 
         selected_paths = []
         for prim in Usd.PrimRange(self.stage.GetPrimAtPath(self.robot_path)):
-            l = [attr for attr in prim.GetAttributes() if attr.GetName().split(":")[0] == "graph"]
-            if l:
+            graph_attrs = [attr for attr in prim.GetAttributes() if attr.GetName().split(":")[0] == "graph"]
+            if graph_attrs:
                 selected_paths.append(prim.GetPath())
 
         for path in selected_paths:

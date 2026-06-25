@@ -28,9 +28,8 @@ target-version = "py311"
 extend-exclude = ["WorldBuilders"]
 
 [tool.ruff.lint]
-# Start minimal: Pyflakes (real bugs / dead code) + import sorting (I).
-# Expand to the pycodestyle `E` rules in follow-up PRs once the baseline is green.
-select = ["F", "I"]
+# Ruff's default rule set (E4/E7/E9 + Pyflakes) plus import sorting (I).
+select = ["E4", "E7", "E9", "F", "I"]
 
 [build-system]
 requires = ["setuptools>=42", "wheel"]

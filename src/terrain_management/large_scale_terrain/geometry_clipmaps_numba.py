@@ -186,7 +186,7 @@ def _build_mesh(start_level, num_levels, meshBaseLODExtentHeightfieldTexels):
                     A = (float(x), float(y), L)
                     C = (float(x + step), A[1], L)
                     G = (A[0], float(y + step), L)
-                    I = (C[0], G[1], L)
+                    I = (C[0], G[1], L)  # noqa: E741  (geometric point label in the A-I grid)
 
                     B = ((A[0] + C[0]) * 0.5, (A[1] + C[1]) * 0.5, (A[2] + C[2]) * 0.5)
                     D = ((A[0] + G[0]) * 0.5, (A[1] + G[1]) * 0.5, (A[2] + G[2]) * 0.5)

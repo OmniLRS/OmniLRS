@@ -284,7 +284,7 @@ class BaseWorker(multiprocessing.Process):
         try:
             while True:
                 self.input_queue.task_done()
-        except:
+        except Exception:
             pass
         self.input_queue.join()
         logger.debug("Worker input queue joined.")
@@ -512,7 +512,7 @@ class BaseWorkerManager:
         while has_items:
             try:
                 results.append(self.output_queue.get_nowait())
-            except:
+            except Exception:
                 has_items = False
         return results
 
@@ -531,7 +531,7 @@ class BaseWorkerManager:
         try:
             while True:
                 self.input_queue.task_done()
-        except:
+        except Exception:
             pass
         logger.debug("Emptied input queue.")
         self.input_queue.join()
@@ -659,7 +659,7 @@ class CraterBuilderManager(BaseWorkerManager):
                     break
                 self.workers[self.get_shortest_queue_index()].input_queue.put((coords, crater_metadata))
                 self.input_queue.task_done()
-            except:
+            except Exception:
                 pass
         self.shutdown_workers()
         logger.debug("Crater Builder Manager exited processing loop.")
@@ -760,7 +760,7 @@ class BicubicInterpolatorManager(BaseWorkerManager):
                 if data is None:
                     break
                 self.workers[self.get_shortest_queue_index()].input_queue.put((coords, data))
-            except:
+            except Exception:
                 pass
         self.shutdown_workers()
         logger.debug("Bicubic Interpolator manager exited processing loop.")

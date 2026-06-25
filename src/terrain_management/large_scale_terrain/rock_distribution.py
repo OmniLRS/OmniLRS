@@ -91,7 +91,7 @@ class Poisson(BaseDistribution):
 
     def __post_init__(self) -> None:
         assert self.density > 0, "density must be larger than 0."
-        assert type(self.density == float), "density must be a float."
+        assert type(self.density) is float, "density must be a float."
 
         self.density = float(self.density)
         if self.seed is not None:
@@ -153,11 +153,11 @@ class ThomasPointProcess(BaseDistribution):
     seed: int = None
 
     def __post_init__(self):
-        assert type(self.parent_density == float), "parent_density must be a float."
+        assert type(self.parent_density) is float, "parent_density must be a float."
         assert self.parent_density > 0, "parent_density must be larger than 0."
-        assert type(self.child_density == float), "child_density must be a float."
+        assert type(self.child_density) is float, "child_density must be a float."
         assert self.child_density > 0, "child_density must be larger than 0."
-        assert type(self.sigma == float), "sigma must be a float."
+        assert type(self.sigma) is float, "sigma must be a float."
         assert self.sigma > 0, "sigma must be larger than 0."
 
         self.parent = Poisson(name="poisson", density=self.parent_density, seed=self.seed)
@@ -254,8 +254,8 @@ class Uniform(BaseDistribution):
     seed: int = None
 
     def __post_init__(self):
-        assert type(self.min) == float, "min must be a float"
-        assert type(self.max) == float, "max must be a float"
+        assert type(self.min) is float, "min must be a float"
+        assert type(self.max) is float, "max must be a float"
         assert self.min < self.max, "min must be smaller than max"
         if self.seed is not None:
             self.set_seed(self.seed)
@@ -295,8 +295,8 @@ class Normal(BaseDistribution):
     seed: int = None
 
     def __post_init__(self):
-        assert type(self.mean) == float, "mean must be a float"
-        assert type(self.std) == float, "std must be a float"
+        assert type(self.mean) is float, "mean must be a float"
+        assert type(self.std) is float, "std must be a float"
         assert self.std > 0, "std must be larger than 0"
         self.mean = float(self.mean)
         self.std = float(self.std)
@@ -338,8 +338,8 @@ class Integer(BaseDistribution):
 
     def __post_init__(self):
         assert self.min < self.max, "min must be smaller than max"
-        assert type(self.min) == int, "min must be an integer"
-        assert type(self.max) == int, "max must be an integer"
+        assert type(self.min) is int, "min must be an integer"
+        assert type(self.max) is int, "max must be an integer"
         self.min = int(self.min)
         self.max = int(self.max)
         if self.seed is not None:
@@ -413,7 +413,7 @@ class RockDynamicDistributionConf:
     def __post_init__(self):
         # Reseed the random number generator
         if self.seed is not None:
-            assert type(self.seed) == int, "seed must be an integer"
+            assert type(self.seed) is int, "seed must be an integer"
             self.seed = int(self.seed)
 
 

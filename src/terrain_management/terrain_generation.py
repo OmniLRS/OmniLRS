@@ -337,18 +337,18 @@ class Distribute:
         self._num_repeat = cfg.num_repeat
         self._rng = np.random.default_rng(cfg.seed)
 
-    def sampleFromPoisson(self, l: float, r_minmax: Tuple[float]) -> Tuple[np.ndarray, np.ndarray]:
+    def sampleFromPoisson(self, density: float, r_minmax: Tuple[float]) -> Tuple[np.ndarray, np.ndarray]:
         """
         Samples from a Poisson process.
 
         Args:
-            l (float): density of the Poisson process (in units per square meters).
+            density (float): density of the Poisson process (in units per square meters).
             r_minmax (tuple): minimum and maximum radius of the craters (in meters).
 
         Returns:
             tuple: coordinates and radius of the craters"""
 
-        num_points = self._rng.poisson(self._area * l)
+        num_points = self._rng.poisson(self._area * density)
         radius = self._rng.uniform(r_minmax[0], r_minmax[1], num_points)
         x_coords = self._rng.uniform(0, self._x_max, num_points)
         y_coords = self._rng.uniform(0, self._y_max, num_points)
@@ -401,23 +401,23 @@ class Distribute:
         return new_coords[boole_keep], radius[boole_keep]
 
     def simulateHCPoissonProcess(
-        self, l: float, r_minmax: Tuple[float], prev_coords: np.ndarray = None
+        self, density: float, r_minmax: Tuple[float], prev_coords: np.ndarray = None
     ) -> Tuple[np.ndarray, np.ndarray]:
         """
         Simulates a hardcore Poisson process.
 
         Args:
-            l (float): density of the Poisson process (in units per square meters).
+            density (float): density of the Poisson process (in units per square meters).
             r_minmax (tuple): minimum and maximum radius of the craters (in meters).
             prev_coords (np.ndarray): coordinates of the previous craters (in meters).
 
         Returns:
             tuple: coordinates of the craters, radii of the craters."""
 
-        coords, radius = self.sampleFromPoisson(l, r_minmax)
+        coords, radius = self.sampleFromPoisson(density, r_minmax)
         for _ in range(self._num_repeat):
             coords, radius = self.hardcoreRejection(coords, radius)
-            new_coords, new_radius = self.sampleFromPoisson(l, r_minmax)
+            new_coords, new_radius = self.sampleFromPoisson(density, r_minmax)
             coords = np.concatenate([coords, new_coords])
             radius = np.concatenate([radius, new_radius])
             self.checkPrevious(coords, radius, prev_coords)

@@ -1,3 +1,5 @@
+"""Basic thermal model for a six-faced box with a single interior node."""
+
 __author__ = "Louis Burtz, Aleksa Stanivuk"
 __copyright__ = "Copyright 2025-26, JAOPS"
 __license__ = "BSD-3-Clause"
@@ -5,8 +7,6 @@ __version__ = "2.0.0"
 __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
 __status__ = "development"
-
-"""Basic thermal model for a six-faced box with a single interior node."""
 
 import math
 import random

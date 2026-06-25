@@ -6,8 +6,6 @@ __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
 __status__ = "development"
 
-"""Basic RSSI model relating rover/lander separation to signal strength."""
-
 import math
 import random
 from dataclasses import dataclass

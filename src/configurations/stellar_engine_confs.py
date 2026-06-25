@@ -97,14 +97,14 @@ class SunConf:
     elevation: float = 0.0
 
     def __post_init__(self):
-        assert type(self.intensity) == float, "The intensity must be a float."
-        assert type(self.angle) == float, "The angle must be a float."
-        assert type(self.diffuse_multiplier) == float, "The diffuse multiplier must be a float."
-        assert type(self.specular_multiplier) == float, "The specular multiplier must be a float."
-        assert type(self.temperature) == float, "The temperature must be a float."
-        assert all([type(i) == float for i in self.color]), "The color must be a tuple of 3 floats."
-        assert type(self.azimuth) == float, "The azimuth must be a float."
-        assert type(self.elevation) == float, "The elevation must be a float."
+        assert type(self.intensity) is float, "The intensity must be a float."
+        assert type(self.angle) is float, "The angle must be a float."
+        assert type(self.diffuse_multiplier) is float, "The diffuse multiplier must be a float."
+        assert type(self.specular_multiplier) is float, "The specular multiplier must be a float."
+        assert type(self.temperature) is float, "The temperature must be a float."
+        assert all([type(i) is float for i in self.color]), "The color must be a tuple of 3 floats."
+        assert type(self.azimuth) is float, "The azimuth must be a float."
+        assert type(self.elevation) is float, "The elevation must be a float."
 
         assert self.intensity > 0.0, "The intensity must be greater than 0."
         assert self.angle > 0.0, "The angle must be greater than 0."

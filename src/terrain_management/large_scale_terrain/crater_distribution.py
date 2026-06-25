@@ -16,11 +16,11 @@ import numpy as np
 from matplotlib import pyplot as plt
 from scipy.interpolate import CubicSpline
 
-logger = logging.getLogger(__name__)
-logging.basicConfig(format="%(asctime)s %(message)s", datefmt="%m/%d/%Y %I:%M:%S %p")
-
 from src.terrain_management.large_scale_terrain.crater_database import CraterDB
 from src.terrain_management.large_scale_terrain.utils import BoundingBox, CraterMetadata
+
+logger = logging.getLogger(__name__)
+logging.basicConfig(format="%(asctime)s %(message)s", datefmt="%m/%d/%Y %I:%M:%S %p")
 
 
 @dataclasses.dataclass
@@ -64,7 +64,7 @@ class DynamicDistribute:
     def sample_from_poisson(
         self,
         region: BoundingBox,
-        l: float,
+        density: float,
         r_minmax: Tuple[float, float],
     ) -> Tuple[np.ndarray, np.ndarray]:
         """
@@ -72,7 +72,7 @@ class DynamicDistribute:
 
         Args:
             region (BoundingBox): region to sample from.
-            l (float): density of the Poisson process (in units per square meters).
+            density (float): density of the Poisson process (in units per square meters).
             r_minmax (Tuple[float,float]): minimum and maximum radius of the craters (in meters).
 
         Returns:
@@ -80,7 +80,7 @@ class DynamicDistribute:
         """
 
         area = (region.x_max - region.x_min) * (region.y_max - region.y_min)
-        num_points = self._rng.poisson(area * l)
+        num_points = self._rng.poisson(area * density)
         radius = self._rng.uniform(r_minmax[0], r_minmax[1], num_points)
         x_coords = self._rng.uniform(region.x_min, region.x_max, num_points)
         y_coords = self._rng.uniform(region.y_min, region.y_max, num_points)
@@ -138,7 +138,7 @@ class DynamicDistribute:
     def simulate_HC_poisson_process(
         self,
         region: BoundingBox,
-        l: float,
+        density: float,
         r_minmax: Tuple[float],
         prev_coords: np.ndarray = None,
     ) -> Tuple[np.ndarray, np.ndarray]:
@@ -147,7 +147,7 @@ class DynamicDistribute:
 
         Args:
             region (BoundingBox): region to sample from.
-            l (float): density of the Poisson process (in units per square meters).
+            density (float): density of the Poisson process (in units per square meters).
             r_minmax (tuple): minimum and maximum radius of the craters (in meters).
             prev_coords (np.ndarray): coordinates of the previous craters (in meters).
 
@@ -155,10 +155,10 @@ class DynamicDistribute:
             Tuple[np.ndarray, np.ndarray]: coordinates of the craters, radii of the craters.
         """
 
-        coords, radius = self.sample_from_poisson(region, l, r_minmax)
+        coords, radius = self.sample_from_poisson(region, density, r_minmax)
         for _ in range(self.settings.num_repeat):
             coords, radius = self.hardcore_rejection(coords, radius)
-            new_coords, new_radius = self.sample_from_poisson(region, l, r_minmax)
+            new_coords, new_radius = self.sample_from_poisson(region, density, r_minmax)
             coords = np.concatenate([coords, new_coords])
             radius = np.concatenate([radius, new_radius])
             self.check_previous(coords, radius, prev_coords)
@@ -169,7 +169,7 @@ class DynamicDistribute:
     def simulate_poisson_process(
         self,
         region: BoundingBox,
-        l: float,
+        density: float,
         r_minmax: Tuple[float],
     ) -> Tuple[np.ndarray, np.ndarray]:
         """
@@ -177,7 +177,7 @@ class DynamicDistribute:
 
         Args:
             region (BoundingBox): region to sample from.
-            l (float): density of the Poisson process (in units per square meters).
+            density (float): density of the Poisson process (in units per square meters).
             r_minmax (tuple): minimum and maximum radius of the craters (in meters).
             prev_coords (np.ndarray): coordinates of the previous craters (in meters).
 
@@ -185,7 +185,7 @@ class DynamicDistribute:
             tuple: coordinates of the craters, radii of the craters.
         """
 
-        coords, radius = self.sample_from_poisson(region, l, r_minmax)
+        coords, radius = self.sample_from_poisson(region, density, r_minmax)
         return coords, radius
 
     def run_HC(
