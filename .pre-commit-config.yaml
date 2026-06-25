@@ -1,5 +1,15 @@
 # See https://pre-commit.com for more information
 # See https://pre-commit.com/hooks.html for more hooks
+
+# Files that no hook should ever touch (generated, vendored, or binary assets).
+exclude: |
+  (?x)^(
+    pixi\.lock|
+    \.pixi/.*|
+    assets/.*|
+    WorldBuilders/.*
+  )$
+
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v6.0.0
@@ -14,7 +24,9 @@ repos:
       # Run the formatter.
       - id: ruff-format
         types_or: [python, pyi]
+        files: ^(src/|[^/]+\.py$)
       # Run the linter.
       - id: ruff-check
         types_or: [python, pyi]
         args: [--fix]
+        files: ^(src/|[^/]+\.py$)
