@@ -7,6 +7,9 @@ from typing import Any, List, Union
 
 import numpy as np
 import omni
+
+from assets import get_assets_path
+from src.labeling.instancer import CustomInstancer
 from WorldBuilders.Mixer import RequestMixer
 from WorldBuilders.pxr_utils import createInstancerAndCache, setInstancerParameters
 from WorldBuilders.Types import (
@@ -39,9 +42,6 @@ from WorldBuilders.Types import (
     UniformSampler_T,
     UserRequest_T,
 )
-
-from assets import get_assets_path
-from src.labeling.instancer import CustomInstancer
 
 
 class TypeFactory:

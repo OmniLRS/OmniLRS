@@ -10,11 +10,9 @@ from scipy.spatial.transform import Rotation
 from src.mission_specific.pragyaan.subsystems.neutron_spectrometer_model import NeutronSpectrometerModel
 from src.mission_specific.pragyaan.subsystems.pragyaan_obc_metrics_model import PragyaanObcMetricsModel
 from src.mission_specific.pragyaan.subsystems.pragyaan_power_model import PragyaanPowerModel
-
-from src.subsystems.robot_enums import ObcState
 from src.mission_specific.pragyaan.subsystems.pragyaan_thermal_model import PragyaanThermalModel
 from src.subsystems.device import CommonDevice, Device, HealthState, PowerState
-from src.subsystems.robot_enums import SolarPanelState
+from src.subsystems.robot_enums import ObcState, SolarPanelState
 from src.subsystems.robot_subsystems_handler import RobotSubsystemsHandler
 
 
