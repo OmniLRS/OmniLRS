@@ -1,10 +1,6 @@
 __author__ = "Aleksa Stanivuk"
-__copyright__ = "Copyright 2025-26, JAOPS"
-__license__ = "BSD-3-Clause"
-__version__ = "2.0.0"
 __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
-__status__ = "development"
 
 from src.mission_specific.pragyaan.subsystems.neutron_spectrometer_model import NeutronSpectrometerModel
 from src.mission_specific.pragyaan.subsystems.pragyaan_obc_metrics_model import PragyaanObcMetricsModel

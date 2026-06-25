@@ -1,10 +1,6 @@
 __author__ = "Aleksa Stanivuk, Shamistan Karimov, Bach Nguyen"
-__copyright__ = "Copyright 2026, JAOPS, AsteriaART/Artefacts"
-__license__ = "BSD-3-Clause"
-__version__ = "2.0.0"
 __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
-__status__ = "development"
 
 import logging
 import time
