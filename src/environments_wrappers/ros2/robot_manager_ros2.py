@@ -1,10 +1,6 @@
 __author__ = "Antoine Richard, Aleksa Stanivuk, Shamistan Karimov"
-__copyright__ = "Copyright 2023-26, JAOPS, Space Robotics Lab, SnT, University of Luxembourg, SpaceR"
-__license__ = "BSD-3-Clause"
-__version__ = "1.0.0"
 __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
-__status__ = "development"
 
 from typing import List, Tuple
 
