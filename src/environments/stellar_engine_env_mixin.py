@@ -66,11 +66,11 @@ class StellarEngineEnvMixin:
         x, y, z, w = SSTR.from_euler(
             "xyz", [0, sun_settings.elevation, sun_settings.azimuth - 90], degrees=True
         ).as_quat()
-        
+
         # NOTE do not alter _sun_lux orientation values, do not make it dynamic
         # the sun is meant to be re-oriented only via the parent XForm element, which is _sun_prim
         # applying (w, x, y, z) here too would double-rotate the sun
-        set_xform_ops( 
+        set_xform_ops(
             self._sun_lux.GetPrim(), Gf.Vec3d(0, 0, 0), Gf.Quatd(0.5, Gf.Vec3d(0.5, -0.5, -0.5)), Gf.Vec3d(1, 1, 1)
         )
         set_xform_ops(self._sun_prim.GetPrim(), Gf.Vec3d(0, 0, 0), Gf.Quatd(w, Gf.Vec3d(x, y, z)), Gf.Vec3d(1, 1, 1))
