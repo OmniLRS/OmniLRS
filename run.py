@@ -2,13 +2,14 @@ __author__ = "Antoine Richard"
 __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
 
-from omegaconf import DictConfig, OmegaConf, ListConfig
+import logging
+from typing import Dict
+
+import hydra
+from omegaconf import DictConfig, ListConfig, OmegaConf
+
 from src.configurations import configFactory
 from src.environments_wrappers import startSim
-
-from typing import Dict, List
-import logging
-import hydra
 
 numba_logger = logging.getLogger("numba")
 numba_logger.setLevel(logging.WARNING)

@@ -3,7 +3,7 @@ __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
 
 import dataclasses
-from typing import Any, Union, List
+from typing import List
 
 
 @dataclasses.dataclass

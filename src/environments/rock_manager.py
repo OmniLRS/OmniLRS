@@ -2,14 +2,46 @@ __author__ = "Antoine Richard, Junnosuke Kamohara"
 __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
 
-from WorldBuilders.Types import *
-from WorldBuilders.Mixer import RequestMixer
-from typing import Any, Union, List, Dict
-from WorldBuilders.pxr_utils import createInstancerAndCache, setInstancerParameters
-from src.labeling.instancer import CustomInstancer
-from assets import get_assets_path
-import omni
 import os
+from typing import Any, List, Union
+
+import numpy as np
+import omni
+from WorldBuilders.Mixer import RequestMixer
+from WorldBuilders.pxr_utils import createInstancerAndCache, setInstancerParameters
+from WorldBuilders.Types import (
+    Circle_T,
+    Cone_T,
+    Cube_T,
+    Cylinder_T,
+    DeterministicSampler_T,
+    Disk_T,
+    HardCoreMaternClusterPointSampler_T,
+    HardCoreThomasClusterSampler_T,
+    HardCoreUniformSampler_T,
+    Image_T,
+    ImageClipper_T,
+    Line_T,
+    LinearInterpolationSampler_T,
+    MaternClusterPointSampler_T,
+    NormalMap_T,
+    NormalMapClipper_T,
+    NormalSampler_T,
+    Orientation_T,
+    Plane_T,
+    PoissonPointSampler_T,
+    Position_T,
+    RollPitchYaw_T,
+    Scale_T,
+    Sphere_T,
+    ThomasClusterSampler_T,
+    Torus_T,
+    UniformSampler_T,
+    UserRequest_T,
+)
+
+from assets import get_assets_path
+from src.labeling.instancer import CustomInstancer
 
 
 class TypeFactory:
@@ -230,7 +262,7 @@ class RockManager:
             self.root_nodes = []
             self.nodes = []
             self.buildDependencyGraph()
-            self.children_nodes = [i for l in self.dependency_graph.values() for i in l]
+            self.children_nodes = [i for sublist in self.dependency_graph.values() for i in sublist]
             # From there we compute the order in which the nodes need to be executed.
             self.execution_order = []
             self.buildExecutionOrder()
@@ -245,10 +277,10 @@ class RockManager:
         for name, settings in self.settings.items():
             self.nodes.append(name)
             if "parent" in settings.keys():
-                if not settings["parent"] is None:
-                    assert (
-                        settings["parent"] in self.settings.keys()
-                    ), "the name of the parent must match the name of an existing process."
+                if settings["parent"] is not None:
+                    assert settings["parent"] in self.settings.keys(), (
+                        "the name of the parent must match the name of an existing process."
+                    )
                     self.settings[settings["parent"]]["is_parent"] = True
                     if settings["parent"] in self.dependency_graph.keys():
                         self.dependency_graph[settings["parent"]].append(name)
@@ -256,7 +288,7 @@ class RockManager:
                         self.settings[settings["parent"]]["children"] = [name]
             else:
                 self.root_nodes.append(name)
-                if not name in self.dependency_graph.keys():
+                if name not in self.dependency_graph.keys():
                     self.dependency_graph[name] = []
 
     def findPath(self, start: str, end: str, path: List[str] = []) -> Union[None, List[str]]:
@@ -276,7 +308,7 @@ class RockManager:
         path = path + [start]
         if start == end:
             return path
-        if not start in self.dependency_graph.keys():
+        if start not in self.dependency_graph.keys():
             return None
         for node in self.dependency_graph[start]:
             if node not in path:
@@ -304,7 +336,7 @@ class RockManager:
         self.execution_order = [i[-1] for i in sorted(paths, key=lambda i: len(i))]
 
     def build(self, image: np.ndarray, mask: np.ndarray) -> None:
-        #TODO neither dem (image) nor mask are beingutilized
+        # TODO neither dem (image) nor mask are beingutilized
         """
         Builds the rock manager.
         It first creates the mixers, and then creates the instancers.

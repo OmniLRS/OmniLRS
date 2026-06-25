@@ -1,5 +1,5 @@
 name: Lunalab
-seed: 42  
+seed: 42
 physics_dt: 0.0333 # 30 Hz
 rendering_dt: 0.0333 # 30 Hz
 enforce_realtime: true
@@ -19,7 +19,7 @@ rocks_settings:
       use_point_instancer: True # If True, the rocks will be instanced using the PointInstancer.
                                 # If False, it will use the custom instancer that works for SDG.
       requests: # A list of request used to distribute the rocks.
-        req_pos_xy: 
+        req_pos_xy:
           attribute: Position
           axes: ["x", "y"]
           layer:
@@ -105,7 +105,7 @@ terrain_manager:
       min_elevation: -0.025
       z_scale: 1.0
       seed: ${....seed}
-    
+
     deformation_engine:
       enable: True
       delay: 2.0
@@ -119,10 +119,10 @@ terrain_manager:
         x_deform_offset: 0.0
         y_deform_offset: 0.0
         deform_decay_ratio: 0.01
-      boundary_distribution: 
+      boundary_distribution:
         distribution: trapezoidal
         angle_of_repose: 1.047 #pi/3
-      depth_distribution: 
+      depth_distribution:
         distribution: trapezoidal
         wave_frequency: 4.14 # num_grouser/pi (no slip)
       force_depth_regression:
@@ -145,7 +145,7 @@ terrain_manager:
   resolution: ${..lunalab_settings.resolution}
 
 
-# This environment config includes the default robot_settings (tested to work out of the box), 
+# This environment config includes the default robot_settings (tested to work out of the box),
 # but the best practice for development is to have a separate robot config file that overides it
 # and launch the sim with run.py environment=... robot=...
 # (do not commit edits to the robot_settings below)

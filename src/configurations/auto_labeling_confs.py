@@ -35,23 +35,23 @@ class AutoLabelingConf:
 
     def __post_init__(self):
         assert len(self.camera_names) > 0, "camera_names must have at least one element"
-        assert len(self.camera_names) == len(
-            self.camera_resolutions
-        ), "camera_names and camera_resolutions must have the same length"
-        assert len(self.camera_names) == len(
-            self.annotators_list
-        ), "camera_names and annotators_list must have the same length"
-        assert len(self.camera_names) == len(
-            self.image_formats
-        ), "camera_names and image_format must have the same length"
-        assert len(self.camera_names) == len(
-            self.annot_formats
-        ), "camera_names and annot_format must have the same length"
+        assert len(self.camera_names) == len(self.camera_resolutions), (
+            "camera_names and camera_resolutions must have the same length"
+        )
+        assert len(self.camera_names) == len(self.annotators_list), (
+            "camera_names and annotators_list must have the same length"
+        )
+        assert len(self.camera_names) == len(self.image_formats), (
+            "camera_names and image_format must have the same length"
+        )
+        assert len(self.camera_names) == len(self.annot_formats), (
+            "camera_names and annot_format must have the same length"
+        )
 
         for camera_name in self.camera_names:
             assert type(camera_name) is str, "camera_name must be a string"
         for camera_resolution in self.camera_resolutions:
-            assert len(camera_resolution) == 2, "camera_resolution must be a tuple of length 2" 
+            assert len(camera_resolution) == 2, "camera_resolution must be a tuple of length 2"
         for annotator in self.annotators_list:
             assert type(annotator) is list, "annotator_list must be a list"
         for image_format in self.image_formats:
@@ -107,6 +107,6 @@ class CameraConf:
         assert self.horizontal_aperture > 0, "horizontal_aperture must be greater than 0"
         assert self.vertical_aperture > 0, "vertical_aperture must be greater than 0"
         assert self.fstop >= 0, "fstop must be greater or equal to 0"
-        assert (
-            self.clipping_range[1] > self.clipping_range[0]
-        ), "clipping_range[1] must be greater than clipping_range[0]"
+        assert self.clipping_range[1] > self.clipping_range[0], (
+            "clipping_range[1] must be greater than clipping_range[0]"
+        )

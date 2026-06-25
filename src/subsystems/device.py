@@ -5,13 +5,16 @@ __email__ = "ljburtz@jaops.com"
 from enum import IntEnum, StrEnum
 from typing import Tuple
 
+
 class PowerState(StrEnum):
     OFF = "OFF"
     ON = "ON"
 
+
 class HealthState(IntEnum):
     NOMINAL = 0
     FAULT = 1
+
 
 class CommonDevice(StrEnum):
     MOTOR_CONTROLLER = "MOTOR_CONTROLLER"
@@ -22,13 +25,14 @@ class CommonDevice(StrEnum):
     NEUTRON_SPECTROMETER = "NEUTRON_SPECTROMETER"
     EPS = "EPS"
 
-class Device():
+
+class Device:
     def __init__(
         self,
-        name:str,
-        power_state:PowerState = PowerState.OFF,
-        health_state:HealthState = HealthState.NOMINAL,
-        current_draw:Tuple[float, float] = (0.0, 0.0), # (off, nominal)
+        name: str,
+        power_state: PowerState = PowerState.OFF,
+        health_state: HealthState = HealthState.NOMINAL,
+        current_draw: Tuple[float, float] = (0.0, 0.0),  # (off, nominal)
     ) -> None:
         self._name = name
         self._power_state = power_state
@@ -36,18 +40,18 @@ class Device():
         self._current_draw = current_draw
 
     def get_health_state(self):
-        return self._health_state 
-    
-    def set_health_state(self, health_state:HealthState):
+        return self._health_state
+
+    def set_health_state(self, health_state: HealthState):
         self._health_state = health_state
-    
+
     def get_power_state(self):
-        return self._power_state 
-    
+        return self._power_state
+
     def is_turned_on(self):
         return self._power_state == PowerState.ON
-    
-    def set_power_state(self, power_state:PowerState):
+
+    def set_power_state(self, power_state: PowerState):
         self._power_state = power_state
 
     def get_current_draw(self):

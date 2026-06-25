@@ -167,7 +167,7 @@ class ArticulationTelemetry:
 
             self._inited = True
 
-            self.log(f"ArticulationTelemetry initialized: " f"prim={self.prim_path}, dofs={len(self.joint_names)}")
+            self.log(f"ArticulationTelemetry initialized: prim={self.prim_path}, dofs={len(self.joint_names)}")
             self.log(f"DOF names: {self.joint_names}")
             return True
 

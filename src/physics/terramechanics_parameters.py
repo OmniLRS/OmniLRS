@@ -2,9 +2,8 @@ __author__ = "Junnosuke Kamohara"
 __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
 
-from dataclasses import dataclass
 import math
-import numpy as np
+from dataclasses import dataclass
 
 
 @dataclass

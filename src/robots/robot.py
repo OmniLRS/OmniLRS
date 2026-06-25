@@ -8,7 +8,6 @@ from typing import Dict, List, Tuple
 
 import numpy as np
 import omni
-import omni.graph.core as og
 from isaacsim.core.api.world import World
 from isaacsim.core.prims import RigidPrim, SingleRigidPrim, SingleXFormPrim
 from isaacsim.core.utils.rotations import quat_to_rot_matrix
@@ -18,14 +17,14 @@ from isaacsim.sensors.camera import Camera
 from isaacsim.sensors.physics import _sensor
 from pxr import Gf, Usd
 from scipy.spatial.transform import Rotation as R
+from WorldBuilders.pxr_utils import createObject, createXform
 
 from src.configurations.robot_confs import RobotManagerConf
 from src.configurations.simulator_mode_enum import SimulatorMode
-from src.environments.utils import transform_orientation_from_xyzw_into_xyz, transform_orientation_into_xyz
+from src.environments.utils import transform_orientation_from_xyzw_into_xyz
 from src.robots.articulation_control import ArticulationControl
 from src.robots.articulation_telemetry import ArticulationTelemetry
 from src.subsystems.robot_subsystems_handler import RobotSubsystemsHandler
-from WorldBuilders.pxr_utils import createObject, createXform
 
 
 # TODO for v4: rethink which methods should be in Manager, RRG, what should be in Robot
@@ -279,6 +278,7 @@ class Robot:
             self.subsystems = PragyaanSubsystemsHandler(pos_relative_to_prim)
         elif robot_name == "husky":
             from src.mission_specific.husky.subsystems.husky_subsystems_handler import HuskySubsystemsHandler
+
             self.subsystems = HuskySubsystemsHandler(pos_relative_to_prim)
 
     def edit_graphs(self) -> None:
@@ -288,8 +288,8 @@ class Robot:
 
         selected_paths = []
         for prim in Usd.PrimRange(self.stage.GetPrimAtPath(self.robot_path)):
-            l = [attr for attr in prim.GetAttributes() if attr.GetName().split(":")[0] == "graph"]
-            if l:
+            graph_attrs = [attr for attr in prim.GetAttributes() if attr.GetName().split(":")[0] == "graph"]
+            if graph_attrs:
                 selected_paths.append(prim.GetPath())
 
         for path in selected_paths:
@@ -734,6 +734,7 @@ class Robot:
     def set_solar_panel_angle(self, angle_deg: float):
         self._verify_solar_panel_joint()
         self.set_joint_positions({self._solar_panel_joint: math.radians(angle_deg)})
+
 
 # TODO for v4: rethink which methods should be in RRG, what should be in Robot
 # TODO for v4: separate into a different file (very complex and lengthy classes)

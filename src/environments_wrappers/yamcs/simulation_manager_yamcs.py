@@ -4,7 +4,6 @@ __email__ = "ljburtz@jaops.com"
 
 import logging
 import time
-from typing import Union
 
 import omni
 from isaacsim import SimulationApp

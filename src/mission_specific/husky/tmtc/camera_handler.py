@@ -4,12 +4,10 @@ __email__ = "ljburtz@jaops.com"
 
 from enum import StrEnum
 
-from src.tmtc.yamcs_TMTC import ImagesHandler
-
-import omni.kit.app
 import numpy as np
-from omni.isaac.sensor import Camera
 from PIL import Image
+
+from src.tmtc.yamcs_TMTC import ImagesHandler
 
 
 class CameraViewType(StrEnum):

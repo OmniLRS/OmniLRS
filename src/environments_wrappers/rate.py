@@ -4,6 +4,7 @@ __email__ = "ljburtz@jaops.com"
 
 import time
 
+
 class Rate:
     """
     Creates a rate object that enables to sleep for a minimum amount

@@ -2,8 +2,8 @@ __author__ = "Antoine Richard"
 __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
 
-from typing import Tuple
 import dataclasses
+from typing import Tuple
 
 
 @dataclasses.dataclass

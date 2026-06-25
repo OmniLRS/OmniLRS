@@ -3,7 +3,6 @@ __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
 
 import numpy as np
-import torch
 import scipy.integrate as integ
 
 from src.physics.terramechanics_parameters import RobotParameter, TerrainMechanicalParameter

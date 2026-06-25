@@ -2,10 +2,9 @@ __author__ = "Amaan Javed"
 __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
 
-import omni.kit.app
 
-from src.mission_specific.husky.tmtc.enums import HuskyYamcsArguments, HuskyCameraResolution
 from src.mission_specific.husky.tmtc.camera_handler import CameraViewType, HuskyCameraHandler
+from src.mission_specific.husky.tmtc.enums import HuskyCameraResolution, HuskyYamcsArguments
 from src.mission_specific.husky.tmtc.transmitter import HuskyTransmitter
 from src.subsystems.robot_enums import ObcState
 from src.tmtc.intervals_handler import IntervalName
@@ -90,4 +89,3 @@ class HuskyCommander:
                 )
         else:
             print("HuskyCommander.set_activity_of_camera_streaming: unknown action:", action)
-

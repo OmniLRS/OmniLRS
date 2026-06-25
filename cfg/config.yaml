@@ -6,7 +6,7 @@ defaults:
   - physics: default_physics
   - optional robot: null
   - optional controller: null
-  
+
 hydra:
   output_subdir: null
   run:

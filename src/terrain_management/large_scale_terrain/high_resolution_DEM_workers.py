@@ -2,18 +2,19 @@ __author__ = "Antoine Richard"
 __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
 
-import multiprocessing.managers
-from typing import List, Tuple, Dict
-import multiprocessing
-import numpy as np
-import dataclasses
-import threading
-import logging
-import signal
-import time
 import copy
-import PIL
+import dataclasses
+import logging
+import multiprocessing
+import multiprocessing.managers
+import signal
+import threading
+import time
+from typing import Dict, List, Tuple
+
 import cv2
+import numpy as np
+import PIL
 
 from src.terrain_management.large_scale_terrain.crater_generation import (
     CraterBuilder,
@@ -279,7 +280,7 @@ class BaseWorker(multiprocessing.Process):
         try:
             while True:
                 self.input_queue.task_done()
-        except:
+        except Exception:
             pass
         self.input_queue.join()
         logger.debug("Worker input queue joined.")
@@ -507,7 +508,7 @@ class BaseWorkerManager:
         while has_items:
             try:
                 results.append(self.output_queue.get_nowait())
-            except:
+            except Exception:
                 has_items = False
         return results
 
@@ -526,7 +527,7 @@ class BaseWorkerManager:
         try:
             while True:
                 self.input_queue.task_done()
-        except:
+        except Exception:
             pass
         logger.debug("Emptied input queue.")
         self.input_queue.join()
@@ -556,7 +557,7 @@ class BaseWorkerManager:
         # Try except to avoid multiple calls to shutdown
         try:
             self.shutdown()
-        except Exception as e:
+        except Exception:
             pass
 
 
@@ -602,9 +603,9 @@ class CraterBuilderWorker(BaseWorker):
                     try:
                         self.output_queue.put(out, timeout=0.1)
                         data_not_in_queue = False
-                    except Exception as e:
+                    except Exception:
                         pass
-            except Exception as e:
+            except Exception:
                 pass
         logger.debug("Crater Builder Worker exited processing loop.")
 
@@ -654,7 +655,7 @@ class CraterBuilderManager(BaseWorkerManager):
                     break
                 self.workers[self.get_shortest_queue_index()].input_queue.put((coords, crater_metadata))
                 self.input_queue.task_done()
-            except:
+            except Exception:
                 pass
         self.shutdown_workers()
         logger.debug("Crater Builder Manager exited processing loop.")
@@ -702,9 +703,9 @@ class BicubicInterpolatorWorker(BaseWorker):
                     try:
                         self.output_queue.put(out, timeout=0.1)
                         data_not_in_queue = False
-                    except Exception as e:
+                    except Exception:
                         pass
-            except Exception as e:
+            except Exception:
                 pass
         logger.debug("Bicubic Interpolator Worker exited processing loop.")
 
@@ -755,7 +756,7 @@ class BicubicInterpolatorManager(BaseWorkerManager):
                 if data is None:
                     break
                 self.workers[self.get_shortest_queue_index()].input_queue.put((coords, data))
-            except:
+            except Exception:
                 pass
         self.shutdown_workers()
         logger.debug("Bicubic Interpolator manager exited processing loop.")

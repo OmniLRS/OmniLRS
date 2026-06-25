@@ -1,7 +1,3 @@
-__author__ = "Antoine Richard"
-__maintainer__ = "Louis Burtz"
-__email__ = "ljburtz@jaops.com"
-
 """
 Configurations
 This packages contains all the configurations for the different modules of the simulation.
@@ -12,23 +8,28 @@ Well, I'm glad you asked.
 Configuarions are used to enforce that the correct type of parameters are being passed onto the different modules of the simulation.
 Python is not a strongly typed language, so this can go wrong real fast.
 This does not mean that it's foul proof, but it should help debugging config files.
-When possible, the parameter values are also checked to make sure they are within the correct range."""
+When possible, the parameter values are also checked to make sure they are within the correct range.
+"""
+
+__author__ = "Antoine Richard"
+__maintainer__ = "Louis Burtz"
+__email__ = "ljburtz@jaops.com"
 
 from typing import Any
 
-from src.configurations.procedural_terrain_confs import (
-    TerrainManagerConf,
-    MoonYardConf,
-    CraterGeneratorConf,
-    CraterDistributionConf,
-    BaseTerrainGeneratorConf,
-    DeformationEngineConf,
-)
-from src.configurations.rendering_confs import FlaresConf, RendererConf, MotionBlurConf, ChromaticAberrationsConf
-from src.configurations.environments import LunalabConf, LunaryardConf, LargeScaleTerrainConf
 from src.configurations.auto_labeling_confs import AutoLabelingConf, CameraConf
-from src.configurations.stellar_engine_confs import StellarEngineConf, SunConf
+from src.configurations.environments import LargeScaleTerrainConf, LunalabConf, LunaryardConf
 from src.configurations.physics_confs import PhysicsSceneConf
+from src.configurations.procedural_terrain_confs import (
+    BaseTerrainGeneratorConf,
+    CraterDistributionConf,
+    CraterGeneratorConf,
+    DeformationEngineConf,
+    MoonYardConf,
+    TerrainManagerConf,
+)
+from src.configurations.rendering_confs import ChromaticAberrationsConf, FlaresConf, MotionBlurConf, RendererConf
+from src.configurations.stellar_engine_confs import StellarEngineConf, SunConf
 
 
 class ConfigFactory:
@@ -42,7 +43,7 @@ class ConfigFactory:
         return self.configs[config_name](**kwargs)
 
     def getConfigs(self) -> list:
-        return self.configs.keys()
+        return list(self.configs.keys())
 
 
 configFactory = ConfigFactory()

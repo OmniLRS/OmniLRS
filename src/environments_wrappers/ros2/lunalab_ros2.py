@@ -3,13 +3,13 @@ __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
 
 # Custom libs
-from src.environments_wrappers.ros2.base_wrapper_ros2 import ROS_BaseManager
-from src.environments.lunalab import LunalabController
+from geometry_msgs.msg import Pose
 
 # Loads ROS2 dependent libraries
-from std_msgs.msg import Bool, Float32, ColorRGBA, Int32
-from geometry_msgs.msg import Pose
-import rclpy
+from std_msgs.msg import Bool, ColorRGBA, Float32, Int32
+
+from src.environments.lunalab import LunalabController
+from src.environments_wrappers.ros2.base_wrapper_ros2 import ROS_BaseManager
 
 
 class ROS_LunalabManager(ROS_BaseManager):

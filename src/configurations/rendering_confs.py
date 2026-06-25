@@ -88,9 +88,9 @@ class RendererConf:
     def __post_init__(self):
         assert type(self.samples_per_pixel_per_frame) is int, "samples_per_pixel_per_frame must be an integer"
         assert type(self.max_bounces) is int, "max_bounces must be an integer"
-        assert (
-            type(self.max_specular_transmission_bounces) is int
-        ), "max_specular_transmission_bounces must be an integer"
+        assert type(self.max_specular_transmission_bounces) is int, (
+            "max_specular_transmission_bounces must be an integer"
+        )
         assert type(self.max_volume_bounces) is int, "max_volume_bounces must be an integer"
         assert type(self.subdiv_refinement_level) is int, "subdiv_refinement_level must be an integer"
         assert type(self.headless) is bool, "headless must be a boolean"

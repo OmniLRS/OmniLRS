@@ -15,10 +15,12 @@ class CpuUsageLevel(float, Enum):
     MEDIUM = 50.0
     HIGH = 75.0
 
+
 class RamUsageLevel(float, Enum):
     LOW = 40.0
     MEDIUM = 50.0
     HIGH = 60.0
+
 
 class DiskUsageLevel(float, Enum):
     LOW = 10.0
@@ -27,9 +29,9 @@ class DiskUsageLevel(float, Enum):
 
 
 class ObcMetricsModel(RobotPhysicsModel):
-    """ Simulates OBC metrics like CPU, RAM, Disk usage and Uptime.
+    """Simulates OBC metrics like CPU, RAM, Disk usage and Uptime.
     Basic model that can be extended/overridden by specific missions
-    
+
     - easily change the CPU/RAM/Disk usage levels to match the mission-specific parameters (see PragyaanObcMetricsModel for example).
     - override the initialize/set_inputs/compute/get_outputs methods to implement the logic for computing the OBC metrics
     """
@@ -47,7 +49,7 @@ class ObcMetricsModel(RobotPhysicsModel):
     def initialize(self) -> None:
         pass
 
-    def set_inputs(self, state:ObcState):
+    def set_inputs(self, state: ObcState):
         self._input_obc_state(state)
 
     def compute(self, dt: float) -> None:
@@ -60,8 +62,8 @@ class ObcMetricsModel(RobotPhysicsModel):
 
     def get_outputs(self):
         return self._obc_metrics
-    
-    def _input_obc_state(self, state:ObcState):
+
+    def _input_obc_state(self, state: ObcState):
         # First, check if need to reset uptime (whenever the controller transitions through OFF)
         if state == ObcState.OFF or (self._state == ObcState.OFF and state != ObcState.OFF):
             self._boot_ts = time.monotonic()
@@ -82,7 +84,7 @@ class ObcMetricsModel(RobotPhysicsModel):
 
     def _get_obc_uptime(self):
         elapsed = int(time.monotonic() - self._boot_ts)
-        return elapsed % (2 ** 32)
+        return elapsed % (2**32)
 
     def _select_by_state(self, levels):
         if self._state == ObcState.CAMERA:
@@ -94,7 +96,3 @@ class ObcMetricsModel(RobotPhysicsModel):
     def _usage_with_noise(self, base, noise=2.0):
         noisy_value = base + random.uniform(-noise, noise)
         return max(0.0, min(100.0, noisy_value))
-    
-
-
-

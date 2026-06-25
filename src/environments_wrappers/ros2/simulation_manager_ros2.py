@@ -107,7 +107,7 @@ class ROS2_SimulationManager:
 
         set_moon_env_name(cfg["environment"]["name"])
 
-        PSM = PhysicsSceneManager(cfg["physics"]["physics_scene"])
+        PhysicsSceneManager(cfg["physics"]["physics_scene"])
         for i in range(100):
             self.world.step(render=True)
         self.world.reset()

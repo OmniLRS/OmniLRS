@@ -2,12 +2,13 @@ __author__ = "Antoine Richard, Junnosuke Kahamora"
 __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
 
-from typing import Any, Union, Dict
-import pandas as pd
-import numpy as np
 import json
-import cv2
 import os
+from typing import Any, Dict
+
+import cv2
+import numpy as np
+import pandas as pd
 
 
 class BaseWriter:

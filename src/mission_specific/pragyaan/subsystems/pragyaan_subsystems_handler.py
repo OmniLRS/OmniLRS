@@ -2,23 +2,22 @@ __author__ = "Aleksa Stanivuk"
 __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
 
+import numpy as np
+from isaacsim.core.utils.prims import is_prim_path_valid
+from isaacsim.core.utils.xforms import get_world_pose
+from scipy.spatial.transform import Rotation
+
 from src.mission_specific.pragyaan.subsystems.neutron_spectrometer_model import NeutronSpectrometerModel
 from src.mission_specific.pragyaan.subsystems.pragyaan_obc_metrics_model import PragyaanObcMetricsModel
 from src.mission_specific.pragyaan.subsystems.pragyaan_power_model import PragyaanPowerModel
-from src.mission_specific.pragyaan.subsystems.pragyaan_thermal_model import PragyaanThermalModel
-
-import numpy as np
-from isaacsim.core.utils.xforms import get_world_pose
-from isaacsim.core.utils.prims import is_prim_path_valid
-from scipy.spatial.transform import Rotation
-
-from src.subsystems.device import CommonDevice, Device, HealthState, PowerState
 from src.mission_specific.pragyaan.subsystems.pragyaan_robot_enums import ObcState
+from src.mission_specific.pragyaan.subsystems.pragyaan_thermal_model import PragyaanThermalModel
+from src.subsystems.device import CommonDevice, Device, HealthState, PowerState
 from src.subsystems.robot_enums import SolarPanelState
 from src.subsystems.robot_subsystems_handler import RobotSubsystemsHandler
 
-class PragyaanSubsystemsHandler(RobotSubsystemsHandler):
 
+class PragyaanSubsystemsHandler(RobotSubsystemsHandler):
     LANDER_POSITION = (0.0, 0.0, 0.0)
 
     # for setting up the Pragyaan-specific PowerModel:
@@ -31,7 +30,12 @@ class PragyaanSubsystemsHandler(RobotSubsystemsHandler):
         thermal_model = PragyaanThermalModel()
         obc_metrics_model = PragyaanObcMetricsModel()
         power_model = PragyaanPowerModel()
-        super().__init__(thermal_model=thermal_model, obc_metrics_model=obc_metrics_model, power_model=power_model, solar_panel_state=SolarPanelState.STOWED)
+        super().__init__(
+            thermal_model=thermal_model,
+            obc_metrics_model=obc_metrics_model,
+            power_model=power_model,
+            solar_panel_state=SolarPanelState.STOWED,
+        )
         self._setup_devices()
         self._setup_power_model()
         self.LANDER_PATH = pos_relative_to_prim
@@ -44,9 +48,13 @@ class PragyaanSubsystemsHandler(RobotSubsystemsHandler):
             self._lander_pos, rot = get_world_pose(self.LANDER_PATH)
         else:
             if pos_relative_to_prim == "":
-                print("[PragyaanSubsystemsHandler] WARNING: no lander prim path provided. Defaulting to global position reporting.")
+                print(
+                    "[PragyaanSubsystemsHandler] WARNING: no lander prim path provided. Defaulting to global position reporting."
+                )
             else:
-                print(f"[PragyaanSubsystemsHandler] WARNING: lander prim path '{self.LANDER_PATH}' not found in the world. Defaulting to global position reporting.")
+                print(
+                    f"[PragyaanSubsystemsHandler] WARNING: lander prim path '{self.LANDER_PATH}' not found in the world. Defaulting to global position reporting."
+                )
             self._lander_pos = self.LANDER_POSITION
 
     def set_sun_prim_path(self, sun_prim_path: str):
@@ -56,48 +64,59 @@ class PragyaanSubsystemsHandler(RobotSubsystemsHandler):
     def _setup_devices(self):
         # Pragyaan and workshop-specific values for the subsystem devices
         self._devices[CommonDevice.OBC] = Device(CommonDevice.OBC, current_draw=(0.0, 7.5), power_state=PowerState.ON)
-        self._devices[CommonDevice.MOTOR_CONTROLLER] = Device(CommonDevice.MOTOR_CONTROLLER, current_draw=(0.0, 2.0), power_state=PowerState.OFF)
-        self._devices[CommonDevice.NEUTRON_SPECTROMETER] = Device(CommonDevice.NEUTRON_SPECTROMETER, current_draw=(0.0, 9.0), power_state=PowerState.OFF)
-        self._devices[CommonDevice.APXS] = Device(CommonDevice.APXS, current_draw=(0.0, 9.0), power_state=PowerState.OFF)
-        self._devices[CommonDevice.CAMERA] = Device(CommonDevice.CAMERA, current_draw=(0.0, 5.0), power_state=PowerState.OFF)
-        self._devices[CommonDevice.RADIO] = Device(CommonDevice.RADIO, current_draw=(0.0, 5.0), power_state=PowerState.ON)
+        self._devices[CommonDevice.MOTOR_CONTROLLER] = Device(
+            CommonDevice.MOTOR_CONTROLLER, current_draw=(0.0, 2.0), power_state=PowerState.OFF
+        )
+        self._devices[CommonDevice.NEUTRON_SPECTROMETER] = Device(
+            CommonDevice.NEUTRON_SPECTROMETER, current_draw=(0.0, 9.0), power_state=PowerState.OFF
+        )
+        self._devices[CommonDevice.APXS] = Device(
+            CommonDevice.APXS, current_draw=(0.0, 9.0), power_state=PowerState.OFF
+        )
+        self._devices[CommonDevice.CAMERA] = Device(
+            CommonDevice.CAMERA, current_draw=(0.0, 5.0), power_state=PowerState.OFF
+        )
+        self._devices[CommonDevice.RADIO] = Device(
+            CommonDevice.RADIO, current_draw=(0.0, 5.0), power_state=PowerState.ON
+        )
         self._devices[CommonDevice.EPS] = Device(CommonDevice.EPS, current_draw=(0.0, 1.0), power_state=PowerState.ON)
 
     def _setup_power_model(self):
         self._power_model.initialize(
-            battery_capacity_wh=self.BATTERY_CAPACITY_WH, 
-            battery_charge_wh=self.BATTERY_CAPACITY_WH, 
-            motor_count=self.MOTOR_COUNT, 
+            battery_capacity_wh=self.BATTERY_CAPACITY_WH,
+            battery_charge_wh=self.BATTERY_CAPACITY_WH,
+            motor_count=self.MOTOR_COUNT,
             motor_power_w=self.MOTOR_POWER_W,
             devices=self._devices,
-            solar_panel_max_power=self.SOLAR_PANEL_MAX_POWER, 
-            solar_panel_state=self._solar_panel_state
+            solar_panel_max_power=self.SOLAR_PANEL_MAX_POWER,
+            solar_panel_state=self._solar_panel_state,
         )
 
     def _update_sun_direction(self):
         if self._sun_prim_path is not None:
             _, quat_wxyz = get_world_pose(self._sun_prim_path)
             w, x, y, z = quat_wxyz
-            self._sun_direction = Rotation.from_quat([x, y, z, w]).apply([-1.0, 0.0, 0.0]) # fixed coordinates
-        # if _sun_prim_path is None, sun direction stays as the default 
+            self._sun_direction = Rotation.from_quat([x, y, z, w]).apply([-1.0, 0.0, 0.0])  # fixed coordinates
+        # if _sun_prim_path is None, sun direction stays as the default
 
     @staticmethod
     def _update_sun_direction_before(func):
         def wrapper(self, *args, **kwargs):
             self._update_sun_direction()
             return func(self, *args, **kwargs)
+
         return wrapper
 
     def get_obc_model_outputs(self):
         self._obc_metrics_model.set_inputs(self._obc_state)
-        self._obc_metrics_model.compute(dt=0.0) # obc model is stateless; dt is unused
+        self._obc_metrics_model.compute(dt=0.0)  # obc model is stateless; dt is unused
         return self._obc_metrics_model.get_outputs()
-    
+
     def get_radio_model_outputs(self, robot_position):
         self._radio_model.set_inputs(robot_position, self._lander_pos)
         self._radio_model.compute(dt=0.0)  # radio model is stateless; dt is unused
         return self._radio_model.get_outputs()
-    
+
     @_update_sun_direction_before
     def get_thermal_model_outputs(self, robot_yaw_deg, interval_s):
         self._thermal_model.set_inputs(self._sun_direction, robot_yaw_deg)
@@ -111,33 +130,32 @@ class PragyaanSubsystemsHandler(RobotSubsystemsHandler):
             rover_yaw_deg=robot_yaw_deg,
             is_in_motor_state=(obc_state == ObcState.MOTOR),
             solar_panel_state=self._solar_panel_state,
-            sun_direction=self._sun_direction
+            sun_direction=self._sun_direction,
         )
         self._power_model.compute(interval_s)
         return self._power_model.get_outputs()
 
     def get_lander_position(self):
         return self._lander_pos
-    
+
     def set_battery_perc(self, battery_perc):
-        #NOTE specific to workshop use case
+        # NOTE specific to workshop use case
         capacity = self._power_model._battery_capacity_wh
         new_charge = battery_perc / 100 * capacity
         self._power_model._battery_charge_wh = new_charge
 
     def get_neutron_count(self):
-        #NOTE specific to workshop use case
+        # NOTE specific to workshop use case
         return self._neutron_spectrometer.get_next_count()
-    
+
     def set_is_near_water(self, is_near):
-        #NOTE specific to workshop use case
+        # NOTE specific to workshop use case
         self._neutron_spectrometer.is_near_water = is_near
 
-    def set_device_health_state(self, device_name:str, state:HealthState):
-        #NOTE specific to workshop use case
+    def set_device_health_state(self, device_name: str, state: HealthState):
+        # NOTE specific to workshop use case
         if device_name not in self._devices:
             print("Invalid electronics naming: ", device_name)
             return
 
         self._devices[device_name].set_health_state(state)
-    

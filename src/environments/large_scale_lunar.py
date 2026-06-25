@@ -2,21 +2,20 @@ __author__ = "Antoine Richard, Aleksa Stanivuk"
 __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
 
-from scipy.spatial.transform import Rotation as SSTR
 from typing import Dict, Tuple
+
 import numpy as np
+from scipy.spatial.transform import Rotation as SSTR
 
-from pxr import UsdLux, Gf
-
-from src.environments.monitoring_cameras_manager import MonitoringCamerasManager
+from src.configurations.environments import LargeScaleTerrainConf
 from src.configurations.simulator_mode_enum import SimulatorMode
+from src.configurations.stellar_engine_confs import StellarEngineConf, SunConf
+from src.environments.base_env import BaseEnv
+from src.environments.monitoring_cameras_manager import MonitoringCamerasManager
 from src.environments.static_assets_manager import StaticAssetsManager
 from src.environments.stellar_engine_env_mixin import StellarEngineEnvMixin
-from src.terrain_management.large_scale_terrain_manager import LargeScaleTerrainManager
-from src.configurations.stellar_engine_confs import StellarEngineConf, SunConf
-from src.configurations.environments import LargeScaleTerrainConf
-from src.environments.base_env import BaseEnv
 from src.robots.robot import RobotManager
+from src.terrain_management.large_scale_terrain_manager import LargeScaleTerrainManager
 
 
 class LargeScaleController(BaseEnv, StellarEngineEnvMixin):
@@ -26,7 +25,7 @@ class LargeScaleController(BaseEnv, StellarEngineEnvMixin):
 
     def __init__(
         self,
-        mode:SimulatorMode = SimulatorMode.ROS2,
+        mode: SimulatorMode = SimulatorMode.ROS2,
         large_scale_terrain: LargeScaleTerrainConf = None,
         stellar_engine_settings: StellarEngineConf = None,
         sun_settings: SunConf = None,
@@ -60,8 +59,7 @@ class LargeScaleController(BaseEnv, StellarEngineEnvMixin):
             self.MCM = MonitoringCamerasManager(self._mode, monitoring_cameras_settings)
 
         self._sun_settings = sun_settings
-        self.init_stellar_engine(stage_settings=self.stage_settings, 
-                                  stellar_engine_settings=stellar_engine_settings)
+        self.init_stellar_engine(stage_settings=self.stage_settings, stellar_engine_settings=stellar_engine_settings)
 
     def build_scene(self) -> None:
         """
@@ -69,7 +67,7 @@ class LargeScaleController(BaseEnv, StellarEngineEnvMixin):
         """
 
         # Creates an empty xform with the name lunaryard
-        large_scale = self.stage.DefinePrim(self.scene_name, "Xform")
+        self.stage.DefinePrim(self.scene_name, "Xform")
 
         self.create_sun(self._sun_settings)
         self.create_earth()
@@ -118,7 +116,7 @@ class LargeScaleController(BaseEnv, StellarEngineEnvMixin):
         """
 
         super().add_robot_manager(robotManager)
-        self.pose_tracker = self.robotManager.robot.get_pose     # is later called as a function, thus now does not have ()
+        self.pose_tracker = self.robotManager.robot.get_pose  # is later called as a function, thus now does not have ()
 
     # ==============================================================================
     # Terrain info

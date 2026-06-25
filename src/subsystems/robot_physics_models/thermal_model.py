@@ -2,28 +2,27 @@ __author__ = "Louis Burtz, Aleksa Stanivuk"
 __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
 
-"""Basic thermal model for a six-faced box with a single interior node."""
-
 import math
-from dataclasses import dataclass, field
-from typing import Dict, Iterable, Mapping, Sequence, Tuple
-from src.subsystems.robot_physics_models.robot_physics_model import RobotPhysicsModel
+import random
+from dataclasses import dataclass
+from typing import Dict, Iterable, Mapping, Sequence
 
 import numpy as np
-import random
+
+from src.subsystems.robot_physics_models.robot_physics_model import RobotPhysicsModel
 
 
 def _clamp(value: float, lower: float, upper: float) -> float:
-	return max(lower, min(upper, value))
+    return max(lower, min(upper, value))
 
 
 FACE_NORMALS: Dict[str, np.ndarray] = {
-	"+X": np.array((1.0, 0.0, 0.0)),
-	"-X": np.array((-1.0, 0.0, 0.0)),
-	"+Y": np.array((0.0, 1.0, 0.0)),
-	"-Y": np.array((0.0, -1.0, 0.0)),
-	"+Z": np.array((0.0, 0.0, 1.0)),
-	"-Z": np.array((0.0, 0.0, -1.0)),
+    "+X": np.array((1.0, 0.0, 0.0)),
+    "-X": np.array((-1.0, 0.0, 0.0)),
+    "+Y": np.array((0.0, 1.0, 0.0)),
+    "-Y": np.array((0.0, -1.0, 0.0)),
+    "+Z": np.array((0.0, 0.0, 1.0)),
+    "-Z": np.array((0.0, 0.0, -1.0)),
 }
 
 MIN_TEMP: float = -50.0
@@ -33,6 +32,7 @@ SIGMOID_GAIN: float = 8.0  # Controls steepness of the sun-loading curve.
 FACES: Iterable[str] = ("+X", "-X", "+Y", "-Y", "+Z", "-Z")
 INITIAL_TEMP: float = 20.0
 MEASUREMENT_NOISE: float = 0.5
+
 
 @dataclass
 class ThermalModel(RobotPhysicsModel):
@@ -54,7 +54,7 @@ class ThermalModel(RobotPhysicsModel):
         self._sun_direction: np.ndarray = np.array((0.0, 1.0, 0.0))
         self._faces: Iterable[str] = FACES
         self._node_temps: Dict[str, float] = {}
-        #NOTE the following fields were set to default values, as these values depend on the environment (Moon), not so much on the rover
+        # NOTE the following fields were set to default values, as these values depend on the environment (Moon), not so much on the rover
         # no setters were implemented, but the values may be directly accessed from a subsystems manager if need for customization exists
         self._min_temp: float = MIN_TEMP
         self._max_temp: float = MAX_TEMP
@@ -97,8 +97,7 @@ class ThermalModel(RobotPhysicsModel):
             return dict(self._node_temps)
 
         return {
-            name: value + random.gauss(0.0, self._measurement_noise_std)
-            for name, value in self._node_temps.items()
+            name: value + random.gauss(0.0, self._measurement_noise_std) for name, value in self._node_temps.items()
         }
 
     def set_rover_yaw(self, yaw_deg: float) -> None:
@@ -135,10 +134,7 @@ class ThermalModel(RobotPhysicsModel):
             dtype=float,
         )
         return {
-            face: float(
-                _clamp(float(np.dot(unit, rotation @ FACE_NORMALS[face])), 0.0, 1.0)
-            )
-            for face in self._faces
+            face: float(_clamp(float(np.dot(unit, rotation @ FACE_NORMALS[face])), 0.0, 1.0)) for face in self._faces
         }
 
 
@@ -148,7 +144,9 @@ class ThermalModel(RobotPhysicsModel):
 # ---------------------------------------------------------------------------
 
 
-def run_single_sun_test(total_time: float = 600.0, dt: float = 1.0) -> tuple[Sequence[float], Dict[str, Sequence[float]]]:
+def run_single_sun_test(
+    total_time: float = 600.0, dt: float = 1.0
+) -> tuple[Sequence[float], Dict[str, Sequence[float]]]:
     """Simulate +X sun exposure and return timelines for plotting/tests."""
 
     steps = int(total_time / dt)
@@ -161,11 +159,13 @@ def run_single_sun_test(total_time: float = 600.0, dt: float = 1.0) -> tuple[Seq
 
     SUN_AZYMUTH_DEG = 65.0
     SUN_ALTITUDE_DEG = 0.5
-    SUN_DIRECTION = np.array([
-        -np.cos(np.radians(SUN_ALTITUDE_DEG)) * np.sin(np.radians(SUN_AZYMUTH_DEG)),
-        np.cos(np.radians(SUN_ALTITUDE_DEG)) * np.cos(np.radians(SUN_AZYMUTH_DEG)),
-        np.sin(np.radians(SUN_ALTITUDE_DEG)),
-    ])
+    SUN_DIRECTION = np.array(
+        [
+            -np.cos(np.radians(SUN_ALTITUDE_DEG)) * np.sin(np.radians(SUN_AZYMUTH_DEG)),
+            np.cos(np.radians(SUN_ALTITUDE_DEG)) * np.cos(np.radians(SUN_AZYMUTH_DEG)),
+            np.sin(np.radians(SUN_ALTITUDE_DEG)),
+        ]
+    )
 
     for idx in range(steps):
         # set inputs
@@ -183,7 +183,9 @@ def run_single_sun_test(total_time: float = 600.0, dt: float = 1.0) -> tuple[Seq
     return times, temps
 
 
-def _plot_temperature_profile(times: Sequence[float], temps: Mapping[str, Sequence[float]], filename: str = "test/outputs/thermal_model_demo.png") -> str:
+def _plot_temperature_profile(
+    times: Sequence[float], temps: Mapping[str, Sequence[float]], filename: str = "test/outputs/thermal_model_demo.png"
+) -> str:
     """Plot node temperatures versus time; returns output filename."""
 
     from matplotlib import pyplot as plt
@@ -205,6 +207,7 @@ def _plot_temperature_profile(times: Sequence[float], temps: Mapping[str, Sequen
 
 def main() -> None:
     import os
+
     os.makedirs("test/outputs", exist_ok=True)
     times, temps = run_single_sun_test(total_time=600.0, dt=1.0)
     output = _plot_temperature_profile(times, temps)

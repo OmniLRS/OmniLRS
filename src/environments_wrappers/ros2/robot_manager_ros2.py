@@ -5,9 +5,8 @@ __email__ = "ljburtz@jaops.com"
 from typing import List, Tuple
 
 from geometry_msgs.msg import PoseStamped
-from pxr import Gf
 from rclpy.node import Node
-from std_msgs.msg import Empty, String
+from std_msgs.msg import String
 
 from src.configurations.simulator_mode_enum import SimulatorMode
 from src.robots.robot import RobotManager
@@ -91,7 +90,6 @@ class ROS_RobotManager(Node):
         """
 
         self.modifications.append([self.RM.reset_robot, {}])
-
 
     def cleanRobots(self) -> None:
         """

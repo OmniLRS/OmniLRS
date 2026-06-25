@@ -2,14 +2,15 @@ __author__ = "Antoine Richard"
 __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
 
-from scipy.interpolate import CubicSpline
-from typing import Tuple
 import dataclasses
-import numpy as np
-import threading
 import logging
+import threading
 import time
+from typing import Tuple
+
+import numpy as np
 import zfpy
+from scipy.interpolate import CubicSpline
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(format="%(asctime)s %(message)s", datefmt="%m/%d/%Y %I:%M:%S %p")

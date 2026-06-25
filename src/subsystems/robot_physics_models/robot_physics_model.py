@@ -3,14 +3,15 @@ __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
 
 from abc import ABC, abstractmethod
-from typing import Dict, Any
+from typing import Any, Dict
+
 
 class RobotPhysicsModel(ABC):
     """Base contract for robot subsystem physics models.
 
-    Every model implements the same four lifecycle methods. 
-    Arguments for initialize() and set_inputs() are intentionally model-specific, 
-    so they accept arbitrary positional/keyword arguments; 
+    Every model implements the same four lifecycle methods.
+    Arguments for initialize() and set_inputs() are intentionally model-specific,
+    so they accept arbitrary positional/keyword arguments;
     subclasses define the concrete signature that suits their physics.
     """
 

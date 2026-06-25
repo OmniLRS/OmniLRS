@@ -2,16 +2,17 @@ __author__ = "Antoine Richard"
 __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
 
-from scipy.ndimage import rotate
-from typing import Tuple, List
-import numpy as np
 import dataclasses
+from typing import List, Tuple
+
+import numpy as np
+from scipy.ndimage import rotate
 
 from src.terrain_management.large_scale_terrain.crater_database import (
     CraterDB,
     CraterDBConf,
 )
-from src.terrain_management.large_scale_terrain.utils import CraterMetadata, BoundingBox
+from src.terrain_management.large_scale_terrain.utils import BoundingBox, CraterMetadata
 
 
 @dataclasses.dataclass
@@ -218,8 +219,8 @@ class CraterBuilder:
 
 
 if __name__ == "__main__":
-
     from matplotlib import pyplot as plt
+
     from src.terrain_management.large_scale_terrain.crater_distribution import (
         CraterSampler,
         CraterSamplerConf,

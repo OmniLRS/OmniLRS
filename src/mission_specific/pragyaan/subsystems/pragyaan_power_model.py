@@ -4,6 +4,7 @@ __email__ = "ljburtz@jaops.com"
 
 from enum import Enum
 from typing import Tuple
+
 import numpy as np
 
 from src.subsystems.robot_physics_models.power_model import PowerModel
@@ -14,15 +15,15 @@ class PragyaanPowerModelDefaults(float, Enum):
     BATTERY_PERCENTAGE_NOISE = 0.5
     BATTERY_VOLTAGE_NOISE = 0.05
     SOLAR_INPUT_NOISE = 0.1
-    REGULATED_BUS_VOLTAGE = 5.0        # Volts
-    DC_DC_EFFICIENCY = 0.95            # 95% efficient battery -> 5V conversion
-    DEVICE_FAULT_EXTRA_POWER = 2.5     # Watts added when device is faulted
+    REGULATED_BUS_VOLTAGE = 5.0  # Volts
+    DC_DC_EFFICIENCY = 0.95  # 95% efficient battery -> 5V conversion
+    DEVICE_FAULT_EXTRA_POWER = 2.5  # Watts added when device is faulted
 
 
 class PragyaanPowerModel(PowerModel):
     """Pragyaan-specific power model. Overrides the base power model defaults
     with values from PragyaanPowerModelDefaults to allow mission-specific tuning.
-    initialize()/set_inputs()/compute()/get_outputs() can also be overridden to implement the logic for computing the power metrics based on mission specifics.    
+    initialize()/set_inputs()/compute()/get_outputs() can also be overridden to implement the logic for computing the power metrics based on mission specifics.
     """
 
     PM = PragyaanPowerModelDefaults
@@ -31,7 +32,7 @@ class PragyaanPowerModel(PowerModel):
         "DEPLOYED": np.array((0.0, 1.0, 0.0)),
         "STOWED": np.array((0.0, 0.0, 1.0)),
     }
-    
+
     # Battery voltage curve as (percentage, voltage) points
     BATTERY_VOLTAGE_CURVE: Tuple[Tuple[float, float], ...] = (
         (0.0, 11.0),

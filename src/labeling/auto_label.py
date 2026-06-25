@@ -2,14 +2,15 @@ __author__ = "Antoine Richard, Junnosuke Kahamora"
 __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
 
-from typing import List, Tuple, Dict, Union
-import random, string
+import os
+import random
+import string
+from typing import Dict, Tuple, Union
+
 import numpy as np
 import omni
-import os
-
-import omni.replicator.core as rep
 import omni.kit.actions.core
+import omni.replicator.core as rep
 from pxr import Usd, UsdGeom
 
 from src.configurations.auto_labeling_confs import AutoLabelingConf

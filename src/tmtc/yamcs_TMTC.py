@@ -2,47 +2,49 @@ __author__ = "Aleksa Stanivuk"
 __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
 
+import logging
+from abc import ABC, abstractmethod
+
+from yamcs.client import YamcsClient
+
 from src.tmtc.commands_handler import CommandsHandler
 from src.tmtc.drive_handler import DriveHandler
 from src.tmtc.images_handler import ImagesHandler
 from src.tmtc.intervals_handler import IntervalsHandler
-from yamcs.client import YamcsClient
-import omni.kit.app
-from abc import ABC, abstractmethod
 from src.tmtc.obc_handler import ObcHandler
-
-import logging
 
 logging.getLogger("urllib3").setLevel(logging.WARNING)
 
+
 class YamcsTMTC(ABC):
     """
-    YamcsTMTC is implementation of Yamcs-TMTC framework. 
+    YamcsTMTC is implementation of Yamcs-TMTC framework.
     It allows to control a robot instance, by receiving TCs from Yamcs and sending TM to Yamcs.
 
     It is not intended to be used standalone, but as a class that is inherited by a rover controller.
     Take a look at mission_specific/pragyaan/tmtct/PragyaanController for reference implementation of how YamcsTMTC should be utilized for a specific rover context.
 
     The class provides handlers that enable working with general concepts of Yamcs-TMTC framework, that would be used by any rover.
-    YamcsTMTC is not constrained by specific rover implementation and functionalities, but is implemented on a high level. 
-    Specific rover controller classes are intended to adhere to the required rover functionalities by building upon the concepts 
+    YamcsTMTC is not constrained by specific rover implementation and functionalities, but is implemented on a high level.
+    Specific rover controller classes are intended to adhere to the required rover functionalities by building upon the concepts
     provided by YamcsTMTC.
 
     Description of handlers:
         IntervalsHandler - allows for easy handling of intervals, thus enables scheduling (non-)repeating tasks in intervals.
         ObcHandler - facilitates work with rover's OBC, such as updating the rover's state from a central point.
-        DriveHandler - handles commanding of rover's drive mechanichs by transfering high level commands in term of speed and distance 
+        DriveHandler - handles commanding of rover's drive mechanichs by transfering high level commands in term of speed and distance
                             into low level wheel movements.
-        CommandsHandler - handles addition and execution of commands coming from Yamcs by conducing mapping between the predefined commands and 
-                            specific functions (functions are implemented inside specific rover controllers that will utilize the CommandsHandler) 
+        CommandsHandler - handles addition and execution of commands coming from Yamcs by conducing mapping between the predefined commands and
+                            specific functions (functions are implemented inside specific rover controllers that will utilize the CommandsHandler)
         ImagesHandler - facilitates working with Yamcs bucket storages for saving the images created inside the simulator
 
     The class also implements two abstract methods that are required to be implemented by the inheriting controllers:
-        setup_command_callbacks(commands_conf) - utilizes CommandsHandler to construct the mapping between high level Yamcs commands, 
+        setup_command_callbacks(commands_conf) - utilizes CommandsHandler to construct the mapping between high level Yamcs commands,
                                                 and desired functionalities (check PragyaanController for ref. impl.)
         start_streaming_data - utilizes IntervalsHandler to setup and trigger update of rover's parameters in Yamcs (check PragyaanController for ref. impl.)
 
-    """ 
+    """
+
     def __init__(
         self,
         yamcs_instance_conf,
@@ -52,17 +54,26 @@ class YamcsTMTC(ABC):
         robot,
     ) -> None:
         yamcs_client = YamcsClient(yamcs_instance_conf["address"])
-        self._yamcs_processor = yamcs_client.get_processor(instance=yamcs_instance_conf["instance"], processor=yamcs_instance_conf["processor"])
+        self._yamcs_processor = yamcs_client.get_processor(
+            instance=yamcs_instance_conf["instance"], processor=yamcs_instance_conf["processor"]
+        )
         self._robot_name = robot_name
         self._robot_RG = robot_RG
         self._yamcs_conf = yamcs_conf
         self._robot = robot
-        #creating the five generic handlers for the main functions of the robot
-        self._intervals_handler:IntervalsHandler = IntervalsHandler()
-        self._obc_handler:ObcHandler = ObcHandler(self._robot, self._intervals_handler)
-        self._drive_handler:DriveHandler = DriveHandler(self._robot, self._intervals_handler, self._obc_handler)
-        self._commands_handler:CommandsHandler = CommandsHandler(self._yamcs_processor, yamcs_instance_conf, yamcs_conf["mdb"])
-        self._images_handler:ImagesHandler = ImagesHandler(self._yamcs_processor, yamcs_instance_conf["address"], yamcs_conf["images"], yamcs_instance_conf["url_full_nginx"])
+        # creating the five generic handlers for the main functions of the robot
+        self._intervals_handler: IntervalsHandler = IntervalsHandler()
+        self._obc_handler: ObcHandler = ObcHandler(self._robot, self._intervals_handler)
+        self._drive_handler: DriveHandler = DriveHandler(self._robot, self._intervals_handler, self._obc_handler)
+        self._commands_handler: CommandsHandler = CommandsHandler(
+            self._yamcs_processor, yamcs_instance_conf, yamcs_conf["mdb"]
+        )
+        self._images_handler: ImagesHandler = ImagesHandler(
+            self._yamcs_processor,
+            yamcs_instance_conf["address"],
+            yamcs_conf["images"],
+            yamcs_instance_conf["url_full_nginx"],
+        )
 
     @abstractmethod
     def setup_command_callbacks(self, commands_conf):

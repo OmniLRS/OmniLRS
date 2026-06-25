@@ -2,30 +2,28 @@ __author__ = "Antoine Richard"
 __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
 
-from typing import List, Tuple, Dict, Union
-import numpy as np
 import dataclasses
-import threading
 import logging
-import math
-import time
 import os
+import threading
+import time
+from typing import List, Tuple
 
-from semantics.schema.editor import PrimSemanticData
+import numpy as np
 import omni
+from pxr import Gf, Sdf, Usd, UsdGeom, Vt
+from semantics.schema.editor import PrimSemanticData
 
 from src.terrain_management.large_scale_terrain.pxr_utils import (
     add_collider,
-    load_material,
     bind_material,
     delete_prim,
+    load_material,
     set_xform_ops,
 )
-from src.terrain_management.large_scale_terrain.rock_distribution import RockSamplerConf, RockSampler
-from src.terrain_management.large_scale_terrain.utils import BoundingBox, RockBlockData, ScopedTimer
 from src.terrain_management.large_scale_terrain.rock_database import RockDB, RockDBConf
-
-from pxr import UsdGeom, Gf, Usd, Vt, Sdf
+from src.terrain_management.large_scale_terrain.rock_distribution import RockSampler, RockSamplerConf
+from src.terrain_management.large_scale_terrain.utils import BoundingBox, RockBlockData, ScopedTimer
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(format="%(asctime)s %(message)s", datefmt="%m/%d/%Y %I:%M:%S %p")
