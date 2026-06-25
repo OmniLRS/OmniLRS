@@ -1,27 +1,21 @@
 __author__ = "Antoine Richard, Junnosuke Kamohara, Aleksa Stanivuk"
-__copyright__ = "Copyright 2023-26, JAOPS, Space Robotics Lab, SnT, University of Luxembourg, SpaceR"
-__license__ = "BSD-3-Clause"
-__version__ = "2.0.0"
 __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
-__status__ = "development"
 
-from typing import List, Tuple, Dict
+from typing import Dict, List, Tuple
 
-from isaacsim.core.utils.stage import open_stage, add_reference_to_stage
-import omni
+from isaacsim.core.utils.stage import add_reference_to_stage
+from pxr import Gf, Usd, UsdGeom, UsdLux
 
-from pxr import UsdGeom, UsdLux, Gf, Usd
-
-from src.environments.monitoring_cameras_manager import MonitoringCamerasManager
+from assets import get_assets_path
+from src.configurations.environments import LunalabConf
+from src.configurations.procedural_terrain_confs import TerrainManagerConf
 from src.configurations.simulator_mode_enum import SimulatorMode
+from src.environments.base_env import BaseEnv
+from src.environments.monitoring_cameras_manager import MonitoringCamerasManager
 from src.environments.static_assets_manager import StaticAssetsManager
 from src.environments.terrain_control_mixin import TerrainControlMixin
 from src.terrain_management.large_scale_terrain.pxr_utils import set_xform_ops
-from src.configurations.procedural_terrain_confs import TerrainManagerConf
-from src.configurations.environments import LunalabConf
-from src.environments.base_env import BaseEnv
-from assets import get_assets_path
 
 
 class LunalabController(BaseEnv, TerrainControlMixin):
@@ -30,7 +24,7 @@ class LunalabController(BaseEnv, TerrainControlMixin):
 
     def __init__(
         self,
-        mode:SimulatorMode = SimulatorMode.ROS2,
+        mode: SimulatorMode = SimulatorMode.ROS2,
         lunalab_settings: LunalabConf = None,
         rocks_settings: Dict = None,
         terrain_manager: TerrainManagerConf = None,
@@ -83,7 +77,7 @@ class LunalabController(BaseEnv, TerrainControlMixin):
         self.build_scene()
         # Fetches the interactive elements
         self.collect_interactive_assets()
-        self.build_RM()    #TODO should first call switch_terrain() as it calls load_DEM() which sets up self.dem and self.mask that are used inside build_RM(), otherwise they are just None (but either ways inside RM.build() neither of those params are being utilized)
+        self.build_RM()  # TODO should first call switch_terrain() as it calls load_DEM() which sets up self.dem and self.mask that are used inside build_RM(), otherwise they are just None (but either ways inside RM.build() neither of those params are being utilized)
         # Loads the DEM and the mask
         self.switch_terrain(0)
 

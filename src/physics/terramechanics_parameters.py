@@ -1,14 +1,9 @@
 __author__ = "Junnosuke Kamohara"
-__copyright__ = "Copyright 2023-26, JAOPS, Space Robotics Lab, SnT, University of Luxembourg, SpaceR"
-__license__ = "BSD-3-Clause"
-__version__ = "2.0.0"
 __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
-__status__ = "development"
 
-from dataclasses import dataclass
 import math
-import numpy as np
+from dataclasses import dataclass
 
 
 @dataclass

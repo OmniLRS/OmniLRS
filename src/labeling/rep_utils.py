@@ -1,17 +1,14 @@
 __author__ = "Antoine Richard, Junnosuke Kahamora"
-__copyright__ = "Copyright 2023-26, JAOPS, Space Robotics Lab, SnT, University of Luxembourg, SpaceR"
-__license__ = "BSD-3-Clause"
-__version__ = "2.0.0"
 __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
-__status__ = "development"
 
-from typing import Any, Union, Dict
-import pandas as pd
-import numpy as np
 import json
-import cv2
 import os
+from typing import Any, Dict
+
+import cv2
+import numpy as np
+import pandas as pd
 
 
 class BaseWriter:

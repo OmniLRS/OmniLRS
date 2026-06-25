@@ -1,19 +1,13 @@
 __author__ = "Amaan Javed"
-__copyright__ = "Copyright 2026, JAOPS"
-__license__ = "BSD-3-Clause"
-__version__ = "3.0.0"
-__status__ = "development"
 __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
 
 from enum import StrEnum
 
-from src.tmtc.yamcs_TMTC import ImagesHandler
-
-import omni.kit.app
 import numpy as np
-from omni.isaac.sensor import Camera
 from PIL import Image
+
+from src.tmtc.yamcs_TMTC import ImagesHandler
 
 
 class CameraViewType(StrEnum):

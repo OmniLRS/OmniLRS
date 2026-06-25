@@ -1,14 +1,10 @@
 __author__ = "Antoine Richard"
-__copyright__ = "Copyright 2023-26, JAOPS, Space Robotics Lab, SnT, University of Luxembourg, SpaceR"
-__license__ = "BSD-3-Clause"
-__version__ = "2.0.0"
 __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
-__status__ = "development"
+
+import logging
 
 import numba as nb
-import numpy as np
-import logging
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(format="%(asctime)s %(message)s", datefmt="%m/%d/%Y %I:%M:%S %p")
@@ -186,7 +182,7 @@ def _build_mesh(start_level, num_levels, meshBaseLODExtentHeightfieldTexels):
                     A = (float(x), float(y), L)
                     C = (float(x + step), A[1], L)
                     G = (A[0], float(y + step), L)
-                    I = (C[0], G[1], L)
+                    I = (C[0], G[1], L)  # noqa: E741  (geometric point label in the A-I grid)
 
                     B = ((A[0] + C[0]) * 0.5, (A[1] + C[1]) * 0.5, (A[2] + C[2]) * 0.5)
                     D = ((A[0] + G[0]) * 0.5, (A[1] + G[1]) * 0.5, (A[2] + G[2]) * 0.5)

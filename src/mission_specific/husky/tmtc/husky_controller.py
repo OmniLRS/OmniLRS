@@ -1,12 +1,7 @@
 __author__ = "Amaan Javed"
-__copyright__ = "Copyright 2026, JAOPS"
-__license__ = "BSD-3-Clause"
-__version__ = "3.0.0"
-__status__ = "development"
 __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
 
-import omni.kit.app
 
 from src.mission_specific.husky.tmtc.camera_handler import HuskyCameraHandler
 from src.mission_specific.husky.tmtc.husky_commander import HuskyCommander

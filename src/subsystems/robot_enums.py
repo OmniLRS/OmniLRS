@@ -1,10 +1,6 @@
 __author__ = "Aleksa Stanivuk"
-__copyright__ = "Copyright 2025-26, JAOPS"
-__license__ = "BSD-3-Clause"
-__version__ = "2.0.0"
 __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
-__status__ = "development"
 
 from enum import IntEnum
 
@@ -18,6 +14,7 @@ class GoNogoState(IntEnum):
     GO = 1
     # UNDEF = -1
 
+
 class ObcState(IntEnum):
     OFF = 0
     BOOT = 1
@@ -26,6 +23,7 @@ class ObcState(IntEnum):
     MOTOR = 4
     SAFE = 5
     ERROR = 6
+
 
 class SolarPanelState(IntEnum):
     STOWED = 0

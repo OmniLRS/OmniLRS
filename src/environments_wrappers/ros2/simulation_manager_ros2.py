@@ -1,10 +1,6 @@
 __author__ = "Antoine Richard, Junnosuke Kamohara, Aleksa Stanivuk, Shamistan Karimov"
-__copyright__ = "Copyright 2023-26, JAOPS, Space Robotics Lab, SnT, University of Luxembourg, SpaceR"
-__license__ = "BSD-3-Clause"
-__version__ = "2.0.0"
 __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
-__status__ = "development"
 
 import logging
 from threading import Thread
@@ -111,7 +107,7 @@ class ROS2_SimulationManager:
 
         set_moon_env_name(cfg["environment"]["name"])
 
-        PSM = PhysicsSceneManager(cfg["physics"]["physics_scene"])
+        PhysicsSceneManager(cfg["physics"]["physics_scene"])
         for i in range(100):
             self.world.step(render=True)
         self.world.reset()

@@ -1,10 +1,9 @@
 import binascii
 import struct
 import xml.etree.ElementTree as ET
-from pathlib import Path
 
-class MdbParsingService():
 
+class MdbParsingService:
     XTCE_NS = {"xtce": "http://www.omg.org/spec/XTCE/20180204"}
 
     @classmethod
@@ -90,7 +89,11 @@ class MdbParsingService():
             type_name = float_type.attrib["name"]
 
             enc = float_type.find("xtce:FloatDataEncoding", cls.XTCE_NS)
-            size_bits = int(enc.attrib.get("sizeInBits", float_type.attrib.get("sizeInBits", "32"))) if enc is not None else int(float_type.attrib.get("sizeInBits", "32"))
+            size_bits = (
+                int(enc.attrib.get("sizeInBits", float_type.attrib.get("sizeInBits", "32")))
+                if enc is not None
+                else int(float_type.attrib.get("sizeInBits", "32"))
+            )
             byte_order = "big"
             if enc is not None:
                 raw_order = enc.attrib.get("byteOrder", "mostSignificantByteFirst")
@@ -136,11 +139,13 @@ class MdbParsingService():
                             f"in command '{full_name}' from file '{mdb_path}'"
                         )
 
-                    args.append({
-                        "name": arg_name,
-                        "type": arg_type,
-                        "spec": type_table[arg_type],
-                    })
+                    args.append(
+                        {
+                            "name": arg_name,
+                            "type": arg_type,
+                            "spec": type_table[arg_type],
+                        }
+                    )
 
             # wire command name
             fixed = cmd.find(".//xtce:FixedValueEntry", cls.XTCE_NS)
@@ -165,7 +170,7 @@ class MdbParsingService():
             }
 
         return command_table
-    
+
     @staticmethod
     def _find_parent_map(root):
         return {child: parent for parent in root.iter() for child in parent}
@@ -188,9 +193,9 @@ class MdbParsingService():
         # "/Rover/system/go_nogo_command" -> "Rover"
         parts = full_name.strip("/").split("/")
         return parts[0] if parts else ""
-    
+
     @staticmethod
-    def decode_tc_payload( payload, registry):
+    def decode_tc_payload(payload, registry):
         for wire_name, cmd in registry.items():
             if not payload.startswith(wire_name):
                 continue

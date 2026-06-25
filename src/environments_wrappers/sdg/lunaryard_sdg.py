@@ -1,37 +1,32 @@
 __author__ = "Antoine Richard"
-__copyright__ = "Copyright 2023-26, JAOPS, Space Robotics Lab, SnT, University of Luxembourg, SpaceR"
-__license__ = "BSD-3-Clause"
-__version__ = "2.0.0"
 __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
-__status__ = "development"
 
 # System imports
-from scipy.spatial.transform import Rotation as SSTR
 import numpy as np
 
 # Once the sim is started load isaac libs (including ROS)
-from isaacsim.core.api.world import World
-from pxr import Gf
-import omni
+from pxr import Gf, UsdGeom
+from scipy.spatial.transform import Rotation as SSTR
+from WorldBuilders.Mixer import RequestMixer
+from WorldBuilders.pxr_utils import addDefaultOps, setDefaultOps
+from WorldBuilders.Types import (
+    Image_T,
+    ImageClipper_T,
+    Orientation_T,
+    Position_T,
+    RollPitchYaw_T,
+    UniformSampler_T,
+    UserRequest_T,
+)
+
+from src.configurations.auto_labeling_confs import CameraConf
+from src.configurations.environments import LunaryardConf
+from src.configurations.procedural_terrain_confs import TerrainManagerConf
+from src.configurations.rendering_confs import FlaresConf
 
 # Custom libs
 from src.environments.lunaryard import LunaryardController
-
-from src.configurations.procedural_terrain_confs import TerrainManagerConf
-from src.configurations.auto_labeling_confs import CameraConf
-from src.configurations.rendering_confs import FlaresConf
-from src.configurations.environments import LunaryardConf
-from src.labeling.auto_label import AutonomousLabeling
-from assets import get_assets_path
-
-from WorldBuilders.pxr_utils import setDefaultOps, addDefaultOps
-from WorldBuilders.Types import Position_T, Orientation_T, UserRequest_T
-from WorldBuilders.Types import UniformSampler_T, ImageClipper_T
-from WorldBuilders.Types import Image_T, RollPitchYaw_T
-from WorldBuilders.Mixer import RequestMixer
-
-from pxr import UsdGeom, Gf
 
 
 class SDG_Lunaryard(LunaryardController):

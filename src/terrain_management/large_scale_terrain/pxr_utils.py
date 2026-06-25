@@ -1,17 +1,12 @@
 __author__ = "Antoine Richard"
-__copyright__ = "Copyright 2023-26, JAOPS, Space Robotics Lab, SnT, University of Luxembourg, SpaceR"
-__license__ = "BSD-3-Clause"
-__version__ = "2.0.0"
 __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
-__status__ = "development"
 
-import os
 import logging
-
-from pxr import UsdGeom, Gf, Usd, Vt, UsdShade, UsdPhysics, PhysxSchema
+import os
 
 import omni
+from pxr import Gf, PhysxSchema, Usd, UsdGeom, UsdPhysics, UsdShade
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(format="%(asctime)s %(message)s", datefmt="%m/%d/%Y %I:%M:%S %p")
@@ -291,7 +286,7 @@ def load_material(material_name: str, material_path: str, destination_path: str 
 
 def make_rigid(stage: Usd.Stage, path: str):
     prim = stage.GetPrimAtPath(path)
-    rigid = UsdPhysics.RigidBodyAPI.Apply(prim)
+    UsdPhysics.RigidBodyAPI.Apply(prim)
 
 
 def set_texture_path(stage: Usd.Stage, material_path: str, shader_name: str, texture_path: str):

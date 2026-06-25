@@ -1,12 +1,8 @@
 from __future__ import annotations
 
 __author__ = "Shamistan Karimov, Bach Nguyen"
-__copyright__ = "Copyright 2025-26, JAOPS, AsteriaART/Artefacts"
-__license__ = "BSD-3-Clause"
-__version__ = "2.0.0"
 __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
-__status__ = "development"
 
 import logging
 import time
@@ -171,7 +167,7 @@ class ArticulationTelemetry:
 
             self._inited = True
 
-            self.log(f"ArticulationTelemetry initialized: " f"prim={self.prim_path}, dofs={len(self.joint_names)}")
+            self.log(f"ArticulationTelemetry initialized: prim={self.prim_path}, dofs={len(self.joint_names)}")
             self.log(f"DOF names: {self.joint_names}")
             return True
 

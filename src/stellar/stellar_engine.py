@@ -1,18 +1,16 @@
 __author__ = "Antoine Richard"
-__copyright__ = "Copyright 2023-26, JAOPS, Space Robotics Lab, SnT, University of Luxembourg, SpaceR"
-__license__ = "BSD-3-Clause"
-__version__ = "2.0.0"
 __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
-__status__ = "development"
 
-from src.configurations.stellar_engine_confs import StellarEngineConf
+import datetime
+import logging
+import math
+from typing import Tuple
+
 from scipy.spatial.transform import Rotation as SSTR
 from skyfield.api import PlanetaryConstants, load
-from typing import Tuple
-import datetime
-import math
-import logging
+
+from src.configurations.stellar_engine_confs import StellarEngineConf
 
 
 class StellarEngine:
@@ -75,7 +73,7 @@ class StellarEngine:
         Args:
             date (float): The current time of the observer. The given is given in seconds in the UTC time zone.
         """
-        self.last_update = datetime.datetime.fromtimestamp(date, datetime.timezone.utc) #added fix
+        self.last_update = datetime.datetime.fromtimestamp(date, datetime.timezone.utc)  # added fix
         self.current_time = datetime.datetime.fromtimestamp(date, datetime.timezone.utc)
         self.t = self.ts.from_datetime(self.current_time)
         logging.debug(f"StellarEngine: current time set to {self.current_time} and date set to {date}")
@@ -175,9 +173,7 @@ class StellarEngine:
             self.last_update = self.current_time
             self.t = self.ts.from_datetime(self.current_time)
             update = True
-            logging.debug(
-                f"StellarEngine: updated time to {self.current_time} (dt = {time_delta.total_seconds()}s)"
-            )
+            logging.debug(f"StellarEngine: updated time to {self.current_time} (dt = {time_delta.total_seconds()}s)")
 
         return update
 
@@ -199,9 +195,10 @@ class StellarEngine:
 
 
 if __name__ == "__main__":
-    from src.configurations.stellar_engine_confs import Date
-    from matplotlib import pyplot as plt
     import numpy as np
+    from matplotlib import pyplot as plt
+
+    from src.configurations.stellar_engine_confs import Date
 
     date = Date(year=2024, month=5, day=1, hour=11, minute=50)
     SEC = StellarEngineConf(start_date=date, time_scale=1, update_interval=1)
