@@ -190,6 +190,17 @@ class StellarEngine:
         Returns:
             Tuple[float, float, float, float]: the quaternion representing the altitude and azimuth. (qw, qx, qy, qz)
         """
+        # NOTE: the sky frame and the USD world frame are distinct; "[0, 0, -1]" here refers to the
+        # sky-frame axis, which is NOT the USD light's local -Z. That frame discrepancy is the root
+        # cause of the calibration handled here and in StellarEngineEnvMixin.create_sun().
+        # Convention bridge: skyfield reports the sun in SKY coordinates (altitude/azimuth), but USD
+        # needs an XYZ rotation. The two systems don't share a zero, so we reconcile the angles here:
+        #   - azimuth is measured clockwise from North, while USD yaw is measured counter-clockwise
+        #     from +X; "az - 90" lines North up with the world +X axis.
+        #   - altitude is the angle above the horizon, applied as the Y (pitch) rotation.
+        # NOTE: this only reconciles the time-varying ANGLES. The light's default emission axis
+        # (USD DistantLight points along local -Z) is separately aligned to the frame this formula
+        # assumes ([0, 0, -1]) by a fixed rotation in StellarEngineEnvMixin.create_sun().
         x, y, z, w = SSTR.from_euler("xyz", [0, alt, az - 90], degrees=True).as_quat()
         return (w, x, y, z)
 

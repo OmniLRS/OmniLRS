@@ -31,8 +31,9 @@ sun_settings:
   specular_multiplier: 1.0
   color: [1.0, 1.0, 1.0]
   temperature: 6500.0
-  azimuth: 180.0 # Orientation of the Sun Xform -> sun direction AND if stellar_engine_settings is set, this config is ignored and the stellar engine will set the sun direction
-  elevation: 45.0 # Orientation of the Sun Xform ->Z sun direction AND if stellar_engine_settings is set, this config is ignored and the stellar engine will set the sun direction
+  # orientation of the Sun Xform: sets the Sun's direction
+  azimuth: 180.0 # if stellar_engine_settings is set, this config is ignored and the stellar engine will set the Sun direction
+  elevation: 45.0 # if stellar_engine_settings is set, this config is ignored and the stellar engine will set the Sun direction
 
 # Rocks sampling parameters.
 rocks_settings:

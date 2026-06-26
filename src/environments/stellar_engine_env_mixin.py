@@ -67,9 +67,24 @@ class StellarEngineEnvMixin:
             "xyz", [0, sun_settings.elevation, sun_settings.azimuth - 90], degrees=True
         ).as_quat()
 
-        # NOTE do not alter _sun_lux orientation values, do not make it dynamic
-        # the sun is meant to be re-oriented only via the parent XForm element, which is _sun_prim
-        # applying (w, x, y, z) here too would double-rotate the sun
+        # NOTE: Do NOT change the sun_lux quaternion and do not make it dynamic.
+        # The sun is aimed only by rotating the parent (_sun_prim)
+        # The child light (sun_lux) keeps a fixed rotation; rotating it too would turn the sun twice.
+        #
+        # This is the CONSTANT half of the sky->USD conversion. StellarEngine.convert_alt_az_to_quat
+        # reconciles the time-varying angles (altitude + azimuth); this fixed rotation reconciles the
+        # leftover frame offset: a USD DistantLight emits along its local -Z, but the engine's formula
+        # assumes the light starts pointing along [0, 0, -1] in ITS frame. The two frames differ by a
+        # constant turn, which is what this quaternion supplies.
+        #
+        # Gf.Quatd(0.5, (0.5, -0.5, -0.5)) is a fixed 120 deg turn around the axis (1, -1, -1),
+        # which is a cube's diagonal (not a single X/Y/Z axis). Spinning around the cube diagonal
+        # cycles the axes (X->Y->Z->X), which is what remaps the light's -Z onto the axis the engine
+        # expects in one step. You only return to the start after 3 equal turns (3 x 120 = 360), which
+        # is exactly why the angle is 120 and not something else.
+        # (Compare: a 90 or 180 deg turn around ONE axis only swaps 2 axes, like rotating a 2D
+        # square in the XY plane - X and Y trade places but Z never moves, so it can't redirect -Z.)
+        # In Isaac Sim's Property panel this same rotation shows up as Euler XYZ = (90, -90, 0).
         set_xform_ops(
             self._sun_lux.GetPrim(), Gf.Vec3d(0, 0, 0), Gf.Quatd(0.5, Gf.Vec3d(0.5, -0.5, -0.5)), Gf.Vec3d(1, 1, 1)
         )
