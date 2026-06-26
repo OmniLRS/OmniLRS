@@ -8,14 +8,6 @@ import numpy as np
 # Once the sim is started load isaac libs (including ROS)
 from pxr import Gf, UsdGeom
 from scipy.spatial.transform import Rotation as SSTR
-
-from src.configurations.auto_labeling_confs import CameraConf
-from src.configurations.environments import LunalabConf
-from src.configurations.procedural_terrain_confs import TerrainManagerConf
-from src.configurations.rendering_confs import FlaresConf
-
-# Custom libs
-from src.environments.lunalab import LunalabController
 from WorldBuilders.Mixer import RequestMixer
 from WorldBuilders.pxr_utils import addDefaultOps, setDefaultOps
 from WorldBuilders.Types import (
@@ -27,6 +19,14 @@ from WorldBuilders.Types import (
     UniformSampler_T,
     UserRequest_T,
 )
+
+from src.configurations.auto_labeling_confs import CameraConf
+from src.configurations.environments import LunalabConf
+from src.configurations.procedural_terrain_confs import TerrainManagerConf
+from src.configurations.rendering_confs import FlaresConf
+
+# Custom libs
+from src.environments.lunalab import LunalabController
 
 
 class SDG_Lunalab(LunalabController):
