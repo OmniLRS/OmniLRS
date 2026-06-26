@@ -420,10 +420,6 @@ class Robot:
     def get_rgba_camera_view(self, resolution) -> np.ndarray:
         return self._cameras[resolution].get_rgba()
 
-    def get_rgba_camera_view_by_idx(self, idx, resolution) -> np.ndarray:
-        # TODO should remove this or the above function - at the moment cameras are keyed by resolution, not index
-        return self._cameras[idx][resolution].get_rgba()
-
     def get_depth_camera_view(self, resolution) -> np.ndarray:
         """Returns depth image in meters as (H, W) float32 array."""
         depth = self._depth_cameras[resolution].get_depth()
