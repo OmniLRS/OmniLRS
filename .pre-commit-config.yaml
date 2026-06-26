@@ -1,7 +1,6 @@
 # See https://pre-commit.com for more information
 # See https://pre-commit.com/hooks.html for more hooks
 
-# Files that no hook should ever touch (generated, vendored, or binary assets).
 exclude: |
   (?x)^(
     pixi\.lock|
@@ -24,9 +23,7 @@ repos:
       # Run the formatter.
       - id: ruff-format
         types_or: [python, pyi]
-        files: ^(src/|[^/]+\.py$)
       # Run the linter.
       - id: ruff-check
         types_or: [python, pyi]
         args: [--fix]
-        files: ^(src/|[^/]+\.py$)
