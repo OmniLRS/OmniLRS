@@ -17,6 +17,7 @@ from isaacsim.sensors.camera import Camera
 from isaacsim.sensors.physics import _sensor
 from pxr import Gf, Usd
 from scipy.spatial.transform import Rotation as R
+from WorldBuilders.pxr_utils import createObject, createXform
 
 from src.configurations.robot_confs import RobotManagerConf
 from src.configurations.simulator_mode_enum import SimulatorMode
@@ -24,7 +25,6 @@ from src.environments.utils import transform_orientation_from_xyzw_into_xyz
 from src.robots.articulation_control import ArticulationControl
 from src.robots.articulation_telemetry import ArticulationTelemetry
 from src.subsystems.robot_subsystems_handler import RobotSubsystemsHandler
-from WorldBuilders.pxr_utils import createObject, createXform
 
 
 # TODO for v4: rethink which methods should be in Manager, RRG, what should be in Robot

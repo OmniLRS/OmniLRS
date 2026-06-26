@@ -9,7 +9,6 @@ import omni
 from isaacsim.core.utils.prims import delete_prim
 from isaacsim.core.utils.semantics import add_update_semantics
 from pxr import Gf, UsdGeom
-
 from WorldBuilders.pxr_utils import createObject, createXform
 
 
