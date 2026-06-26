@@ -4,9 +4,9 @@ __email__ = "ljburtz@jaops.com"
 
 import math
 
-from src.mission_specific.pragyaan.subsystems.pragyaan_robot_enums import SolarPanelState
 from src.robots.robot import Robot
 from src.subsystems.device import CommonDevice, PowerState
+from src.subsystems.robot_enums import SolarPanelState
 from src.tmtc.intervals_handler import IntervalName
 
 

@@ -2,13 +2,12 @@ __author__ = "Aleksa Stanivuk"
 __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
 
-
-from src.mission_specific.pragyaan.subsystems.pragyaan_robot_enums import GoNogoState, ObcState, SolarPanelState
 from src.mission_specific.pragyaan.tmtc.camera_handler import CameraViewType, PragyaanCameraHandler
 from src.mission_specific.pragyaan.tmtc.enums import PragyaanCameraResolution, PragyaanYamcsArguments
 from src.mission_specific.pragyaan.tmtc.payload_handler import PayloadHandler
 from src.mission_specific.pragyaan.tmtc.transmitter import PragyaanTransmitter
 from src.subsystems.device import CommonDevice, HealthState, PowerState
+from src.subsystems.robot_enums import GoNogoState, ObcState, SolarPanelState
 from src.tmtc.intervals_handler import IntervalName
 
 
