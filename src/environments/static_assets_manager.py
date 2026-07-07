@@ -6,7 +6,7 @@ import os
 from pathlib import Path
 
 import omni
-from pxr import UsdGeom, UsdPhysics
+from pxr import PhysxSchema, UsdGeom, UsdPhysics
 
 from assets import get_assets_path
 from src.environments.utils import set_xform_pose
@@ -42,6 +42,8 @@ class StaticAssetsManager:
 
             set_xform_pose(xform, position, pose["orientation"])
             self._set_collision(prim_path, a.get("collision", True))
+            # Keep static assets fixed by default even if the referenced USD contains rigid bodies.
+            self._set_simulation_enabled(prim_path, a.get("simulate_physics", False))
 
     def _create_reference(self, prim_path: str, usd_path: str):
         assets_root = Path(get_assets_path())
@@ -64,6 +66,31 @@ class StaticAssetsManager:
                 continue
 
             UsdPhysics.CollisionAPI.Apply(p).CreateCollisionEnabledAttr(enabled)
+
+            for c in p.GetChildren():
+                stack.append(c)
+
+    def _set_simulation_enabled(self, prim_path: str, enabled: bool):
+        if UsdPhysics is None:
+            return
+
+        stack = [self._stage.GetPrimAtPath(prim_path)]
+        while stack:
+            p = stack.pop()
+
+            if not p or not p.IsValid():
+                continue
+
+            if p.HasAPI(UsdPhysics.RigidBodyAPI):
+                rb_api = UsdPhysics.RigidBodyAPI(p)
+                rb_api.CreateRigidBodyEnabledAttr().Set(enabled)
+                # If simulation is disabled, keep bodies kinematic to prevent solver updates.
+                if not enabled:
+                    rb_api.CreateKinematicEnabledAttr().Set(True)
+
+            if p.HasAPI(PhysxSchema.PhysxRigidBodyAPI):
+                physx_rb_api = PhysxSchema.PhysxRigidBodyAPI(p)
+                physx_rb_api.CreateDisableGravityAttr().Set(not enabled)
 
             for c in p.GetChildren():
                 stack.append(c)
