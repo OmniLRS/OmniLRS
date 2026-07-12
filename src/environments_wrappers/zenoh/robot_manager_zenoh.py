@@ -7,7 +7,7 @@ __email__ = "ljburtz@jaops.com"
 __status__ = "development"
 
 import time
-from typing import Callable, Dict, List, Tuple
+from typing import Callable, List, Tuple
 
 from src.configurations.simulator_mode_enum import SimulatorMode
 from src.environments_wrappers.zenoh.telemetry.camera_bridge import CameraBridge
@@ -33,7 +33,7 @@ class Zenoh_RobotManager:
 
         robot = RM_conf["parameters"]
 
-        robot_name = f'{robot["robot_name"]}'
+        robot_name = f"{robot['robot_name']}"
         robot_path = self.RM_.robots_root + "/" + robot_name
 
         ### BEGIN TELEMETRY ###
@@ -122,7 +122,7 @@ class Zenoh_RobotManager:
         robot = getattr(self.RM_, "robot", None)
         if robot is None:
             return False
-        
+
         robot.invalidate_articulation_api()
         return True
 

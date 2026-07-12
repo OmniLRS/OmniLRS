@@ -1,4 +1,4 @@
-from typing import Optional, List
+from typing import Optional
 import logging
 import time
 
@@ -8,13 +8,9 @@ from src.robots.robot import RobotManager
 
 logger = logging.getLogger(__name__)
 
+
 class CameraBridge:
-    def __init__(self, 
-                 camera_cfg: Optional[dict], 
-                 zenoh_cfg: dict, 
-                 RM: RobotManager,
-                 publish_period_s: float = 0.0333
-        ):
+    def __init__(self, camera_cfg: Optional[dict], zenoh_cfg: dict, RM: RobotManager, publish_period_s: float = 0.0333):
         self.camera_cfg = camera_cfg
         self.zenoh_cfg = zenoh_cfg
 
@@ -33,37 +29,29 @@ class CameraBridge:
         self._transports_started = False
         self._t_last_publish = 0.0
 
-
     def build_camera_keyexpr(self, camera_name: str) -> str:
         return self.base_expr_template.format(robot_name=self.RM.robot_parameters.robot_name) + f"/{camera_name}"
-    
+
     def make_transports(self):
         if self.camera_cfg:
-
             if isinstance(self.camera_cfg, list):
                 specs = []
                 for camera in self.camera_cfg:
-                    specs.append({
-                        'type': 'zenoh',
-                        'keyexpr': self.build_camera_keyexpr(camera["name"])
-                    })
-                    
+                    specs.append({"type": "zenoh", "keyexpr": self.build_camera_keyexpr(camera["name"])})
+
                 self.transports = make_transports(specs)
 
             else:
-                spec = {
-                    'type': 'zenoh',
-                    'keyexpr': self.build_camera_keyexpr(self.camera_cfg["name"])
-                }
+                spec = {"type": "zenoh", "keyexpr": self.build_camera_keyexpr(self.camera_cfg["name"])}
                 self.transports = make_transports([spec])
 
     def maybe_initialize(self):
         if self._inited:
             return True
-        
+
         try:
             self.make_transports()
-            
+
             if not self._transports_started:
                 for t in self.transports:
                     t.start()
@@ -71,7 +59,7 @@ class CameraBridge:
 
             self._inited = True
             return True
-        
+
         except Exception as e:
             self.log(f"[camera_bridge] init failed: {e}")
             self._inited = False
@@ -97,7 +85,7 @@ class CameraBridge:
 
             if frame.size != 0:
                 transport.publish_array(frame)
-        
+
         return True
 
     def close(self):
@@ -108,6 +96,6 @@ class CameraBridge:
                 t.close()
             except Exception:
                 pass
-        
+
         self._transports_started = False
         self.log("[camera_bridge] closed.")
