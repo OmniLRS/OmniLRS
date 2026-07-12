@@ -6,11 +6,11 @@ __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
 __status__ = "development"
 
+import zenoh
+
 from src.configurations.simulator_mode_enum import SimulatorMode
 from src.environments.lunaryard import LunaryardController
 from src.environments_wrappers.zenoh.base_wrapper_zenoh import Zenoh_BaseManager
-
-import zenoh
 
 
 class Zenoh_LunaryardManager(Zenoh_BaseManager):

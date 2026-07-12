@@ -4,7 +4,6 @@ import time
 from src.environments_wrappers.zenoh.transport.factory import make_transports
 from src.robots.robot import RobotManager
 
-
 logger = logging.getLogger(__name__)
 
 
