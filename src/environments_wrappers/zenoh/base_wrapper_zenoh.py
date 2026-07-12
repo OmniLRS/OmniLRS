@@ -38,7 +38,7 @@ class Zenoh_BaseManager:
             .get("keyexpr", "OmniLRS/Terrain/RandomizeRocks")
         )
 
-        self.transports = []
+        self.transports: List[ZenohPubTransport] = []
 
         self.sim_running_pub = ZenohPubTransport(
             keyexpr=zenoh_cfg.get("misc", {}).get("sim", {}).get("is_running_keyexpr", "OmniLRS/sim/is_running")
@@ -86,3 +86,7 @@ class Zenoh_BaseManager:
         """
         if self.transports_inited:
             self.sim_running_pub.publish({"is_running": is_running})
+
+    def close(self) -> None:
+        for t in self.transports:
+            t.close()

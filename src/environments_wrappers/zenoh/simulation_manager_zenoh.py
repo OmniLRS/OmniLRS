@@ -233,6 +233,7 @@ class Zenoh_SimulationManager:
         if self._entry_task is not None:
             self._entry_task.cancel()
 
+        self.Zenoh_EC.close()
         self.Zenoh_RM.close()
 
         self.world.stop()
