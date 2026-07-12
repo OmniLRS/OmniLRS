@@ -18,108 +18,16 @@ from isaacsim.core.api.world import World
 
 from src.configurations.procedural_terrain_confs import TerrainManagerConf
 from src.environments.utils import set_moon_env_name
+from src.environments_wrappers.rate import Rate
 from src.environments_wrappers.zenoh.largescale_zenoh import Zenoh_LargeScaleManager
 from src.environments_wrappers.zenoh.lunalab_zenoh import Zenoh_LunalabManager
 from src.environments_wrappers.zenoh.lunaryard_zenoh import Zenoh_LunaryardManager
 from src.environments_wrappers.zenoh.robot_manager_zenoh import Zenoh_RobotManager
 from src.physics.physics_scene import PhysicsSceneManager
 
+
 logger = logging.getLogger(__name__)
 logging.basicConfig(format="%(asctime)s %(message)s", datefmt="%m/%d/%Y %I:%M:%S %p")
-
-
-class Rate:
-    """
-    Creates a rate object that enables to sleep for a minimum amount of time between two iterations of a loop. If freq and dt are passed, the object will only use the information provided by dt.
-    """
-
-    def __init__(self, freq: float = None, dt: float = None, is_disabled: bool = False) -> None:
-        """
-        Args:
-            freq (float): The frequency at which the loop should be executed.
-            dt (float): The delta of time to be kept between two loop iterations.
-        """
-
-        self.is_disabled = is_disabled
-
-        if not self.is_disabled:
-            if dt is None:
-                if freq is None:
-                    raise ValueError("You must provide either a frequency or a delta time.")
-                else:
-                    self.dt = 1.0 / freq
-            else:
-                self.dt = dt
-
-            self.last_check = time.time()
-
-    def reset(self) -> None:
-        """
-        Resets the timer.
-        """
-        if not self.is_disabled:
-            self.last_check = time.time()
-
-    def sleep(self) -> None:
-        """
-        Wait for a minimum amount of time between two iterations of a loop.
-        """
-        if not self.is_disabled:
-            now = time.time()
-            delta = now - self.last_check
-
-            # If time delta is too low, sleep, else carry one.
-            if delta < self.dt:
-                to_sleep = self.dt - delta
-                time.sleep(to_sleep)
-
-
-class Zenoh_LabManagerFactory:
-    def __init__(self):
-        self._lab_managers = {}
-
-    def register(
-        self,
-        name: str,
-        lab_manager: Union[Zenoh_LunalabManager, Zenoh_LunaryardManager, Zenoh_LargeScaleManager],
-    ) -> None:
-        """
-        Registers a lab manager.
-
-        Args:
-            name (str): Name of the lab manager.
-            lab_manager (Union[Zenoh_LunalabManager, Zenoh_LunaryardManager, Zenoh_LargeScaleManager]): Instance of the lab manager
-        """
-
-        self._lab_managers[name] = lab_manager
-
-    def __call__(
-        self,
-        cfg: dict,
-        **kwargs,
-    ) -> Union[Zenoh_LunalabManager, Zenoh_LunaryardManager, Zenoh_LargeScaleManager]:
-        """
-        Returns an instance of the lab manager corresponding to the environment name.
-
-        Args:
-            cfg (dict): Configuration dictionary.
-
-        Returns:
-            Union[Zenoh_LunalabManager, Zenoh_LunaryardManager, Zenoh_LargeScaleManager]: Instance of the lab manager
-        """
-
-        return self._lab_managers[cfg["environment"]["name"]](
-            environment_cfg=cfg["environment"],
-            zenoh_cfg=cfg["mode"],
-            **kwargs,
-        )
-
-
-Zenoh_LMF = Zenoh_LabManagerFactory()
-Zenoh_LMF.register("Lunalab", Zenoh_LunalabManager)
-Zenoh_LMF.register("Lunaryard", Zenoh_LunaryardManager)
-Zenoh_LMF.register("LargeScale", Zenoh_LargeScaleManager)
-
 
 class Zenoh_SimulationManager:
     """
@@ -157,63 +65,99 @@ class Zenoh_SimulationManager:
 
         set_moon_env_name(cfg["environment"]["name"])
 
-        PSM = PhysicsSceneManager(cfg["physics"]["physics_scene"])
-        for i in range(100):
+        self._step_world_and_reset()
+        self._setup_rate()
+
+        self.Zenoh_EC = self._get_environment_controller(self.cfg["environment"]["name"])
+        assert self.Zenoh_EC is not None
+
+        self.Zenoh_RM = Zenoh_RobotManager(cfg["environment"]["robots_settings"], cfg["mode"])
+
+        self._setup_terrain_manager()
+        self._preload_robot()
+
+        self._start_transports()
+
+        self.Zenoh_EC.LC.add_robot_manager(self.Zenoh_RM.get_RM())
+
+        self._step_world_and_reset()
+
+        self.entry_task_is_done = False
+
+    def _step_world_and_reset(self, n=100):
+        for i in range(n):
             self.world.step(render=True)
         self.world.reset()
 
-        if cfg["environment"]["enforce_realtime"]:
-            self.rate = Rate(dt=cfg["environment"]["physics_dt"])
+    def _setup_rate(self):
+        if self.cfg["environment"]["enforce_realtime"]:
+            self.rate = Rate(dt=self.cfg["environment"]["physics_dt"])
         else:
             self.rate = Rate(is_disabled=True)
 
-        # Lab manager thread
-        self.ZenohLabManager = Zenoh_LMF(
-            cfg, is_simulation_alive=self.simulation_app.is_running, close_simulation=self.simulation_app.close
-        )
+    def _get_environment_controller(self, environment_name: str):
+        self.Zenoh_EC = None
+        if environment_name == "LargeScale":
+            self.Zenoh_EC = Zenoh_LargeScaleManager(
+                environment_cfg=self.cfg["environment"],
+                zenoh_cfg=self.cfg["mode"],
+                is_simulation_alive=self.simulation_app.is_running,
+                close_simulation=self.simulation_app.close,
+            )
+        elif environment_name == "Lunaryard":
+            self.Zenoh_EC = Zenoh_LunaryardManager(
+                environment_cfg=self.cfg["environment"],
+                zenoh_cfg=self.cfg["mode"],
+                is_simulation_alive=self.simulation_app.is_running,
+                close_simulation=self.simulation_app.close,
+            )
+        elif environment_name == "Lunalab":
+            self.Zenoh_EC = Zenoh_LunalabManager(
+                environment_cfg=self.cfg["environment"],
+                zenoh_cfg=self.cfg["mode"],
+                is_simulation_alive=self.simulation_app.is_running,
+                close_simulation=self.simulation_app.close,
+            )
 
-        self.ZenohRobotManager = Zenoh_RobotManager(cfg["environment"]["robots_settings"], cfg["mode"])
+        return self.Zenoh_EC
 
-        if "terrain_manager" in cfg["environment"].keys():
-            self.terrain_manager_conf: TerrainManagerConf = cfg["environment"]["terrain_manager"]
+    def _setup_terrain_manager(self):
+        if "terrain_manager" in self.cfg["environment"].keys():
+            self.terrain_manager_conf: TerrainManagerConf = self.cfg["environment"]["terrain_manager"]
             self.deform_delay = self.terrain_manager_conf.moon_yard.deformation_engine.delay
             self.enable_deformation = self.terrain_manager_conf.moon_yard.deformation_engine.enable
         else:
             self.enable_deformation = False
 
-        # Preload the assets
-        if cfg["environment"]["name"] == "LargeScale":
-            height, quat = self.ZenohLabManager.LC.get_height_and_normal((0.0, 0.0, 0.0))
-            self.ZenohRobotManager.RM.preload_robot_at_pose(self.world, (0, 0, height + 0.5), (1, 0, 0, 0))
+    def _preload_robot(self):
+        if self.cfg["environment"]["name"] == "LargeScale":
+            height, quat = self.Zenoh_EC.LC.get_height_and_normal((0.0, 0.0, 0.0))
+            self.Zenoh_RM.get_RM().preload_robot_at_pose(self.world, (0, 0, height + 0.5), (1, 0, 0, 0))
         else:
-            self.ZenohRobotManager.RM.preload_robot(self.world)
+            self.Zenoh_RM.get_RM().preload_robot(self.world)
 
-        for t in self.ZenohLabManager.transports:
+    def _start_transports(self):
+        for t in self.Zenoh_EC.transports:
             t.start()
-        self.ZenohLabManager.transports_inited = True
+        self.Zenoh_EC.transports_inited = True
 
-        for t in self.ZenohRobotManager.transports:
+        for t in self.Zenoh_RM.transports:
             t.start()
-        self.ZenohRobotManager.transports_inited = True
-
-        self.ZenohLabManager.LC.add_robot_manager(self.ZenohRobotManager.RM)
-
-        for i in range(100):
-            self.world.step(render=True)
-        self.world.reset()
-
-        self.entry_task_is_done = False
+        self.Zenoh_RM.transports_inited = True
 
     async def _randomize_rocks_sub(self):
-        sub = Sub(self.ZenohLabManager.rocks_randomize_keyexpr)
+        sub = Sub(self.Zenoh_EC.rocks_randomize_keyexpr)
 
         try:
             async for sample in sub.listen_reliable():
-                self.ZenohLabManager.randomize_rocks(sample)
+                self.Zenoh_EC.randomize_rocks(sample)
         finally:
             sub.close()
 
     async def _entry_point(self):
+        """
+        Entry point for Zenoh subscribers using async manner.
+        """
         async with asyncio.TaskGroup() as tg:
             tg.create_task(self._randomize_rocks_sub())
             # tg.create_task(..)
@@ -239,28 +183,33 @@ class Zenoh_SimulationManager:
         self.rate.reset()
 
         if self.world.is_playing():
-            self.ZenohLabManager.periodic_update(dt=self.world.get_physics_dt())
+            self.Zenoh_EC.periodic_update(dt=self.world.get_physics_dt())
             if self.world.current_time_step_index == 0:
                 self.world.reset()
-                self.ZenohLabManager.reset()
-                self.ZenohRobotManager.reset()
-            self.ZenohLabManager.apply_modifications()
-            if self.ZenohLabManager.trigger_reset:
-                self.ZenohRobotManager.reset()
-                self.ZenohLabManager.trigger_reset = False
-            self.ZenohRobotManager.apply_modifications()
+                self.Zenoh_EC.reset()
+                self.Zenoh_RM.invalidate_articulation_api()
+                self.Zenoh_RM.reset_robot()
+            self.Zenoh_EC.apply_modifications()
+            if self.Zenoh_EC.trigger_reset:
+                self.Zenoh_RM.invalidate_articulation_api()
+                self.Zenoh_RM.reset()
+                self.Zenoh_EC.trigger_reset = False
+            self.Zenoh_RM.apply_modifications()
             if self.enable_deformation:
                 if self.world.current_time_step_index >= (self.deform_delay * self.world.get_physics_dt()):
-                    self.ZenohLabManager.LC.deform_terrain()
+                    self.Zenoh_EC.LC.deform_terrain()
 
-        if self.ZenohLabManager.transports_inited:
-            self.ZenohLabManager.pub_sim_is_running(True)
+        if self.Zenoh_EC.transports_inited:
+            self.Zenoh_EC.pub_sim_is_running(True)
 
-        if self.ZenohRobotManager.transports_inited:
-            self.ZenohRobotManager.publish_telemetry()
-            self.ZenohRobotManager.publish_gt()
-            self.ZenohRobotManager.update_controller()
-            self.ZenohRobotManager.update_cmd()
+        if self.Zenoh_RM.transports_inited:
+            self.Zenoh_RM.update_cmd()
+
+            if self.world.is_playing():
+                self.Zenoh_RM.update_articulation_api()
+                self.Zenoh_RM.apply_modifications()
+                self.Zenoh_RM.publish_telemetry()
+                self.Zenoh_RM.publish_gt()
 
         self.rate.sleep()
 
@@ -287,7 +236,7 @@ class Zenoh_SimulationManager:
         if self._entry_task is not None:
             self._entry_task.cancel()
 
-        self.ZenohRobotManager.close()
+        self.Zenoh_RM.close()
 
         self.world.stop()
         self.timeline.stop()

@@ -2,15 +2,11 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import time
 
 import asyncio_for_robotics.zenoh as afor
 from ms_zenoh_bridge.utils import wire_to_jsb
 
-from src.environments_wrappers.zenoh.control.articulation_controller import (
-    ArticulationController,
-    JointCommand,
-)
+from src.robots.robot import RobotManager
 
 logger = logging.getLogger(__name__)
 
@@ -18,12 +14,12 @@ logger = logging.getLogger(__name__)
 class ZenohCommandReceiver:
     def __init__(
         self,
-        controller: ArticulationController,
+        RM: RobotManager,
         keyexpr: str = "joint_cmd",
         logger=logger,
         log_every_n: int = 5000,
     ):
-        self.controller = controller
+        self.RM = RM
         self.keyexpr = keyexpr
         self.log = logger.info
         self.log_every_n = int(max(1, log_every_n))
@@ -52,13 +48,12 @@ class ZenohCommandReceiver:
                 try:
                     jsb = wire_to_jsb(payload)
                 except Exception as e:
-                    self.log(
-                        f"[ZenohCommandReceiver] failed to decode WireJStateBatch: {e}"
-                    )
+                    self.log(f"[ZenohCommandReceiver] failed to decode WireJStateBatch: {e}")
                     continue
 
                 position_targets: dict[str, float] = {}
                 velocity_targets: dict[str, float] = {}
+                effort_targets: dict[str, float] = {}
 
                 for name, j in jsb.items():
                     if j.position is not None:
@@ -67,24 +62,38 @@ class ZenohCommandReceiver:
                     if j.velocity is not None:
                         velocity_targets[name] = float(j.velocity)
 
-                cmd = JointCommand(
-                    stamp_s=time.time(),
-                    mode="mixed",
+                    if j.effort is not None:
+                        effort_targets[name] = float(j.effort)
+
+                robot = self.RM.robot
+
+                if robot is None:
+                    self.log("[ZenohCommandReceiver] skipped command: robot is None")
+                    continue
+
+                if not robot.is_articulation_api_ready():
+                    self.log("[ZenohCommandReceiver] skipped command: articulation API is not ready")
+                    continue
+
+                ok = robot.set_joint_targets(
                     position_targets=position_targets,
                     velocity_targets=velocity_targets,
+                    effort_targets=effort_targets,
                 )
 
-                self.controller.set_command(cmd)
-
                 self._count += 1
+
                 if self._count == 1 or self._count % self.log_every_n == 0:
                     self.log(
                         "[ZenohCommandReceiver] received cmd "
                         f"#{self._count}: "
+                        f"ok={ok} "
                         f"position={len(position_targets)} "
                         f"velocity={len(velocity_targets)} "
+                        f"effort={len(effort_targets)} "
                         f"preview_pos={list(position_targets.items())[:3]} "
-                        f"preview_vel={list(velocity_targets.items())[:3]}"
+                        f"preview_vel={list(velocity_targets.items())[:3]} "
+                        f"preview_eff={list(effort_targets.items())[:3]}"
                     )
 
         except asyncio.CancelledError:

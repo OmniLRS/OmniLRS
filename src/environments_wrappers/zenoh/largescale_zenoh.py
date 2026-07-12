@@ -61,7 +61,7 @@ class Zenoh_LargeScaleManager(Zenoh_BaseManager):
         """
         Resets the lab to its initial state
         """
-        pass
+        self.LC.reset()
 
     def randomize_rocks(self, sample: zenoh.Sample):
         data = int(sample.payload.to_string())

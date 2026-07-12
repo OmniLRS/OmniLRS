@@ -39,6 +39,7 @@ gdown = "*"
 em = "*"
 lark = "*"
 pandas = "*"
+motion_stack = { git = "ssh://git@github.com/2lian/motion-stack-2.git", subdirectory = "src/motion_stack" }
 OmniLRS = { path = ".", editable = true }
 
 [feature.core.activation.env]
@@ -78,7 +79,20 @@ yamcs-client = "*"
 yamcs = "python run.py mode=Yamcs environment=lunaryard_40m_workshop robot=pragyaan controller=pragyaan-controller"
 fix-tmp = "bash scripts/fix_yamcs_tmp.sh"
 
+# zenoh-specific deps, tasks in feature "zenoh"
+[feature.zenoh.pypi-dependencies]
+eclipse-zenoh = "*"
+asyncio_for_robotics = "*"
+ms_zenoh_bridge = { git = "ssh://git@github.com/2lian/motion-stack-2.git", branch = "zenoh", subdirectory = "src/ms_zenoh_bridge" }
+msgspec = "*"
+
+[feature.zenoh.tasks]
+zenoh = "python run.py mode=Zenoh environment=lunaryard_20m_zenoh"
+zenoh_test_sub = "python scripts/zenoh/sub_camera.py"
+zenoh_test_pub = "python scripts/zenoh/pub_randomize_rocks.py"
+
 [environments]
 default = { features = ["core", "isaac"] }
 yamcs = { features = ["core", "isaac", "yamcs"] }
 ros2 = { features = ["core", "isaac", "ros2"] }
+zenoh = { features = ["core", "isaac", "zenoh"]}

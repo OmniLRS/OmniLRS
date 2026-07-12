@@ -9,14 +9,12 @@ __status__ = "development"
 import time
 from typing import Callable, Dict, List, Tuple
 
-from src.environments_wrappers.zenoh.control.articulation_controller import ArticulationController
+from src.configurations.simulator_mode_enum import SimulatorMode
 from src.environments_wrappers.zenoh.telemetry.camera_bridge import CameraBridge
 from src.environments_wrappers.zenoh.telemetry.imu_bridge import IMUBridge
 from src.environments_wrappers.zenoh.telemetry.joint_force_bridge import JointForceBridge
 from src.environments_wrappers.zenoh.transport.zenoh_cmd import ZenohCommandReceiver
 from src.environments_wrappers.zenoh.transport.zenoh_pub import ZenohPubTransport
-
-from src.configurations.simulator_mode_enum import SimulatorMode
 from src.robots.robot import RobotManager
 
 
@@ -26,7 +24,7 @@ class Zenoh_RobotManager:
     """
 
     def __init__(self, RM_conf: dict, zenoh_conf: dict) -> None:
-        self.RM = RobotManager(RM_conf, mode=SimulatorMode.ZENOH)
+        self.RM_ = RobotManager(RM_conf, mode=SimulatorMode.ZENOH)
 
         self.modifications: List[Tuple[Callable, dict]] = []
 
@@ -36,53 +34,43 @@ class Zenoh_RobotManager:
         robot = RM_conf["parameters"]
 
         robot_name = f'{robot["robot_name"]}'
-        robot_path = self.RM.robots_root + "/" + robot_name
+        robot_path = self.RM_.robots_root + "/" + robot_name
 
         ### BEGIN TELEMETRY ###
 
         ## Camera Telemetry
-        
-        camera_cfg = robot.get("camera", None) # camera_cfg optional
+        camera_cfg = robot.get("camera", None)  # camera_cfg optional
         camera_zenoh_cfg = zenoh_conf.get("sensors", {}).get("camera", {})
-
-        self.camera_bridge = CameraBridge(
-            camera_cfg,
-            camera_zenoh_cfg,
-            self.RM
-        )
+        self.camera_bridge = CameraBridge(camera_cfg, camera_zenoh_cfg, self.RM_)
 
         ## IMU Telemetry
         imu_zenoh_cfg = zenoh_conf.get("sensors", {}).get("imu", {})
-
-        self.imu_bridge = IMUBridge(
-            imu_zenoh_cfg,
-            self.RM
-        )
+        self.imu_bridge = IMUBridge(imu_zenoh_cfg, self.RM_)
 
         ## Joint Force Telemetry
         joint_zenoh_cfg = zenoh_conf.get("sensors", {}).get("joint_force", {})
-
         self.joint_bridge = JointForceBridge(
             joint_zenoh_cfg,
-            robot_name,
+            RM=self.RM_,
+            robot_name=robot_name,
             robot_root_prim=robot_path,
         )
-
         ### END TELEMETRY ###
 
         gt_pub = ZenohPubTransport(
-            keyexpr=zenoh_conf.get("misc", {}).get("sim", {}).get("gt_pose_keyexpr", "OmniLRS/{robot_name}/gt_pose").format(robot_name = robot_name)
+            keyexpr=zenoh_conf.get("misc", {})
+            .get("sim", {})
+            .get("gt_pose_keyexpr", "OmniLRS/{robot_name}/gt_pose")
+            .format(robot_name=robot_name)
         )
         self.gt = gt_pub
         self.transports.append(gt_pub)
 
-        self.controller = ArticulationController(
-            prim_path=robot_path,
-        )
-
         self.cmd_receiver = ZenohCommandReceiver(
-            controller=self.controller,
-            keyexpr=zenoh_conf.get("controller", {}).get("cmd_keyexpr", "OmniLRS/{robot_name}/joint_cmd").format(robot_name = robot_name),
+            RM=self.RM_,
+            keyexpr=zenoh_conf.get("controller", {})
+            .get("cmd_keyexpr", "OmniLRS/{robot_name}/joint_cmd")
+            .format(robot_name=robot_name),
         )
 
         self.transports_inited = False
@@ -108,6 +96,9 @@ class Zenoh_RobotManager:
             mod[0](**mod[1])
         self.clear_modifications()
 
+    def get_RM(self) -> RobotManager:
+        return self.RM_
+
     def reset_robot(self) -> None:
         """
         Resets all the robots.
@@ -116,7 +107,7 @@ class Zenoh_RobotManager:
             data (Int32): Dummy argument.
         """
 
-        self.modifications.append([self.RM.reset_robot, {}])
+        self.modifications.append([self.RM_.reset_robot, {}])
 
     def publish_telemetry(self) -> None:
         self.camera_bridge.maybe_initialize()
@@ -127,20 +118,32 @@ class Zenoh_RobotManager:
         self.imu_bridge.update()
         self.joint_bridge.update()
 
-    def update_controller(self) -> None:
-        self.controller.maybe_initialize()
-        self.controller.update()
+    def invalidate_articulation_api(self) -> bool:
+        robot = getattr(self.RM_, "robot", None)
+        if robot is None:
+            return False
+        
+        robot.invalidate_articulation_api()
+        return True
+
+    def update_articulation_api(self) -> bool:
+        robot = getattr(self.RM_, "robot", None)
+        if robot is None:
+            return False
+
+        robot.update_articulation_api()
+        return True
 
     def update_cmd(self) -> None:
         self.cmd_receiver.start()
 
     def publish_gt(self) -> None:
         if self.transports_inited:
-            pos, quat = self.RM.robot.get_pose()
+            pos, quat = self.RM_.robot.get_pose()
 
             gt = {
                 "stamp_s": time.time(),
-                "robot_name": self.RM.robot.robot_name,
+                "robot_name": self.RM_.robot.robot_name,
                 "position": [float(pos[0]), float(pos[1]), float(pos[2])],
                 "orientation_xyzw": [
                     float(quat[0]),
@@ -159,5 +162,4 @@ class Zenoh_RobotManager:
         self.camera_bridge.close()
         self.imu_bridge.close()
         self.joint_bridge.close()
-        self.controller.close()
         self.cmd_receiver.close()
