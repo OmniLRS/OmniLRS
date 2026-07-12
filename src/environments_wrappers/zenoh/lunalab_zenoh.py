@@ -34,7 +34,7 @@ class Zenoh_LunalabManager(Zenoh_BaseManager):
         self.LC.load()
 
         self.trigger_reset = False
-    
+
     def periodic_update(self, dt: float) -> None:
         """
         Updates the lab.

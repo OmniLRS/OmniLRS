@@ -99,7 +99,7 @@ def startSim(cfg: dict):
         from src.environments_wrappers.zenoh.simulation_manager_zenoh import (
             Zenoh_SimulationManager,
         )
-    
+
         SM = Zenoh_SimulationManager(cfg, simulation_app)
 
     # Omits ROS settings, purely Yamcs-native

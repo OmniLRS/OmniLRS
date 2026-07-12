@@ -36,16 +36,17 @@ class Zenoh_LargeScaleManager(Zenoh_BaseManager):
         """
 
         super().__init__(environment_cfg=environment_cfg, zenoh_cfg=zenoh_cfg, **kwargs)
-        
+
         self.LC = LargeScaleController(
-            mode=SimulatorMode.ZENOH, **environment_cfg,
+            mode=SimulatorMode.ZENOH,
+            **environment_cfg,
             is_simulation_alive=is_simulation_alive,
-            close_simulation=close_simulation
+            close_simulation=close_simulation,
         )
         self.LC.load()
 
         self.trigger_reset = False
-        
+
     def periodic_update(self, dt: float) -> None:
         """
         Updates the lab.
@@ -56,7 +57,7 @@ class Zenoh_LargeScaleManager(Zenoh_BaseManager):
 
         self.modifications.append([self.LC.update_stellar_engine, {"dt": dt}])
         self.LC.update()
-    
+
     def reset(self) -> None:
         """
         Resets the lab to its initial state

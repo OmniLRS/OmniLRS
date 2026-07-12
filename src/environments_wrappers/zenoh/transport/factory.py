@@ -7,7 +7,7 @@ from src.environments_wrappers.zenoh.transport.base import Transport
 from .zenoh_pub import ZenohPubTransport
 
 
-### TODO: should we make this transports factory to be interface for all modes in future? (i.e: zenoh, ros2, zmq, ..) 
+### TODO: should we make this transports factory to be interface for all modes in future? (i.e: zenoh, ros2, zmq, ..)
 ### -> if so, may also consider moving these "transport", "control", "telemetry" outside of zenoh wrapper, to be used by other modes
 def make_transports(
     spec: Optional[Union[str, Dict[str, Any], List[Dict[str, Any]]]],

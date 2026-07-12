@@ -11,7 +11,7 @@ from typing import List, Tuple
 from src.environments_wrappers.zenoh.transport.zenoh_pub import ZenohPubTransport
 
 
-class Zenoh_BaseManager():
+class Zenoh_BaseManager:
     def __init__(
         self,
         environment_cfg: dict = None,
@@ -31,18 +31,22 @@ class Zenoh_BaseManager():
 
         self.modifications: List[Tuple[callable, dict]] = []
 
-        self.rocks_randomize_keyexpr = zenoh_cfg.get("misc", {}).get("rocks", {}).get("randomize", {}).get("keyexpr", "OmniLRS/Terrain/RandomizeRocks")
+        self.rocks_randomize_keyexpr = (
+            zenoh_cfg.get("misc", {})
+            .get("rocks", {})
+            .get("randomize", {})
+            .get("keyexpr", "OmniLRS/Terrain/RandomizeRocks")
+        )
 
         self.transports = []
 
         self.sim_running_pub = ZenohPubTransport(
-            keyexpr = zenoh_cfg.get("misc", {}).get("sim", {}).get("is_running_keyexpr", "OmniLRS/sim/is_running") 
+            keyexpr=zenoh_cfg.get("misc", {}).get("sim", {}).get("is_running_keyexpr", "OmniLRS/sim/is_running")
         )
         self.transports.append(self.sim_running_pub)
 
         self.transports_inited = False
 
-    
     def periodic_update(self, dt: float) -> None:
         """
         Updates the lab.
@@ -52,7 +56,7 @@ class Zenoh_BaseManager():
         """
 
         raise NotImplementedError
-    
+
     def reset(self) -> None:
         """
         Resets the lab to its initial state.
@@ -66,7 +70,7 @@ class Zenoh_BaseManager():
         """
 
         self.modifications: List[Tuple[callable, dict]] = []
-    
+
     def apply_modifications(self) -> None:
         """
         Applies the list of modifications to the lab
@@ -75,7 +79,7 @@ class Zenoh_BaseManager():
         for mod in self.modifications:
             mod[0](**mod[1])
         self.clear_modifications()
-    
+
     def pub_sim_is_running(self, is_running: bool) -> None:
         """
         Publish to Zenoh keyexpr to let subscribers know that the simulation is running
