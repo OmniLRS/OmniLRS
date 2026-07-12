@@ -1,12 +1,6 @@
 __author__ = "Antoine Richard"
-__copyright__ = (
-    "Copyright 2023-26, JAOPS, Space Robotics Lab, SnT, University of Luxembourg, SpaceR"
-)
-__license__ = "BSD-3-Clause"
-__version__ = "1.0.0"
 __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
-__status__ = "development"
 
 
 def enable_ros2(simulation_app, bridge_name="foxy", **kwargs) -> None:
@@ -22,7 +16,7 @@ def enable_ros2(simulation_app, bridge_name="foxy", **kwargs) -> None:
     if bridge_name == "foxy":
         enable_extension("isaacsim.ros2.bridge")
     elif bridge_name == "humble":
-        enable_extension("isaacsim.ros2.bridge") # replaced omni.isaac.ros2_bridge_humble
+        enable_extension("isaacsim.ros2.bridge")  # replaced omni.isaac.ros2_bridge_humble
     else:
         raise ValueError("Bridge not supported, please choose between foxy and humble.")
     enable_extension("omni.kit.viewport.actions")

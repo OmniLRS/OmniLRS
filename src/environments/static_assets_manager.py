@@ -1,18 +1,16 @@
 __author__ = "Aleksa Stanivuk"
-__copyright__ = "Copyright 2025-26, JAOPS"
-__license__ = "BSD-3-Clause"
-__version__ = "2.0.0"
 __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
-__status__ = "development"
 
-from pathlib import Path
-from typing import Dict
 import os
-from assets import get_assets_path
+from pathlib import Path
+
 import omni
 from pxr import UsdGeom, UsdPhysics
+
+from assets import get_assets_path
 from src.environments.utils import set_xform_pose
+
 
 class StaticAssetsManager:
     """
@@ -25,9 +23,9 @@ class StaticAssetsManager:
         self._stage = omni.usd.get_context().get_stage()
         self._stage.DefinePrim(self._root_path, "Xform")
 
-    def spawn(self):
+    def spawn(self, get_height_func=None):
         if "parameters" not in self._cfg:
-            return 
+            return
 
         for a in self._cfg["parameters"]:
             name = a["asset_name"]
@@ -35,17 +33,21 @@ class StaticAssetsManager:
             self._create_reference(prim_path, a["usd_path"])
             pose = a.get("pose", {})
 
+            position = list(pose["position"])
+            if get_height_func is not None:
+                position[2] = get_height_func((position[0], position[1])) + position[2]
+
             prim = self._stage.GetPrimAtPath(prim_path)
             xform = UsdGeom.Xformable(prim)
 
-            set_xform_pose(xform, pose["position"], pose["orientation"])
+            set_xform_pose(xform, position, pose["orientation"])
             self._set_collision(prim_path, a.get("collision", True))
 
     def _create_reference(self, prim_path: str, usd_path: str):
-        assets_root = Path(get_assets_path())  
+        assets_root = Path(get_assets_path())
         real_usd_path = str(assets_root / usd_path.lstrip("/"))
-        prim = self._stage.DefinePrim(prim_path, "Xform")           # this in essence creates an empty wrapper / holder 
-        prim.GetReferences().AddReference(real_usd_path)            # that will reference to USD model in an external file
+        prim = self._stage.DefinePrim(prim_path, "Xform")  # this in essence creates an empty wrapper / holder
+        prim.GetReferences().AddReference(real_usd_path)  # that will reference to USD model in an external file
 
         return prim
 
@@ -54,7 +56,7 @@ class StaticAssetsManager:
             return
 
         # the asset may not be a single model, but it may consist of of multiple parts - therefore this function iterates over every part
-        stack = [self._stage.GetPrimAtPath(prim_path)] 
+        stack = [self._stage.GetPrimAtPath(prim_path)]
         while stack:
             p = stack.pop()
 
@@ -65,5 +67,3 @@ class StaticAssetsManager:
 
             for c in p.GetChildren():
                 stack.append(c)
-
-    

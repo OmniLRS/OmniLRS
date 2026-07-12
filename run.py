@@ -1,18 +1,15 @@
 __author__ = "Antoine Richard"
-__copyright__ = "Copyright 2023-26, JAOPS, Space Robotics Lab, SnT, University of Luxembourg, SpaceR"
-__license__ = "BSD-3-Clause"
-__version__ = "2.0.0"
 __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
-__status__ = "development"
 
-from omegaconf import DictConfig, OmegaConf, ListConfig
+import logging
+from typing import Dict
+
+import hydra
+from omegaconf import DictConfig, ListConfig, OmegaConf
+
 from src.configurations import configFactory
 from src.environments_wrappers import startSim
-
-from typing import Dict, List
-import logging
-import hydra
 
 numba_logger = logging.getLogger("numba")
 numba_logger.setLevel(logging.WARNING)
@@ -73,7 +70,7 @@ def instantiateConfigs(cfg: dict) -> dict:
     return ret
 
 
-@hydra.main(config_name="config", config_path="cfg")
+@hydra.main(config_name="config", config_path="cfg", version_base="1.3")
 def run(cfg: DictConfig):
     cfg = omegaconfToDict(cfg)
     cfg = instantiateConfigs(cfg)

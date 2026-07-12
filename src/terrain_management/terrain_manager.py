@@ -1,25 +1,20 @@
 __author__ = "Antoine Richard, Junnosuke Kamohara"
-__copyright__ = "Copyright 2023-26, JAOPS, Space Robotics Lab, SnT, University of Luxembourg, SpaceR"
-__license__ = "BSD-3-Clause"
-__version__ = "2.0.0"
 __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
-__status__ = "development"
 
-from typing import List, Tuple
-import numpy as np
-import warnings
 import os
+import warnings
 
-from semantics.schema.editor import PrimSemanticData
-from pxr import UsdGeom, Sdf
+import numpy as np
 import omni
 import warp as wp
+from pxr import Sdf, UsdGeom
+from semantics.schema.editor import PrimSemanticData
 
-from src.terrain_management.terrain_generation import GenerateProceduralMoonYard
-from src.configurations.procedural_terrain_confs import TerrainManagerConf
-from WorldBuilders import pxr_utils
 from assets import get_assets_path
+from src.configurations.procedural_terrain_confs import TerrainManagerConf
+from src.terrain_management.terrain_generation import GenerateProceduralMoonYard
+from WorldBuilders import pxr_utils
 
 
 class TerrainManager:

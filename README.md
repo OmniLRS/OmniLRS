@@ -6,9 +6,9 @@
 
 OmniLRS is powered by NVIDIA Isaac Sim and NVIDIA Omniverse libraries to provide visually realistic and physically accurate robotics simulation of lunar rovers.
 - GPU accelerated ray tracing for real-time illumination, shadows and vision sensors
-- GPU accelerated physics for real-time rigid-body dynamics and wheel/soil interactions 
+- GPU accelerated physics for real-time rigid-body dynamics and wheel/soil interactions
 - Base Terrain from NASA LRO Digital Elevation Models, plus generative rock and crater distributions from power laws
-- Customizable and randomizable terrain generation and asset placement for synthetic data generation 
+- Customizable and randomizable terrain generation and asset placement for synthetic data generation
 - Integration with ROS2 robotics ecosystem and more
 - Multi-physics model framework to simulate the entire range of telemetry needed in lunar missions: Power, Radio, Thermal
 - Mission Control Software Integration (Yamcs and Grafana) for mission operations development, training and rehearsals
@@ -41,9 +41,9 @@ OmniLRS is powered by NVIDIA Isaac Sim and NVIDIA Omniverse libraries to provide
 | **LargeScale**           |  <div style="width:230px">Semi procedural lunar environment. It uses real DEM to reconstuct the coarse terrain, usually 5 meters per pixel and then uses procedural generation to augment it to 2.5 cm per pixel. The terrain itself can be generated at a even higher resolution to smooth out shadows. This very fine terrain allows to reconstruct fine terrain features increasing the engineering value of the sim. The whole of this is bundled inside Geometry clip maps, allowing to render very large scenes.</div> | <img src="https://raw.githubusercontent.com/wiki/OmniLRS/OmniLRS/media/env_img/large_scale.png" width=520/>
 
 > [!IMPORTANT]
-> This readme showcases only basic information: for a more complete introduction to the simulation and its inner workings please [visit our wiki](https://github.com/OmniLRS/OmniLRS/wiki)! 
-> For specific questions or to have a chat join [our discord](https://discord.gg/KfZ2uaMHqh)! 
-> Should you run into a bug, or would like to request a new feature, feel free to open an issue. 
+> This readme showcases only basic information: for a more complete introduction to the simulation and its inner workings please [visit our wiki](https://github.com/OmniLRS/OmniLRS/wiki)!
+> For specific questions or to have a chat join [our discord](https://discord.gg/KfZ2uaMHqh)!
+> Should you run into a bug, or would like to request a new feature, feel free to open an issue.
 > Want to collaborate, reach out to us! PRs very welcome!
 
 ## OmniLRS in Action!
@@ -67,9 +67,9 @@ Mission Operations Update:
 
 ## Installation
 
-Follow the instruction on the Wiki: we strongly recommend following the [docker installation](https://github.com/OmniLRS/OmniLRS/wiki/Installation#docker-installation) steps. 
+Follow the instruction on the Wiki: we strongly recommend following the [docker installation](https://github.com/OmniLRS/OmniLRS/wiki/Installation#docker-installation) steps.
 
-Then Follow the [Getting Started steps](https://github.com/OmniLRS/OmniLRS/wiki/GettingStarted) to run your first OmniLRS simulations!
+Then Follow the [Getting Started steps](https://github.com/OmniLRS/OmniLRS/wiki/getting_started) to run your first OmniLRS simulations!
 
 ### ROS2 Integration
 
@@ -99,37 +99,22 @@ Please use the following citations if you use `OmniLRS` in your work.
 }
 
 @article{kamohara2024modelingterraindeformationgrouser,
-      title={Modeling of Terrain Deformation by a Grouser Wheel for Lunar Rover Simulation}, 
+      title={Modeling of Terrain Deformation by a Grouser Wheel for Lunar Rover Simulation},
       author={Junnosuke Kamohara and Vinicius Ares and James Hurrell and Keisuke Takehana and Antoine Richard and Shreya Santra and Kentaro Uno and Eric Rohmer and Kazuya Yoshida},
       year={2024},
       eprint={2408.13468},
       booktitle={21st International and 12th Asia-Pacific Regional Conference of the ISTVS}
       primaryClass={cs.RO},
-      url={https://arxiv.org/abs/2408.13468}, 
+      url={https://arxiv.org/abs/2408.13468},
 }
 ```
 
-## Directory Structure
-```bash
-.
-├── assets
-├── cfg
-│   ├── environment
-│   ├── mode
-│   ├── physics
-│   └── rendering
-├── docs
-├── scripts
-├── src
-│   ├── configurations
-│   ├── environments
-│   ├── environments_wrappers
-│   │   ├── ros2
-│   │   └── sdg
-│   ├── labeling
-│   ├── physics
-│   ├── robots
-│   ├── stellar
-│   └── terrain_management
-└── WorldBuilders
-```
+## Star History
+
+<a href="https://www.star-history.com/?repos=OmniLRS%2FOmniLRS&type=date&logscale=&legend=top-left">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=OmniLRS/OmniLRS&type=date&theme=dark&legend=top-left" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=OmniLRS/OmniLRS&type=date&legend=top-left" />
+   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=OmniLRS/OmniLRS&type=date&legend=top-left" />
+ </picture>
+</a>

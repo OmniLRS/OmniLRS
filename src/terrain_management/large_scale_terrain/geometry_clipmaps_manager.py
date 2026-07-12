@@ -1,22 +1,19 @@
 __author__ = "Antoine Richard"
-__copyright__ = "Copyright 2023-26, JAOPS, Space Robotics Lab, SnT, University of Luxembourg, SpaceR"
-__license__ = "BSD-3-Clause"
-__version__ = "2.0.0"
 __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
-__status__ = "development"
 
-from src.terrain_management.large_scale_terrain.geometry_clipmaps import (
-    GeometryClipmapConf,
-    GeoClipmap,
-)
 from dataclasses import dataclass, field
-from src.terrain_management.large_scale_terrain.pxr_utils import set_xform_ops
-from pxr import UsdGeom, Sdf, Usd, Gf
 from typing import Tuple
+
 import numpy as np
 import warp as wp
-import omni
+from pxr import Gf, Sdf, Usd, UsdGeom
+
+from src.terrain_management.large_scale_terrain.geometry_clipmaps import (
+    GeoClipmap,
+    GeometryClipmapConf,
+)
+from src.terrain_management.large_scale_terrain.pxr_utils import set_xform_ops
 
 
 @dataclass

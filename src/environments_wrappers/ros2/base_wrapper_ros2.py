@@ -1,23 +1,17 @@
 __author__ = "Antoine Richard"
-__copyright__ = "Copyright 2023-26, JAOPS, Space Robotics Lab, SnT, University of Luxembourg, SpaceR"
-__license__ = "BSD-3-Clause"
-__version__ = "2.0.0"
 __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
-__status__ = "development"
 
 # System imports
 from typing import List, Tuple
 
-# Custom libs
-import src.environments.rendering as rndr
+from rclpy.node import Node
 
 # Loads ROS2 dependent libraries
-from std_msgs.msg import Bool, Float32, ColorRGBA, Int8, Int32, String, Empty
-from rclpy.executors import SingleThreadedExecutor as Executor
-from geometry_msgs.msg import Pose, PoseStamped
-from rclpy.node import Node
-import rclpy
+from std_msgs.msg import Bool, Empty, Float32, Int8
+
+# Custom libs
+import src.environments.rendering as rndr
 
 
 class ROS_BaseManager(Node):

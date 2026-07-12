@@ -1,19 +1,16 @@
 __author__ = "Antoine Richard, Junnosuke Kahamora"
-__copyright__ = "Copyright 2023-26, JAOPS, Space Robotics Lab, SnT, University of Luxembourg, SpaceR"
-__license__ = "BSD-3-Clause"
-__version__ = "2.0.0"
 __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
-__status__ = "development"
 
-from typing import List, Tuple, Dict, Union
-import random, string
+import os
+import random
+import string
+from typing import Dict, Tuple, Union
+
 import numpy as np
 import omni
-import os
-
-import omni.replicator.core as rep
 import omni.kit.actions.core
+import omni.replicator.core as rep
 from pxr import Usd, UsdGeom
 
 from src.configurations.auto_labeling_confs import AutoLabelingConf

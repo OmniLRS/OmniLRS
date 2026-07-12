@@ -1,34 +1,29 @@
 __author__ = "Antoine Richard"
-__copyright__ = "Copyright 2023-26, JAOPS, Space Robotics Lab, SnT, University of Luxembourg, SpaceR"
-__license__ = "BSD-3-Clause"
-__version__ = "2.0.0"
 __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
-__status__ = "development"
 
-from typing import Tuple
-import dataclasses
-import numpy as np
-import math
 import copy
+import math
+from typing import Tuple
+
+import numpy as np
 
 from src.configurations.environments import LargeScaleTerrainConf
-
-from src.terrain_management.large_scale_terrain.nested_geometry_clipmaps_manager import (
-    NestedGeometryClipmapManagerConf,
-    NestedGeometryClipmapManager,
-)
 from src.terrain_management.large_scale_terrain.collider_manager import (
-    ColliderManagerConf,
     ColliderManager,
-)
-from src.terrain_management.large_scale_terrain.rock_manager import (
-    RockManagerConf,
-    RockManager,
+    ColliderManagerConf,
 )
 from src.terrain_management.large_scale_terrain.map_manager import (
-    MapManagerConf,
     MapManager,
+    MapManagerConf,
+)
+from src.terrain_management.large_scale_terrain.nested_geometry_clipmaps_manager import (
+    NestedGeometryClipmapManager,
+    NestedGeometryClipmapManagerConf,
+)
+from src.terrain_management.large_scale_terrain.rock_manager import (
+    RockManager,
+    RockManagerConf,
 )
 
 
@@ -95,6 +90,7 @@ class LargeScaleTerrainManager:
             self.rock_manager_cfg,
             self.nested_clipmap_manager.get_height_and_random_scale,
             is_map_done,
+            world_offset=self.settings.starting_position,
         )
         self.rock_manager.build()
 
@@ -202,10 +198,6 @@ class LargeScaleTerrainManager:
                 corrected_coordinates[0] + self.settings.starting_position[0],
                 corrected_coordinates[1] + self.settings.starting_position[1],
             )
-            global_coordinates = (
-                local_coordinates[0] + self.settings.starting_position[0],
-                local_coordinates[1] + self.settings.starting_position[1],
-            )
             # print("initial_coordinates", self.initial_coordinates)
             # print("global_coordinates", global_coordinates)
 
@@ -231,7 +223,16 @@ class LargeScaleTerrainManager:
 
             self.nested_clipmap_manager.update_clipmaps(fine_position, coarse_position, corrected_coordinates)
             print("clipmaps updated")
-            self.rock_manager.sample(local_coordinates)
+            # The rock DB requires block-aligned coordinates (multiples of block_size).
+            # Local frame is offset by `starting_position` which is generally NOT block
+            # aligned, so we sample rocks in the GLOBAL frame and let the rock manager
+            # subtract the world offset when feeding positions to the instancer.
+            bs = self.settings.block_size
+            block_corner_global = (
+                int(global_corrected_coordinates[0] // bs) * bs,
+                int(global_corrected_coordinates[1] // bs) * bs,
+            )
+            self.rock_manager.sample(global_corrected_coordinates, block_corner_global)
             print("rock manager sampled")
             self.collider_manager.update_shifting_map(local_coordinates)
             print("collider manager updated")

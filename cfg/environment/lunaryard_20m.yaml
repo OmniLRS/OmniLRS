@@ -264,7 +264,7 @@ terrain_manager:
       min_elevation: -0.5
       z_scale: .5
       seed: ${....seed}
-    
+
     deformation_engine:
       enable: False
       delay: 2.0
@@ -278,10 +278,10 @@ terrain_manager:
         x_deform_offset: 0.0
         y_deform_offset: 0.0
         deform_decay_ratio: 0.01
-      boundary_distribution: 
+      boundary_distribution:
         distribution: trapezoidal
         angle_of_repose: 1.047 #pi/3
-      depth_distribution: 
+      depth_distribution:
         distribution: sinusoidal
         wave_frequency: 4.14 # num_grouser/pi (no slip)
       force_depth_regression:
@@ -304,28 +304,18 @@ terrain_manager:
   sim_width: ${..lunaryard_settings.lab_width}
   resolution: ${..lunaryard_settings.resolution}
 
+
+# This environment config includes the default robot_settings (tested to work out of the box),
+# but the best practice for development is to have a separate robot config file that overides it
+# and launch the sim with run.py environment=... robot=...
+# (do not commit edits to the robot_settings below)
 robots_settings:
   robots_root: "/Robots"
   parameters:
-    # robot_name: ex1
-    # usd_path: assets/USD_Assets/robots/ex1.usd
-    # pose:
-    #   position: [5.0, 5.0, 0.5]
-    #   orientation: [1, 0, 0, 0]
-    # base_link: "base_link" # core link used to determine the position of the robot
-    # target_links: ["left_front_wheel_link", "left_rear_wheel_link", "right_front_wheel_link", "right_rear_wheel_link"]
-
-    # robot_name: jackal
-    # usd_path: assets/USD_Assets/robots/ros2_jackal_PhysX_vlp16_stereo.usd
-    # pose:
-    #   position: [5.0, 5.0, 0.5]
-    #   orientation: [1, 0, 0, 0]
-    # base_link: "base_link" # core link used to determine the position of the robot
-    # target_links: ["front_left_wheel_link", "front_right_wheel_link", "rear_left_wheel_link", "rear_right_wheel_link"]
     robot_name: husky
     usd_path: assets/USD_Assets/robots/ros2_husky_PhysX_vlp16.usd
     pose:
-      position: [5.0, 5.0, 0.5]
+      position: [10.0, 10.0, 0.5]
       orientation: [1, 0, 0, 0]
-    base_link: "base_link" # core link used to determine the position of the robot
     target_links: ["front_left_wheel_link", "front_right_wheel_link", "rear_left_wheel_link", "rear_right_wheel_link"]
+    base_link: "base_link" # core link used to determine the position of the robot

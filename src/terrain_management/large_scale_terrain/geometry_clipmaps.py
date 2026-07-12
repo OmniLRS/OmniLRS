@@ -1,29 +1,26 @@
 __author__ = "Antoine Richard"
-__copyright__ = "Copyright 2023-26, JAOPS, Space Robotics Lab, SnT, University of Luxembourg, SpaceR"
-__license__ = "BSD-3-Clause"
-__version__ = "2.0.0"
 __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
-__status__ = "development"
 
-from typing import Tuple
 import dataclasses
-import numpy as np
-import warp as wp
 import hashlib
 import os
+from typing import Tuple
+
+import numpy as np
+import warp as wp
 
 from src.terrain_management.large_scale_terrain.geometry_clipmaps_numba import (
     _build_mesh,
 )
 from src.terrain_management.large_scale_terrain.geometry_clipmaps_warp import (
-    _preprocess,
-    _bilinear_interpolation,
     _bicubic_interpolation,
+    _bilinear_interpolation,
+    _bilinear_interpolation_and_random_orientation,
     _get_values_wp_2x2,
     _get_values_wp_4x4,
+    _preprocess,
     _preprocess_multi_points,
-    _bilinear_interpolation_and_random_orientation,
 )
 from src.terrain_management.large_scale_terrain.utils import ScopedTimer
 

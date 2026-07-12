@@ -1,32 +1,30 @@
-__author__ = "Antoine Richard, Junnosuke Kamohara, Aleksa Stanivuk"
-__copyright__ = "Copyright 2023-26, JAOPS, Space Robotics Lab, SnT, University of Luxembourg, SpaceR"
-__license__ = "BSD-3-Clause"
-__version__ = "2.0.0"
+__author__ = "Antoine Richard, Junnosuke Kamohara, Aleksa Stanivuk, Shamistan Karimov"
 __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
-__status__ = "development"
 
+import logging
 from threading import Thread
+from typing import Union
 
+import omni
+import rclpy
 from isaacsim import SimulationApp
 from isaacsim.core.api.world import World
-from typing import Union
-import logging
-import omni
+from rclpy.executors import SingleThreadedExecutor as Executor
 
+from src.configurations.procedural_terrain_confs import TerrainManagerConf
+from src.environments.stellar_engine_env_mixin import StellarEngineEnvMixin
 from src.environments.utils import set_moon_env_name
 from src.environments_wrappers.rate import Rate
 from src.environments_wrappers.ros2.largescale_ros2 import ROS_LargeScaleManager
+from src.environments_wrappers.ros2.lunalab_ros2 import ROS_LunalabManager
 from src.environments_wrappers.ros2.lunaryard_ros2 import ROS_LunaryardManager
 from src.environments_wrappers.ros2.robot_manager_ros2 import ROS_RobotManager
-from src.environments_wrappers.ros2.lunalab_ros2 import ROS_LunalabManager
-from src.configurations.procedural_terrain_confs import TerrainManagerConf
-from rclpy.executors import SingleThreadedExecutor as Executor
 from src.physics.physics_scene import PhysicsSceneManager
-import rclpy
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(format="%(asctime)s %(message)s", datefmt="%m/%d/%Y %I:%M:%S %p")
+
 
 class ROS2_EnvironmentManagerFactory:
     def __init__(self):
@@ -109,7 +107,7 @@ class ROS2_SimulationManager:
 
         set_moon_env_name(cfg["environment"]["name"])
 
-        PSM = PhysicsSceneManager(cfg["physics"]["physics_scene"])
+        PhysicsSceneManager(cfg["physics"]["physics_scene"])
         for i in range(100):
             self.world.step(render=True)
         self.world.reset()
@@ -155,6 +153,16 @@ class ROS2_SimulationManager:
         else:
             self.ROSRobotManager.RM.preload_robot(self.world)
         self.ROSEnvironmentManager.EC.add_robot_manager(self.ROSRobotManager.RM)
+        if (
+            isinstance(self.ROSEnvironmentManager.EC, StellarEngineEnvMixin)
+            and self.ROSRobotManager.RM.robot.subsystems is not None
+        ):
+            # True for Lunaryard and LargeScale, False for Lunalab
+            # subsystems uses sun directions to calculate views no matter if stellar engine is enabled (sun moves) or not
+            # subsystems is only initialized for mission-specific robots (e.g. pragyaan); skip otherwise.
+            self.ROSRobotManager.RM.robot.subsystems.set_sun_prim_path(
+                self.ROSEnvironmentManager.EC.get_sun_prim_path()
+            )
 
         for i in range(100):
             self.world.step(render=True)
@@ -170,22 +178,42 @@ class ROS2_SimulationManager:
             self.rate.reset()
             self.world.step(render=True)
             if self.world.is_playing():
-                # Apply modifications to the lab only once the simulation step is finished
-                # This is extremely important as modifying the stage during a simulation step
-                # will lead to a crash.
-                self.ROSEnvironmentManager.periodic_update(dt=self.world.get_physics_dt())
+                did_reset = False
+
                 if self.world.current_time_step_index == 0:
                     self.world.reset()
+                    did_reset = True
+
+                    if self.ROSRobotManager.RM.robot is not None:
+                        self.ROSRobotManager.RM.robot.invalidate_articulation_api()
+
                     self.ROSEnvironmentManager.reset()
                     self.ROSRobotManager.reset()
-                self.ROSEnvironmentManager.apply_modifications()
-                if self.ROSEnvironmentManager.trigger_reset:
-                    self.ROSRobotManager.reset()
-                    self.ROSEnvironmentManager.trigger_reset = False
-                self.ROSRobotManager.apply_modifications()
-                if self.enable_deformation:
-                    if self.world.current_time_step_index >= (self.deform_delay * self.world.get_physics_dt()):
-                        self.ROSEnvironmentManager.EC.deform_terrain()
+
+                if not did_reset:
+                    # Must happen before periodic_update(), because LargeScale may call robot.get_pose().
+                    if self.ROSRobotManager.RM.robot is not None:
+                        self.ROSRobotManager.RM.robot.update_articulation_api()
+
+                    # Apply modifications to the lab only once the simulation step is finished.
+                    # This is extremely important as modifying the stage during a simulation step
+                    # will lead to a crash.
+                    self.ROSEnvironmentManager.periodic_update(dt=self.world.get_physics_dt())
+
+                    self.ROSEnvironmentManager.apply_modifications()
+
+                    if self.ROSEnvironmentManager.trigger_reset:
+                        self.ROSRobotManager.reset()
+                        self.ROSEnvironmentManager.trigger_reset = False
+
+                        if self.ROSRobotManager.RM.robot is not None:
+                            self.ROSRobotManager.RM.robot.invalidate_articulation_api()
+
+                    self.ROSRobotManager.apply_modifications()
+
+                    if self.enable_deformation:
+                        if self.world.current_time_step_index >= (self.deform_delay * self.world.get_physics_dt()):
+                            self.ROSEnvironmentManager.EC.deform_terrain()
                         # self.ROSLabManager.EC.applyTerramechanics()
             if not self.ROSEnvironmentManager.monitor_thread_is_alive():
                 logger.debug("Destroying the ROS nodes")

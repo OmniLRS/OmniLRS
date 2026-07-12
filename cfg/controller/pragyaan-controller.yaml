@@ -5,9 +5,9 @@ robots_settings:
   robot_controller: "pragyaan-controller"
   yamcs_tmtc: # these settings are relevant if Yamcs mode
     mdb:
-      - "cfg/mdb/rover.xml"
-      - "cfg/mdb/lander.xml"
-      - "cfg/mdb/admin.xml"
+      - "cfg/mdb/pragyaan/rover.xml"
+      - "cfg/mdb/pragyaan/lander.xml"
+      - "cfg/mdb/pragyaan/admin.xml"
     intervals:
       robot_stats: 1
       camera_streaming: 2
@@ -15,7 +15,7 @@ robots_settings:
       prim_path: "/StaticAssets/lander/Lander/Cam_Right/Lander_Camera"
       resolution: [1440, 1080]
     images:
-      no_data_image_path: "/workspace/omnilrs/assets/images/no_data_grafana.png"
+      no_data_image_path: "${oc.env:OMNILRS_ROOT,.}/assets/images/no_data_grafana.png"
       buckets:
         - name: "images_streaming"
           path: "/Rover/camera/images_streaming"
@@ -30,7 +30,7 @@ robots_settings:
     payload:
       apxs:
         resolution: [1440, 1080]
-        samples_dir: "/workspace/omnilrs/assets/images/"
+        samples_dir: "${oc.env:OMNILRS_ROOT,.}/assets/images/"
         no_data: "APXS_nodata.png"
         measurement: "APXS_measurement.png"
         bucket:

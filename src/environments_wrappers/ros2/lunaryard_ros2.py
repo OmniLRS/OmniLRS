@@ -1,19 +1,15 @@
 __author__ = "Antoine Richard"
-__copyright__ = "Copyright 2023-26, JAOPS, Space Robotics Lab, SnT, University of Luxembourg, SpaceR"
-__license__ = "BSD-3-Clause"
-__version__ = "2.0.0"
 __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
-__status__ = "development"
 
 # Custom libs
-from src.environments_wrappers.ros2.base_wrapper_ros2 import ROS_BaseManager
-from src.environments.lunaryard import LunaryardController
+from geometry_msgs.msg import Pose
 
 # Loads ROS2 dependent libraries
-from std_msgs.msg import Bool, Float32, ColorRGBA, Int32
-from geometry_msgs.msg import Pose
-import rclpy
+from std_msgs.msg import Bool, ColorRGBA, Float32, Int32
+
+from src.environments.lunaryard import LunaryardController
+from src.environments_wrappers.ros2.base_wrapper_ros2 import ROS_BaseManager
 
 
 class ROS_LunaryardManager(ROS_BaseManager):
@@ -38,7 +34,9 @@ class ROS_LunaryardManager(ROS_BaseManager):
         self.EC.load()
 
         self.create_subscription(Float32, "/OmniLRS/Sun/Intensity", self.set_sun_intensity, 1)
-        self.create_subscription(Pose, "/OmniLRS/Sun/Pose", self.set_sun_pose, 1)
+        self.create_subscription(
+            Pose, "/OmniLRS/Sun/Pose", self.set_sun_pose, 1
+        )  # Note: in lunaryard and largescale, Sun is directional light so only orientation matters, position is ignored
         self.create_subscription(ColorRGBA, "/OmniLRS/Sun/Color", self.set_sun_color, 1)
         self.create_subscription(Float32, "/OmniLRS/Sun/ColorTemperature", self.set_sun_color_temperature, 1)
         self.create_subscription(Float32, "/OmniLRS/Sun/AngularSize", self.set_sun_angle, 1)

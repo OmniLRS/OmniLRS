@@ -1,25 +1,21 @@
 __author__ = "Antoine Richard"
-__copyright__ = "Copyright 2023-26, JAOPS, Space Robotics Lab, SnT, University of Luxembourg, SpaceR"
-__license__ = "BSD-3-Clause"
-__version__ = "2.0.0"
 __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
-__status__ = "development"
 
-from typing import Tuple
 import dataclasses
-import numpy as np
-import warnings
 import math
+import warnings
+from typing import Tuple
 
-from semantics.schema.editor import PrimSemanticData
+import numpy as np
 import omni
+from semantics.schema.editor import PrimSemanticData
 
-from src.terrain_management.large_scale_terrain.geometry_clipmaps_manager import (
-    GeoClipmapManagerConf,
-    GeoClipmapManager,
-)
 from src.terrain_management.large_scale_terrain.geometry_clipmaps import GeometryClipmapConf
+from src.terrain_management.large_scale_terrain.geometry_clipmaps_manager import (
+    GeoClipmapManager,
+    GeoClipmapManagerConf,
+)
 from src.terrain_management.large_scale_terrain.pxr_utils import bind_material, load_material
 
 

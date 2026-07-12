@@ -1,46 +1,34 @@
-__author__ = "Antoine Richard, Junnosuke Kamohara, Aleksa Stanivuk"
-__copyright__ = "Copyright 2023-26, JAOPS, Space Robotics Lab, SnT, University of Luxembourg, SpaceR"
-__license__ = "BSD-3-Clause"
-__version__ = "2.0.0"
+__author__ = "Antoine Richard, Junnosuke Kamohara, Aleksa Stanivuk, Shamistan Karimov"
 __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
-__status__ = "development"
 
 import math
-import threading
-import time
-from typing import Dict, List, Tuple, TYPE_CHECKING
-from scipy.spatial.transform import Rotation as R
-import numpy as np
-import warnings
 import os
+from typing import Dict, List, Tuple
 
+import numpy as np
 import omni
 from isaacsim.core.api.world import World
-import omni.graph.core as og
+from isaacsim.core.prims import RigidPrim, SingleRigidPrim, SingleXFormPrim
 from isaacsim.core.utils.rotations import quat_to_rot_matrix
-from omni.isaac.dynamic_control import _dynamic_control
-from isaacsim.core.prims import SingleRigidPrim, SingleXFormPrim, RigidPrim
-from pxr import Gf, Usd
 
-from WorldBuilders.pxr_utils import createXform, createObject
-from src.configurations.robot_confs import RobotManagerConf
-import numpy as np
-from scipy.spatial.transform import Rotation as R
-
-from src.configurations.simulator_mode_enum import SimulatorMode
-from src.environments.utils import transform_orientation_from_xyzw_into_xyz, transform_orientation_into_xyz
-from src.subsystems.robot_subsystems_handler import RobotSubsystemsHandler
 # from src.robots.subsystems_manager import RobotSubsystemsManager
-from omni.isaac.sensor import Camera
-
-if TYPE_CHECKING:
-    from src.tmtc.yamcs_TMTC import YamcsTMTC
-
+from isaacsim.sensors.camera import Camera
 from isaacsim.sensors.physics import _sensor
+from pxr import Gf, Usd
+from scipy.spatial.transform import Rotation as R
+from WorldBuilders.pxr_utils import createObject, createXform
 
-#TODO for v4: rethink which methods should be in Manager, RRG, what should be in Robot
-#TODO for v4: separate into a different file (very complex and lengthy classes)
+from src.configurations.robot_confs import RobotManagerConf
+from src.configurations.simulator_mode_enum import SimulatorMode
+from src.environments.utils import transform_orientation_from_xyzw_into_xyz
+from src.robots.articulation_control import ArticulationControl
+from src.robots.articulation_telemetry import ArticulationTelemetry
+from src.subsystems.robot_subsystems_handler import RobotSubsystemsHandler
+
+
+# TODO for v4: rethink which methods should be in Manager, RRG, what should be in Robot
+# TODO for v4: separate into a different file (very complex and lengthy classes)
 class RobotManager:
     """
     RobotManager class.
@@ -50,21 +38,23 @@ class RobotManager:
     def __init__(
         self,
         RM_conf: RobotManagerConf,
-        mode:SimulatorMode = SimulatorMode.ROS2,
+        mode: SimulatorMode = SimulatorMode.ROS2,
     ) -> None:
         """
         Args:
             RM_conf (RobotManagerConf): The configuration of the robot manager.
         """
 
-        self.stage = omni.usd.get_context().get_stage() # TODO for v4: logcally an instance of a robot, should not have access to the instance of stage... change?
+        self.stage = (
+            omni.usd.get_context().get_stage()
+        )  # TODO for v4: logcally an instance of a robot, should not have access to the instance of stage... change?
         self.RM_conf = RobotManagerConf(**RM_conf)
         self.is_ROS2 = mode == SimulatorMode.ROS2
         self.robot_parameters = self.RM_conf.parameters
         self.robots_root = self.RM_conf.robots_root
         createXform(self.stage, self.robots_root)
-        self.robot: Robot = None   # TODO for v4: if only 1 robot, no need for a dict, just an instance
-        self.robot_RG: RobotRigidGroup = None # TODO for v4: if only 1 robot, no need for a dict, just an instance
+        self.robot: Robot = None
+        self.robot_RG: RobotRigidGroup = None
 
     def preload_robot(
         self,
@@ -75,11 +65,6 @@ class RobotManager:
         Args:
             world (Usd.Stage): The usd stage scene.
         """
-        print("self.robot_parameters")
-
-        print(self.robot_parameters)
-
-
         self.add_robot(
             self.robot_parameters.usd_path,
             self.robot_parameters.robot_name,
@@ -143,12 +128,12 @@ class RobotManager:
         q: Tuple[float, float, float, float] = [0, 0, 0, 1],
         domain_id: int = None,
         wheel_joints: dict = {},
-        camera_conf :dict={},
-        imu_sensor_path:str="",
-        dimensions:dict={},
-        turn_speed_coef:float=1,
-        pos_relative_to_prim:str="",
-        solar_panel_joint:str="",
+        camera_conf: dict = {},
+        imu_sensor_path: str = "",
+        dimensions: dict = {},
+        turn_speed_coef: float = 1,
+        pos_relative_to_prim: str = "",
+        solar_panel_joint: str = None,
     ) -> None:
         """
         Add a robot to the scene.
@@ -186,7 +171,7 @@ class RobotManager:
         robot_name: str = None,
         target_links: List[str] = None,
         pose_base_link: str = None,
-        world = None,
+        world=None,
     ) -> None:
         """
         Add a robot rigid group to the scene.
@@ -211,13 +196,12 @@ class RobotManager:
         """
         self.robot.reset()
 
-    def teleport_robot(
-        self, position: np.ndarray = None, orientation: np.ndarray = None
-    ) -> None:
+    def teleport_robot(self, position: np.ndarray = None, orientation: np.ndarray = None) -> None:
         """
         Teleport the robot to a specific position and orientation.
         """
         self.robot.teleport(position, orientation)
+
 
 class Robot:
     """
@@ -226,8 +210,8 @@ class Robot:
     and tfs to enable multi-robot operation.
     """
 
-    #TODO for v4: simplify and refactor the initialization, put some inits into a separate init methods, 
-    #TODO for v4: lower the number of arguments, simplify
+    # TODO for v4: simplify and refactor the initialization, put some inits into a separate init methods,
+    # TODO for v4: lower the number of arguments, simplify
     def __init__(
         self,
         usd_path: str,
@@ -236,13 +220,12 @@ class Robot:
         is_ROS2: bool = False,
         domain_id: int = 0,
         wheel_joints: Dict = {},
-        camera_conf:Dict = {},
-        imu_sensor_path:str = "",
-        dimensions:dict = {},
-        turn_speed_coef:float=1,
-        pos_relative_to_prim:str = "",
-        solar_panel_joint:str = "",
-
+        camera_conf: Dict = {},
+        imu_sensor_path: str = "",
+        dimensions: dict = {},
+        turn_speed_coef: float = 1,
+        pos_relative_to_prim: str = "",
+        solar_panel_joint: str = None,
     ) -> None:
         """
         Args:
@@ -259,39 +242,44 @@ class Robot:
         self.robot_path = os.path.join(self.robots_root, self.robot_name.strip("/"))
         self.is_ROS2 = is_ROS2
         self.domain_id = int(domain_id)
-        self.dc = _dynamic_control.acquire_dynamic_control_interface()
-        self.root_body_id = None
-        self._wheel_joint_names = wheel_joints
-        self._dofs = {} # dof = Degree of Freedom
+        self._wheel_joint_names = wheel_joints or {}
+        self.telemetry = ArticulationTelemetry(
+            prim_path=self.robot_path,
+            name=f"{self.robot_name.strip('/')}_telemetry",
+            sample_period_s=0.0,
+        )
+        self.control = ArticulationControl(
+            prim_path=self.robot_path,
+            name=f"{self.robot_name.strip('/')}_control",
+            apply_period_s=0.0,
+        )
+        self._articulation_api_enabled = False
+        self._last_joint_positions: dict[str, float] = {}
+        self._last_joint_velocities: dict[str, float] = {}
+        self._last_joint_efforts: dict[str, float] = {}
+        self._last_wheel_joint_angles: list[float] = []
         self._camera_conf = camera_conf
         self._cameras = {}
         self._depth_cameras = {}
         self.dimensions = dimensions
         self.turn_speed_coef = turn_speed_coef
         self._imu_sensor_interface = _sensor.acquire_imu_sensor_interface()
-        self._imu_sensor_path:str = imu_sensor_path
+        self._imu_sensor_path: str = imu_sensor_path
         self._solar_panel_joint = solar_panel_joint
-        self._solar_panel_dof = None
         self._setup_subsystems_handler(pos_relative_to_prim)
 
     def _setup_subsystems_handler(self, pos_relative_to_prim):
-        self.subsystems:RobotSubsystemsHandler = None
+        self.subsystems: RobotSubsystemsHandler = None
         robot_name = self.robot_name.strip("/")
-        
+
         if robot_name == "pragyaan":
             from src.mission_specific.pragyaan.subsystems.pragyaan_subsystems_handler import PragyaanSubsystemsHandler
+
             self.subsystems = PragyaanSubsystemsHandler(pos_relative_to_prim)
+        elif robot_name == "husky":
+            from src.mission_specific.husky.subsystems.husky_subsystems_handler import HuskySubsystemsHandler
 
-    def get_root_rigid_body_path(self) -> None:
-        """
-        Get the root rigid body path of the robot.
-        """
-
-        art = self.dc.get_articulation(self.robot_path)
-        self.root_body_id = self.dc.get_articulation_root_body(art)
-
-    def _get_art(self):
-        return self.dc.get_articulation(self.robot_path)
+            self.subsystems = HuskySubsystemsHandler(pos_relative_to_prim)
 
     def edit_graphs(self) -> None:
         """
@@ -300,8 +288,8 @@ class Robot:
 
         selected_paths = []
         for prim in Usd.PrimRange(self.stage.GetPrimAtPath(self.robot_path)):
-            l = [attr for attr in prim.GetAttributes() if attr.GetName().split(":")[0] == "graph"]
-            if l:
+            graph_attrs = [attr for attr in prim.GetAttributes() if attr.GetName().split(":")[0] == "graph"]
+            if graph_attrs:
                 selected_paths.append(prim.GetPath())
 
         for path in selected_paths:
@@ -332,102 +320,186 @@ class Robot:
         self.edit_graphs()
         self._initialize_cameras()
 
+    def is_articulation_api_ready(self) -> bool:
+        return self._articulation_api_enabled
+
+    def update_articulation_api(self) -> None:
+        """
+        Call this from the simulation update loop after timeline.play().
+        This is the only place where Robot should actively update articulation-backed state.
+        """
+        control_ready = self.control.maybe_initialize()
+        telemetry_ready = self.telemetry.maybe_initialize()
+
+        if not control_ready or not telemetry_ready:
+            self._articulation_api_enabled = False
+            return
+
+        frame = self.telemetry.sample()
+        if frame is None:
+            self._articulation_api_enabled = False
+            return
+
+        self._articulation_api_enabled = True
+
+        self._last_joint_positions = {name: sample.position for name, sample in frame.joints.items()}
+        self._last_joint_velocities = {name: sample.velocity for name, sample in frame.joints.items()}
+        self._last_joint_efforts = {name: sample.effort for name, sample in frame.joints.items()}
+
+        self.update_wheel_joint_angles()
+
+    def update_wheel_joint_angles(self) -> None:
+        """
+        Update cached wheel joint angles from the latest articulation telemetry.
+
+        This should not call Isaac directly.
+        It only uses self._last_joint_positions, which is updated by update_articulation_api().
+        """
+        if not self._wheel_joint_names:
+            self._last_wheel_joint_angles = []
+            return
+
+        joint_angles = []
+
+        for side in ["left", "right"]:
+            for joint_name in self._wheel_joint_names.get(side, []):
+                joint_angles.append(float(self._last_joint_positions.get(joint_name, 0.0)))
+
+        self._last_wheel_joint_angles = joint_angles
+
+    def invalidate_articulation_api(self) -> None:
+        """
+        Call after world.reset() or when physics views may have been invalidated.
+        """
+        self._articulation_api_enabled = False
+
+        self._last_joint_positions = {}
+        self._last_joint_velocities = {}
+        self._last_joint_efforts = {}
+        self._last_wheel_joint_angles = []
+
+        try:
+            self.control.close()
+        except Exception:
+            pass
+
+        try:
+            self.telemetry.close()
+        except Exception:
+            pass
+
     def get_streaming_cam_resolution(self):
         return (self._camera_conf["resolutions"]["low"][0], self._camera_conf["resolutions"]["low"][1])
-    
+
     def get_high_cam_resolution(self):
         return (self._camera_conf["resolutions"]["high"][0], self._camera_conf["resolutions"]["high"][1])
-        
+
     def _initialize_cameras(self) -> None:
         # Camera is a wrapper, therefore it just wraps around the camera instance if it already exists
         # otherwise it creates a new camera instance on the provided prim_path
-        
-        if isinstance(self._camera_conf, list):
-            self._cameras = []
-            self._depth_cameras = []
+        if "resolutions" not in self._camera_conf:
+            return
 
-            for camera_conf in self._camera_conf:
-                if "resolutions" not in camera_conf:
-                    continue
+        resolutions = list(self._camera_conf.get("resolutions").keys())
 
-                camera = {}
-                depth_camera = {}
+        for res in resolutions:
+            self._cameras[res] = Camera(
+                self._camera_conf["prim_path"],
+                resolution=(self._camera_conf["resolutions"][res][0], self._camera_conf["resolutions"][res][1]),
+            )
+            self._cameras[res].initialize()
 
-                resolutions = list(camera_conf.get("resolutions").keys())
-
-                for res in resolutions:
-                    camera[res] = Camera(camera_conf["prim_path"],
-                                        resolution=(camera_conf["resolutions"][res][0], camera_conf["resolutions"][res][1]))
-                    camera[res].initialize()
-
-                for res in resolutions:
-                    depth_camera[res] = Camera(camera_conf["prim_path"],
-                                        resolution=(camera_conf["resolutions"][res][0], camera_conf["resolutions"][res][1]))
-                    depth_camera[res].initialize()
-                    depth_camera[res].add_distance_to_image_plane_to_frame()
-
-                self._cameras.append(camera)
-                self._depth_cameras.append(depth_camera)
-                
-        else:
-            if "resolutions" not in self._camera_conf:
-                return
-            
-            resolutions = list(self._camera_conf.get("resolutions").keys())
-
-            for res in resolutions:
-                self._cameras[res] = Camera(self._camera_conf["prim_path"], 
-                                    resolution=(self._camera_conf["resolutions"][res][0], self._camera_conf["resolutions"][res][1]))
-                self._cameras[res].initialize()
-
-            for res in resolutions:
-                self._depth_cameras[res] = Camera(self._camera_conf["prim_path"], 
-                                    resolution=(self._camera_conf["resolutions"][res][0], self._camera_conf["resolutions"][res][1]))
-                self._depth_cameras[res].initialize()
-                self._depth_cameras[res].add_distance_to_image_plane_to_frame()
+        for res in resolutions:
+            self._depth_cameras[res] = Camera(
+                self._camera_conf["prim_path"],
+                resolution=(self._camera_conf["resolutions"][res][0], self._camera_conf["resolutions"][res][1]),
+            )
+            self._depth_cameras[res].initialize()
+            self._depth_cameras[res].add_distance_to_image_plane_to_frame()
 
     def get_rgba_camera_view(self, resolution) -> np.ndarray:
         return self._cameras[resolution].get_rgba()
-    
-    def get_rgba_camera_view_by_idx(self, idx, resolution) -> np.ndarray:
-        return self._cameras[idx][resolution].get_rgba()
-    
+
     def get_depth_camera_view(self, resolution) -> np.ndarray:
         """Returns depth image in meters as (H, W) float32 array."""
         depth = self._depth_cameras[resolution].get_depth()
         print("depth")
         print(depth)
         return depth
-    
+
     def get_imu_readings(self):
-        if (self._imu_sensor_path == ""):
-            raise Exception("Path to imu sensor is not defined. Please check your .yaml configuration file. 'imu_sensor_path' should be defined on the same level as 'robot_name'.")
-        
+        if self._imu_sensor_path == "":
+            raise Exception(
+                "Path to imu sensor is not defined. Please check your .yaml configuration file. 'imu_sensor_path' should be defined on the same level as 'robot_name'."
+            )
+
         # https://docs.isaacsim.omniverse.nvidia.com/4.5.0/sensors/isaacsim_sensors_physics_imu.html#reading-sensor-output
-        sensor_reading = self._imu_sensor_interface.get_sensor_reading(self._imu_sensor_path, use_latest_data = True, read_gravity = True)
-        linear_acceleration = {"ax": sensor_reading.lin_acc_x, "ay": sensor_reading.lin_acc_y, "az": sensor_reading.lin_acc_z}
-        angular_velocity = {"gx":sensor_reading.ang_vel_x, "gy":sensor_reading.ang_vel_y, "gz":sensor_reading.ang_vel_z} 
-        
-        # orientation = sensor_reading.orientation # w, x, y, z 
-        orientation = sensor_reading.orientation # x, y, z, w
-        xyz_orientation = transform_orientation_from_xyzw_into_xyz(orientation) 
-        orientation = {"roll":-float(xyz_orientation[0]), "pitch":-float(xyz_orientation[1]), "yaw":float(xyz_orientation[2])}
+        sensor_reading = self._imu_sensor_interface.get_sensor_reading(
+            self._imu_sensor_path, use_latest_data=True, read_gravity=True
+        )
+        linear_acceleration = {
+            "ax": sensor_reading.lin_acc_x,
+            "ay": sensor_reading.lin_acc_y,
+            "az": sensor_reading.lin_acc_z,
+        }
+        angular_velocity = {
+            "gx": sensor_reading.ang_vel_x,
+            "gy": sensor_reading.ang_vel_y,
+            "gz": sensor_reading.ang_vel_z,
+        }
 
-        # print(linear_acceleration, angular_velocity, orientation)
+        # orientation = sensor_reading.orientation # w, x, y, z
+
+        raw_orientation = np.asarray(sensor_reading.orientation, dtype=float)
+
+        if raw_orientation.shape != (4,):
+            print(f"[WARN] Invalid IMU orientation shape: {raw_orientation}")
+            xyz_orientation = np.zeros(3)
+
+        elif np.linalg.norm(raw_orientation) < 1e-8:
+            print(
+                f"[WARN] IMU returned zero quaternion at path "
+                f"{self._imu_sensor_path}: {raw_orientation}. "
+                "Sensor is probably not initialized yet."
+            )
+            xyz_orientation = np.zeros(3)
+
+        else:
+            raw_orientation = raw_orientation / np.linalg.norm(raw_orientation)
+
+            xyz_orientation = transform_orientation_from_xyzw_into_xyz(raw_orientation)
+
+        orientation = {
+            "roll": -float(xyz_orientation[0]),
+            "pitch": -float(xyz_orientation[1]),
+            "yaw": float(xyz_orientation[2]),
+        }
+
         return linear_acceleration, angular_velocity, orientation
-
 
     def get_pose(self) -> List[float]:
         """
-        Get the pose of the robot.
+        Get the pose of the robot root.
+
         Returns:
-            List[float]: The pose of the robot. (x, y, z), (qx, qy, qz, qw)
+            position, orientation_xyzw
         """
-        if self.root_body_id is None:
-            self.get_root_rigid_body_path()
-        pose = self.dc.get_rigid_body_pose(self.root_body_id)
-        return pose.p, pose.r
-    
+        if not self._articulation_api_enabled or self.telemetry.articulation is None:
+            raise RuntimeError(
+                f"Articulation API is not ready: {self.robot_path}. "
+                "Call update_articulation_api() from the simulation loop first."
+            )
+
+        position, quat_wxyz = self.telemetry.articulation.get_world_pose()
+
+        quat_xyzw = [
+            float(quat_wxyz[1]),
+            float(quat_wxyz[2]),
+            float(quat_wxyz[3]),
+            float(quat_wxyz[0]),
+        ]
+
+        return position, quat_xyzw
 
     def set_reset_pose(self, position: np.ndarray, orientation: np.ndarray) -> None:
         """
@@ -446,26 +518,49 @@ class Robot:
         Teleport the robot to a specific position and orientation.
 
         Args:
-            p (list): The position of the robot.
-            q (list): The orientation of the robot. (x, y, z, w)
+            p: position [x, y, z]
+            q: orientation [x, y, z, w]
         """
+        if not self._articulation_api_enabled or self.control.articulation is None:
+            raise RuntimeError(
+                f"Articulation API is not ready: {self.robot_path}. "
+                "Call update_articulation_api() from the simulation loop first."
+            )
 
-        self.get_root_rigid_body_path()
-        transform = _dynamic_control.Transform(p, q)
-        self.dc.set_rigid_body_pose(self.root_body_id, transform)
-        self.dc.set_rigid_body_linear_velocity(self.root_body_id, [0, 0, 0])
-        self.dc.set_rigid_body_angular_velocity(self.root_body_id, [0, 0, 0])
+        quat_wxyz = np.asarray([q[3], q[0], q[1], q[2]], dtype=np.float32)
+        position = np.asarray(p, dtype=np.float32)
+
+        self.control.articulation.set_world_pose(
+            position=position,
+            orientation=quat_wxyz,
+        )
+
+        self.control.articulation.set_linear_velocity(np.zeros(3, dtype=np.float32))
+        self.control.articulation.set_angular_velocity(np.zeros(3, dtype=np.float32))
+
+        self._last_joint_positions = {}
+        self._last_joint_velocities = {}
+        self._last_joint_efforts = {}
+        self._last_wheel_joint_angles = []
 
     def reset(self) -> None:
         """
         Reset the robot to its original position and orientation.
-        """
 
-        # w = self.reset_orientation.GetReal()
-        # xyz = self.reset_orientation.GetImaginary()
-        self.root_body_id = None
+        Note:
+            This requires articulation API to be ready. If called during world reset,
+            queue this from the simulation manager after update_articulation_api() succeeds.
+        """
+        if not self._articulation_api_enabled:
+            print(f"Cannot reset robot yet. Articulation API is not ready: {self.robot_path}")
+            return
+
         self.teleport(
-            [self.reset_position[0], self.reset_position[1], self.reset_position[2]],
+            [
+                self.reset_position[0],
+                self.reset_position[1],
+                self.reset_position[2],
+            ],
             [
                 self.reset_orientation[1],
                 self.reset_orientation[2],
@@ -475,96 +570,180 @@ class Robot:
         )
 
     def drive_straight(self, linear_velocity):
-        self._set_wheels_velocity(linear_velocity, "left")
-        self._set_wheels_velocity(linear_velocity, "right")
+        left_ok = self._set_wheels_velocity(linear_velocity, "left")
+        right_ok = self._set_wheels_velocity(linear_velocity, "right")
+        return bool(left_ok and right_ok)
 
     def drive_turn(self, wheel_speed):
         print(wheel_speed)
-        if (wheel_speed > 0):
+        if wheel_speed > 0:
             print("turns left")
         else:
             print("turns right")
-        self._set_wheels_velocity(-wheel_speed, "left")
-        self._set_wheels_velocity(wheel_speed, "right")
+
+        left_ok = self._set_wheels_velocity(-wheel_speed, "left")
+        right_ok = self._set_wheels_velocity(wheel_speed, "right")
+        return bool(left_ok and right_ok)
 
     def stop_drive(self):
-        self._set_wheels_velocity(0, "left")
-        self._set_wheels_velocity(0, "right")
+        left_ok = self._set_wheels_velocity(0.0, "left")
+        right_ok = self._set_wheels_velocity(0.0, "right")
+        return bool(left_ok and right_ok)
 
-    def _set_wheels_velocity(self, velocity, side:str):
-        self._init_dofs()
+    def set_joint_positions(self, targets: dict[str, float]) -> bool:
+        """
+        Command joint position targets by joint name.
 
-        if side not in ["left","right"]:
+        Args:
+            targets:
+                {
+                    "joint_name": position_rad_or_m,
+                    ...
+                }
+        """
+        if not self._articulation_api_enabled:
+            print(f"Articulation API is not ready: {self.robot_path}")
+            return False
+
+        return self.control.command_positions(targets)
+
+    def set_joint_velocities(self, targets: dict[str, float]) -> bool:
+        """
+        Command joint velocity targets by joint name.
+
+        Args:
+            targets:
+                {
+                    "joint_name": velocity_rad_s_or_m_s,
+                    ...
+                }
+        """
+        if not self._articulation_api_enabled:
+            print(f"Articulation API is not ready: {self.robot_path}")
+            return False
+
+        return self.control.command_velocities(targets)
+
+    def set_joint_efforts(self, targets: dict[str, float]) -> bool:
+        """
+        Command joint effort targets by joint name.
+
+        Args:
+            targets:
+                {
+                    "joint_name": effort_Nm_or_N,
+                    ...
+                }
+        """
+        if not self._articulation_api_enabled:
+            print(f"Articulation API is not ready: {self.robot_path}")
+            return False
+
+        return self.control.command_efforts(targets)
+
+    def set_joint_targets(
+        self,
+        *,
+        position_targets: dict[str, float] | None = None,
+        velocity_targets: dict[str, float] | None = None,
+        effort_targets: dict[str, float] | None = None,
+    ) -> bool:
+        """
+        Mixed joint command.
+
+        Useful when some joints are position-controlled and others are velocity/effort-controlled.
+        """
+        if not self._articulation_api_enabled:
+            print(f"Articulation API is not ready: {self.robot_path}")
+            return False
+
+        return self.control.command_mixed(
+            position_targets=position_targets or {},
+            velocity_targets=velocity_targets or {},
+            effort_targets=effort_targets or {},
+        )
+
+    def _set_wheels_velocity(self, velocity, side: str):
+        if not self._wheel_joint_names:
+            return False
+
+        if side not in ["left", "right"]:
             print("Wrong side param:", side, "Side can only be [left] or [right].")
-            return
+            return False
 
-        for dof in self._dofs[side]:
-            self.dc.set_dof_velocity_target(dof, velocity)
+        targets = {joint_name: float(velocity) for joint_name in self._wheel_joint_names.get(side, [])}
+
+        return self.set_joint_velocities(targets)
 
     def get_wheels_joint_angles(self):
-        self._init_dofs()
-        
-        joint_angles = []
-        for side in ["left","right"]:
-            for dof in self._dofs[side]:
-                joint_angle = self.dc.get_dof_position(dof)
-                joint_angles.append(joint_angle)
+        return list(self._last_wheel_joint_angles)
 
-        return joint_angles
-
-    def _init_dofs(self):
-        #NOTE idealy, this would be initialized inside load(),
-        # however, for an unknown reason art, and dc do not work well when invoked there
-        # thus not populating dofs correctly
-        # therefore, it was implemented as singleton, and should be called at the begging of every commanding function
-        #
-        # more about the use of dofs for robot movement can be read on: 
-        # https://docs.isaacsim.omniverse.nvidia.com/5.0.0/python_scripting/robots_simulation.html#velocity-control
+    def get_wheel_joint_names(self, side: str | None = None) -> list[str]:
         if not self._wheel_joint_names:
-            return
+            return []
 
-        if "left" in list(self._dofs.keys()):
-            return # it means it is already initialized
-        
-        self._dofs = {
-            "left": [],
-            "right": []
-        }
-        art = self._get_art()
+        if side is None:
+            names = []
+            for rover_side in ["left", "right"]:
+                names.extend(self._wheel_joint_names.get(rover_side, []))
+            return names
 
-        for rover_side in ["left", "right"]:
-            for joint_name in self._wheel_joint_names[rover_side]:
-                dof = self.dc.find_articulation_dof(art, joint_name)
-                self._dofs[rover_side].append(dof)
+        if side not in ["left", "right"]:
+            raise ValueError("side must be 'left', 'right', or None")
 
-    def _init_solar_panel_dof(self):
-        if self._solar_panel_dof == None and self._solar_panel_joint != "":
-            art = self._get_art()
-            self._solar_panel_dof = self.dc.find_articulation_dof(art, self._solar_panel_joint)
-            return
-        elif self._solar_panel_dof != None:
-            return
+        return list(self._wheel_joint_names.get(side, []))
 
-        if self._solar_panel_joint == "":
-            raise Exception("Solar panel joint is not specified. Please check your .yaml configuration file. 'solar_panel_joint' should be defined on the same level as 'robot_name'.")
+    def get_joint_positions(self) -> dict[str, float]:
+        return dict(self._last_joint_positions)
 
-    def deploy_solar_panel(self):
-        self._init_solar_panel_dof()
-        self.dc.set_dof_position_target(self._solar_panel_dof, math.radians(0))
+    def get_joint_velocities(self) -> dict[str, float]:
+        return dict(self._last_joint_velocities)
 
-    def stow_solar_panel(self):
-        self._init_solar_panel_dof()
-        self.dc.set_dof_position_target(self._solar_panel_dof, math.radians(-80))
+    def get_joint_efforts(self) -> dict[str, float]:
+        return dict(self._last_joint_efforts)
 
-#TODO for v4: rethink which methods should be in RRG, what should be in Robot
-#TODO for v4: separate into a different file (very complex and lengthy classes)
+    def get_available_joint_names(self) -> list[str]:
+        if self.control.is_ready:
+            return list(self.control.joint_names)
+
+        return list(self._last_joint_positions.keys())
+
+    def _verify_solar_panel_joint(self) -> None:
+        if not self._solar_panel_joint:
+            raise Exception(
+                "Solar panel joint is not specified. "
+                "Please check your .yaml configuration file. "
+                "'solar_panel_joint' should be defined on the same level as 'robot_name'."
+            )
+
+        if not self._articulation_api_enabled:
+            raise RuntimeError(
+                f"Articulation API is not ready: {self.robot_path}. "
+                "Call update_articulation_api() from the simulation loop first."
+            )
+
+        if self._solar_panel_joint not in self.control.joint_name_to_index:
+            raise RuntimeError(
+                f"Solar panel joint '{self._solar_panel_joint}' was not found in articulation "
+                f"{self.robot_path}. Available joints: {self.control.joint_names}"
+            )
+
+    def set_solar_panel_angle(self, angle_deg: float):
+        self._verify_solar_panel_joint()
+        self.set_joint_positions({self._solar_panel_joint: math.radians(angle_deg)})
+
+
+# TODO for v4: rethink which methods should be in RRG, what should be in Robot
+# TODO for v4: separate into a different file (very complex and lengthy classes)
 class RobotRigidGroup:
     """
     Class which deals with rigidprims and rigidprimview of a single robot.
     It is used to retrieve world pose, and contact forces, or apply force/torque.
     """
 
-    def __init__(self, root_path: str = "/Robots", robot_name: str = None, target_links: List[str] = None, base_link:str=None):
+    def __init__(
+        self, root_path: str = "/Robots", robot_name: str = None, target_links: List[str] = None, base_link: str = None
+    ):
         """
         Args:
             root_path (str): The root path of the robots.
@@ -585,7 +764,7 @@ class RobotRigidGroup:
         Initialize the rigidprims and rigidprimviews of the robot.
 
         Args:
-            world (World): A Omni.isaac.core.world.World object.
+            world (World): A isaacsim.core.api.world.World object.
         """
 
         self.dt = world.get_physics_dt()
@@ -608,7 +787,7 @@ class RobotRigidGroup:
         if not self.base_link:
             raise ValueError(
                 f"Robot '{self.robot_name}' is missing required 'base_link' in its YAML configuration. "
-                "Please add e.g. base_link: \"base_link\" under the robot's parameters."
+                'Please add e.g. base_link: "base_link" under the robot\'s parameters.'
             )
         # Use SingleXFormPrim instead of SingleRigidPrim for the base link.
         # SingleRigidPrim eagerly queries physics velocities in its constructor,
@@ -686,11 +865,16 @@ class RobotRigidGroup:
 
             # Convert back to (w, x, y, z) and store results
             quaternion_corrected = rotation_corrected.as_quat()
-            orientation_corrected = [quaternion_corrected[3], quaternion_corrected[0], quaternion_corrected[1], quaternion_corrected[2]]
+            orientation_corrected = [
+                quaternion_corrected[3],
+                quaternion_corrected[0],
+                quaternion_corrected[1],
+                quaternion_corrected[2],
+            ]
             positions[i, :] = position
             orientations[i, :] = orientation_corrected
         return positions, orientations
-    
+
     def get_pose_of_base_link(self) -> Tuple[list, list]:
         """
         Returns a pair of value representing the robot's pose, and orientation respectively, based on the base_link.
@@ -732,7 +916,7 @@ class RobotRigidGroup:
         n_links = len(self.target_links)
         contact_forces = np.zeros((n_links, 3))
         for i, prim_view in enumerate(self.prim_views):
-            contact_force = prim_view.get_net_contact_forces(dt = self.dt).squeeze()
+            contact_force = prim_view.get_net_contact_forces(dt=self.dt).squeeze()
             contact_forces[i, :] = contact_force
         return contact_forces
 

@@ -1,18 +1,12 @@
 __author__ = "Antoine Richard"
-__copyright__ = "Copyright 2023-26, JAOPS, Space Robotics Lab, SnT, University of Luxembourg, SpaceR"
-__license__ = "BSD-3-Clause"
-__version__ = "2.0.0"
 __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
-__status__ = "development"
 
-import os
 import logging
+import os
 
-from pxr import UsdGeom, Gf, Usd, Vt, UsdShade, UsdPhysics
-
-from omni.physx.scripts import utils as physx_utils
 import omni
+from pxr import Gf, PhysxSchema, Usd, UsdGeom, UsdPhysics, UsdShade
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(format="%(asctime)s %(message)s", datefmt="%m/%d/%Y %I:%M:%S %p")
@@ -164,8 +158,28 @@ def add_collider(
     # Checks that the mode selected by the user is correct.
     assert mode in collider_modes, "Decimation mode: " + mode + " for colliders unknown."
     # Get the prim and add collisions.
+    _MESH_APPROXIMATIONS = {
+        "none": PhysxSchema.PhysxTriangleMeshCollisionAPI,
+        "convexHull": PhysxSchema.PhysxConvexHullCollisionAPI,
+        "convexDecomposition": PhysxSchema.PhysxConvexDecompositionCollisionAPI,
+        "meshSimplification": PhysxSchema.PhysxTriangleMeshSimplificationCollisionAPI,
+        "convexMeshSimplification": PhysxSchema.PhysxTriangleMeshSimplificationCollisionAPI,
+        "boundingCube": None,
+        "boundingSphere": None,
+        "sphereFill": PhysxSchema.PhysxSphereFillCollisionAPI,
+    }
+
     prim = stage.GetPrimAtPath(path)
-    physx_utils.setCollider(prim, approximationShape=mode)
+    collision_api = UsdPhysics.CollisionAPI.Apply(prim)
+    PhysxSchema.PhysxCollisionAPI.Apply(prim)
+    collision_api.CreateCollisionEnabledAttr().Set(True)
+
+    if prim.IsA(UsdGeom.Mesh):
+        api = _MESH_APPROXIMATIONS.get(mode)
+        if api is not None:
+            api.Apply(prim)
+        mesh_collision_api = UsdPhysics.MeshCollisionAPI.Apply(prim)
+        mesh_collision_api.CreateApproximationAttr().Set(mode)
 
 
 def remove_collider(
@@ -180,9 +194,15 @@ def remove_collider(
         path (str): The path to the prim.
     """
 
-    # Get the prim and remove collisions.
     prim = stage.GetPrimAtPath(path)
-    physx_utils.removeCollider(prim)
+    prim.RemoveAPI(UsdPhysics.CollisionAPI)
+    prim.RemoveAPI(PhysxSchema.PhysxCollisionAPI)
+    if prim.IsA(UsdGeom.Mesh):
+        prim.RemoveAPI(UsdPhysics.MeshCollisionAPI)
+        prim.RemoveAPI(PhysxSchema.PhysxConvexHullCollisionAPI)
+        prim.RemoveAPI(PhysxSchema.PhysxConvexDecompositionCollisionAPI)
+        prim.RemoveAPI(PhysxSchema.PhysxTriangleMeshSimplificationCollisionAPI)
+        prim.RemoveAPI(PhysxSchema.PhysxTriangleMeshCollisionAPI)
 
 
 def delete_prim(
@@ -266,7 +286,7 @@ def load_material(material_name: str, material_path: str, destination_path: str 
 
 def make_rigid(stage: Usd.Stage, path: str):
     prim = stage.GetPrimAtPath(path)
-    rigid = UsdPhysics.RigidBodyAPI.Apply(prim)
+    UsdPhysics.RigidBodyAPI.Apply(prim)
 
 
 def set_texture_path(stage: Usd.Stage, material_path: str, shader_name: str, texture_path: str):

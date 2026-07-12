@@ -1,16 +1,13 @@
 __author__ = "Antoine Richard"
-__copyright__ = "Copyright 2023-26, JAOPS, Space Robotics Lab, SnT, University of Luxembourg, SpaceR"
-__license__ = "BSD-3-Clause"
-__version__ = "2.0.0"
 __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
-__status__ = "development"
 
 
 def startSim(cfg: dict):
-    from isaacsim import SimulationApp
     import omni
-    from src.environments.rendering import set_lens_flares, set_chromatic_aberrations, set_motion_blur
+    from isaacsim import SimulationApp
+
+    from src.environments.rendering import set_chromatic_aberrations, set_lens_flares, set_motion_blur
 
     class SimulationApp_wait(SimulationApp):
         def __init__(self, launch_config: dict = None, experience: str = "") -> None:
@@ -93,7 +90,7 @@ def startSim(cfg: dict):
     set_motion_blur(cfg)
     set_chromatic_aberrations(cfg)
 
-    #NOTE mode is chosen by setting the value of "mode" property within "defaults" @cfg/config.yaml
+    # NOTE mode is chosen by setting the value of "mode" property within "defaults" @cfg/config.yaml
     # it can also be overwritten through console, same as environment
     # mode is required to exist also @cfg/mode/[mode_name].yaml with "name" property
 

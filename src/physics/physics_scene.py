@@ -1,14 +1,10 @@
 __author__ = "Antoine Richard"
-__copyright__ = "Copyright 2023-26, JAOPS, Space Robotics Lab, SnT, University of Luxembourg, SpaceR"
-__license__ = "BSD-3-Clause"
-__version__ = "2.0.0"
 __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
-__status__ = "development"
-
-from src.configurations.physics_confs import PhysicsSceneConf
 
 from isaacsim.core.api.physics_context.physics_context import PhysicsContext
+
+from src.configurations.physics_confs import PhysicsSceneConf
 
 
 class PhysicsSceneManager:

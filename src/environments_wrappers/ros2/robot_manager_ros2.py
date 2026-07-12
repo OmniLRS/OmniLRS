@@ -1,17 +1,12 @@
-__author__ = "Antoine Richard, Aleksa Stanivuk"
-__copyright__ = "Copyright 2023-26, JAOPS, Space Robotics Lab, SnT, University of Luxembourg, SpaceR"
-__license__ = "BSD-3-Clause"
-__version__ = "1.0.0"
+__author__ = "Antoine Richard, Aleksa Stanivuk, Shamistan Karimov"
 __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
-__status__ = "development"
 
 from typing import List, Tuple
 
 from geometry_msgs.msg import PoseStamped
-from pxr import Gf
 from rclpy.node import Node
-from std_msgs.msg import Empty, String
+from std_msgs.msg import String
 
 from src.configurations.simulator_mode_enum import SimulatorMode
 from src.robots.robot import RobotManager
@@ -86,17 +81,15 @@ class ROS_RobotManager(Node):
 
         p = [data.pose.position.x, data.pose.position.y, data.pose.position.z]
         q = [data.pose.orientation.x, data.pose.orientation.y, data.pose.orientation.z, data.pose.orientation.w]
+        # print(f"received {data.pose.position}")
         self.modifications.append([self.RM.teleport_robot, {"position": p, "orientation": q}])
 
-    def reset_robot(self) -> None:
+    def reset_robot(self, msg=None) -> None:
         """
         Resets a robot.
-
-        Args:
-            data (String): Name of the robot to reset.
         """
 
-        self.modifications.append([self.RM.reset_robot])
+        self.modifications.append([self.RM.reset_robot, {}])
 
     def cleanRobots(self) -> None:
         """
