@@ -45,10 +45,7 @@ class ZenohCommandReceiver:
         self._task = asyncio.ensure_future(self._listen())
         self._started = True
 
-        self.log(
-            f"[ZenohCommandReceiver] listening: {self.keyexpr} "
-            f"wire_format={self.wire_format}"
-        )
+        self.log(f"[ZenohCommandReceiver] listening: {self.keyexpr} wire_format={self.wire_format}")
 
     @staticmethod
     def _joint_targets(
@@ -91,14 +88,9 @@ class ZenohCommandReceiver:
 
                 try:
                     command = decode_payload(payload, self.wire_format)
-                    position_targets, velocity_targets, effort_targets = (
-                        self._joint_targets(command)
-                    )
+                    position_targets, velocity_targets, effort_targets = self._joint_targets(command)
                 except Exception as e:
-                    self.log(
-                        "[ZenohCommandReceiver] failed to decode "
-                        f"{self.wire_format} command: {e}"
-                    )
+                    self.log(f"[ZenohCommandReceiver] failed to decode {self.wire_format} command: {e}")
                     continue
 
                 robot = self.RM.robot

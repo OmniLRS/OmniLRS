@@ -15,17 +15,13 @@ WireFormat: TypeAlias = Literal["json", "msgspec"]
 def normalize_wire_format(wire_format: str) -> WireFormat:
     normalized = wire_format.strip().lower()
     if normalized not in ("json", "msgspec"):
-        raise ValueError(
-            f"unsupported wire format {wire_format!r}; expected 'json' or 'msgspec'"
-        )
+        raise ValueError(f"unsupported wire format {wire_format!r}; expected 'json' or 'msgspec'")
     return cast(WireFormat, normalized)
 
 
 def encode_payload(value: Any, wire_format: WireFormat) -> bytes:
     if wire_format == "json":
-        return json.dumps(value, separators=(",", ":"), ensure_ascii=False).encode(
-            "utf-8"
-        )
+        return json.dumps(value, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
     return msgspec.msgpack.encode(value)
 
 

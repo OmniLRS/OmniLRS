@@ -88,14 +88,10 @@ class ZenohPubTransport:
         try:
             payload = encode_payload(frame, self.wire_format)
             self._pub.put(payload)
-            self._log_publish(
-                self.wire_format, len(payload), extra=f"keys={list(frame.keys())}"
-            )
+            self._log_publish(self.wire_format, len(payload), extra=f"keys={list(frame.keys())}")
 
         except Exception:
-            logger.exception(
-                "failed to publish %s on %s", self.wire_format, self.keyexpr
-            )
+            logger.exception("failed to publish %s on %s", self.wire_format, self.keyexpr)
 
     def publish_array(self, array: np.ndarray) -> None:
         if not self._check_pub("publish_array"):
