@@ -4,10 +4,6 @@ import logging
 import time
 from typing import Any, Dict, List
 
-from motion_stack.lvl1.core import JStateBatch
-from motion_stack.utils.joint_state import JState
-from motion_stack.utils.time import Time
-
 from src.environments_wrappers.zenoh.transport.factory import make_transports
 from src.robots.robot import RobotManager
 
@@ -28,7 +24,6 @@ class JointForceBridge:
         keep_history: bool = False,
         history_len: int = 200,
         contact_force_threshold_n: float = 0.0,
-        publish_json_frame: bool = False,
     ):
         self.zenoh_cfg = zenoh_cfg
         self.RM = RM
@@ -43,7 +38,6 @@ class JointForceBridge:
 
         self.keep_history = self.zenoh_cfg.get("keep_history", bool(keep_history))
         self.history_len = self.zenoh_cfg.get("history_len", int(max(1, history_len)))
-        self.publish_json_frame = self.zenoh_cfg.get("publish_json_frame", bool(publish_json_frame))
 
         self._inited = False
         self._t_last_publish = 0.0
@@ -61,7 +55,7 @@ class JointForceBridge:
             "meta": {},
         }
 
-        self.last_jstate_batch: JStateBatch = JStateBatch({})
+        self.last_joint_states: Dict[str, Dict[str, float]] = {}
 
         self.transports = []
         self._transports_started = False
@@ -72,6 +66,7 @@ class JointForceBridge:
             "keyexpr": self.zenoh_cfg.get("keyexpr", "OmniLRS/{robot_name}/joint_telemetry").format(
                 robot_name=self.robot_name
             ),
+            "wire_format": self.zenoh_cfg.get("wire_format", "json"),
         }
         self.transports = make_transports([spec])
 
@@ -132,10 +127,7 @@ class JointForceBridge:
 
         joint_names = robot.get_available_joint_names()
 
-        stamp = Time.from_parts(nano=time.time_ns())
-
         joints_dict: Dict[str, Dict[str, float]] = {}
-        jstate_dict: Dict[str, JState] = {}
 
         for name in joint_names:
             qi = float(q.get(name, 0.0))
@@ -157,20 +149,11 @@ class JointForceBridge:
                 "effort": ei,
             }
 
-            jstate_dict[name] = JState(
-                name=name,
-                time=stamp,
-                position=qi,
-                velocity=dqi,
-                effort=ei,
-            )
-
             if self.keep_history:
                 self.joints_history.setdefault(name, [])
                 self._append_hist(self.joints_history[name], sample, self.history_len)
 
-        jsb = JStateBatch(jstate_dict)
-        self.last_jstate_batch = jsb
+        self.last_joint_states = joints_dict
 
         self.last_frame = {
             "stamp_s": now,
@@ -181,30 +164,25 @@ class JointForceBridge:
                 "source": "Robot cached articulation API",
                 "n_joints": len(joints_dict),
                 "n_contacts": 0,
-                "wire_format": "WireJStateBatch",
+                "wire_format": self.zenoh_cfg.get("wire_format", "json"),
             },
         }
 
-        self._publish(jsb, self.last_frame)
+        self._publish(self.last_frame)
         return True
 
-    def _publish(self, jsb: JStateBatch, frame: Dict[str, Any]) -> None:
+    def _publish(self, frame: Dict[str, Any]) -> None:
         for t in self.transports:
             try:
-                if hasattr(t, "publish_jstate_batch"):
-                    t.publish_jstate_batch(jsb)
-                elif self.publish_json_frame:
-                    t.publish(frame)
-                else:
-                    self.log(f"transport {type(t).__name__} has no publish_jstate_batch(); skipping")
+                t.publish(frame)
             except Exception as e:
                 self.log(f"[joint_force_bridge] transport publish error: {e}")
 
     def get_latest_frame(self) -> Dict[str, Any]:
         return self.last_frame
 
-    def get_latest_jstate_batch(self) -> JStateBatch:
-        return self.last_jstate_batch
+    def get_latest_joint_states(self) -> Dict[str, Dict[str, float]]:
+        return self.last_joint_states
 
     def close(self) -> None:
         self._inited = False
@@ -218,7 +196,7 @@ class JointForceBridge:
             "contacts": {},
             "meta": {},
         }
-        self.last_jstate_batch = JStateBatch({})
+        self.last_joint_states = {}
 
         for t in self.transports:
             try:

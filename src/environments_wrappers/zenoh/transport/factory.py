@@ -29,35 +29,13 @@ def make_transports(
     out = []
     for s in spec:
         t = s.get("type", "").lower()
-        # if : == "zmq":
-        #     out.append(
-        #         ZmqPubTransport(
-        #             bind=s.get("bind", "tcp://127.0.0.1:7777"),
-        #             topic=s.get("topic", ""),
-        #             json_compact=s.get("json_compact", True),
-        #         )
-        #     )
         if t == "zenoh":
             out.append(
                 ZenohPubTransport(
                     keyexpr=s.get("keyexpr", "joint_telemetry"),
+                    wire_format=s.get("wire_format", "json"),
                 )
             )
-        # elif t == "ros_js":
-        #     out.append(
-        #         RosJointStatePubTransport(
-        #             topic=s.get("topic", "/joint_states"),
-        #             frame_id=s.get("frame_id", ""),
-        #         )
-        #     )
-        # elif t == "ros_imu":
-        #     out.append(
-        #         RosImuPubTransport(
-        #             topic=s.get("topic", "/imu"),
-        #             frame_id=s.get("frame_id", ""),
-        #         )
-        #     )
-
         else:
             raise ValueError(f"Unknown transport type: {t}")
     return out

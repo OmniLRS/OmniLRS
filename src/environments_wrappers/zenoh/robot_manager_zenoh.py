@@ -71,6 +71,7 @@ class Zenoh_RobotManager:
             keyexpr=zenoh_conf.get("controller", {})
             .get("cmd_keyexpr", "OmniLRS/{robot_name}/joint_cmd")
             .format(robot_name=robot_name),
+            wire_format=zenoh_conf.get("controller", {}).get("wire_format", "json"),
         )
 
         self.transports_inited = False

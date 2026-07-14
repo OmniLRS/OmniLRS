@@ -11,16 +11,17 @@ sensors:
 
   joint_force:
     keyexpr: "OmniLRS/{robot_name}/joint_telemetry"
+    wire_format: "json" # "json" or "msgspec" (MessagePack)
     publish_period_s: 0.1
     init_retry_s: 0.5
     not_ready_log_period_s: 1.0
     keep_history: False
     history_len: 200
     contact_force_threshold_n: 0.0
-    publish_json_frame: False
 
 controller:
     cmd_keyexpr: "OmniLRS/{robot_name}/joint_cmd"
+    wire_format: "json" # "json" or "msgspec" (MessagePack)
 
 misc:
   sim:

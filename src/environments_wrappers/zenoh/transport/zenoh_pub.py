@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 import logging
 import time
 from typing import Any, AsyncGenerator, Dict, Optional
@@ -9,8 +8,7 @@ import asyncio_for_robotics.zenoh as afor
 import msgspec
 import numpy as np
 from asyncio_for_robotics.zenoh.sub import Sub
-from motion_stack.lvl1.core import JStateBatch
-from ms_zenoh_bridge.utils import jsb_to_wire, wire_to_jsb
+from .wire import WireFormat, decode_payload, encode_payload, normalize_wire_format
 
 logger = logging.getLogger(__name__)
 
@@ -33,11 +31,11 @@ class ZenohPubTransport:
     def __init__(
         self,
         keyexpr: str = "OmniLRS/Husky/**",
-        json_compact: bool = True,
+        wire_format: str = "json",
         log_every_n: int = 50,
     ):
         self.keyexpr = keyexpr
-        self.json_compact = json_compact
+        self.wire_format: WireFormat = normalize_wire_format(wire_format)
         self.log_every_n = int(max(1, log_every_n))
 
         self._session = None
@@ -51,9 +49,9 @@ class ZenohPubTransport:
         self._last_publish_t = 0.0
 
         logger.info(
-            "ZenohPubTransport created: keyexpr=%s json_compact=%s",
+            "ZenohPubTransport created: keyexpr=%s wire_format=%s",
             self.keyexpr,
-            self.json_compact,
+            self.wire_format,
         )
 
     def start(self) -> None:
@@ -96,16 +94,16 @@ class ZenohPubTransport:
             return
 
         try:
-            payload = (
-                json.dumps(frame, separators=(",", ":"), ensure_ascii=False)
-                if self.json_compact
-                else json.dumps(frame, ensure_ascii=False)
-            )
+            payload = encode_payload(frame, self.wire_format)
             self._pub.put(payload)
-            self._log_publish("json", len(payload), extra=f"keys={list(frame.keys())}")
+            self._log_publish(
+                self.wire_format, len(payload), extra=f"keys={list(frame.keys())}"
+            )
 
         except Exception:
-            logger.exception("failed to publish json on %s", self.keyexpr)
+            logger.exception(
+                "failed to publish %s on %s", self.wire_format, self.keyexpr
+            )
 
     def publish_array(self, array: np.ndarray) -> None:
         if not self._check_pub("publish_array"):
@@ -123,30 +121,8 @@ class ZenohPubTransport:
         except Exception:
             logger.exception("failed to publish ndarray on %s", self.keyexpr)
 
-    def publish_jstate_batch(self, batch: JStateBatch) -> None:
-        """
-        Publish using the exact wire format expected by ms_zenoh_bridge.
-        """
-        if not self._check_pub("publish_jstate_batch"):
-            return
-
-        try:
-            payload = jsb_to_wire(batch.values())
-            self._pub.put(payload)
-
-            joint_names = list(batch.keys())
-            preview = joint_names[:5]
-            self._log_publish(
-                "jstate_batch",
-                len(payload),
-                extra=f"n_joints={len(joint_names)} preview={preview}",
-            )
-
-        except Exception:
-            logger.exception("failed to publish JStateBatch on %s", self.keyexpr)
-
-    async def subscribe_jstate_batch(self) -> AsyncGenerator[JStateBatch, None]:
-        logger.info("subscribing jstate_batch: %s", self.keyexpr)
+    async def subscribe_payload(self) -> AsyncGenerator[Any, None]:
+        logger.info("subscribing %s: %s", self.wire_format, self.keyexpr)
         self._sub = Sub(self.keyexpr)
 
         count = 0
@@ -157,23 +133,25 @@ class ZenohPubTransport:
 
                 if count == 1 or count % self.log_every_n == 0:
                     logger.info(
-                        "received jstate payload #%d on %s bytes=%d",
+                        "received %s payload #%d on %s bytes=%d",
+                        self.wire_format,
                         count,
                         self.keyexpr,
                         len(payload),
                     )
 
                 try:
-                    yield wire_to_jsb(payload)
+                    yield decode_payload(payload, self.wire_format)
                 except Exception:
                     logger.exception(
-                        "failed to decode jstate payload on %s bytes=%d",
+                        "failed to decode %s payload on %s bytes=%d",
+                        self.wire_format,
                         self.keyexpr,
                         len(payload),
                     )
 
         finally:
-            logger.info("closing jstate subscriber: %s", self.keyexpr)
+            logger.info("closing subscriber: %s", self.keyexpr)
             self._sub.close()
             self._sub = None
 
@@ -204,33 +182,14 @@ class ZenohPubTransport:
             self._sub = None
 
     async def subscribe_json(self) -> AsyncGenerator[Dict[str, Any], None]:
-        logger.info("subscribing json: %s", self.keyexpr)
-        self._sub = Sub(self.keyexpr)
+        if self.wire_format != "json":
+            raise ValueError("subscribe_json() requires wire_format='json'")
+        async for value in self.subscribe_payload():
+            yield value
 
-        count = 0
-        try:
-            async for sample in self._sub.listen_reliable():
-                payload = bytes(sample.payload)
-                count += 1
-
-                if count == 1 or count % self.log_every_n == 0:
-                    logger.info(
-                        "received json payload #%d on %s bytes=%d",
-                        count,
-                        self.keyexpr,
-                        len(payload),
-                    )
-
-                yield json.loads(payload.decode("utf-8"))
-
-        finally:
-            logger.info("closing json subscriber: %s", self.keyexpr)
-            self._sub.close()
-            self._sub = None
-
-    async def subscribe(self) -> AsyncGenerator[np.ndarray, None]:
-        async for arr in self.subscribe_array():
-            yield arr
+    async def subscribe(self) -> AsyncGenerator[Any, None]:
+        async for value in self.subscribe_payload():
+            yield value
 
     def close(self) -> None:
         logger.info("closing ZenohPubTransport: %s", self.keyexpr)

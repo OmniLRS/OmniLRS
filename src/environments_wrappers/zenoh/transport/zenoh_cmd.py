@@ -2,11 +2,14 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from collections.abc import Mapping
+from typing import Any
 
 import asyncio_for_robotics.zenoh as afor
-from ms_zenoh_bridge.utils import wire_to_jsb
 
 from src.robots.robot import RobotManager
+
+from .wire import WireFormat, decode_payload, normalize_wire_format
 
 logger = logging.getLogger(__name__)
 
@@ -16,11 +19,13 @@ class ZenohCommandReceiver:
         self,
         RM: RobotManager,
         keyexpr: str = "joint_cmd",
+        wire_format: str = "json",
         logger=logger,
         log_every_n: int = 5000,
     ):
         self.RM = RM
         self.keyexpr = keyexpr
+        self.wire_format: WireFormat = normalize_wire_format(wire_format)
         self.log = logger.info
         self.log_every_n = int(max(1, log_every_n))
 
@@ -36,7 +41,42 @@ class ZenohCommandReceiver:
         self._task = asyncio.ensure_future(self._listen())
         self._started = True
 
-        self.log(f"[ZenohCommandReceiver] listening: {self.keyexpr}")
+        self.log(
+            f"[ZenohCommandReceiver] listening: {self.keyexpr} "
+            f"wire_format={self.wire_format}"
+        )
+
+    @staticmethod
+    def _joint_targets(
+        message: Any,
+    ) -> tuple[dict[str, float], dict[str, float], dict[str, float]]:
+        if not isinstance(message, Mapping):
+            raise TypeError("command payload must be a mapping")
+
+        joints = message.get("joints", message)
+        if not isinstance(joints, Mapping):
+            raise TypeError("command payload 'joints' must be a mapping")
+
+        position_targets: dict[str, float] = {}
+        velocity_targets: dict[str, float] = {}
+        effort_targets: dict[str, float] = {}
+
+        for name, state in joints.items():
+            if not isinstance(name, str) or not isinstance(state, Mapping):
+                raise TypeError("each joint entry must map a string name to a mapping")
+
+            position = state.get("position", state.get("q"))
+            velocity = state.get("velocity", state.get("dq"))
+            effort = state.get("effort")
+
+            if position is not None:
+                position_targets[name] = float(position)
+            if velocity is not None:
+                velocity_targets[name] = float(velocity)
+            if effort is not None:
+                effort_targets[name] = float(effort)
+
+        return position_targets, velocity_targets, effort_targets
 
     async def _listen(self) -> None:
         sub = afor.Sub(self.keyexpr)
@@ -46,24 +86,16 @@ class ZenohCommandReceiver:
                 payload = bytes(msg.payload)
 
                 try:
-                    jsb = wire_to_jsb(payload)
+                    command = decode_payload(payload, self.wire_format)
+                    position_targets, velocity_targets, effort_targets = (
+                        self._joint_targets(command)
+                    )
                 except Exception as e:
-                    self.log(f"[ZenohCommandReceiver] failed to decode WireJStateBatch: {e}")
+                    self.log(
+                        "[ZenohCommandReceiver] failed to decode "
+                        f"{self.wire_format} command: {e}"
+                    )
                     continue
-
-                position_targets: dict[str, float] = {}
-                velocity_targets: dict[str, float] = {}
-                effort_targets: dict[str, float] = {}
-
-                for name, j in jsb.items():
-                    if j.position is not None:
-                        position_targets[name] = float(j.position)
-
-                    if j.velocity is not None:
-                        velocity_targets[name] = float(j.velocity)
-
-                    if j.effort is not None:
-                        effort_targets[name] = float(j.effort)
 
                 robot = self.RM.robot
 
