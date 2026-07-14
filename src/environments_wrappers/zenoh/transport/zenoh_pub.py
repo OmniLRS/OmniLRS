@@ -80,19 +80,7 @@ class ZenohPubTransport:
         return True
 
     def _log_publish(self, kind: str, payload_len: int, extra: str = "") -> None:
-        return
-        self._publish_count += 1
-        self._last_publish_t = time.time()
-
-        if self._publish_count == 1 or self._publish_count % self.log_every_n == 0:
-            logger.info(
-                "published %s #%d on %s payload_bytes=%d %s",
-                kind,
-                self._publish_count,
-                self.keyexpr,
-                payload_len,
-                extra,
-            )
+        pass
 
     def publish(self, frame: Dict[str, Any]) -> None:
         if not self._check_pub("publish"):
