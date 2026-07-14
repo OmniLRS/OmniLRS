@@ -5,7 +5,6 @@ __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
 
 import logging
-import time
 from typing import Any, AsyncGenerator, Dict, Optional
 
 import asyncio_for_robotics.zenoh as afor
