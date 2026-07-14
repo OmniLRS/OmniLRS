@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+__author__ = "Shamistan Karimov, Bach Nguyen, Elian Neppel"
+__maintainer__ = "Louis Burtz"
+__email__ = "ljburtz@jaops.com"
+
 from typing import Any, Dict, List, Optional, Union
 
 from src.environments_wrappers.zenoh.transport.base import Transport
