@@ -12,6 +12,7 @@ import asyncio_for_robotics.zenoh as afor
 import msgspec
 import numpy as np
 from asyncio_for_robotics.zenoh.sub import Sub
+
 from .wire import WireFormat, decode_payload, encode_payload, normalize_wire_format
 
 logger = logging.getLogger(__name__)

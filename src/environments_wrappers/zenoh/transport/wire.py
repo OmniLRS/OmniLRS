@@ -9,7 +9,6 @@ from typing import Any, Literal, TypeAlias, cast
 
 import msgspec
 
-
 WireFormat: TypeAlias = Literal["json", "msgspec"]
 
 
