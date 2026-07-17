@@ -2,21 +2,9 @@ import asyncio
 
 import cv2
 import msgspec
-import numpy as np
 from asyncio_for_robotics.zenoh.sub import Sub
 
-
-class WireNDArray(msgspec.Struct, array_like=True, kw_only=True):
-    dtype: str
-    shape: tuple[int, ...]
-    data: memoryview
-
-    @classmethod
-    def pack(cls, arr: np.ndarray):
-        return cls(data=arr.data, dtype=str(arr.dtype), shape=arr.shape)
-
-    def unpack(self) -> np.ndarray:
-        return np.frombuffer(self.data, dtype=self.dtype).reshape(self.shape)
+from environments_wrappers.zenoh.transport.zenoh_pub import WireNDArray
 
 
 async def main():

@@ -88,6 +88,8 @@ msgspec = "*"
 zenoh_lunaryard = "python run.py mode=Zenoh environment=lunaryard_20m robot=husky"
 zenoh_lab = "python run.py mode=Zenoh environment=lunalab robot=husky"
 zenoh_largescale = "python run.py mode=Zenoh environment=largescale robot=husky"
+
+[feature.zenoh-client.tasks]
 zenoh_test_sub = "python scripts/zenoh/sub_camera.py"
 zenoh_test_pub = "python scripts/zenoh/pub_randomize_rocks.py"
 
@@ -96,3 +98,4 @@ default = { features = ["core", "isaac"] }
 yamcs = { features = ["core", "isaac", "yamcs"] }
 ros2 = { features = ["core", "isaac", "ros2"] }
 zenoh = { features = ["core", "isaac", "zenoh"]}
+zenoh-client = { features = ["core", "zenoh", "zenoh-client"]}
