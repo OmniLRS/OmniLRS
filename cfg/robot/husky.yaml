@@ -8,8 +8,8 @@ robots_settings:
     # usd_path: assets/USD_Assets/robots/ros2_husky_PhysX_vlp16_mono_depth_imu.usd
     usd_path: assets/USD_Assets/robots/nograph_husky.usd
     pose:
-        position: [26., 16.6, 0.8] # Lunaryard, LargeScale
-        # position: [5.0, 5.0, 0.1] # Lunalab
+        # position: [26., 16.6, 0.8] # Lunaryard, LargeScale
+        position: [5.0, 5.0, 0.1] # Lunalab
         orientation: [0.70711, 0., 0., 0.70711]
     base_link: "base_link" # core link used to determine the position of the robot
     domain_id: 0
@@ -23,6 +23,7 @@ robots_settings:
       left: ["front_left_wheel", "rear_left_wheel"]
       right: ["front_right_wheel", "rear_right_wheel"]
     camera:
+      name: "cam_color"
       prim_path: "/Robots/husky/d455/RSD455/Camera_OmniVision_OV9782_Color"
       resolutions:
         low: [320, 240]
