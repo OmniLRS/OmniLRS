@@ -179,22 +179,31 @@ class Zenoh_SimulationManager:
 
         self.rate.reset()
 
+        did_reset = False
+
         if self.world.is_playing():
-            self.Zenoh_EC.periodic_update(dt=self.world.get_physics_dt())
             if self.world.current_time_step_index == 0:
                 self.world.reset()
+                did_reset = True
                 self.Zenoh_EC.reset()
                 self.Zenoh_RM.invalidate_articulation_api()
                 self.Zenoh_RM.reset_robot()
-            self.Zenoh_EC.apply_modifications()
-            if self.Zenoh_EC.trigger_reset:
-                self.Zenoh_RM.invalidate_articulation_api()
-                self.Zenoh_RM.reset()
-                self.Zenoh_EC.trigger_reset = False
-            self.Zenoh_RM.apply_modifications()
-            if self.enable_deformation:
-                if self.world.current_time_step_index >= (self.deform_delay * self.world.get_physics_dt()):
-                    self.Zenoh_EC.LC.deform_terrain()
+                self.Zenoh_RM.apply_modifications()
+
+            if not did_reset:
+                # Must happen before periodic_update(), because LargeScale calls robot.get_pose().
+                self.Zenoh_RM.update_articulation_api()
+                self.Zenoh_EC.periodic_update(dt=self.world.get_physics_dt())
+                self.Zenoh_EC.apply_modifications()
+                if self.Zenoh_EC.trigger_reset:
+                    self.Zenoh_RM.invalidate_articulation_api()
+                    self.Zenoh_RM.reset()
+                    self.Zenoh_EC.trigger_reset = False
+                    did_reset = True
+                self.Zenoh_RM.apply_modifications()
+                if self.enable_deformation:
+                    if self.world.current_time_step_index >= (self.deform_delay * self.world.get_physics_dt()):
+                        self.Zenoh_EC.LC.deform_terrain()
 
         if self.Zenoh_EC.transports_inited:
             self.Zenoh_EC.pub_sim_is_running(True)
@@ -202,8 +211,7 @@ class Zenoh_SimulationManager:
         if self.Zenoh_RM.transports_inited:
             self.Zenoh_RM.update_cmd()
 
-            if self.world.is_playing():
-                self.Zenoh_RM.update_articulation_api()
+            if self.world.is_playing() and not did_reset:
                 self.Zenoh_RM.apply_modifications()
                 self.Zenoh_RM.publish_telemetry()
                 self.Zenoh_RM.publish_gt()
