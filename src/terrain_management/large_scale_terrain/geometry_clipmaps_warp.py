@@ -31,10 +31,10 @@ def _preprocess(
     tid = wp.tid()
     x[tid] = points[tid][0] / mpp + coord[0]
     y[tid] = points[tid][1] / mpp + coord[1]
-    x[tid] = wp.atomic_min(x, tid, dem_shape[0] - 1.0)
-    y[tid] = wp.atomic_min(y, tid, dem_shape[1] - 1.0)
-    x[tid] = wp.atomic_max(x, tid, 0.0)
-    y[tid] = wp.atomic_max(y, tid, 0.0)
+    _ = wp.atomic_min(x, tid, dem_shape[0] - 1.0)
+    _ = wp.atomic_min(y, tid, dem_shape[1] - 1.0)
+    _ = wp.atomic_max(x, tid, 0.0)
+    _ = wp.atomic_max(y, tid, 0.0)
 
 
 @wp.func
