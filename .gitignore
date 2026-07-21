@@ -28,3 +28,7 @@ results.txt
 # Test venv and outputs
 test/venv/
 test/outputs/
+
+src/OmniLRS.egg-info/
+
+Session.vim
