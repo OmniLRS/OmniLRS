@@ -85,7 +85,7 @@ python = "3.11.*"
 pytest = "*"
 
 [feature.test-sim.tasks]
-test-sim = "pytest -v -s test/test_ros2_sanity.py"
+test-ros2 = "pytest -v -s test/test_ros2_sanity.py"
 
 [environments]
 default = { features = ["core", "isaac"] }

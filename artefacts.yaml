@@ -16,5 +16,5 @@ jobs:
     scenarios:
       settings:
         - name: test_ros2_sanity
-          run: "pixi run test-sim"
+          run: "pixi run test-ros2"
   
