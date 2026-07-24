@@ -32,7 +32,11 @@ FATAL_MARKERS = [
 
 class SimProcess:
     def __init__(self):
-        self.log_path = REPO_ROOT / "test" / "sim_startup.log"
+        # Artefacts upload dir if available, otherwise a local test dir.
+        upload_dir = os.environ.get("ARTEFACTS_SCENARIO_UPLOAD_DIR")
+        log_dir = Path(upload_dir) if upload_dir else REPO_ROOT / "test"
+        log_dir.mkdir(parents=True, exist_ok=True)
+        self.log_path = log_dir / "sim_startup.log"
         self._log_file = open(self.log_path, "w")
         self.proc = subprocess.Popen(
             SIM_COMMAND,
