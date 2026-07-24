@@ -1,0 +1,20 @@
+project: artefacts/omnilrs
+version: 0.1.0
+
+jobs:
+  test-ros2:
+    type: test
+    timeout: 15 # minutes
+    package:
+      docker:
+        build:
+          dockerfile: ci.docker/Dockerfile
+    runtime:
+      framework: other
+      simulator: isaacsim
+      
+    scenarios:
+      settings:
+        - name: test_ros2_sanity
+          run: "pixi run test-sim"
+  
