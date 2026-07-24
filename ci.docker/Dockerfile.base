@@ -1,0 +1,26 @@
+FROM public.ecr.aws/artefacts/ros2:humble-harmonic-nvidia
+
+ENV OMNI_KIT_ACCEPT_EULA=YES
+ENV ACCEPT_EULA=Y
+ENV PRIVACY_CONSENT=Y
+ENV NVIDIA_VISIBLE_DEVICES=all
+ENV NVIDIA_DRIVER_CAPABILITIES=all
+
+RUN apt-get update && apt-get install -q -y --no-install-recommends \
+    curl \
+    ca-certificates \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN curl -fsSL https://pixi.sh/install.sh | PIXI_HOME=/usr/local bash
+
+WORKDIR /workspace/omnilrs
+
+# Only the manifests, activation scripts, and a stub package (so the
+# editable OmniLRS dep resolves). Real sources are copied by the app
+# Dockerfile; the editable install just points at /workspace/omnilrs,
+# so the envs stay valid.
+COPY pixi.toml pixi.lock pyproject.toml ./
+COPY scripts ./scripts
+RUN mkdir -p src && touch src/__init__.py
+RUN pixi install --all
