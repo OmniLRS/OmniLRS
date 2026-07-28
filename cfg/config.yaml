@@ -6,6 +6,7 @@ defaults:
   - physics: default_physics
   - optional robot: null
   - optional controller: null
+  - optional static_assets: null
 
 hydra:
   output_subdir: null
