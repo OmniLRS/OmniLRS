@@ -1,0 +1,14 @@
+# @package environment
+# do not remove the above comment, it injects the settings below into the environment config
+
+static_assets_settings:
+  root_path: "/StaticAssets"
+  parameters:
+    - asset_name: lander
+      usd_path: USD_Assets/common/lander/ispace_ultra/ispace_ultra_lander.usdc
+      pose:
+        position: [10., 10., 0.65]
+        # orientation: [0., 0. , 0., 1.]   # x/y/z/w (identity)
+        orientation: [0, -0.70710678, 0, 0.70710678]   # x/y/z/w (-90 degree rotation around y axis)
+      collision: False
+      simulate_physics: False
