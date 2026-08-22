@@ -1,0 +1,26 @@
+.pixi
+.git
+docs
+
+# Ignore hidden thumbnail/cache files that can have restrictive permissions.
+.thumbs
+**/.thumbs
+**/.thumbnails
+**/.DS_Store
+
+# Generated Python artifacts that the editable `pixi install` rewrites into the
+# source tree on every build — including these busts the COPY cache spuriously.
+**/__pycache__
+**/*.py[cod]
+**/*.egg-info
+.pytest_cache
+**/.pytest_cache
+.ruff_cache
+**/.ruff_cache
+
+# Build outputs / downloaded data that change independently of source.
+data
+results.txt
+run.log
+**/.venv
+**/venv
