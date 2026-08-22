@@ -31,10 +31,12 @@ def _preprocess(
     tid = wp.tid()
     x[tid] = points[tid][0] / mpp + coord[0]
     y[tid] = points[tid][1] / mpp + coord[1]
-    x[tid] = wp.atomic_min(x, tid, dem_shape[0] - 1.0)
-    y[tid] = wp.atomic_min(y, tid, dem_shape[1] - 1.0)
-    x[tid] = wp.atomic_max(x, tid, 0.0)
-    y[tid] = wp.atomic_max(y, tid, 0.0)
+    # The functions update the variable directly in-place,
+    # the return value is the old value so it can be discarded
+    _ = wp.atomic_min(x, tid, dem_shape[0] - 1.0)
+    _ = wp.atomic_min(y, tid, dem_shape[1] - 1.0)
+    _ = wp.atomic_max(x, tid, 0.0)
+    _ = wp.atomic_max(y, tid, 0.0)
 
 
 @wp.func
@@ -414,5 +416,5 @@ def _get_random_tangent_vector(normal: wp.vec3f, state: wp.uint32) -> wp.quatf:
     vx = wp.cross(normal, vx)
     vx = vx / wp.length(vx)
     vy = wp.cross(normal, vx)
-    mat = wp.mat33f(vx, vy, normal)
+    mat = wp.matrix_from_rows(vx, vy, normal)
     return wp.quat_from_matrix(mat)
