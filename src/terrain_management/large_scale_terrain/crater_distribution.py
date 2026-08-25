@@ -416,13 +416,12 @@ class CraterMetadataGenerator:
 
             from scipy._lib._array_api import array_namespace
             for ii in range(len(self.crater_profiles)):
-
                 profile_old = self.crater_profiles[ii]
                 profile_new = CubicSpline.__new__(CubicSpline)
 
                 profile_new._x = profile_old._x
                 profile_new._c = profile_old._c
-                profile_new._asarray  = array_namespace(profile_new._c, profile_new._x).asarray
+                profile_new._asarray = array_namespace(profile_new._c, profile_new._x).asarray
                 profile_new.axis = getattr(profile_old, "axis", 0)
                 profile_new.extrapolate = getattr(profile_old, "extrapolate", True)
                 self.crater_profiles[ii] = profile_new
