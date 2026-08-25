@@ -415,6 +415,7 @@ class CraterMetadataGenerator:
             self.crater_profiles = pickle.load(handle)
 
             from scipy._lib._array_api import array_namespace
+
             for ii in range(len(self.crater_profiles)):
                 profile_old = self.crater_profiles[ii]
                 profile_new = CubicSpline.__new__(CubicSpline)
