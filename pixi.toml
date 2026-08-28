@@ -26,6 +26,7 @@ index-strategy = "unsafe-best-match"
 python = "3.11.*"
 gdal = "*"
 libgdal = "*"
+libglu = "*"
 rdfind = "*"
 
 [feature.core.pypi-dependencies]
