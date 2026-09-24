@@ -28,6 +28,7 @@ class RobotParameters:
     dimensions: dict = field(default_factory=dict)
     turn_speed_coef: float = 1
     solar_panel_joint: str = field(default_factory=str)
+    zenoh: Dict = field(default_factory=dict)
 
     def __post_init__(self):
         self.usd_path = os.path.join(os.getcwd(), self.usd_path)

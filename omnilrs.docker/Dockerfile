@@ -64,8 +64,8 @@ RUN /isaac-sim/python.sh -m pip install \
 RUN /isaac-sim/python.sh -m pip install \
     omegaconf \
     hydra-core \
-    eclipse-zenoh \
-    asyncio_for_robotics \
+    eclipse-zenoh==1.10.1 \
+    asyncio_for_robotics==1.5.0 \
     msgspec
 
 RUN /isaac-sim/python.sh -m pip install --no-deps opencv-python
@@ -92,3 +92,4 @@ COPY ./entrypoint.sh /
 
 ENTRYPOINT ["/entrypoint.sh"]
 CMD ["bash"]
+
