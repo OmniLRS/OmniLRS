@@ -16,7 +16,8 @@ docker build -t omnilrs . -f artefacts.Dockerfile
 
 1. Using 'artefacts'
 ```
-artefacts run --in-container test-startup --dockerfile artefacts.Dockerfile --gpus=all
+artefacts run --in-container test-startup --dockerfile artefacts.Dockerfile --gpus=all # local run
+artefacts run-remote test-startup # Run in the cloud on the artefacts platform
 ```
 
 2. With Pytest override the command from the command line
