@@ -135,6 +135,17 @@ def test_exclude_list_and_splits_only(tmp_path):
     assert "s00007_t0000_f000" not in ids and "s00007_t0000_f001" in ids
 
 
+def test_generator_lit_fraction_under_guards_sends_frame_to_dark(tmp_path):
+    shard = make_shard(tmp_path, frames=2)
+    man = json.loads((shard / "manifest.json").read_text())
+    man["frames"][0]["guards"] = {"lit_fraction": 0.2}
+    (shard / "manifest.json").write_text(json.dumps(man))
+    out = tmp_path / "out"
+    assert build.main(["--shards", str(shard), "--out", str(out), "--workers", "1", "--sizes", "S=100"]) == 0
+    dark = (out / "splits" / "S_dark.txt").read_text().split()
+    assert dark == ["s00007_t0000_f000"]
+
+
 def test_validate_passes_on_consistent_shard(tmp_path):
     shard = make_shard(tmp_path, frames=3)
     rc = validate.main([str(shard), "--n", "3"])

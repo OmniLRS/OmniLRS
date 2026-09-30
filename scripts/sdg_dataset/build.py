@@ -61,6 +61,12 @@ def rock_class(height_m: float, clearance_m: float) -> str:
     return "rock_large" if height_m >= clearance_m else "rock_small"
 
 
+def guard_field(fr: dict, key: str, default=None):
+    """A generator guard outcome: under fr["guards"] (SDG_Dataset manager), else top-level (older raw shards)."""
+    g = fr.get("guards") or {}
+    return g[key] if key in g else fr.get(key, default)
+
+
 def traversability(sem: np.ndarray, bits: np.ndarray) -> np.ndarray:
     """Collapse semantics + geometry into free / caution / hazard.
 
@@ -87,8 +93,8 @@ def process_frame(
         "id": fid,
         **{k: fr[k] for k in ("terrain_index", "terrain_seed", "frame_in_terrain", "render", "sun", "rig")},
         "base_seed": man["base_seed"],
-        "lit_fraction": fr.get("lit_fraction"),
-        "dark_retries": fr.get("dark_retries", 0),
+        "lit_fraction": guard_field(fr, "lit_fraction"),
+        "dark_retries": guard_field(fr, "dark_retries", 0),
         "cams": {},
     }
     for cam, side in C.cameras(man):
@@ -371,7 +377,7 @@ def main(argv=None) -> int:
                     missing.append(fid)
                     continue
                 shard_name, base_seed, fr = info[fid]
-                lit = fr.get("lit_fraction")  # written by the generator's dark-frame guard
+                lit = guard_field(fr, "lit_fraction")  # written by the generator's dark-frame guard
                 index[fid] = {
                     "shard": shard_name,
                     "terrain_seed": fr["terrain_seed"],
