@@ -191,6 +191,8 @@ python scripts/sdg_dataset/build.py --out $OUT --splits-only --exclude $OUT/*/re
 python scripts/sdg_dataset/sensor_model.py --in $OUT/shard_00000/images --out $OUT/shard_00000/images_sensor
 ```
 
+`validate.py` fails the shard on any hard check. The sun check (ground luminance must rise with sun elevation) only fails with 10 or more sampled frames; on fewer, such as a 2 x 3 smoke run, it is recorded under `warn` in `validation_report.json`.
+
 Several shards: `--shards data/sdg_dataset/shard_0000{0,1,2}`, then run `flag_frames.py` once per built shard directory. `build.py` only fills in what it has (it merges into an existing `index.json`), so you can add shards later; re-run step 4 afterwards.
 
 Built layout (`--out`):

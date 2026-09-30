@@ -12,7 +12,7 @@ box is destroyed:
   dem        unproject ground pixels through manifest pose + K, compare with the DEM under
              both row conventions; the recorded one must win with RMSE < 0.05 m
   normals    unit length; reports mean ground normal to reveal world- vs view-space frame
-  sun        ground luminance must rise with sun elevation (Spearman rho > 0.3)
+  sun        ground luminance must rise with sun elevation (Spearman rho > 0.3; fails on 10+ frames, warns below)
   rocks      height-above-ground histogram vs wheel clearance -> small/large ratio
   contact    contact_sheet.png: rgb | semantic | depth for n frames, eyeball it
 Writes validation_report.json into the shard dir. Exit code 1 on any hard failure.
@@ -57,6 +57,7 @@ def main(argv=None) -> int:
         "frames_in_manifest": len(frames),
         "partial": man.get("partial"),
         "fail": [],
+        "warn": [],
     }
 
     # files
@@ -197,9 +198,13 @@ def main(argv=None) -> int:
         rho = spearmanr(elev, lum).correlation
         rep["sun_luminance_spearman"] = float(rho)
         if not rho > 0.3:
-            rep["fail"].append(
-                f"ground luminance does not rise with sun elevation (rho={rho:.2f}); sun convention suspect"
-            )
+            msg = f"ground luminance does not rise with sun elevation (rho={rho:.2f}, n={len(lum)})"
+            # a handful of frames (a smoke run) is too few to judge, and constant_ground_brightness deliberately
+            # flattens luminance against elevation: only a sample of 10+ frames fails the shard
+            if len(lum) >= 10:
+                rep["fail"].append(msg + "; sun convention suspect")
+            else:
+                rep["warn"].append(msg + "; fewer than 10 frames, not failing")
     rh = np.array(rock_h)
     thr = a.wheel_clearance_m
     rep["rocks"] = {

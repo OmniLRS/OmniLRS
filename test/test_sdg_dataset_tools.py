@@ -200,6 +200,34 @@ def test_validate_reads_element_per_folder(tmp_path):
     assert rep["frames_with_files"] == 3
 
 
+def _darken_with_sun(shard):
+    """Sun elevation rises frame by frame while the ground gets darker: the opposite of the expected correlation."""
+    man = json.loads((shard / "manifest.json").read_text())
+    data = next(p for p in shard.iterdir() if p.is_dir() and p.name != "terrains")
+    for i, fr in enumerate(man["frames"]):
+        fr["sun"]["elevation_deg"] = 5.0 + 5.0 * i
+        for cam in man["intrinsics"]:
+            cv2.imwrite(str(data / f"{cam}_rgb" / "0" / f"{i:04d}.png"), np.full((48, 64, 3), 200 - 10 * i, np.uint8))
+    (shard / "manifest.json").write_text(json.dumps(man))
+
+
+def test_validate_sun_check_only_warns_on_a_small_sample(tmp_path):
+    shard = make_shard(tmp_path, frames=6)
+    _darken_with_sun(shard)
+    rc = validate.main([str(shard), "--n", "12"])
+    rep = json.loads((shard / "validation_report.json").read_text())
+    assert rc == 0, rep["fail"]
+    assert any("sun elevation" in w for w in rep["warn"]), rep["warn"]
+
+
+def test_validate_sun_check_fails_on_a_large_sample(tmp_path):
+    shard = make_shard(tmp_path, frames=10)
+    _darken_with_sun(shard)
+    assert validate.main([str(shard), "--n", "12"]) == 1
+    rep = json.loads((shard / "validation_report.json").read_text())
+    assert any("sun elevation" in m for m in rep["fail"]), rep["fail"]
+
+
 def test_validate_mono(tmp_path):
     shard = make_shard(tmp_path, frames=2, cameras=("cam_left",))
     assert validate.main([str(shard), "--n", "2"]) == 0
