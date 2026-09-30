@@ -106,13 +106,17 @@ class AutonomousLabeling:
                 self.writers_cfgs[camera_name][name]["annot_format"] = self.annot_formats[i]
                 self.synthetic_writers[camera_name][name] = writerFactory(name, **self.writers_cfgs[camera_name][name])
 
-    def get_intrinsics_matrix(self, camera_prim) -> np.ndarray:
+    def get_intrinsics_matrix(self, camera_prim, resolution) -> np.ndarray:
         """
+        Args:
+            camera_prim: the USD camera prim.
+            resolution: (width, height) of the camera's render product, in pixels.
+
         Returns:
             np.ndarray: the intrinsics of the camera (used for calibration)
         """
         focal_length = camera_prim.GetAttribute("focalLength").Get() / 10.0
-        (width, height) = (1280, 720)
+        (width, height) = resolution
         horizontal_aperture = camera_prim.GetAttribute("horizontalAperture").Get() / 10.0
         vertical_aperture = (camera_prim.GetAttribute("horizontalAperture").Get() / 10.0) * (float(height) / width)
         fx = width * focal_length / horizontal_aperture
@@ -122,7 +126,8 @@ class AutonomousLabeling:
         return np.array([[fx, 0.0, cx], [0.0, fy, cy], [0.0, 0.0, 1.0]], dtype="float32")
 
     def save_intrinsics(self, camera_name: str) -> None:
-        intrinsics = self.get_intrinsics_matrix(self.camera_prims[camera_name])
+        resolution = self.camera_resolutions[self.get_camera_idx(camera_name)]
+        intrinsics = self.get_intrinsics_matrix(self.camera_prims[camera_name], resolution)
         np.savetxt(os.path.join(self.data_dir, camera_name + "_intrisics.csv"), intrinsics, delimiter=",")
         np.save(os.path.join(self.data_dir, camera_name + "_intrisics.npy"), intrinsics)
 
