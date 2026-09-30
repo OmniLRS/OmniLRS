@@ -49,6 +49,14 @@ normals and exact poses on Lunaryard or on real LOLA terrain (LargeScale); `scri
 into training labels without Isaac Sim. Both halves can be used on their own. See [docs/sdg_dataset.md](docs/sdg_dataset.md),
 including how to move to another lunar site.
 
+```bash
+# capture only (Isaac Sim): one shard on the default LargeScale site
+python run.py mode=SDG_Dataset environment=largescale4Dataset rendering.renderer.headless=True mode.dataset_settings.base_seed=0
+# post-process only (numpy, scipy, opencv-python, pyyaml): validate, then build labels and splits
+python scripts/sdg_dataset/validate.py data/sdg_dataset/shard_00000 && python scripts/sdg_dataset/build.py --shards data/sdg_dataset/shard_00000 --out data/sdg_dataset_built
+# both: run the capture command, then the post-process command (several shards: docs/sdg_dataset.md, "Workflow C")
+```
+
 > [!IMPORTANT]
 > This readme showcases only basic information: for a more complete introduction to the simulation and its inner workings please [visit our wiki](https://github.com/OmniLRS/OmniLRS/wiki)!
 > For specific questions or to have a chat join [our discord](https://discord.gg/KfZ2uaMHqh)!

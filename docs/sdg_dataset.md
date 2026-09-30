@@ -5,7 +5,7 @@
 - **Capture** (`python run.py mode=SDG_Dataset ...`) needs Isaac Sim 5.0 and a GPU. It writes a *shard*: RGB, semantic and instance masks, depth, normals, exact poses, and the terrain ground truth (DEM, craters, rocks).
 - **Post-processing** (`scripts/sdg_dataset/*.py`) needs only `numpy scipy opencv-python pyyaml`. It reads any shard that follows the [output contract](#output-contract) and writes size classes, traversability, slope/crater masks and train/val splits. A shard from another simulator works as long as it follows the contract.
 
-Contents: [What it produces](#what-it-produces) - [A: capture only](#workflow-a-capture-only-needs-isaac-sim) - [B: post-processing only](#workflow-b-post-processing-only-no-isaac-sim) - [C: end to end](#workflow-c-end-to-end) - [Changing the site](#changing-the-site) - [Quality guards](#quality-guards) - Reproducing the reference dataset - [Known limitations](#known-limitations)
+Contents: [What it produces](#what-it-produces) - [A: capture only](#workflow-a-capture-only-needs-isaac-sim) - [B: post-processing only](#workflow-b-post-processing-only-no-isaac-sim) - [C: end to end](#workflow-c-end-to-end) - [Changing the site](#changing-the-site) - [Quality guards](#quality-guards) - [Reproducing the reference dataset](#reproducing) - [Known limitations](#known-limitations)
 
 ## What it produces
 
@@ -21,7 +21,7 @@ Per frame and per camera. Raw capture is what Workflow A writes; built dataset i
 | Depth | `<cam>_depth/...npz` (key `depth`, float32 metres, distance to image plane) | `depth/<id>_{L,R}_mm.png`, uint16 millimetres, 0 = no surface (space); saturates at 65.535 m |
 | Normals | `<cam>_normals/...npz` (key `normals`, H x W x 3) | `normals/<id>_{L,R}.png`, uint8 `(n+1)/2*255`, same frame as recorded |
 | Pose | `<cam>_pose/` (stock pose writer) and `frames[].rig` in `manifest.json` | `meta/<id>.json` (`rig`, per-camera `world_T_cam`, `K`) |
-| Sun, render mode, guard outcomes | `frames[].sun`, `.render`, `.guards` in `manifest.json` | `meta/<id>.json` |
+| Sun, render mode, guard outcomes | `frames[].sun`, `.render`, `.guards` in `manifest.json` | `meta/<id>.json` (`sun`, `render`, `guards`; plus `lit_fraction`, `dark_retries`) |
 | Terrain truth | `terrains/terrain_<k:04d>.npz/.json` | copied to `OUT/<shard>/terrains/` |
 
 Craters and slopes are baked into the terrain mesh and carry no renderer labels. `build.py` recovers them exactly by unprojecting every depth pixel through the recorded pose and looking the world (x, y) up in the terrain's DEM.
@@ -55,7 +55,7 @@ Every option lives under `mode.dataset_settings.<key>` (defaults in `cfg/mode/SD
 | Key | Default | Meaning |
 |---|---|---|
 | `base_seed` | 0 | Shard id. Terrain `k` uses seed `base_seed * 1000 + k`. One shard per seed: run several seeds for more data. Output goes to `<out_dir>/shard_<base_seed:05d>/` |
-| `num_terrains` | 10 | Terrains (Lunaryard) or locations (LargeScale) per shard |
+| `num_terrains` | 10 | Terrains (Lunaryard) or locations (LargeScale) per shard, at most 1000 (terrain seeds are `base_seed * 1000 + k`) |
 | `frames_per_terrain` | 25 | Frames per terrain/location |
 | `out_dir` | `data/sdg_dataset` | Parent of the shard directories |
 | `settle_steps` | 4 | Render steps after every re-roll, before recording (flushes temporal AA history) |
@@ -70,13 +70,13 @@ Every option lives under `mode.dataset_settings.<key>` (defaults in `cfg/mode/SD
 | `guards.*` | all off | See [Quality guards](#quality-guards) |
 | `terrain_material` | null | `{texture_scale, bump_factor}` override on the terrain shader |
 
-Camera set-up lives in `mode.generation_settings`: `camera_names` (one name = mono rig; two = stereo), `camera_resolutions` (all cameras must share one resolution), `annotators_list`. The `guards` need `rgb` and `depth` in the first camera's annotators.
+Camera set-up lives in `mode.generation_settings`: `camera_names` (one name = mono rig; two = stereo), `camera_resolutions` (all cameras must share one resolution), `annotators_list`. The per-camera lists `camera_names`, `camera_resolutions`, `annotators_list`, `image_formats` and `annot_formats` must all have the same length: for a mono rig, length 1 each. The `guards` need `rgb` and `depth` in the first camera's annotators.
 
 Hydra override examples: `mode.dataset_settings.num_terrains=50`, `mode.dataset_settings.rig.baseline_m=0.2`, `mode.dataset_settings.guards.mesh_probe.enabled=true`, `'mode.generation_settings.camera_resolutions=[[1640,1232],[1640,1232]]'`.
 
 Rendering: `rendering=ray_tracing` (RayTracedLighting) is the tested renderer. For path tracing set `mode.dataset_settings.guards.pt_runtime_switch=true` (boots ray tracing and switches the render mode at runtime, because selecting `rendering=path_tracing` at startup crashes headless on Isaac Sim 5.0 in the tested install). The frame record's `render` field is `pt` or `rt`.
 
-Progress is printed with the prefix `[sdg_dataset]`. If the run raises, the manifest is still written, with `partial: true` and an `error` string, containing only the frames recorded so far, and the process exits with code 1.
+Progress is printed with the prefix `[sdg_dataset]`. If the run raises, the manifest is still written, with `partial: true` and an `error` string, containing only the frames recorded so far. The exit code 1 is guaranteed only when `exit_watchdog_s` is set (the watchdog force-exits with 1 after a failed run, 0 after a good one); without it the exit code is whatever Isaac Sim's shutdown returns, and the shutdown can hang. Set `exit_watchdog_s` (e.g. 180) for unattended or scripted runs.
 
 ### Output contract
 
@@ -85,10 +85,11 @@ This is the interface between capture and post-processing: any capture that prod
 ```
 <out_dir>/shard_<base_seed:05d>/
   manifest.json
-  <cam>_intrinsics.json                       (one per camera; informational, manifest intrinsics are authoritative)
   terrains/terrain_<k:04d>.npz
   terrains/terrain_<k:04d>.json
   <data_hash>/                                (the writer directory; manifest.data_dir points at it)
+    <cam>_intrinsics.json                     (one per camera, from the rig; informational)
+    <cam>_intrisics.csv, <cam>_intrisics.npy  (stock writer, spelling as written; informational)
     <cam>_rgb/<folder>/<n>.png
     <cam>_depth/<folder>/<n>.npz
     <cam>_normals/<folder>/<n>.npz
@@ -98,6 +99,8 @@ This is the interface between capture and post-processing: any capture that prod
     <cam>_instance_segmentation_id_label/<folder>/<n>.json
     <cam>_pose/...
 ```
+
+The manifest `intrinsics` are authoritative. `<cam>_intrinsics.json` is a copy of them. The stock `<cam>_intrisics.csv/.npy` are computed from the USD camera's focal length and horizontal aperture with square pixels and a centred principal point, so they match the manifest `K` only when `rig.fy`, `rig.cx` and `rig.cy` are unset.
 
 File naming: with frame index `i` (`frames[].index`) and `epf` = `element_per_folder` from the manifest (1000 when absent, the default of `mode.generation_settings.element_per_folder`), `<folder>` = `i // epf` and `<n>` = `i % epf` zero-padded to the number of digits in `epf` (`0000` for 1000). Only `depth`, `rgb`, semantic and instance are required by `build.py`; normals are optional. `build.py` looks for the writer directory as `<shard>/<basename of data_dir>` first, then `data_dir` as given. Camera names are `cam_left` and `cam_right` (or, if absent, the first two intrinsics keys in sorted order). Left is `_L`, right is `_R`.
 
@@ -152,7 +155,7 @@ DEM convention (required): the elevation at world (x, y) is `dem[H-1-round((y-oy
 | `origin_xy_m` | no (default [0, 0]) | world xy of DEM column 0 / bottom row |
 | `crater_xy_frame` | no (default `lunaryard_index`) | `lunaryard_index`: crater `coord_m` are DEM-index metres (axis 0 = row); `local_xy`: crater centres are world xy metres |
 | `craters` | yes (may be empty) | Lunaryard: `{coord_m: [a, b], size_px, xy_deformation_factor: [sx, sy], rotation_deg, profile_id}`. LargeScale (`local_xy`): `{xy_local_m: [x, y], radius_m, xy_deformation_factor, rotation_deg, xy_global_m}` |
-| `rocks` | yes (may be empty) | one entry per labelled rock prim: `path` (USD prim path; matched by prefix against the instance-segmentation label), `height_above_ground_m`, `footprint_m` (both required); `group`, `prototype`, `position`, `scale`, `aabb_min`, `aabb_max` are informational |
+| `rocks` | yes (may be empty) | one entry per labelled rock prim: `path` (USD prim path; an instance-segmentation label matches it when the label is that path or a child of it, `<path>/...`), `height_above_ground_m`, `footprint_m` (both required); `group`, `prototype`, `position`, `scale`, `aabb_min`, `aabb_max` are informational |
 | `terrain_index`, `terrain_seed`, `base_seed`, `dem_shape`, `dem_convention`, `build_seconds`, ... | no | informational. LargeScale also records `lr_dem`, `starting_position_global_m`, `location_local_m`, `location_global_m`, `hr_dem_shape`, `crater_source` |
 
 A crater is masked where the DEM inside its ellipse lies more than 1 cm below the median DEM on its rim ring.
@@ -207,6 +210,8 @@ OUT/
 ```
 
 <a id="splits"></a>Splits: a frame goes to `val` (or `test`) by a hash of its terrain seed (`base_seed * 1000 + k`), so the frames of one terrain or location never straddle two splits; the rest is `train`. For Lunaryard that means no terrain is in two splits, because the yard is a pure function of the terrain seed. For LargeScale it does not on its own: the terrain seed only drives the location walk, rig poses and sun, while the ground itself is set by `environment.large_scale_terrain.starting_position` (location 0 *is* the starting position and the walk stays within `largescale.region_radius_m` of it) and the crater relief by `environment.seed`. Shards that share both capture the same ground, which can then land in train and val. Give every LargeScale shard its own `starting_position`, at least `2 * (region_radius_m + frame_jitter_m)` (about 320 m with the defaults) from every other shard's, and its own `environment.seed`, as in [Workflow C](#workflow-c-end-to-end). Frames flagged dark go to `<size>_dark.txt` and frames with too much far terrain to `<size>_far.txt`. Sizes are nested (S in M in L): each takes the first `ceil(target / frames_per_terrain)` terrains in shard order.
+
+`build.py` skips a frame whose files are missing (listed under `missing` in `summary.json`) and exits 1 if it built none of the manifest's frames. `flag_frames.py` records a frame it cannot analyse with an `error` entry in `quality.json` (counted in `summary.errors`) and exits 1 if every frame errored.
 
 `rejected.txt` is one `frame_id<TAB>reason` line per rejected frame; reasons are `mesh_issue` (rendered ground more than 0.3 m from the DEM), `rock_issue` (a rock floats above or is buried in the mesh by more than `--tol`), `dark_near` (less than half of the nearby terrain is lit) and `far_flat` (too much textureless far terrain). `--exclude` reads the first column of any number of such files.
 
@@ -283,7 +288,9 @@ All guards default to **off** (`mode.dataset_settings.guards.<name>`). They exis
 | `hide_far_mesh` | LargeScale only: the coarse 5 m mesh beyond the fine clipmap shows streaks and a flat bright sheet at the horizon. Hides it; beyond the fine mesh the frame shows space (label 0, depth saturated) | none, but no far terrain in the image | bool |
 | `pt_runtime_switch` | Path tracing selected at startup crashes headless on Isaac Sim 5.0; boots ray tracing and flips to path tracing at runtime (`rendering.renderer.samples_per_pixel_per_frame`, default 32 spp) | path tracing costs more time per frame than ray tracing | bool |
 
-A guard that cannot run (mesh_probe, dark_frame or auto_exposure without `rgb` and `depth` annotators) raises at startup rather than mid-run. Guard outcomes are recorded per frame in `manifest.json` (`frames[].guards`) and mirrored into `meta/<id>.json`.
+A guard that cannot run (mesh_probe, dark_frame or auto_exposure without `rgb` and `depth` annotators) raises at startup rather than mid-run. Guard outcomes are recorded per frame in `manifest.json` (`frames[].guards`) and copied by `build.py` into `meta/<id>.json` (`guards`).
+
+<a id="reproducing"></a>
 
 ## Reproducing stride-moon-seg-v1
 
