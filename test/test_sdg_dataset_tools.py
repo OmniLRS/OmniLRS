@@ -178,6 +178,18 @@ def test_generator_lit_fraction_under_guards_sends_frame_to_dark(tmp_path):
     assert dark == ["s00007_t0000_f000"]
 
 
+def test_guard_outcomes_are_copied_into_meta(tmp_path):
+    shard = make_shard(tmp_path)
+    man = json.loads((shard / "manifest.json").read_text())
+    man["frames"][0]["guards"] = {"lit_fraction": 0.9, "dark_retries": 1, "ae_gain": 1.2, "probe_err_m": 0.01}
+    (shard / "manifest.json").write_text(json.dumps(man))
+    out = tmp_path / "out"
+    assert build.main(["--shards", str(shard), "--out", str(out), "--workers", "1"]) == 0
+    meta = json.loads((out / "shard_00007" / "meta" / "s00007_t0000_f000.json").read_text())
+    assert meta["guards"] == man["frames"][0]["guards"]
+    assert meta["lit_fraction"] == 0.9 and meta["dark_retries"] == 1
+
+
 def test_validate_passes_on_consistent_shard(tmp_path):
     shard = make_shard(tmp_path, frames=3)
     rc = validate.main([str(shard), "--n", "3"])
@@ -244,6 +256,19 @@ def test_flag_frames_writes_rejected_list(tmp_path):
     for fid, fr in q["frames"].items():
         assert "error" not in fr, (fid, fr.get("error"))
         assert "near_lit_frac" in fr and isinstance(fr["far_flat_frac"], (int, float)), fid
+
+
+def test_flag_frames_counts_errors_and_fails_when_every_frame_errors(tmp_path):
+    shard = make_shard(tmp_path, frames=2)
+    out = tmp_path / "out"
+    build.main(["--shards", str(shard), "--out", str(out), "--workers", "1"])
+    built = out / "shard_00007"
+    (built / "meta" / "s00007_t0000_f000.json").unlink()
+    assert flag_frames.main([str(built), "--workers", "1"]) == 0
+    assert json.loads((built / "quality.json").read_text())["summary"]["errors"] == 1
+    (built / "meta" / "s00007_t0000_f001.json").unlink()
+    assert flag_frames.main([str(built), "--workers", "1"]) == 1
+    assert json.loads((built / "quality.json").read_text())["summary"]["errors"] == 2
 
 
 def test_sensor_model_cli_is_deterministic(tmp_path):

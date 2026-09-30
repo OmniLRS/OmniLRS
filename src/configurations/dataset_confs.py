@@ -82,7 +82,7 @@ class DatasetConf:
 
     Args:
         base_seed (int): terrain k of this shard uses seed base_seed * 1000 + k.
-        num_terrains (int): terrains (Lunaryard) or locations (LargeScale) per shard.
+        num_terrains (int): terrains (Lunaryard) or locations (LargeScale) per shard, at most 1000.
         frames_per_terrain (int): frames recorded per terrain/location.
         out_dir (str): shards are written to <out_dir>/shard_<base_seed:05d>/.
         settle_steps (int): render steps after every re-roll, before recording.
@@ -110,7 +110,8 @@ class DatasetConf:
         for name in ("rig", "sun", "largescale", "guards"):
             setattr(self, name, _merge(DEFAULTS[name], getattr(self, name), name))
         assert int(self.base_seed) >= 0, "base_seed must be >= 0"
-        assert int(self.num_terrains) >= 1, "num_terrains must be >= 1"
+        # terrain_seed = base_seed * 1000 + k: more than 1000 terrains would reuse the next shard's seeds
+        assert 1 <= int(self.num_terrains) <= 1000, f"num_terrains must be in [1, 1000], got {self.num_terrains}"
         assert int(self.frames_per_terrain) >= 1, "frames_per_terrain must be >= 1"
         assert int(self.settle_steps) >= 0, "settle_steps must be >= 0"
         assert self.exit_watchdog_s is None or float(self.exit_watchdog_s) > 0, "exit_watchdog_s must be > 0 or null"

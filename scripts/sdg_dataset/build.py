@@ -13,7 +13,7 @@ Per frame it writes, under <out>/<shard name>/:
   masks/<id>_{L,R}_bits.png      uint8 bitfield: 1 slope_caution 2 slope_hazard 4 crater 8 rock_small 16 rock_large
   depth/<id>_{L,R}_mm.png        uint16 millimetres, 0 = no surface (space)
   normals/<id>_{L,R}.png         uint8 (n+1)/2*255, frame as recorded
-  meta/<id>.json                 sun, rig pose, intrinsics, terrain seed, per-instance rock table, measured rocks
+  meta/<id>.json                 sun, rig pose, intrinsics, terrain seed, guard outcomes, rock table, measured rocks
   terrains/                      copy of the shard's per-terrain DEM + tables
 and <out>/splits/<size>_<split>.txt (frame ids; sizes are nested S c M c L and split by terrain seed),
 <out>/index.json, <out>/summary.json.
@@ -95,6 +95,7 @@ def process_frame(
         "base_seed": man["base_seed"],
         "lit_fraction": guard_field(fr, "lit_fraction"),
         "dark_retries": guard_field(fr, "dark_retries", 0),
+        "guards": dict(fr.get("guards") or {}),  # every guard outcome the generator recorded for this frame
         "cams": {},
     }
     for cam, side in C.cameras(man):

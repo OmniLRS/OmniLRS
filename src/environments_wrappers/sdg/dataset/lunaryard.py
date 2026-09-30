@@ -102,6 +102,8 @@ class DatasetLunaryard(LunaryardController, RigMixin):
             )
         if self.ds.terrain_material:
             self.apply_terrain_material()
+        if self.ds.guards["hide_far_mesh"]:
+            print("[sdg_dataset] WARNING: hide_far_mesh has no effect on Lunaryard", flush=True)
 
     # ------------------------------------------------------------------ DEM helpers
     def ground_height(self, x_m: float, y_m: float) -> float:

@@ -9,7 +9,8 @@ hovers (or one in a bowl is buried). For every rock blob in the left semantic la
 ground pixels in a band just below the blob, look the same (x, y) up in the DEM crop, and take
 median(z_render - z_dem). Below -tol the mesh is under the DEM there (rock floats); above +tol the rock
 is buried. Writes quality.json and rejected.txt (fid<TAB>reason) into the built shard dir; pass rejected.txt to
-build.py --exclude to drop the flagged frames from the splits.
+build.py --exclude to drop the flagged frames from the splits. Frames that cannot be analysed carry an "error" entry
+in quality.json (counted in summary.errors); exit code 1 when every frame errored.
 """
 
 __author__ = "Sam S. Yu"
@@ -214,9 +215,11 @@ def main(argv=None) -> int:
         elif r.get("far_flat_frac", 0) > a.max_far_flat:
             reasons[f] = "far_flat"
     (built / "rejected.txt").write_text("".join(f"{f}\t{r}\n" for f, r in sorted(reasons.items())))
+    n_err = sum(1 for r in q.values() if "error" in r)
     summary = {
         "frames": len(fids),
         "rejected": len(reasons),
+        "errors": n_err,
         **{
             k: sum(1 for v in reasons.values() if v == k) for k in ("mesh_issue", "rock_issue", "dark_near", "far_flat")
         },
@@ -225,6 +228,9 @@ def main(argv=None) -> int:
     }
     json.dump({"summary": summary, "frames": q}, open(built / "quality.json", "w"))
     print(json.dumps(summary))
+    if fids and n_err == len(fids):
+        print(f"ERROR: every frame failed to analyse (first: {next(iter(q.values()))['error']})", file=sys.stderr)
+        return 1
     return 0
 
 

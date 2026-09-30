@@ -177,9 +177,13 @@ def main(argv=None) -> int:
             d = np.where(valid, depth, 0)
             dv = cv2.applyColorMap(np.clip(d / max(d.max(), 1e-3) * 255, 0, 255).astype(np.uint8), cv2.COLORMAP_TURBO)
             row_img = np.concatenate([rgb, sem_vis, dv], 1)
+            caption = (
+                f"t{k} f{fr['frame_in_terrain']} elev={fr['sun']['elevation_deg']:.1f} "
+                f"h={fr['rig']['height_above_ground_m']:.2f}"
+            )
             cv2.putText(
                 row_img,
-                f"t{k} f{fr['frame_in_terrain']} elev={fr['sun']['elevation_deg']:.1f} h={fr['rig']['height_above_ground_m']:.2f}",
+                caption,
                 (10, 30),
                 cv2.FONT_HERSHEY_SIMPLEX,
                 0.9,

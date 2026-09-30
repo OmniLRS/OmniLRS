@@ -87,7 +87,6 @@ def main(argv=None) -> int:
     t0 = per_T[T_ref]["exposures"][0]
     fr = darks[(t0, T_ref)]
     read_dn = float(np.std(fr[0] - fr[1]) / np.sqrt(2)) if len(fr) >= 2 else float(np.std(fr[0] - lowpass(fr[0])))
-    # DSNU from the temporal mean at the exposure closest to the reference
     # ---------------- flats: photon transfer curve
     flats = defaultdict(list)
     for p, t, T in read_csv(a.flats):
@@ -135,7 +134,7 @@ def main(argv=None) -> int:
     A = np.stack([r2.ravel(), r2.ravel() ** 2], 1)
     k1, k2 = np.linalg.lstsq(A, 1.0 - g, rcond=None)[0]
     out["vignetting"] = {"k1": float(k1), "k2": float(k2), "center": [float(cx / w), float(cy / h)]}
-    # DSNU at the reference exposure (dark temporal mean minus low-pass), in electrons
+    # DSNU from the dark temporal mean (minus low-pass) at the exposure closest to the reference, in electrons
     t_near = min(per_T[T_ref]["exposures"], key=lambda t: abs(t - out["exposure_ref_s"]))
     dm = np.mean(darks[(t_near, T_ref)], axis=0)
     out["dsnu_e"] = float(np.std(dm - lowpass(dm)) * gain * (out["exposure_ref_s"] / t_near))

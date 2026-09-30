@@ -8,7 +8,8 @@ from src.environments_wrappers.sdg.dataset import guards, sampling
 
 
 def test_intrinsics_match_dataset_camera():
-    # published reference dataset (docs/sdg_dataset.md, 'Reproducing') cam_left_intrinsics.json: 1640x1232, hfov 90 -> K = [[820,0,820],[0,820,616],[0,0,1]]
+    # published reference dataset (docs/sdg_dataset.md, 'Reproducing') cam_left_intrinsics.json:
+    # 1640x1232, hfov 90 -> K = [[820,0,820],[0,820,616],[0,0,1]]
     k = sampling.compute_intrinsics(1640, 1232, DatasetConf().rig)
     assert np.allclose(k["K"], [[820, 0, 820], [0, 820, 616], [0, 0, 1]])
     assert k["usd"]["horizontal_aperture_mm"] == pytest.approx(48.0)
@@ -43,6 +44,25 @@ def test_sun_sampling_is_deterministic_and_in_range():
 def test_sun_min_elevation_respected():
     rng = np.random.default_rng(1)
     assert all(sampling.sample_sun(rng, DatasetConf().sun, 10.0)["elevation_deg"] >= 10.0 for _ in range(200))
+
+
+def test_sun_and_rig_draws_are_pinned():
+    # golden values: a seed must keep meaning the same frames, so any reordering of the rng draws (sun: bucket,
+    # elevation, azimuth, intensity jitter, temperature; rig: height, yaw, pitch, roll) fails here
+    rng = np.random.default_rng(12345)
+    sun = sampling.sample_sun(rng, DatasetConf().sun)
+    assert sun == {"elevation_deg": 6.584, "azimuth_deg": 287.052, "intensity": 3398.5, "temperature_k": 5952.0}
+    rec = sampling.sample_rig_pose(rng, DatasetConf().rig, 1.5, -2.0, 0.25)
+    assert {k: v for k, v in rec.items() if k != "quat_xyzw"} == {
+        "position": [1.5, -2.0, 0.8163],
+        "height_above_ground_m": 0.5663,
+        "yaw_deg": 215.391,
+        "pitch_deg": 8.174,
+        "roll_deg": 0.691,
+    }
+    assert rec["quat_xyzw"] == pytest.approx([-0.06973, -0.015934, 0.950375, -0.302771], abs=2e-6)
+    ranged = sampling.sample_sun(np.random.default_rng(12345), DatasetConf(sun={"intensity_mode": "range"}).sun)
+    assert ranged == {"elevation_deg": 6.584, "azimuth_deg": 287.052, "intensity": 1873.4, "temperature_k": 5952.0}
 
 
 def test_rig_pose_height_above_ground():

@@ -151,7 +151,8 @@ class DatasetLargeScale(LargeScaleController, RigMixin):
                 "check large_scale_terrain.geo_cm_texture_name",
                 flush=True,
             )
-        self.apply_terrain_material()
+        if self.ds.terrain_material:
+            self.apply_terrain_material()
         self._hide_far_mesh()
 
     def _hide_far_mesh(self) -> None:

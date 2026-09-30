@@ -28,6 +28,7 @@ def test_partial_nested_override_keeps_other_defaults():
     "kwargs, msg",
     [
         ({"num_terrains": 0}, "num_terrains"),
+        ({"num_terrains": 1001}, "num_terrains"),
         ({"rig": {"height_m": [1.0, 0.5]}}, "height_m"),
         ({"sun": {"elevation_buckets": [{"weight": 0.0, "range": [1, 5]}]}}, "weight"),
         ({"sun": {"intensity_mode": "auto"}}, "intensity_mode"),
