@@ -206,7 +206,7 @@ OUT/
   summary.json                                                       frame counts per size and split, class pixel fractions, missing/excluded
 ```
 
-Splits: a frame goes to `val` (or `test`) by a hash of its terrain seed, so no terrain is in two splits; the rest is `train`. Frames flagged dark go to `<size>_dark.txt` and frames with too much far terrain to `<size>_far.txt`. Sizes are nested (S in M in L): each takes the first `ceil(target / frames_per_terrain)` terrains in shard order.
+<a id="splits"></a>Splits: a frame goes to `val` (or `test`) by a hash of its terrain seed (`base_seed * 1000 + k`), so the frames of one terrain or location never straddle two splits; the rest is `train`. For Lunaryard that means no terrain is in two splits, because the yard is a pure function of the terrain seed. For LargeScale it does not on its own: the terrain seed only drives the location walk, rig poses and sun, while the ground itself is set by `environment.large_scale_terrain.starting_position` (location 0 *is* the starting position and the walk stays within `largescale.region_radius_m` of it) and the crater relief by `environment.seed`. Shards that share both capture the same ground, which can then land in train and val. Give every LargeScale shard its own `starting_position`, at least `2 * (region_radius_m + frame_jitter_m)` (about 320 m with the defaults) from every other shard's, and its own `environment.seed`, as in [Workflow C](#workflow-c-end-to-end). Frames flagged dark go to `<size>_dark.txt` and frames with too much far terrain to `<size>_far.txt`. Sizes are nested (S in M in L): each takes the first `ceil(target / frames_per_terrain)` terrains in shard order.
 
 `rejected.txt` is one `frame_id<TAB>reason` line per rejected frame; reasons are `mesh_issue` (rendered ground more than 0.3 m from the DEM), `rock_issue` (a rock floats above or is buried in the mesh by more than `--tol`), `dark_near` (less than half of the nearby terrain is lit) and `far_flat` (too much textureless far terrain). `--exclude` reads the first column of any number of such files.
 
@@ -227,10 +227,14 @@ Splits: a frame goes to `val` (or `test`) by a hash of its terrain seed, so no t
 ## Workflow C: end to end
 
 ```bash
-# capture (Isaac Sim): three shards of the default LargeScale site
+# capture (Isaac Sim): three shards of the default LargeScale site (Site20, valid |x|, |y| <= 7800 m, see
+# "Changing the site" step 4). Each shard gets its own starting position (km apart) and crater seed, so no ground is
+# shared between shards and the terrain-seed split keeps train and val apart.
+POS=("[2800,-2200]" "[-3000,1500]" "[1000,4500]")    # bash array, 0-indexed
 for s in 0 1 2; do
   python run.py mode=SDG_Dataset environment=largescale4Dataset rendering=ray_tracing \
-      rendering.renderer.headless=True mode.dataset_settings.base_seed=$s
+      rendering.renderer.headless=True mode.dataset_settings.base_seed=$s \
+      environment.seed=$((42 + s)) "environment.large_scale_terrain.starting_position=${POS[$s]}"
 done
 
 # post-process (no Isaac Sim needed from here on)
@@ -254,7 +258,7 @@ Everything site-specific for LargeScale is the low-resolution DEM plus one start
    - `pixel_size`: metres per pixel (`pixel_size[0]` is used)
    - `center_coordinates`: `[longitude, latitude]` of the DEM centre in degrees
 3. **Select it:** `environment.large_scale_terrain.lr_dem_name=<name>` (Hydra override, or edit `cfg/environment/largescale4Dataset.yaml`; the folder is `lr_dem_folder_path`, default `assets/Terrains/SouthPole`).
-4. **Choose the starting position.** `environment.large_scale_terrain.starting_position=[x,y]` (quote it in the shell: `'environment.large_scale_terrain.starting_position=[2800,-2200]'`) is in metres **from the DEM centre**: the terrain generator converts a coordinate to a DEM pixel as `pixel = coord / pixel_size + shape // 2`, with `x` along DEM array axis 0 (rows) and `y` along axis 1 (columns) (`querry_low_res_dem` in `src/terrain_management/large_scale_terrain/high_resolution_DEM_generator.py`). The valid range is therefore `+-(size * pixel_size / 2)` minus `largescale.region_radius_m` minus one 50 m block. For the default Site20 (a 16 km square at 5 m/px, so +-8000 m) with `region_radius_m` 150 this is `|x|, |y| <= 8000 - 150 - 50 = 7800`; the shipped default `[2800, -2200]` is well inside. For a non-square DEM apply the row count to `x` and the column count to `y`. To choose a spot, preview the DEM (jet colour map with min/max elevation, plus the centre, pixel size and size from `dem.yaml` when present):
+4. **Choose the starting position.** `environment.large_scale_terrain.starting_position=[x,y]` (quote it in the shell: `'environment.large_scale_terrain.starting_position=[2800,-2200]'`) is in metres **from the DEM centre**: the terrain generator converts a coordinate to a DEM pixel as `pixel = coord / pixel_size + shape // 2`, with `x` along DEM array axis 0 (rows) and `y` along axis 1 (columns) (`querry_low_res_dem` in `src/terrain_management/large_scale_terrain/high_resolution_DEM_generator.py`). The valid range is therefore `+-(size * pixel_size / 2)` minus `largescale.region_radius_m` minus one 50 m block. Every LargeScale shard that goes into one dataset needs its own starting position (and `environment.seed`), or the same ground ends up in train and val: see [Splits](#splits). For the default Site20 (a 16 km square at 5 m/px, so +-8000 m) with `region_radius_m` 150 this is `|x|, |y| <= 8000 - 150 - 50 = 7800`; the shipped default `[2800, -2200]` is well inside. For a non-square DEM apply the row count to `x` and the column count to `y`. To choose a spot, preview the DEM (jet colour map with min/max elevation, plus the centre, pixel size and size from `dem.yaml` when present):
 
    ```bash
    python scripts/generate_dem_previews.py --dem-path assets/Terrains/SouthPole/<name>/dem.npy --size 2048
