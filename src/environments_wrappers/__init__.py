@@ -136,4 +136,9 @@ def startSim(cfg: dict):
 
         SM = SDG_SimulationManager(cfg, simulation_app)
 
+    if cfg["mode"]["name"] == "SDG_Dataset":
+        from src.environments_wrappers.sdg.dataset.manager import SDGDataset_SimulationManager
+
+        SM = SDGDataset_SimulationManager(cfg, simulation_app)
+
     return SM, simulation_app
