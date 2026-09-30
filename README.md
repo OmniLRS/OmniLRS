@@ -42,6 +42,13 @@ OmniLRS is powered by NVIDIA Isaac Sim and NVIDIA Omniverse libraries to provide
 | **Lunaryard**            |  <div style="width:230px">A small scale procedually generated lunar environment. If lunar coordinates and a date is provided the position of the Earth and Sun are computed using ephemerides resulting in realistic lighting. This feature is also available in the large scale environments. This environment also support terrain deformation as the rover drives on it.</div>  | <img src="https://raw.githubusercontent.com/wiki/OmniLRS/OmniLRS/media/env_img/lunaryard_husky_ex1.png" width=520/> |
 | **LargeScale**           |  <div style="width:230px">Semi procedural lunar environment. It uses real DEM to reconstuct the coarse terrain, usually 5 meters per pixel and then uses procedural generation to augment it to 2.5 cm per pixel. The terrain itself can be generated at a even higher resolution to smooth out shadows. This very fine terrain allows to reconstruct fine terrain features increasing the engineering value of the sim. The whole of this is bundled inside Geometry clip maps, allowing to render very large scenes.</div> | <img src="https://raw.githubusercontent.com/wiki/OmniLRS/OmniLRS/media/env_img/large_scale.png" width=520/>
 
+### Dataset generation
+
+`mode=SDG_Dataset` renders stereo (or mono) segmentation datasets with RGB, semantic and instance masks, depth,
+normals and exact poses on Lunaryard or on real LOLA terrain (LargeScale); `scripts/sdg_dataset/` turns the capture
+into training labels without Isaac Sim. Both halves can be used on their own. See [docs/sdg_dataset.md](docs/sdg_dataset.md),
+including how to move to another lunar site.
+
 > [!IMPORTANT]
 > This readme showcases only basic information: for a more complete introduction to the simulation and its inner workings please [visit our wiki](https://github.com/OmniLRS/OmniLRS/wiki)!
 > For specific questions or to have a chat join [our discord](https://discord.gg/KfZ2uaMHqh)!
