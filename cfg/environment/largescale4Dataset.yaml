@@ -1,0 +1,86 @@
+# LargeScale environment for mode=SDG_Dataset (real LOLA DEM + procedural craters and rocks around the rig).
+# Change the site: large_scale_terrain.lr_dem_name / starting_position (see docs/sdg_dataset.md, "Changing the site").
+# Differences from largescale.yaml: no robot, labelled rock groups (semantic_label: rock -> instance ids),
+# the 2-5 cm pebble group stays an unlabelled PointInstancer, colliders off, hr_dem_num_blocks 4 (450 m window).
+name: LargeScale
+seed: 42
+physics_dt: 0.01666
+rendering_dt: 0.0333
+enforce_realtime: false
+
+large_scale_terrain:
+  seed: ${..seed}
+  lr_dem_name: Site20_final_adj_5mpp_surf
+  hr_dem_generate_craters: True
+  hr_dem_num_blocks: 4             # 9x9 blocks = 450 m window (3 -> 350 m showed coarse-horizon striping)
+  geo_cm_apply_smooth_shading: True  # coarse 5 m mesh showed lit/dark triangle-row banding under grazing sun
+  # geo_cm_fine_acceleration_mode stays stock 'hybrid' and texels stock 384: gpu mode/1024 produced a distance-proportional
+  # stretch of the mesh (error ~0.24 x depth); the stock pair measured 5 mm out to 40 m
+  update_every_n_meters: 2.0
+  num_workers_interpolation: 4
+  terrain_collider_enabled: False  # no robot in SDG; colliders only cost streaming time
+  starting_position: [2800, -2200]
+  crater_gen_densities: [0.025, 0.05, 0.5]
+  crater_gen_radius: [[1.5, 2.5], [0.75, 1.5], [0.25, 0.5]]
+  rock_gen_cfgs:
+    -   # pebbles, 2-5 cm: unlabelled PointInstancer, texture only
+      rock_sampler_cfg:
+        block_size: 50
+        seed: 42
+        rock_dist_cfg:
+          position_distribution: {name: "thomas_point_process", parent_density: 0.04, child_density: 100, sigma: 3.0, seed: 42}
+          scale_distribution: {name: "uniform", min: 0.02, max: 0.05, seed: 43}
+      rock_assets_folder: "assets/USD_Assets/rocks/small_rocks"
+      instancer_name: "very_small_rock_instancer"
+      seed: 46
+      block_span: 1
+      add_colliders: False
+      texture_name: "seaside_rock_2k"
+      texture_path: "assets/Textures/seaside_rock_2k.mdl"
+    -   # 5-25 cm: straddles the wheel-clearance threshold -> labelled, per-prim
+      rock_sampler_cfg:
+        block_size: 50
+        seed: 42
+        rock_dist_cfg:
+          position_distribution: {name: "thomas_point_process", parent_density: 0.006, child_density: 12, sigma: 3.0, seed: 44}
+          scale_distribution: {name: "uniform", min: 0.05, max: 0.25, seed: 45}
+      rock_assets_folder: "assets/USD_Assets/rocks/small_rocks"
+      instancer_name: "small_rock_instancer"
+      seed: 47
+      block_span: 1                # rocks only where the fine mesh exists; beyond it they float over the coarse mesh
+      add_colliders: False
+      collider_mode: "none"
+      semantic_label: "rock"
+      texture_name: "seaside_rock_2k"
+      texture_path: "assets/Textures/seaside_rock_2k.mdl"
+    -   # 25-90 cm: obstacles -> labelled, per-prim, sparse
+      rock_sampler_cfg:
+        block_size: 50
+        seed: 42
+        rock_dist_cfg:
+          position_distribution: {name: "thomas_point_process", parent_density: 0.002, child_density: 4, sigma: 4.0, seed: 48}
+          scale_distribution: {name: "uniform", min: 0.25, max: 0.9, seed: 49}
+      rock_assets_folder: "assets/USD_Assets/rocks/small_rocks"
+      instancer_name: "large_rock_instancer"
+      seed: 50
+      block_span: 1                # rocks only where the fine mesh exists; beyond it they float over the coarse mesh
+      add_colliders: False
+      collider_mode: "none"
+      semantic_label: "rock"
+      texture_name: "seaside_rock_2k"      # rock_boulder_dry renders reddish on the Moon
+      texture_path: "assets/Textures/seaside_rock_2k.mdl"
+
+stellar_engine_settings:
+  start_date: {year: 2024, month: 5, day: 21, hour: 5, minute: 1}
+  time_scale: 1.0
+  update_interval: 600
+
+sun_settings:
+  intensity: 1750.0
+  angle: 0.53
+  diffuse_multiplier: 1.0
+  specular_multiplier: 1.0
+  color: [1.0, 1.0, 1.0]
+  temperature: 6000.0
+  azimuth: 180.0
+  elevation: 8.0
