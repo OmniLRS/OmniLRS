@@ -29,13 +29,14 @@ def save_rig_intrinsics(data_dir: str, intrinsics: dict, camera_names: list) -> 
             json.dump(intrinsics[cam], f, indent=1)
 
 
-def start_exit_watchdog(timeout_s: float) -> None:
-    """Isaac's close() has hung after the HR DEM workers shut down; never leave a GPU-holding zombie."""
+def start_exit_watchdog(timeout_s: float, exit_code: int = 0) -> None:
+    """Isaac's close() has hung after the HR DEM workers shut down, and the HR DEM worker shutdown itself has hung;
+    never leave a GPU-holding zombie. Forces os._exit(exit_code) timeout_s seconds from now."""
 
     def _watchdog():
         time.sleep(timeout_s)
-        print("[sdg_dataset] watchdog: forcing process exit", flush=True)
-        os._exit(0)
+        print(f"[sdg_dataset] watchdog: forcing process exit (code {exit_code})", flush=True)
+        os._exit(exit_code)
 
     threading.Thread(target=_watchdog, daemon=True).start()
 
@@ -121,6 +122,7 @@ class SDGDataset_SimulationManager:
         self.fpt = int(self.ds.frames_per_terrain)
         self.count = 0
         self.skipped = []
+        self._error = None
         print(
             f"[sdg_dataset] env={env_cfg['name']} plan: {self.num_terrains} terrains x {self.fpt} frames, "
             f"settle={self.settle}, render={self.render_tag}, renderer={cfg['rendering']['renderer'].renderer}",
@@ -132,8 +134,12 @@ class SDGDataset_SimulationManager:
             self.world.step(render=True)
 
     def run_simulation(self) -> None:
+        # run.py never calls finish(): flush the manifest here, whether the loop ended or raised
         try:
             self._run()
+        except BaseException as e:
+            self._error = e
+            raise
         finally:
             self.finish()
 
@@ -285,14 +291,19 @@ class SDGDataset_SimulationManager:
         return lit
 
     def finish(self) -> None:
-        self.LC.flush(
-            self.AL.data_dir, {"partial": False, "frames_recorded": self.count, "skipped_locations": self.skipped}
-        )
+        failed = self._error is not None
+        # first, so it also covers a flush or LC.shutdown() that hangs or raises
+        if self.ds.exit_watchdog_s:
+            start_exit_watchdog(float(self.ds.exit_watchdog_s), exit_code=1 if failed else 0)
+        extra = {"partial": failed, "frames_recorded": self.count, "skipped_locations": self.skipped}
+        if failed:
+            # the frame in flight has a record but no (complete) files: keep only the recorded frames
+            del self.LC.frame_records[self.count :]
+            extra["error"] = repr(self._error)
+        self.LC.flush(self.AL.data_dir, extra)
         if hasattr(self.LC, "shutdown"):
             self.LC.shutdown()
         # Proof of effect: count files on disk for the first camera's RGB and compare.
         d = os.path.join(self.AL.data_dir, f"{self.cam}_rgb")
         n = sum(len(fs) for _, _, fs in os.walk(d)) if os.path.isdir(d) else 0
         print(f"[sdg_dataset] {self.cam}_rgb files on disk: {n} (manifest frames: {self.count})", flush=True)
-        if self.ds.exit_watchdog_s:
-            start_exit_watchdog(float(self.ds.exit_watchdog_s))
