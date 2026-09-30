@@ -55,12 +55,18 @@ DEFAULTS = {
 
 
 def _merge(default: dict, user: dict, path: str) -> dict:
+    """Deep-merge user over default. A dict or bool default only accepts a value of the same type, so a typo such as
+    guards.mesh_probe: true fails here instead of after Isaac Sim has booted."""
+    assert user is None or isinstance(user, dict), f"{path}: expected a dict, got {type(user).__name__} {user!r}"
     out = copy.deepcopy(default)
     for k, v in (user or {}).items():
         assert k in default, f"{path}.{k}: unknown_key {k!r}; valid keys: {sorted(default)}"
-        if isinstance(default[k], dict) and isinstance(v, dict):
+        if isinstance(default[k], dict):
+            assert isinstance(v, dict), f"{path}.{k}: expected a dict, got {type(v).__name__} {v!r}"
             out[k] = _merge(default[k], v, f"{path}.{k}")
         else:
+            if isinstance(default[k], bool):
+                assert isinstance(v, bool), f"{path}.{k}: expected a bool, got {type(v).__name__} {v!r}"
             out[k] = v
     return out
 

@@ -39,6 +39,26 @@ def test_invalid_values_are_rejected(kwargs, msg):
         DatasetConf(**kwargs)
 
 
+@pytest.mark.parametrize(
+    "kwargs, msg",
+    [
+        ({"guards": {"mesh_probe": True}}, r"guards\.mesh_probe: expected a dict"),
+        ({"guards": {"pt_runtime_switch": {"enabled": False}}}, r"guards\.pt_runtime_switch: expected a bool"),
+        ({"guards": {"dark_frame": {"enabled": "yes"}}}, r"guards\.dark_frame\.enabled: expected a bool"),
+        ({"rig": 5}, r"rig: expected a dict"),
+    ],
+)
+def test_wrong_type_does_not_replace_a_default(kwargs, msg):
+    with pytest.raises(AssertionError, match=msg):
+        DatasetConf(**kwargs)
+
+
+def test_right_types_still_merge():
+    c = DatasetConf(guards={"hide_far_mesh": True, "pt_runtime_switch": True, "dark_frame": {"enabled": True}})
+    assert c.guards["hide_far_mesh"] is True and c.guards["pt_runtime_switch"] is True
+    assert c.guards["dark_frame"]["enabled"] is True and c.guards["dark_frame"]["retries"] == 3
+
+
 @pytest.mark.parametrize("name", ["SDG_Dataset.yaml", "SDG_Dataset_moonseg.yaml"])
 def test_mode_yamls_validate(name):
     y = yaml.safe_load((REPO / "cfg" / "mode" / name).read_text())
