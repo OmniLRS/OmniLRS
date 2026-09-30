@@ -1,0 +1,70 @@
+# Dataset generation: terrains x frames with a stereo (or mono) rig. See docs/sdg_dataset.md.
+#   python run.py mode=SDG_Dataset environment=lunaryard_20m4Dataset rendering.renderer.headless=True
+name: SDG_Dataset
+generation_settings:
+  num_images: 0                  # unused: the loop is bounded by num_terrains * frames_per_terrain
+  prim_path: Rig
+  camera_names: [cam_left, cam_right]        # one name = mono rig
+  camera_resolutions: [[1280, 960], [1280, 960]]
+  data_dir: data/sdg_dataset     # replaced with the shard directory at runtime
+  annotators_list:
+    - [rgb, semantic_segmentation, instance_segmentation, depth, normals, pose]
+    - [rgb, semantic_segmentation, instance_segmentation, depth, normals, pose]
+  image_formats: [png, png]
+  annot_formats: [json, json]
+  element_per_folder: 1000
+  save_intrinsics: True          # stock csv/npy; manifest.json intrinsics are authoritative
+
+# required by the stock CameraConf validator; the rig sets the real camera attributes
+camera_settings:
+  camera_path: Rig/cam_left
+  focal_length: 24.0
+  horizontal_aperture: 48.0
+  vertical_aperture: 36.0
+  fstop: 0.0
+  focus_distance: 10.0
+  clipping_range: ${as_tuple:0.05, 1000000.0}
+
+dataset_settings:
+  base_seed: 0
+  num_terrains: 10
+  frames_per_terrain: 25
+  out_dir: data/sdg_dataset
+  settle_steps: 4
+  exit_watchdog_s: null
+  rig:
+    baseline_m: 0.12
+    hfov_deg: 90.0
+    fx: null
+    fy: null
+    cx: null
+    cy: null
+    height_m: [0.35, 1.0]
+    pitch_deg: [5.0, 22.0]
+    roll_jitter_deg: 2.0
+    terrain_margin_m: 1.5
+  sun:
+    elevation_buckets:
+      - {weight: 0.15, range: [1.0, 5.0]}
+      - {weight: 0.25, range: [5.0, 10.0]}
+      - {weight: 0.35, range: [10.0, 25.0]}
+      - {weight: 0.25, range: [25.0, 60.0]}
+    intensity_mode: constant_ground_brightness
+    intensity: [1400.0, 2100.0]
+    intensity_base: 364.0
+    intensity_jitter: 0.2
+    temperature_k: [5600.0, 6500.0]
+  largescale:
+    region_radius_m: 150.0
+    step_m: [40.0, 80.0]
+    frame_jitter_m: 8.0
+    rock_clearance_m: 0.6
+    dem_crop_half_m: 80.0
+    dem_crop_res_m: 0.05
+  guards:
+    dark_frame: {enabled: false, min_lit_fraction: 0.5, retries: 3, retry_min_elevation_deg: 10.0}
+    auto_exposure: {enabled: false, min_mean: 70.0, max_mean: 185.0, target_mean: 125.0}
+    mesh_probe: {enabled: false, tol_m: 0.3}
+    hide_far_mesh: false
+    pt_runtime_switch: false
+  terrain_material: null

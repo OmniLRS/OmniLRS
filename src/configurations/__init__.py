@@ -18,6 +18,7 @@ __email__ = "ljburtz@jaops.com"
 from typing import Any
 
 from src.configurations.auto_labeling_confs import AutoLabelingConf, CameraConf
+from src.configurations.dataset_confs import DatasetConf
 from src.configurations.environments import LargeScaleTerrainConf, LunalabConf, LunaryardConf
 from src.configurations.physics_confs import PhysicsSceneConf
 from src.configurations.procedural_terrain_confs import (
@@ -65,6 +66,7 @@ configFactory.registerConfig("lunaryard_settings", LunaryardConf)
 # Auto Labeling Configs
 configFactory.registerConfig("camera_settings", CameraConf)
 configFactory.registerConfig("generation_settings", AutoLabelingConf)
+configFactory.registerConfig("dataset_settings", DatasetConf)
 # Stellar Engine Configs
 configFactory.registerConfig("stellar_engine_settings", StellarEngineConf)
 configFactory.registerConfig("sun_settings", SunConf)
