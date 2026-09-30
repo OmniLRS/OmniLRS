@@ -31,7 +31,9 @@ def exposure_gain(mean_gray: float, ae: dict) -> float:
     return max(0.25, min(4.0, float(ae["target_mean"]) / max(mean_gray, 1.0)))
 
 
-def probe_error(depth, K, rig_rec: dict, rig_offset_y: float, ground_height, stride: int = 8, max_depth: float = 30.0):
+def probe_error(
+    depth, K, rig_rec: dict, rig_offset_y: float, ground_height, pixel_step: int = 8, max_depth: float = 30.0
+):
     """p95 of |rendered ground z - terrain manager z| over a pixel grid; None when nothing can be compared."""
     depth = np.asarray(depth, dtype=np.float32)
     depth = depth.reshape(depth.shape[0], depth.shape[1])
@@ -40,7 +42,7 @@ def probe_error(depth, K, rig_rec: dict, rig_offset_y: float, ground_height, str
     Rr = SSTR.from_quat(rig_rec["quat_xyzw"]).as_matrix()
     Rc = Rr @ SSTR.from_quat(CAM_LOOK_FORWARD_XYZW).as_matrix()
     t = np.array(rig_rec["position"]) + Rr @ np.array([0.0, rig_offset_y, 0.0])
-    ys, xs = np.mgrid[0:H:stride, 0:W:stride]
+    ys, xs = np.mgrid[0:H:pixel_step, 0:W:pixel_step]
     z = depth[ys, xs]
     ok = np.isfinite(z) & (z > 0) & (z < max_depth)
     u = xs[ok].astype(np.float32)
