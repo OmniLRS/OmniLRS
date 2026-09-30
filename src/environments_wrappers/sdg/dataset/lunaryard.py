@@ -2,8 +2,8 @@
 
 What differs from src/environments_wrappers/sdg/lunaryard_sdg.py and why:
 
-  * Stereo rig, not a single camera. /Lunaryard/Rig carries cam_left / cam_right
-    at +-baseline/2 on the rig Y axis (rig X forward, Z up -> Y is image-left).
+  * Stereo or mono rig under /Lunaryard/Rig; stereo cameras sit at +-baseline/2 on the
+    rig Y axis (rig X forward, Z up -> Y is image-left), a mono camera at y=0.
   * Per-terrain reseeding. Every numpy Generator inside the terrain generator and
     the rock manager is replaced with default_rng(terrain_seed) before a terrain is
     built, so terrain k of shard S is a pure function of (S, k). Stock SDG advances

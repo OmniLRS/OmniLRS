@@ -16,6 +16,9 @@ from src.environments_wrappers.sdg.dataset import sampling
 
 class RigMixin:
     def init_dataset(self, ds, camera_names: list, resolution: tuple) -> None:
+        assert ds is not None and camera_names is not None and resolution is not None, (
+            "SDG_Dataset environments need dataset=, camera_names= and resolution= (passed by the SDG_Dataset manager)"
+        )
         self.ds = ds
         self.camera_names = list(camera_names)
         self.resolution = tuple(resolution)
@@ -40,7 +43,7 @@ class RigMixin:
         addDefaultOps(UsdGeom.Xformable(rig))
         setDefaultOps(UsdGeom.Xformable(rig), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0, 1.0), (1.0, 1.0, 1.0))
         self._rig_prim = rig
-        b = float(self.ds.rig["baseline_m"])
+        b = float(self.ds.rig["baseline_m"]) if len(self.camera_names) == 2 else 0.0  # mono: one camera at y=0
         self.cam_paths = {}
         for name, y in sampling.camera_offsets(self.camera_names, self.ds.rig["baseline_m"]).items():
             path = f"{self.scene_name}/Rig/{name}"
