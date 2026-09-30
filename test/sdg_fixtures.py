@@ -38,13 +38,18 @@ def make_shard(
     frames: int = 1,
     drop_files_for: tuple = (),
     table_heights=None,
+    rock_paths=None,
+    label_suffix: str = "/mesh",
 ) -> Path:
     """rocks: (height_m, row, col[, depth_m[, size_px]]) boxes, 6x6 px by default. A depth_m given puts the whole
     box at that depth instead of 1 m - height_m. table_heights: the generator rock table's heights, one per rock;
-    defaults to the depth-encoded heights (pass different values to tell measurement from table). Returns the shard dir."""
+    defaults to the depth-encoded heights (pass different values to tell measurement from table). rock_paths: the
+    rock prim paths (default /World/Rocks/r<i>); each instance label is its path + label_suffix. Returns the shard dir."""
     rocks = [tuple(r) for r in rocks]
     if table_heights is None:
         table_heights = [r[0] for r in rocks]
+    if rock_paths is None:
+        rock_paths = [f"/World/Rocks/r{i}" for i in range(len(rocks))]
     shard = root / "shard_00007"
     data = shard / "AbCdEfGh12345678"
     (shard / "terrains").mkdir(parents=True)
@@ -60,8 +65,8 @@ def make_shard(
             {"xy_local_m": [0.0, 0.0], "radius_m": 1.0, "xy_deformation_factor": [1.0, 1.0], "rotation_deg": 0.0}
         )
     rock_table = [
-        {"path": f"/World/Rocks/r{i}", "height_above_ground_m": h, "footprint_m": 0.3, "position": [0, 0, 0]}
-        for i, h in enumerate(table_heights)
+        {"path": rp, "height_above_ground_m": h, "footprint_m": 0.3, "position": [0, 0, 0]}
+        for rp, h in zip(rock_paths, table_heights)
     ]
     np.savez_compressed(shard / "terrains" / "terrain_0000.npz", dem=dem)
     (shard / "terrains" / "terrain_0000.json").write_text(
@@ -125,7 +130,7 @@ def make_shard(
                 data / f"{cam}_instance_segmentation" / "0" / f"{name}.png",
                 data / f"{cam}_instance_segmentation_id_label" / "0" / f"{name}.json",
                 ins_ids,
-                {10 + i: f"/World/Rocks/r{i}/mesh" for i in range(len(rocks))},
+                {10 + i: rock_paths[i] + label_suffix for i in range(len(rocks))},
             )
     (shard / "manifest.json").write_text(json.dumps(man))
     return shard

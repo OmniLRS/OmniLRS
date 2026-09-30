@@ -128,7 +128,8 @@ def process_frame(
         rocks_seen = {}
         for key, path in ins_tab.items():
             p = path if isinstance(path, str) else str(path)
-            base = next((rp for rp in terr.rocks if p.startswith(rp)), None)
+            # the label is the rock prim itself or a child mesh; a bare prefix would join instance_10 to instance_1
+            base = next((rp for rp in terr.rocks if p == rp or p.startswith(rp + "/")), None)
             if base is None:
                 continue
             m = ins_key == key

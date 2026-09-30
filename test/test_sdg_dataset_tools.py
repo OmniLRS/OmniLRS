@@ -52,6 +52,24 @@ def test_unmeasurable_blob_takes_its_majority_table_class(tmp_path):
     assert blob["method"] == "far" and blob["height_m"] is None and blob["class"] == "rock_large"
 
 
+@pytest.mark.parametrize("suffix", ["", "/mesh"])
+def test_rock_table_join_does_not_match_a_path_prefix(tmp_path, suffix):
+    # instance_1 is a string prefix of instance_10; each blob must still get its own table entry. Both blobs sit
+    # at 70 m (unmeasurable), so the table class is what ends up in the label.
+    rocks = ((0.03, 10, 10, 70.0), (0.10, 30, 40, 70.0))
+    paths = ("/World/Rocks/instance_1", "/World/Rocks/instance_10")
+    shard = make_shard(tmp_path, rocks=rocks, rock_paths=paths, label_suffix=suffix)
+    out = tmp_path / "out"
+    assert build.main(["--shards", str(shard), "--out", str(out), "--workers", "1"]) == 0
+    sem = _sem(out)
+    assert (sem[10:16, 10:16] == _common.SEM["rock_small"]).all()
+    assert (sem[30:36, 40:46] == _common.SEM["rock_large"]).all()
+    meta = json.loads((out / "shard_00007" / "meta" / "s00007_t0000_f000.json").read_text())
+    rocks_seen = meta["cams"]["L"]["rocks"]
+    assert set(rocks_seen) == set(paths)
+    assert rocks_seen[paths[1]]["class"] == "rock_large"
+
+
 def test_clearance_flag_changes_the_split(tmp_path):
     shard = make_shard(tmp_path)
     out = tmp_path / "out"
