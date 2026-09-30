@@ -2,7 +2,7 @@
 #   python run.py mode=SDG_Dataset environment=lunaryard_20m4Dataset rendering.renderer.headless=True
 name: SDG_Dataset
 generation_settings:
-  num_images: 0                  # unused: the loop is bounded by num_terrains * frames_per_terrain
+  num_images: 1                  # unused: the loop is bounded by num_terrains * frames_per_terrain
   prim_path: Rig
   camera_names: [cam_left, cam_right]        # one name = mono rig
   camera_resolutions: [[1280, 960], [1280, 960]]
