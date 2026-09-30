@@ -145,6 +145,8 @@ def test_validate_passes_on_consistent_shard(tmp_path):
 def test_validate_fails_on_missing_files(tmp_path):
     shard = make_shard(tmp_path, frames=3, drop_files_for=(1,))
     assert validate.main([str(shard), "--n", "2"]) == 1
+    rep = json.loads((shard / "validation_report.json").read_text())
+    assert any("files !=" in m and "frames" in m for m in rep["fail"]), rep["fail"]
 
 
 def test_validate_mono(tmp_path):
@@ -160,6 +162,9 @@ def test_flag_frames_writes_rejected_list(tmp_path):
     q = json.loads((out / "shard_00007" / "quality.json").read_text())
     assert set(q["frames"]) == {"s00007_t0000_f000", "s00007_t0000_f001"}
     assert (out / "shard_00007" / "rejected.txt").exists()
+    for fid, fr in q["frames"].items():
+        assert "error" not in fr, (fid, fr.get("error"))
+        assert "near_lit_frac" in fr and isinstance(fr["far_flat_frac"], (int, float)), fid
 
 
 def test_sensor_model_cli_is_deterministic(tmp_path):
