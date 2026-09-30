@@ -11,7 +11,7 @@ import numpy as np
 import pytest
 from sdg_fixtures import make_shard
 
-from scripts.sdg_dataset import _common, build
+from scripts.sdg_dataset import _common, build, flag_frames, sensor_model, validate
 
 
 def _sem(out, side="L"):
@@ -133,3 +133,46 @@ def test_exclude_list_and_splits_only(tmp_path):
     build.main(["--out", str(out), "--splits-only", "--exclude", str(ex), "--sizes", "S=100"])
     ids = "".join(p.read_text() for p in (out / "splits").glob("S_*.txt"))
     assert "s00007_t0000_f000" not in ids and "s00007_t0000_f001" in ids
+
+
+def test_validate_passes_on_consistent_shard(tmp_path):
+    shard = make_shard(tmp_path, frames=3)
+    rc = validate.main([str(shard), "--n", "3"])
+    rep = json.loads((shard / "validation_report.json").read_text())
+    assert rc == 0, rep["fail"]
+
+
+def test_validate_fails_on_missing_files(tmp_path):
+    shard = make_shard(tmp_path, frames=3, drop_files_for=(1,))
+    assert validate.main([str(shard), "--n", "2"]) == 1
+
+
+def test_validate_mono(tmp_path):
+    shard = make_shard(tmp_path, frames=2, cameras=("cam_left",))
+    assert validate.main([str(shard), "--n", "2"]) == 0
+
+
+def test_flag_frames_writes_rejected_list(tmp_path):
+    shard = make_shard(tmp_path, frames=2)
+    out = tmp_path / "out"
+    build.main(["--shards", str(shard), "--out", str(out), "--workers", "1"])
+    assert flag_frames.main([str(out / "shard_00007"), "--workers", "1"]) == 0
+    q = json.loads((out / "shard_00007" / "quality.json").read_text())
+    assert set(q["frames"]) == {"s00007_t0000_f000", "s00007_t0000_f001"}
+    assert (out / "shard_00007" / "rejected.txt").exists()
+
+
+def test_sensor_model_cli_is_deterministic(tmp_path):
+    src = tmp_path / "images"
+    src.mkdir()
+    img = np.random.default_rng(0).integers(0, 255, (32, 48, 3), dtype=np.uint8)
+    for side in ("L", "R"):
+        cv2.imwrite(str(src / f"s00001_t0000_f000_{side}.png"), img)
+    for run in ("a", "b"):
+        assert sensor_model.main(["--in", str(src), "--out", str(tmp_path / run)]) == 0
+    for side in ("L", "R"):
+        a = cv2.imread(str(tmp_path / "a" / f"s00001_t0000_f000_{side}.png"))
+        b = cv2.imread(str(tmp_path / "b" / f"s00001_t0000_f000_{side}.png"))
+        assert a.dtype == np.uint8 and a.shape == img.shape and np.array_equal(a, b)
+    params = json.loads((tmp_path / "a" / "_sensor_params.json").read_text())["frames"]
+    assert params["s00001_t0000_f000"]["seed"] == sensor_model.frame_seed("s00001_t0000_f000")
