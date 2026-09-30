@@ -37,3 +37,13 @@ def test_instance_writer_does_not_overwrite_semantic_output(tmp_path):
     assert instance_png.exists()
     # The semantic mask must still hold the semantic ids (1), not the instance ids (7).
     assert np.all(cv2.imread(str(semantic_png), cv2.IMREAD_UNCHANGED)[..., 2] == 1)
+
+
+def test_normals_writer_stores_float16_xyz(tmp_path):
+    w = writerFactory("normals", root_path=str(tmp_path), prefix="camera_", element_per_folder=1000)
+    data = np.zeros((4, 6, 4), np.float32)
+    data[..., 2] = 1.0
+    w.write(data)
+    out = np.load(tmp_path / "camera_normals" / "0" / "0000.npz")["normals"]
+    assert out.dtype == np.float16 and out.shape == (4, 6, 3)
+    assert np.all(out[..., 2] == 1.0)

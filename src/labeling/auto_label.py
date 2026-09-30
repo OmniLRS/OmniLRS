@@ -83,6 +83,7 @@ class AutonomousLabeling:
             "semantic_segmentation": self.enableSemanticData,
             "depth": self.enableDepthData,
             "ir": self.enableIRData,
+            "normals": self.enableNormalsData,
         }
 
         self.stage = omni.usd.get_context().get_stage()
@@ -211,6 +212,15 @@ class AutonomousLabeling:
         depth_annot = rep.AnnotatorRegistry.get_annotator("distance_to_image_plane")
         self.annotators[camera_name + "_depth"] = (camera_name, "depth", depth_annot)
         depth_annot.attach([self.render_products[camera_name]])
+
+    def enableNormalsData(self, camera_name: str) -> None:
+        """
+        Enables the normals annotator (surface normal per pixel).
+        """
+
+        normals_annot = rep.AnnotatorRegistry.get_annotator("normals")
+        self.annotators[camera_name + "_normals"] = (camera_name, "normals", normals_annot)
+        normals_annot.attach([self.render_products[camera_name]])
 
     def enableSemanticData(self, camera_name: str) -> None:
         """
