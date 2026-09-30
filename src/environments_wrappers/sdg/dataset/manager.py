@@ -252,7 +252,7 @@ class SDGDataset_SimulationManager:
                 flush=True,
             )
             if k % 5 == 4:
-                self.LC.flush(self.AL.data_dir, {"partial": True})
+                self.LC.flush(self.AL.data_dir, {"partial": True, **self._manifest_extra()})
         self.timeline.stop()
         print(f"[sdg_dataset] finished {self.count} frames in {(time.time() - t_start) / 60:.1f} min")
 
@@ -290,12 +290,21 @@ class SDGDataset_SimulationManager:
         g["terrain_mean_gray"] = round(mean, 1)
         return lit
 
+    def _manifest_extra(self) -> dict:
+        """Writer layout the offline tools need to find the files: <cam>_<annot>/<idx // epf>/<idx % epf>.<ext>."""
+        return {"element_per_folder": int(self.gen.element_per_folder)}
+
     def finish(self) -> None:
         failed = self._error is not None
         # first, so it also covers a flush or LC.shutdown() that hangs or raises
         if self.ds.exit_watchdog_s:
             start_exit_watchdog(float(self.ds.exit_watchdog_s), exit_code=1 if failed else 0)
-        extra = {"partial": failed, "frames_recorded": self.count, "skipped_locations": self.skipped}
+        extra = {
+            "partial": failed,
+            "frames_recorded": self.count,
+            "skipped_locations": self.skipped,
+            **self._manifest_extra(),
+        }
         if failed:
             # the frame in flight has a record but no (complete) files: keep only the recorded frames
             del self.LC.frame_records[self.count :]

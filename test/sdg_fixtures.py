@@ -40,11 +40,14 @@ def make_shard(
     table_heights=None,
     rock_paths=None,
     label_suffix: str = "/mesh",
+    epf: int = 1000,
 ) -> Path:
     """rocks: (height_m, row, col[, depth_m[, size_px]]) boxes, 6x6 px by default. A depth_m given puts the whole
     box at that depth instead of 1 m - height_m. table_heights: the generator rock table's heights, one per rock;
     defaults to the depth-encoded heights (pass different values to tell measurement from table). rock_paths: the
-    rock prim paths (default /World/Rocks/r<i>); each instance label is its path + label_suffix. Returns the shard dir."""
+    rock prim paths (default /World/Rocks/r<i>); each instance label is its path + label_suffix. epf: the writer's
+    element_per_folder; recorded in the manifest only when it is not 1000 (older shards lack the key). Returns the
+    shard dir."""
     rocks = [tuple(r) for r in rocks]
     if table_heights is None:
         table_heights = [r[0] for r in rocks]
@@ -91,6 +94,8 @@ def make_shard(
         "frames": [],
         "partial": False,
     }
+    if epf != 1000:
+        man["element_per_folder"] = epf
     for idx in range(frames):
         man["frames"].append(
             {
@@ -106,7 +111,7 @@ def make_shard(
         if idx in drop_files_for:
             continue
         for cam in cameras:
-            name = f"{idx:04d}"
+            sub, name = str(idx // epf), f"{idx % epf:0{len(str(epf))}d}"
             depth = np.full((H, W), 1.0, np.float32)
             sem_ids = np.ones((H, W), np.int32)  # 1 = ground
             ins_ids = np.zeros((H, W), np.int32)
@@ -116,19 +121,19 @@ def make_shard(
                 depth[r : r + n, c : c + n] = d
                 sem_ids[r : r + n, c : c + n] = 2
                 ins_ids[r : r + n, c : c + n] = 10 + i
-            (data / f"{cam}_rgb" / "0").mkdir(parents=True, exist_ok=True)
-            cv2.imwrite(str(data / f"{cam}_rgb" / "0" / f"{name}.png"), np.full((H, W, 3), 120, np.uint8))
-            (data / f"{cam}_depth" / "0").mkdir(parents=True, exist_ok=True)
-            np.savez_compressed(data / f"{cam}_depth" / "0" / f"{name}.npz", depth=depth)
+            (data / f"{cam}_rgb" / sub).mkdir(parents=True, exist_ok=True)
+            cv2.imwrite(str(data / f"{cam}_rgb" / sub / f"{name}.png"), np.full((H, W, 3), 120, np.uint8))
+            (data / f"{cam}_depth" / sub).mkdir(parents=True, exist_ok=True)
+            np.savez_compressed(data / f"{cam}_depth" / sub / f"{name}.npz", depth=depth)
             _write_colorized(
-                data / f"{cam}_semantic_segmentation" / "0" / f"{name}.png",
-                data / f"{cam}_semantic_segmentation_id_label" / "0" / f"{name}.json",
+                data / f"{cam}_semantic_segmentation" / sub / f"{name}.png",
+                data / f"{cam}_semantic_segmentation_id_label" / sub / f"{name}.json",
                 sem_ids,
                 {1: {"class": "terrain"}, 2: {"class": "rock"}},
             )
             _write_colorized(
-                data / f"{cam}_instance_segmentation" / "0" / f"{name}.png",
-                data / f"{cam}_instance_segmentation_id_label" / "0" / f"{name}.json",
+                data / f"{cam}_instance_segmentation" / sub / f"{name}.png",
+                data / f"{cam}_instance_segmentation_id_label" / sub / f"{name}.json",
                 ins_ids,
                 {10 + i: rock_paths[i] + label_suffix for i in range(len(rocks))},
             )

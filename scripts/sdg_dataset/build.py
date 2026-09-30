@@ -338,6 +338,7 @@ def main(argv=None) -> int:
                 excluded.add(line.split("\t")[0].strip())
 
     missing = []
+    n_tasks = n_done = 0
     if a.splits_only:
         prev = out / "summary.json"
         if prev.exists():
@@ -349,7 +350,7 @@ def main(argv=None) -> int:
             for sub in ("images", "labels", "masks", "depth", "normals", "meta"):
                 (out / sh.name / sub).mkdir(parents=True, exist_ok=True)
             shutil.copytree(sh / "terrains", out / sh.name / "terrains", dirs_exist_ok=True)
-            epf = 1000
+            epf = int(man.get("element_per_folder", 1000))  # the writer's folder size; older shards used 1000
             for fr in man["frames"]:
                 k = fr["terrain_index"]
                 fid = f"s{man['base_seed']:05d}_t{k:04d}_f{fr['frame_in_terrain']:03d}"
@@ -359,6 +360,7 @@ def main(argv=None) -> int:
                     break
             if a.limit and len(tasks) >= a.limit:
                 break
+        n_tasks = len(tasks)
         workers = a.workers or max(1, min(16, os.cpu_count() or 1))
         print(f"building {len(tasks)} frames with {workers} workers")
         index = json.loads((out / "index.json").read_text()) if (out / "index.json").exists() else {}
@@ -370,7 +372,6 @@ def main(argv=None) -> int:
 
             pool = ProcessPoolExecutor(max_workers=workers)
             results = pool.map(_work, tasks, chunksize=4)
-        n_done = 0
         try:
             for fid, meta, err in results:
                 if meta is None:
@@ -399,6 +400,9 @@ def main(argv=None) -> int:
     summary = write_splits(out, a, sizes, excluded, missing)
     json.dump(summary, open(out / "summary.json", "w"), indent=1)
     print(json.dumps(summary, indent=1))
+    if n_tasks and not n_done:
+        print(f"ERROR: built 0 of {n_tasks} manifest frames (every frame's files missing)", file=sys.stderr)
+        return 1
     return 0
 
 

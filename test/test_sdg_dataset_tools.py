@@ -127,6 +127,20 @@ def test_partial_shard_builds_what_exists(tmp_path):
     assert summary["frames"] == 2 and summary["missing"] == ["s00007_t0000_f001"]
 
 
+def test_element_per_folder_from_the_manifest(tmp_path):
+    # 3 frames at 2 per folder: files in 0/0.png, 0/1.png, 1/0.png
+    shard = make_shard(tmp_path, frames=3, epf=2)
+    out = tmp_path / "out"
+    assert build.main(["--shards", str(shard), "--out", str(out), "--workers", "1", "--sizes", "S=100"]) == 0
+    summary = json.loads((out / "summary.json").read_text())
+    assert summary["frames"] == 3 and summary["missing"] == []
+
+
+def test_build_fails_when_no_frame_could_be_built(tmp_path):
+    shard = make_shard(tmp_path, frames=2, drop_files_for=(0, 1))
+    assert build.main(["--shards", str(shard), "--out", str(tmp_path / "out"), "--workers", "1"]) == 1
+
+
 def test_missing_manifest_field_is_named(tmp_path):
     shard = make_shard(tmp_path)
     man = json.loads((shard / "manifest.json").read_text())
@@ -176,6 +190,14 @@ def test_validate_fails_on_missing_files(tmp_path):
     assert validate.main([str(shard), "--n", "2"]) == 1
     rep = json.loads((shard / "validation_report.json").read_text())
     assert any("files !=" in m and "frames" in m for m in rep["fail"]), rep["fail"]
+
+
+def test_validate_reads_element_per_folder(tmp_path):
+    shard = make_shard(tmp_path, frames=3, epf=2)
+    rc = validate.main([str(shard), "--n", "3"])
+    rep = json.loads((shard / "validation_report.json").read_text())
+    assert rc == 0, rep["fail"]
+    assert rep["frames_with_files"] == 3
 
 
 def test_validate_mono(tmp_path):

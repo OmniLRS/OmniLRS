@@ -50,7 +50,7 @@ def main(argv=None) -> int:
     cam = B.cameras(man)[0][0]
     data_dir = B.resolve_data_dir(sh, man)
     frames = man["frames"]
-    epf = 1000
+    epf = int(man.get("element_per_folder", 1000))  # the writer's folder size; older shards used 1000
     rep = {
         "shard": str(sh),
         "environment": man.get("environment"),

@@ -99,7 +99,7 @@ This is the interface between capture and post-processing: any capture that prod
     <cam>_pose/...
 ```
 
-File naming: with frame index `i` (`frames[].index`), `<folder>` = `i // 1000` and `<n>` = `i % 1000` zero-padded to 4 digits (`0000`). Only `depth`, `rgb`, semantic and instance are required by `build.py`; normals are optional. `build.py` looks for the writer directory as `<shard>/<basename of data_dir>` first, then `data_dir` as given. Camera names are `cam_left` and `cam_right` (or, if absent, the first two intrinsics keys in sorted order). Left is `_L`, right is `_R`.
+File naming: with frame index `i` (`frames[].index`) and `epf` = `element_per_folder` from the manifest (1000 when absent, the default of `mode.generation_settings.element_per_folder`), `<folder>` = `i // epf` and `<n>` = `i % epf` zero-padded to the number of digits in `epf` (`0000` for 1000). Only `depth`, `rgb`, semantic and instance are required by `build.py`; normals are optional. `build.py` looks for the writer directory as `<shard>/<basename of data_dir>` first, then `data_dir` as given. Camera names are `cam_left` and `cam_right` (or, if absent, the first two intrinsics keys in sorted order). Left is `_L`, right is `_R`.
 
 **`manifest.json`**
 
@@ -115,6 +115,7 @@ File naming: with frame index `i` (`frames[].index`), `<folder>` = `i // 1000` a
 | `error` | str | - | only when the run failed |
 | `skipped_locations` | list of int | - | locations the mesh-probe guard skipped |
 | `frames_recorded` | int | - | frames actually recorded |
+| `element_per_folder` | int | build, validate (default 1000) | the writer's `mode.generation_settings.element_per_folder`, see file naming above |
 
 `intrinsics.<cam>`: `K` (3x3 pinhole matrix in pixels, required), `width`, `height` (required), `rig_offset_y_m` (camera offset along the rig y axis, +baseline/2 for left, -baseline/2 for right, 0 for mono; required), `baseline_m` (used for `meta.baseline_m`, default 0), `hfov_deg`, `usd` (informational).
 
