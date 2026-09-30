@@ -37,8 +37,14 @@ def make_shard(
     dem_tilt_deg: float = 0.0,
     frames: int = 1,
     drop_files_for: tuple = (),
+    table_heights=None,
 ) -> Path:
-    """rocks: (height_m, row, col) boxes of 6x6 px. Returns the shard dir."""
+    """rocks: (height_m, row, col[, depth_m[, size_px]]) boxes, 6x6 px by default. A depth_m given puts the whole
+    box at that depth instead of 1 m - height_m. table_heights: the generator rock table's heights, one per rock;
+    defaults to the depth-encoded heights (pass different values to tell measurement from table). Returns the shard dir."""
+    rocks = [tuple(r) for r in rocks]
+    if table_heights is None:
+        table_heights = [r[0] for r in rocks]
     shard = root / "shard_00007"
     data = shard / "AbCdEfGh12345678"
     (shard / "terrains").mkdir(parents=True)
@@ -55,7 +61,7 @@ def make_shard(
         )
     rock_table = [
         {"path": f"/World/Rocks/r{i}", "height_above_ground_m": h, "footprint_m": 0.3, "position": [0, 0, 0]}
-        for i, (h, _, _) in enumerate(rocks)
+        for i, h in enumerate(table_heights)
     ]
     np.savez_compressed(shard / "terrains" / "terrain_0000.npz", dem=dem)
     (shard / "terrains" / "terrain_0000.json").write_text(
@@ -99,10 +105,12 @@ def make_shard(
             depth = np.full((H, W), 1.0, np.float32)
             sem_ids = np.ones((H, W), np.int32)  # 1 = ground
             ins_ids = np.zeros((H, W), np.int32)
-            for i, (h, r, c) in enumerate(rocks):
-                depth[r : r + 6, c : c + 6] = 1.0 - h
-                sem_ids[r : r + 6, c : c + 6] = 2
-                ins_ids[r : r + 6, c : c + 6] = 10 + i
+            for i, (h, r, c, *extra) in enumerate(rocks):
+                d = extra[0] if extra else 1.0 - h
+                n = extra[1] if len(extra) > 1 else 6
+                depth[r : r + n, c : c + n] = d
+                sem_ids[r : r + n, c : c + n] = 2
+                ins_ids[r : r + n, c : c + n] = 10 + i
             (data / f"{cam}_rgb" / "0").mkdir(parents=True, exist_ok=True)
             cv2.imwrite(str(data / f"{cam}_rgb" / "0" / f"{name}.png"), np.full((H, W, 3), 120, np.uint8))
             (data / f"{cam}_depth" / "0").mkdir(parents=True, exist_ok=True)

@@ -28,6 +28,30 @@ def test_rock_size_is_measured_from_depth(tmp_path):
     assert sem[5, 5] == _common.SEM["ground"]
 
 
+def test_measured_height_beats_the_rock_table(tmp_path):
+    # the table claims 3 cm / 10 cm; the depth says 10 cm / 3 cm. The depth wins.
+    shard = make_shard(tmp_path, table_heights=(0.03, 0.10))
+    out = tmp_path / "out"
+    assert build.main(["--shards", str(shard), "--out", str(out), "--workers", "1"]) == 0
+    sem = _sem(out)
+    assert sem[22, 32] == _common.SEM["rock_large"]
+    assert sem[42, 14] == _common.SEM["rock_small"]
+
+
+def test_unmeasurable_blob_takes_its_majority_table_class(tmp_path):
+    # two touching instances at 70 m (beyond the 65 m measuring range): 6x6 table-large + 3x3 table-small
+    rocks = ((0.10, 20, 30, 70.0, 6), (0.03, 20, 36, 70.0, 3))
+    shard = make_shard(tmp_path, rocks=rocks, table_heights=(0.10, 0.03))
+    out = tmp_path / "out"
+    assert build.main(["--shards", str(shard), "--out", str(out), "--workers", "1"]) == 0
+    sem = _sem(out)
+    assert (sem[20:26, 30:36] == _common.SEM["rock_large"]).all()
+    assert (sem[20:23, 36:39] == _common.SEM["rock_large"]).all()  # minority pixels follow the blob majority
+    meta = json.loads((out / "shard_00007" / "meta" / "s00007_t0000_f000.json").read_text())
+    (blob,) = meta["cams"]["L"]["rocks_measured"]
+    assert blob["method"] == "far" and blob["height_m"] is None and blob["class"] == "rock_large"
+
+
 def test_clearance_flag_changes_the_split(tmp_path):
     shard = make_shard(tmp_path)
     out = tmp_path / "out"

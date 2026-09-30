@@ -155,7 +155,6 @@ def process_frame(
         bits[sem == C.SEM["rock_small"]] |= C.BIT["rock_small"]
         bits[sem == C.SEM["rock_large"]] |= C.BIT["rock_large"]
         bits[unlab] |= C.BIT["unlabelled"]
-        trav = traversability(sem, bits)
 
         depth_mm = np.where(valid, np.clip(depth * 1000.0, 0, 65535), 0).astype(np.uint16)
         # rock size from the rendered geometry, measured on the mm-quantized depth
@@ -226,7 +225,7 @@ _TERRAIN_CACHE = {}
 def _work(args):
     """Worker: build one frame. Terrain objects are cached per process (shard, terrain index)."""
     sh, man, fr, opts, out, fid, epf = args
-    key = (str(sh), fr["terrain_index"])
+    key = (str(sh), fr["terrain_index"], opts.footprint_m)
     if key not in _TERRAIN_CACHE:
         _TERRAIN_CACHE[key] = C.Terrain(Path(sh), fr["terrain_index"], opts.footprint_m)
     try:
