@@ -1,0 +1,111 @@
+"""Offline dataset tools (scripts/sdg_dataset). No Isaac Sim required."""
+
+__author__ = "Sam S. Yu"
+__maintainer__ = "Louis Burtz"
+__email__ = "ljburtz@jaops.com"
+
+import json
+
+import cv2
+import numpy as np
+import pytest
+from sdg_fixtures import make_shard
+
+from scripts.sdg_dataset import _common, build
+
+
+def _sem(out, side="L"):
+    return cv2.imread(str(out / "shard_00007" / "labels" / f"s00007_t0000_f000_{side}_sem.png"), cv2.IMREAD_UNCHANGED)
+
+
+def test_rock_size_is_measured_from_depth(tmp_path):
+    shard = make_shard(tmp_path)
+    out = tmp_path / "out"
+    assert build.main(["--shards", str(shard), "--out", str(out), "--workers", "1"]) == 0
+    sem = _sem(out)
+    assert sem[22, 32] == _common.SEM["rock_large"]  # 10 cm >= 5 cm clearance
+    assert sem[42, 14] == _common.SEM["rock_small"]  # 3 cm < 5 cm
+    assert sem[5, 5] == _common.SEM["ground"]
+
+
+def test_clearance_flag_changes_the_split(tmp_path):
+    shard = make_shard(tmp_path)
+    out = tmp_path / "out"
+    build.main(["--shards", str(shard), "--out", str(out), "--workers", "1", "--wheel-clearance-m", "0.2"])
+    assert _sem(out)[22, 32] == _common.SEM["rock_small"]
+
+
+def test_trav_and_bits(tmp_path):
+    shard = make_shard(tmp_path)
+    out = tmp_path / "out"
+    build.main(["--shards", str(shard), "--out", str(out), "--workers", "1"])
+    base = out / "shard_00007"
+    trav = cv2.imread(str(base / "labels" / "s00007_t0000_f000_L_trav.png"), cv2.IMREAD_UNCHANGED)
+    bits = cv2.imread(str(base / "masks" / "s00007_t0000_f000_L_bits.png"), cv2.IMREAD_UNCHANGED)
+    assert trav[22, 32] == 2 and trav[42, 14] == 1 and trav[5, 5] == 0
+    assert bits[22, 32] & _common.BIT["rock_large"] and bits[42, 14] & _common.BIT["rock_small"]
+    assert (base / "terrains" / "terrain_0000.npz").exists()
+
+
+def test_crater_bit_from_dem(tmp_path):
+    shard = make_shard(tmp_path, rocks=(), crater=True)
+    out = tmp_path / "out"
+    build.main(["--shards", str(shard), "--out", str(out), "--workers", "1"])
+    bits = cv2.imread(str(out / "shard_00007" / "masks" / "s00007_t0000_f000_L_bits.png"), cv2.IMREAD_UNCHANGED)
+    assert (bits & _common.BIT["crater"]).any()
+
+
+def test_slope_bits_from_dem(tmp_path):
+    shard = make_shard(tmp_path, rocks=(), dem_tilt_deg=30.0)
+    out = tmp_path / "out"
+    build.main(["--shards", str(shard), "--out", str(out), "--workers", "1"])
+    bits = cv2.imread(str(out / "shard_00007" / "masks" / "s00007_t0000_f000_L_bits.png"), cv2.IMREAD_UNCHANGED)
+    assert (bits[10:-10, 10:-10] & _common.BIT["slope_hazard"]).all()
+
+
+def test_frame_without_rocks(tmp_path):
+    shard = make_shard(tmp_path, rocks=())
+    out = tmp_path / "out"
+    assert build.main(["--shards", str(shard), "--out", str(out), "--workers", "1"]) == 0
+    assert set(np.unique(_sem(out))) == {_common.SEM["ground"]}
+
+
+def test_mono_rig(tmp_path):
+    shard = make_shard(tmp_path, cameras=("cam_left",))
+    out = tmp_path / "out"
+    assert build.main(["--shards", str(shard), "--out", str(out), "--workers", "1"]) == 0
+    assert not (out / "shard_00007" / "labels" / "s00007_t0000_f000_R_sem.png").exists()
+
+
+def test_partial_shard_builds_what_exists(tmp_path):
+    shard = make_shard(tmp_path, frames=3, drop_files_for=(1,))
+    out = tmp_path / "out"
+    assert build.main(["--shards", str(shard), "--out", str(out), "--workers", "1"]) == 0
+    summary = json.loads((out / "summary.json").read_text())
+    assert summary["frames"] == 2 and summary["missing"] == ["s00007_t0000_f001"]
+
+
+def test_missing_manifest_field_is_named(tmp_path):
+    shard = make_shard(tmp_path)
+    man = json.loads((shard / "manifest.json").read_text())
+    del man["intrinsics"]
+    (shard / "manifest.json").write_text(json.dumps(man))
+    with pytest.raises(_common.ContractError, match="intrinsics"):
+        build.main(["--shards", str(shard), "--out", str(tmp_path / "out"), "--workers", "1"])
+
+
+def test_split_is_by_terrain_seed_and_matches_published_rule():
+    # published reference dataset rule: md5(str(seed)) % 1000 % 100 < val_frac * 100 -> val
+    assert {build.split_of(s, 0.15, 0.0) for s in range(1000, 1400)} == {"train", "val"}
+    assert build.split_of(1234, 0.15, 0.0) == build.split_of(1234, 0.15, 0.0)
+
+
+def test_exclude_list_and_splits_only(tmp_path):
+    shard = make_shard(tmp_path, frames=2)
+    out = tmp_path / "out"
+    build.main(["--shards", str(shard), "--out", str(out), "--workers", "1", "--sizes", "S=100"])
+    ex = tmp_path / "rejected.txt"
+    ex.write_text("s00007_t0000_f000\trock_issue\n")
+    build.main(["--out", str(out), "--splits-only", "--exclude", str(ex), "--sizes", "S=100"])
+    ids = "".join(p.read_text() for p in (out / "splits").glob("S_*.txt"))
+    assert "s00007_t0000_f000" not in ids and "s00007_t0000_f001" in ids
