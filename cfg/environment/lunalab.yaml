@@ -145,7 +145,7 @@ terrain_manager:
   resolution: ${..lunalab_settings.resolution}
 
 
-# This environment config includes the default robot_settings (tested to work out of the box), 
+# This environment config includes the default robot_settings (tested to work out of the box),
 # but the best practice for development is to have a separate robot config file that overides it
 # and launch the sim with run.py environment=... robot=...
 # (do not commit edits to the robot_settings below)

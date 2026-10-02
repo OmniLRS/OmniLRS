@@ -1,19 +1,14 @@
 __author__ = "Antoine Richard"
-__copyright__ = "Copyright 2023-26, JAOPS, Space Robotics Lab, SnT, University of Luxembourg, SpaceR"
-__license__ = "BSD-3-Clause"
-__version__ = "2.0.0"
 __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
-__status__ = "development"
 
-from src.environments_wrappers.sdg.lunaryard_sdg import SDG_Lunaryard
-from src.environments_wrappers.sdg.lunalab_sdg import SDG_Lunalab
-from src.configurations.auto_labeling_confs import AutoLabelingConf, CameraConf
-from src.labeling.auto_label import AutonomousLabeling
 
-from isaacsim.core.api.world import World
-from typing import Union
 import omni
+from isaacsim.core.api.world import World
+
+from src.environments_wrappers.sdg.lunalab_sdg import SDG_Lunalab
+from src.environments_wrappers.sdg.lunaryard_sdg import SDG_Lunaryard
+from src.labeling.auto_label import AutonomousLabeling
 
 
 class SyntheticDataGeneration_LabManagerFactory:
@@ -65,7 +60,6 @@ class SDG_SimulationManager:
         # Randomize once to setup the camera mixer
         self.LC.randomize()
 
-
     def run_simulation(self) -> None:
         """
         Runs the simulation.
@@ -78,7 +72,7 @@ class SDG_SimulationManager:
                 try:
                     self.AL.record()
                     self.count += 1
-                except:
+                except Exception:
                     pass
                 self.LC.randomize()
         self.timeline.stop()

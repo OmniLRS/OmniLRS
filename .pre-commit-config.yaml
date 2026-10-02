@@ -1,0 +1,29 @@
+# See https://pre-commit.com for more information
+# See https://pre-commit.com/hooks.html for more hooks
+
+exclude: |
+  (?x)^(
+    pixi\.lock|
+    \.pixi/.*|
+    assets/.*|
+    WorldBuilders/.*
+  )$
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: check-yaml
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    # Keep this rev in sync with the ruff version pinned in CI and pixi.
+    rev: v0.15.19
+    hooks:
+      # Run the formatter.
+      - id: ruff-format
+        types_or: [python, pyi]
+      # Run the linter.
+      - id: ruff-check
+        types_or: [python, pyi]
+        args: [--fix]

@@ -1,4 +1,7 @@
 #!/bin/bash
+touch run.log
+chown "$(id -u):$(id -g)" run.log
+
 xhost +
 docker run --name isaac-sim-omnilrs-container -it --gpus all -e "ACCEPT_EULA=Y" --rm --network=host --ipc=host \
 -v $HOME/.Xauthority:/root/.Xauthority \

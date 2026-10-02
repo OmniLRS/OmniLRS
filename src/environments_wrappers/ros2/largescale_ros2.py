@@ -1,19 +1,15 @@
 __author__ = "Antoine Richard"
-__copyright__ = "Copyright 2023-26, JAOPS, Space Robotics Lab, SnT, University of Luxembourg, SpaceR"
-__license__ = "BSD-3-Clause"
-__version__ = "2.0.0"
 __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
-__status__ = "development"
 
 # Custom libs
-from src.environments_wrappers.ros2.base_wrapper_ros2 import ROS_BaseManager
-from src.environments.large_scale_lunar import LargeScaleController
+from geometry_msgs.msg import Pose
 
 # Loads ROS2 dependent libraries
-from std_msgs.msg import Float32, ColorRGBA
-from geometry_msgs.msg import Pose
-import rclpy
+from std_msgs.msg import ColorRGBA, Float32
+
+from src.environments.large_scale_lunar import LargeScaleController
+from src.environments_wrappers.ros2.base_wrapper_ros2 import ROS_BaseManager
 
 
 class ROS_LargeScaleManager(ROS_BaseManager):
@@ -44,7 +40,9 @@ class ROS_LargeScaleManager(ROS_BaseManager):
         self.EC.load()
 
         self.create_subscription(Float32, "/OmniLRS/Sun/Intensity", self.set_sun_intensity, 1)
-        self.create_subscription(Pose, "/OmniLRS/Sun/Pose", self.set_sun_pose, 1)  # Note: in lunaryard and largescale, Sun is directional light so only orientation matters, position is ignored
+        self.create_subscription(
+            Pose, "/OmniLRS/Sun/Pose", self.set_sun_pose, 1
+        )  # Note: in lunaryard and largescale, Sun is directional light so only orientation matters, position is ignored
         self.create_subscription(ColorRGBA, "/OmniLRS/Sun/Color", self.set_sun_color, 1)
         self.create_subscription(Float32, "/OmniLRS/Sun/ColorTemperature", self.set_sun_color_temperature, 1)
         self.create_subscription(Float32, "/OmniLRS/Sun/AngularSize", self.set_sun_angle, 1)
@@ -118,9 +116,9 @@ class ROS_LargeScaleManager(ROS_BaseManager):
             data (Pose): Pose in ROS2 Pose format.
         """
 
-        position = [data.position.x, data.position.y, data.position.z ]
+        position = [data.position.x, data.position.y, data.position.z]
         orientation = [data.orientation.w, data.orientation.y, data.orientation.z, data.orientation.x]
-        self.modifications.append([self.EC.set_sun_pose, {"position":position, "orientation": orientation}])
+        self.modifications.append([self.EC.set_sun_pose, {"position": position, "orientation": orientation}])
 
     def monitor_thread_is_alive(self):
         return self.EC.monitor_thread_is_alive()

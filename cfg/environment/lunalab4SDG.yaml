@@ -1,5 +1,5 @@
 name: Lunalab
-seed: 42  
+seed: 42
 # Stage settings, only edit if you know what you are doing.
 lunalab_settings:
   lab_length: 10.0
@@ -23,7 +23,7 @@ rocks_settings:
                                  # If False, it will use the custom instancer that works for SDG.
       class: rock
       requests: # A list of request used to distribute the rocks.
-        req_pos_xy: 
+        req_pos_xy:
           attribute: Position
           axes: ["x", "y"]
           layer:
@@ -109,7 +109,7 @@ terrain_manager:
       min_elevation: -0.025
       z_scale: 1.0
       seed: ${....seed}
-    
+
     deformation_engine:
       enable: False
       render_deform_inv: 10
@@ -123,10 +123,10 @@ terrain_manager:
         x_deform_offset: 0.0
         y_deform_offset: 0.0
         deform_decay_ratio: 0.01
-      boundary_distribution: 
+      boundary_distribution:
         distribution: trapezoidal
         angle_of_repose: 1.047 #pi/3
-      depth_distribution: 
+      depth_distribution:
         distribution: trapezoidal
         wave_frequency: 4.14 # num_grouser/pi (no slip)
       force_depth_regression:

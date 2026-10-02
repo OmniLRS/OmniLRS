@@ -1,15 +1,13 @@
 __author__ = "Antoine Richard, Junnosuke Kamohara, Aleksa Stanivuk"
-__copyright__ = "Copyright 2023-26, JAOPS, Space Robotics Lab, SnT, University of Luxembourg, SpaceR"
-__license__ = "BSD-3-Clause"
-__version__ = "2.0.0"
 __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
-__status__ = "development"
 
 import omni
 from pxr import Usd
+
 from src.configurations.simulator_mode_enum import SimulatorMode
 from src.robots.robot import RobotManager
+
 
 class BaseEnv:
     """
@@ -18,7 +16,7 @@ class BaseEnv:
 
     def __init__(
         self,
-        mode:SimulatorMode = SimulatorMode.ROS2,
+        mode: SimulatorMode = SimulatorMode.ROS2,
         **kwargs,
     ) -> None:
         """
@@ -27,11 +25,11 @@ class BaseEnv:
         Args:
             **kwargs: Arbitrary keyword arguments.
         """
-        self._mode:SimulatorMode = mode
+        self._mode: SimulatorMode = mode
         self.stage: Usd.Stage = omni.usd.get_context().get_stage()
-        self.SAM = None          # Static Assets Manager
-        self.MCM = None          # Monitoring Cameras Manager
-        self.robotManager = None # Set later via add_robot_manager()
+        self.SAM = None  # Static Assets Manager
+        self.MCM = None  # Monitoring Cameras Manager
+        self.robotManager = None  # Set later via add_robot_manager()
 
     def build_scene(self) -> None:
         """

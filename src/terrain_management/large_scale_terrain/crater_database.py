@@ -1,16 +1,13 @@
 __author__ = "Antoine Richard"
-__copyright__ = "Copyright 2023-26, JAOPS, Space Robotics Lab, SnT, University of Luxembourg, SpaceR"
-__license__ = "BSD-3-Clause"
-__version__ = "2.0.0"
 __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
-__status__ = "development"
 
-from scipy.interpolate import CubicSpline
-from typing import Tuple, List
-import numpy as np
 import dataclasses
 import sys
+from typing import List, Tuple
+
+import numpy as np
+from scipy.interpolate import CubicSpline
 
 from src.terrain_management.large_scale_terrain.utils import BoundingBox, CraterMetadata
 
@@ -134,12 +131,12 @@ class CraterDB:
             block_coordinates (Tuple[float, float]): coordinates of the block.
         """
 
-        assert (
-            block_coordinates[0] % self.crater_db_configs.block_size == 0
-        ), "Block x-coordinate must be a multiple of the block size."
-        assert (
-            block_coordinates[1] % self.crater_db_configs.block_size == 0
-        ), "Block y-coordinate must be a multiple of the block size."
+        assert block_coordinates[0] % self.crater_db_configs.block_size == 0, (
+            "Block x-coordinate must be a multiple of the block size."
+        )
+        assert block_coordinates[1] % self.crater_db_configs.block_size == 0, (
+            "Block y-coordinate must be a multiple of the block size."
+        )
 
         self.crater_db[block_coordinates] = block_data
 
@@ -155,12 +152,12 @@ class CraterDB:
             bool: True if the block coordinates are valid.
         """
 
-        assert (
-            block_coordinates[0] % self.crater_db_configs.block_size == 0
-        ), "Block x-coordinate must be a multiple of the block size."
-        assert (
-            block_coordinates[1] % self.crater_db_configs.block_size == 0
-        ), "Block y-coordinate must be a multiple of the block size."
+        assert block_coordinates[0] % self.crater_db_configs.block_size == 0, (
+            "Block x-coordinate must be a multiple of the block size."
+        )
+        assert block_coordinates[1] % self.crater_db_configs.block_size == 0, (
+            "Block y-coordinate must be a multiple of the block size."
+        )
         return True
 
     def get_block_data(self, block_coordinates: Tuple[float, float]) -> List[CraterMetadata]:

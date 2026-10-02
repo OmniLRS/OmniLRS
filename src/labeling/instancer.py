@@ -1,17 +1,14 @@
 __author__ = "Antoine Richard, Junnosuke Kahamora"
-__copyright__ = "Copyright 2023-26, JAOPS, Space Robotics Lab, SnT, University of Luxembourg, SpaceR"
-__license__ = "BSD-3-Clause"
-__version__ = "2.0.0"
 __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
-__status__ = "development"
+
+import os
 
 import numpy as np
 import omni
-import os
 from isaacsim.core.utils.prims import delete_prim
 from isaacsim.core.utils.semantics import add_update_semantics
-from pxr import UsdGeom, Gf
+from pxr import Gf, UsdGeom
 from WorldBuilders.pxr_utils import createObject, createXform
 
 

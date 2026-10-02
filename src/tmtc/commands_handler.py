@@ -1,31 +1,25 @@
 __author__ = "Aleksa Stanivuk"
-__copyright__ = "Copyright 2025-26, JAOPS"
-__license__ = "BSD-3-Clause"
-__version__ = "2.0.0"
 __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
-__status__ = "development"
-import time
-import omni.kit.app
 
 import socket
-import time
 import threading
+import time
 
 from src.tmtc.mdb_parsing_service import MdbParsingService
 
-class CommandsHandler():
-    UDP_RECV_MAX        = 4096  
-    SOCKET_TIMEOUT_SEC  = 2.0 
+
+class CommandsHandler:
+    UDP_RECV_MAX = 4096
+    SOCKET_TIMEOUT_SEC = 2.0
     HEARTBEAT_EVERY_SEC = 10.0  # how often to log "waiting..." when idle
 
-    def __init__(self, yamcs_processor, yamcs_instance_conf, mdb_files:list[str]):
+    def __init__(self, yamcs_processor, yamcs_instance_conf, mdb_files: list[str]):
         self._yamcs_processor = yamcs_processor
         self._commands_catalogue = {}
-        self._registry = MdbParsingService.load_mdb_registry(mdb_files) 
+        self._registry = MdbParsingService.load_mdb_registry(mdb_files)
         self._config_tc_socket(yamcs_instance_conf)
         self._start_tc_listener()
-
 
     def _config_tc_socket(self, yamcs_instance_conf):
         self._tc_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -63,7 +57,7 @@ class CommandsHandler():
                 print(f"Command '{decoded['full_name']}' not found in catalogue")
             else:
                 self._execute(command, decoded["arguments"])
-    
+
     def _execute(self, command, received_arguments):
         arg_names = command["args"]
         func = command["func"]
@@ -72,13 +66,13 @@ class CommandsHandler():
             func()
         else:
             args = [received_arguments[name] for name in arg_names]
-            func(*args) 
+            func(*args)
 
-    def add_command(self, command_name:str, func, args:list=[]):
+    def add_command(self, command_name: str, func, args: list = []):
         # Can be called from inside _init_commands_catalogue or externally.
         if command_name in self._commands_catalogue:
             raise Exception("Command named", str(command_name), "already exists")
         elif command_name == "":
             raise Exception("Command name can not be an empty string.")
 
-        self._commands_catalogue[command_name] = {"func":func, "args":args}
+        self._commands_catalogue[command_name] = {"func": func, "args": args}

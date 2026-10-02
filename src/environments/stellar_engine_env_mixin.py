@@ -1,21 +1,19 @@
 __author__ = "Antoine Richard, Aleksa Stanivuk"
-__copyright__ = "Copyright 2023-26, JAOPS, Space Robotics Lab, SnT, University of Luxembourg, SpaceR"
-__license__ = "BSD-3-Clause"
-__version__ = "2.0.0"
 __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
-__status__ = "development"
 
 import math
 import os
-
-from scipy.spatial.transform import Rotation as SSTR
 from typing import List, Tuple
+
 from pxr import Gf, UsdLux
-from src.terrain_management.large_scale_terrain.pxr_utils import set_texture_path, set_xform_ops
-from src.configurations.stellar_engine_confs import StellarEngineConf, SunConf
+from scipy.spatial.transform import Rotation as SSTR
+
 from src.configurations.environments import LargeScaleTerrainConf, LunaryardConf
+from src.configurations.stellar_engine_confs import StellarEngineConf, SunConf
 from src.stellar.stellar_engine import StellarEngine
+from src.terrain_management.large_scale_terrain.pxr_utils import set_texture_path, set_xform_ops
+
 
 class StellarEngineEnvMixin:
     """
@@ -30,9 +28,10 @@ class StellarEngineEnvMixin:
     If you wish to customize the behaviour of a certain class,
     override the corresponding method in the host class.
     """
+
     def init_stellar_engine(
         self,
-        stage_settings:LunaryardConf | LargeScaleTerrainConf = None,
+        stage_settings: LunaryardConf | LargeScaleTerrainConf = None,
         stellar_engine_settings: StellarEngineConf = None,
     ) -> None:
         """
@@ -41,8 +40,8 @@ class StellarEngineEnvMixin:
         """
 
         self._stage_settings = stage_settings
-        self._earth_scale = stage_settings.earth_scale     # stage_settings.earth_scale
-        self._sun_path = stage_settings.sun_path           # stage_settings.sun_path
+        self._earth_scale = stage_settings.earth_scale  # stage_settings.earth_scale
+        self._sun_path = stage_settings.sun_path  # stage_settings.sun_path
         self._sun_lux = None
         self._sun_prim = None
         self._earth_prim = None
@@ -53,24 +52,39 @@ class StellarEngineEnvMixin:
         else:
             self.enable_stellar_engine = False
 
-    def create_sun(self, sun_settings:SunConf):
+    def create_sun(self, sun_settings: SunConf):
         # Should be called inside env's build_scene()
         sun = self.stage.DefinePrim(self._sun_path, "Xform")
         self._sun_prim = sun.GetPrim()
-        self._sun_lux: UsdLux.DistantLight = UsdLux.DistantLight.Define(
-            self.stage, os.path.join(self._sun_path, "sun")
-        )
+        self._sun_lux: UsdLux.DistantLight = UsdLux.DistantLight.Define(self.stage, os.path.join(self._sun_path, "sun"))
         self._sun_lux.CreateIntensityAttr(sun_settings.intensity)
         self._sun_lux.CreateAngleAttr(sun_settings.angle)
         self._sun_lux.CreateDiffuseAttr(sun_settings.diffuse_multiplier)
         self._sun_lux.CreateSpecularAttr(sun_settings.specular_multiplier)
-        self._sun_lux.CreateColorAttr(
-            Gf.Vec3f(sun_settings.color[0], sun_settings.color[1], sun_settings.color[2])
-        )
+        self._sun_lux.CreateColorAttr(Gf.Vec3f(sun_settings.color[0], sun_settings.color[1], sun_settings.color[2]))
         self._sun_lux.CreateColorTemperatureAttr(sun_settings.temperature)
         x, y, z, w = SSTR.from_euler(
             "xyz", [0, sun_settings.elevation, sun_settings.azimuth - 90], degrees=True
         ).as_quat()
+
+        # NOTE: Do NOT change the sun_lux quaternion and do not make it dynamic.
+        # The sun is aimed only by rotating the parent (_sun_prim)
+        # The child light (sun_lux) keeps a fixed rotation; rotating it too would turn the sun twice.
+        #
+        # This is the CONSTANT half of the sky->USD conversion. StellarEngine.convert_alt_az_to_quat
+        # reconciles the time-varying angles (altitude + azimuth); this fixed rotation reconciles the
+        # leftover frame offset: a USD DistantLight emits along its local -Z, but the engine's formula
+        # assumes the light starts pointing along [0, 0, -1] in ITS frame. The two frames differ by a
+        # constant turn, which is what this quaternion supplies.
+        #
+        # Gf.Quatd(0.5, (0.5, -0.5, -0.5)) is a fixed 120 deg turn around the axis (1, -1, -1),
+        # which is a cube's diagonal (not a single X/Y/Z axis). Spinning around the cube diagonal
+        # cycles the axes (X->Y->Z->X), which is what remaps the light's -Z onto the axis the engine
+        # expects in one step. You only return to the start after 3 equal turns (3 x 120 = 360), which
+        # is exactly why the angle is 120 and not something else.
+        # (Compare: a 90 or 180 deg turn around ONE axis only swaps 2 axes, like rotating a 2D
+        # square in the XY plane - X and Y trade places but Z never moves, so it can't redirect -Z.)
+        # In Isaac Sim's Property panel this same rotation shows up as Euler XYZ = (90, -90, 0).
         set_xform_ops(
             self._sun_lux.GetPrim(), Gf.Vec3d(0, 0, 0), Gf.Quatd(0.5, Gf.Vec3d(0.5, -0.5, -0.5)), Gf.Vec3d(1, 1, 1)
         )
@@ -90,7 +104,7 @@ class StellarEngineEnvMixin:
         pz = math.sin(math.radians(self._stage_settings.earth_elevation)) * dist
         # TODO: setting the Earth orientation from stage_settings is not implemented yet
         # (no earth_orientation field exists on LunaryardConf / LargeScaleTerrainConf).
-        # Hard-coded to (0, 0, 0, 1) for now; 
+        # Hard-coded to (0, 0, 0, 1) for now;
         # note that update_stellar_engine() is also TODO for Earth orientation and currently just overides.
         set_xform_ops(self._earth_prim, Gf.Vec3d(px, py, pz), Gf.Quatd(0, 0, 0, 1))
 
@@ -146,7 +160,7 @@ class StellarEngineEnvMixin:
                 alt, az, _ = self.SE.get_alt_az("sun")
                 quat = self.SE.convert_alt_az_to_quat(alt, az)
 
-                self.set_sun_pose((0,0,0), quat)
+                self.set_sun_pose((0, 0, 0), quat)
                 # TODO: StellarEngine does not yet compute Earth's body orientation
                 # (only its position/alt-az). Re-asserting the build-time orientation
                 # (0, 0, 0, 1) here is a placeholder until an Earth attitude model is added.
@@ -183,7 +197,7 @@ class StellarEngineEnvMixin:
     # ==============================================================================
     # Sun control
     # ==============================================================================
-    
+
     def get_sun_prim_path(self) -> str:
         return self._sun_path
 

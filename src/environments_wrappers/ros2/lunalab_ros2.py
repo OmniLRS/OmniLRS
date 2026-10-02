@@ -1,19 +1,15 @@
 __author__ = "Antoine Richard"
-__copyright__ = "Copyright 2023-26, JAOPS, Space Robotics Lab, SnT, University of Luxembourg, SpaceR"
-__license__ = "BSD-3-Clause"
-__version__ = "1.0.0"
 __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
-__status__ = "development"
 
 # Custom libs
-from src.environments_wrappers.ros2.base_wrapper_ros2 import ROS_BaseManager
-from src.environments.lunalab import LunalabController
+from geometry_msgs.msg import Pose
 
 # Loads ROS2 dependent libraries
-from std_msgs.msg import Bool, Float32, ColorRGBA, Int32
-from geometry_msgs.msg import Pose
-import rclpy
+from std_msgs.msg import Bool, ColorRGBA, Float32, Int32
+
+from src.environments.lunalab import LunalabController
+from src.environments_wrappers.ros2.base_wrapper_ros2 import ROS_BaseManager
 
 
 class ROS_LunalabManager(ROS_BaseManager):

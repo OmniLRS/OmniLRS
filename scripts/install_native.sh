@@ -7,7 +7,7 @@ git submodule update
 
 # Install GDAL
 echo "Installing GDAL"
-sudo apt install python3 python3-dev python3-pip 
+sudo apt install python3 python3-dev python3-pip
 sudo apt-get install gdal-bin libgdal-dev
 version=$(gdal-config --version)
 
@@ -28,5 +28,3 @@ fi
 echo "Installing Python packages for default Python"
 python3 -m pip --upgrade pip
 python3 -m pip install gdown black gdal==$version
-
-

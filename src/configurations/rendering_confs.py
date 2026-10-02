@@ -1,10 +1,6 @@
 __author__ = "Antoine Richard"
-__copyright__ = "Copyright 2023-26, JAOPS, Space Robotics Lab, SnT, University of Luxembourg, SpaceR"
-__license__ = "BSD-3-Clause"
-__version__ = "2.0.0"
 __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
-__status__ = "development"
 
 import dataclasses
 
@@ -88,17 +84,21 @@ class RendererConf:
     subdiv_refinement_level: int = dataclasses.field(default_factory=int)
     renderer: str = dataclasses.field(default_factory=str)
     headless: bool = dataclasses.field(default_factory=bool)
+    multi_gpu: bool = True
+    active_gpu: int = None
 
     def __post_init__(self):
         assert type(self.samples_per_pixel_per_frame) is int, "samples_per_pixel_per_frame must be an integer"
         assert type(self.max_bounces) is int, "max_bounces must be an integer"
-        assert (
-            type(self.max_specular_transmission_bounces) is int
-        ), "max_specular_transmission_bounces must be an integer"
+        assert type(self.max_specular_transmission_bounces) is int, (
+            "max_specular_transmission_bounces must be an integer"
+        )
         assert type(self.max_volume_bounces) is int, "max_volume_bounces must be an integer"
         assert type(self.subdiv_refinement_level) is int, "subdiv_refinement_level must be an integer"
         assert type(self.headless) is bool, "headless must be a boolean"
         assert type(self.renderer) is str, "renderer must be a string"
+        assert type(self.multi_gpu) is bool, "multi_gpu must be a boolean"
+        assert self.active_gpu is None or type(self.active_gpu) is int, "active_gpu must be an integer or None"
 
         assert self.samples_per_pixel_per_frame > 0, "samples_per_pixel_per_frame must be greater than 0"
         assert self.max_bounces > 0, "max_bounces must be greater than 0"

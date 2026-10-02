@@ -1,26 +1,20 @@
 __author__ = "Antoine Richard, Junnosuke Kamohara, Aleksa Stanivuk"
-__copyright__ = "Copyright 2023-26, JAOPS, Space Robotics Lab, SnT, University of Luxembourg, SpaceR"
-__license__ = "BSD-3-Clause"
-__version__ = "2.0.0"
 __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
-__status__ = "development"
 
-from typing import Dict
 import os
+from typing import Dict
 
-from pxr import UsdGeom, UsdLux, Gf, Usd
-
+from src.configurations.environments import LunaryardConf
+from src.configurations.procedural_terrain_confs import TerrainManagerConf
+from src.configurations.simulator_mode_enum import SimulatorMode
+from src.configurations.stellar_engine_confs import StellarEngineConf, SunConf
+from src.environments.base_env import BaseEnv
 from src.environments.monitoring_cameras_manager import MonitoringCamerasManager
 from src.environments.static_assets_manager import StaticAssetsManager
 from src.environments.stellar_engine_env_mixin import StellarEngineEnvMixin
 from src.environments.terrain_control_mixin import TerrainControlMixin
 from src.terrain_management.large_scale_terrain.pxr_utils import load_material
-from src.configurations.stellar_engine_confs import StellarEngineConf, SunConf
-from src.configurations.procedural_terrain_confs import TerrainManagerConf
-from src.configurations.environments import LunaryardConf
-from src.environments.base_env import BaseEnv
-from src.configurations.simulator_mode_enum import SimulatorMode
 
 
 class LunaryardController(BaseEnv, StellarEngineEnvMixin, TerrainControlMixin):
@@ -30,7 +24,7 @@ class LunaryardController(BaseEnv, StellarEngineEnvMixin, TerrainControlMixin):
 
     def __init__(
         self,
-        mode:SimulatorMode = SimulatorMode.ROS2,
+        mode: SimulatorMode = SimulatorMode.ROS2,
         lunaryard_settings: LunaryardConf = None,
         rocks_settings: Dict = None,
         terrain_manager: TerrainManagerConf = None,
@@ -66,8 +60,7 @@ class LunaryardController(BaseEnv, StellarEngineEnvMixin, TerrainControlMixin):
             self.MCM = MonitoringCamerasManager(self._mode, monitoring_cameras_settings)
 
         self._sun_settings = sun_settings
-        self.init_stellar_engine(stage_settings=self.stage_settings, 
-                                  stellar_engine_settings=stellar_engine_settings)
+        self.init_stellar_engine(stage_settings=self.stage_settings, stellar_engine_settings=stellar_engine_settings)
 
         self.init_terrain_control(terrain_manager=terrain_manager, rocks_settings=rocks_settings)
 
@@ -77,7 +70,7 @@ class LunaryardController(BaseEnv, StellarEngineEnvMixin, TerrainControlMixin):
         """
 
         # Creates an empty xform with the name lunaryard
-        lunaryard = self.stage.DefinePrim(self.scene_name, "Xform")
+        self.stage.DefinePrim(self.scene_name, "Xform")
 
         self.create_sun(self._sun_settings)
         self.create_earth()
@@ -99,7 +92,7 @@ class LunaryardController(BaseEnv, StellarEngineEnvMixin, TerrainControlMixin):
         self.build_scene()
 
         # Generates the instancer for the rocks
-        self.build_RM()  #TODO should first call switch_terrain() as it calls load_DEM() which sets up self.dem and self.mask that are used inside build_RM(), otherwise they are just None (but either ways inside RM.build() neither of those params are being utilized)
+        self.build_RM()  # TODO should first call switch_terrain() as it calls load_DEM() which sets up self.dem and self.mask that are used inside build_RM(), otherwise they are just None (but either ways inside RM.build() neither of those params are being utilized)
         # Loads the DEM and the mask
         self.switch_terrain(self.stage_settings.terrain_id)
         if self.enable_stellar_engine:

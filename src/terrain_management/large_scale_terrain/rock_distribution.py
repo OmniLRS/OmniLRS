@@ -1,23 +1,20 @@
 __author__ = "Antoine Richard"
-__copyright__ = "Copyright 2023-26, JAOPS, Space Robotics Lab, SnT, University of Luxembourg, SpaceR"
-__license__ = "BSD-3-Clause"
-__version__ = "2.0.0"
 __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
-__status__ = "development"
 
-from matplotlib import pyplot as plt
-from typing import List, Tuple
-import dataclasses
-import numpy as np
 import colorsys
+import dataclasses
+from typing import List, Tuple
 
+import numpy as np
+from matplotlib import pyplot as plt
+
+from src.terrain_management.large_scale_terrain.rock_database import RockDB
 from src.terrain_management.large_scale_terrain.utils import (
     BoundingBox,
     RockBlockData,
     ScopedTimer,
 )
-from src.terrain_management.large_scale_terrain.rock_database import RockDB
 
 # TODO (antoine.richard / JAOPS): The current implementation can be extremely costly in terms of memory.
 # For small rocks, whose density can be very high, the memory footprint will be very large.
@@ -89,10 +86,9 @@ class Poisson(BaseDistribution):
     seed: int = None
 
     def __post_init__(self) -> None:
-        assert self.density > 0, "density must be larger than 0."
-        assert type(self.density == float), "density must be a float."
-
         self.density = float(self.density)
+        assert self.density > 0, "density must be larger than 0."
+
         if self.seed is not None:
             self.seed = int(self.seed)
             self.rng = np.random.default_rng(self.seed)
@@ -152,11 +148,11 @@ class ThomasPointProcess(BaseDistribution):
     seed: int = None
 
     def __post_init__(self):
-        assert type(self.parent_density == float), "parent_density must be a float."
+        self.parent_density = float(self.parent_density)
         assert self.parent_density > 0, "parent_density must be larger than 0."
-        assert type(self.child_density == float), "child_density must be a float."
+        self.child_density = float(self.child_density)
         assert self.child_density > 0, "child_density must be larger than 0."
-        assert type(self.sigma == float), "sigma must be a float."
+        self.sigma = float(self.sigma)
         assert self.sigma > 0, "sigma must be larger than 0."
 
         self.parent = Poisson(name="poisson", density=self.parent_density, seed=self.seed)
@@ -253,8 +249,8 @@ class Uniform(BaseDistribution):
     seed: int = None
 
     def __post_init__(self):
-        assert type(self.min) == float, "min must be a float"
-        assert type(self.max) == float, "max must be a float"
+        assert type(self.min) is float, "min must be a float"
+        assert type(self.max) is float, "max must be a float"
         assert self.min < self.max, "min must be smaller than max"
         if self.seed is not None:
             self.set_seed(self.seed)
@@ -294,8 +290,8 @@ class Normal(BaseDistribution):
     seed: int = None
 
     def __post_init__(self):
-        assert type(self.mean) == float, "mean must be a float"
-        assert type(self.std) == float, "std must be a float"
+        assert type(self.mean) is float, "mean must be a float"
+        assert type(self.std) is float, "std must be a float"
         assert self.std > 0, "std must be larger than 0"
         self.mean = float(self.mean)
         self.std = float(self.std)
@@ -337,8 +333,8 @@ class Integer(BaseDistribution):
 
     def __post_init__(self):
         assert self.min < self.max, "min must be smaller than max"
-        assert type(self.min) == int, "min must be an integer"
-        assert type(self.max) == int, "max must be an integer"
+        assert type(self.min) is int, "min must be an integer"
+        assert type(self.max) is int, "max must be an integer"
         self.min = int(self.min)
         self.max = int(self.max)
         if self.seed is not None:
@@ -412,7 +408,7 @@ class RockDynamicDistributionConf:
     def __post_init__(self):
         # Reseed the random number generator
         if self.seed is not None:
-            assert type(self.seed) == int, "seed must be an integer"
+            assert type(self.seed) is int, "seed must be an integer"
             self.seed = int(self.seed)
 
 
@@ -763,7 +759,7 @@ class RockSampler:
             coordinates (Tuple[float,float]): coordinates of the block.
         """
 
-        fig = plt.figure(figsize=(10, 10), dpi=300)
+        plt.figure(figsize=(10, 10), dpi=300)
         if self.rock_db.check_block_exists(coordinates):
             block = self.rock_db.get_block_data(coordinates)
             coordinates = self.rock_dist_gen.get_xy_coordinates_from_block(block)
@@ -778,7 +774,7 @@ class RockSampler:
             coords (List[Tuple[float,float]]): list of coordinates of the blocks.
         """
 
-        fig = plt.figure(figsize=(10, 10), dpi=300)
+        plt.figure(figsize=(10, 10), dpi=300)
         blocks = [self.rock_db.get_block_data(coord) for coord in coords]
 
         color_interp = np.linspace(0, 1, len(blocks), endpoint=False)
@@ -796,7 +792,7 @@ class RockSampler:
             region (BoundingBox): region to display.
         """
 
-        fig = plt.figure(figsize=(10, 10), dpi=300)
+        plt.figure(figsize=(10, 10), dpi=300)
         blocks, _, _ = self.rock_db.get_blocks_within_region(region)
 
         color_interp = np.linspace(0, 1, len(blocks), endpoint=False)

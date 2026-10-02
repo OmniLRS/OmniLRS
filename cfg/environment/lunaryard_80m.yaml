@@ -126,7 +126,7 @@ terrain_manager:
       min_elevation: -0.5
       z_scale: 1.0
       seed: ${....seed}
-    
+
     deformation_engine:
       enable: False
       delay: 2.0
@@ -140,10 +140,10 @@ terrain_manager:
         x_deform_offset: 0.0
         y_deform_offset: 0.0
         deform_decay_ratio: 0.01
-      boundary_distribution: 
+      boundary_distribution:
         distribution: trapezoidal
         angle_of_repose: 1.047 #pi/3
-      depth_distribution: 
+      depth_distribution:
         distribution: trapezoidal
         wave_frequency: 4.14 # num_grouser/pi (no slip)
       force_depth_regression:
@@ -166,7 +166,7 @@ terrain_manager:
   resolution: ${..lunaryard_settings.resolution}
 
 
-# This environment config includes the default robot_settings (tested to work out of the box), 
+# This environment config includes the default robot_settings (tested to work out of the box),
 # but the best practice for development is to have a separate robot config file that overides it
 # and launch the sim with run.py environment=... robot=...
 # (do not commit edits to the robot_settings below)
