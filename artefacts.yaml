@@ -19,5 +19,3 @@ jobs:
           run: "pixi run test-ros2"
         - name: test_yamcs_sanity
           run: "pixi run test-yamcs"
-
-  

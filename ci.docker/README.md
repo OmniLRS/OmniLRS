@@ -16,14 +16,15 @@ docker build -t omnilrs . -f artefacts.Dockerfile
 
 1. Using 'artefacts'
 ```
-artefacts run --in-container test-startup --dockerfile artefacts.Dockerfile --gpus=all
+artefacts run --in-container test-startup --dockerfile artefacts.Dockerfile --gpus=all # local run
+artefacts run-remote test-startup # Run in the cloud on the artefacts platform
 ```
 
 2. With Pytest override the command from the command line
 ```
-docker run --gpus all --rm omnilrs pixi run test-startup
+docker run --gpus all --rm omnilrs pixi run test-ros2 # or test-yamcs
 ```
 
 ## Notes for Building the Base Image
 
-If you wish to build the base image (`Dockerfile.base`) yourself, note that assets (git lfs) and git submodules must already be available on the machine you are building on.
+If you wish to build the base image (`ci.Dockerfile`) yourself, note that assets (git lfs) and git submodules must already be available on the machine you are building on.

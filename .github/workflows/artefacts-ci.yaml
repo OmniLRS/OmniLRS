@@ -1,0 +1,29 @@
+name: artefacts-ci
+
+on:
+  workflow_dispatch:
+  
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.12]
+
+    steps:
+      # Checkout repository under $GITHUB_WORKSPACE, so our jobs can access it.
+      - uses: actions/checkout@v4
+        with:
+          submodules: true  # WorldBuilders is not in base image
+
+      - name: Set Up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      
+      # Start up test
+      - uses: art-e-fact/action-artefacts-ci@main
+        with:
+          artefacts-api-key: ${{ secrets.ARTEFACTS_API_KEY }}
+          job-name: test-startup

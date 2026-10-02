@@ -24,3 +24,7 @@ results.txt
 run.log
 **/.venv
 **/venv
+
+# Assets baked into ci.Dockerfile 
+
+assets/
