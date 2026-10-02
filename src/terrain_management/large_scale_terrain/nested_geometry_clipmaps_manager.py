@@ -1,4 +1,4 @@
-__author__ = "Antoine Richard"
+__author__ = "Antoine Richard, Shamistan Karimov"
 __copyright__ = "Copyright 2023-26, JAOPS, Space Robotics Lab, SnT, University of Luxembourg, SpaceR"
 __license__ = "BSD-3-Clause"
 __version__ = "2.0.0"
@@ -7,7 +7,9 @@ __email__ = "ljburtz@jaops.com"
 __status__ = "development"
 
 from typing import Tuple
+
 import dataclasses
+import carb
 import numpy as np
 import warnings
 import math
@@ -82,6 +84,8 @@ class NestedGeometryClipmapManager:
 
         self.settings = settings
         self.stage = omni.usd.get_context().get_stage()
+        # this generates normals and tangents on the GPU for the deforming clipmap meshes
+        carb.settings.get_settings().set("/rtx/hydra/TBNFrameMode", 3)
 
     def generate_geometry_clip_maps_configs(
         self,
