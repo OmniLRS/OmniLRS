@@ -7,7 +7,7 @@ import os
 import numpy as np
 import omni
 from isaacsim.core.utils.prims import delete_prim
-from isaacsim.core.utils.semantics import add_update_semantics
+from isaacsim.core.utils.semantics import add_labels
 from pxr import Gf, UsdGeom
 from WorldBuilders.pxr_utils import createObject, createXform
 
@@ -104,7 +104,12 @@ class CustomInstancer:
                 True,
             )
             if self.semantic_classes[i] is not None:
-                add_update_semantics(prim, self.semantic_classes[i])
+                add_labels(
+                    prim,
+                    [self.semantic_classes[i]],
+                    instance_name="class",
+                    overwrite=True,
+                )
         self.flag = True
 
     def destroy(self):
