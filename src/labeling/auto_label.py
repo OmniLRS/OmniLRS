@@ -115,8 +115,9 @@ class AutonomousLabeling:
         Returns:
             np.ndarray: the intrinsics of the camera (used for calibration)
         """
-        focal_length = camera_prim.GetAttribute("focalLength").Get() / 10.0
+        # resolution comes from the render product config, not the camera prim attributes
         (width, height) = resolution
+        focal_length = camera_prim.GetAttribute("focalLength").Get() / 10.0
         horizontal_aperture = camera_prim.GetAttribute("horizontalAperture").Get() / 10.0
         vertical_aperture = (camera_prim.GetAttribute("horizontalAperture").Get() / 10.0) * (float(height) / width)
         fx = width * focal_length / horizontal_aperture
