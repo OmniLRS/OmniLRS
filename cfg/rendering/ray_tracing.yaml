@@ -8,6 +8,7 @@ renderer:
   max_specular_transmission_bounces: 6
   max_volume_bounces: 4
   subdiv_refinement_level: 0
+  tbn_frame_mode: 3
 
 lens_flares:
   enable: False

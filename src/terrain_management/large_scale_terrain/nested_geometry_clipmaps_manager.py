@@ -2,7 +2,6 @@ __author__ = "Antoine Richard, Shamistan Karimov"
 __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
 
-import carb
 import dataclasses
 import math
 import warnings
@@ -79,8 +78,6 @@ class NestedGeometryClipmapManager:
 
         self.settings = settings
         self.stage = omni.usd.get_context().get_stage()
-        # this generates normals and tangents on the GPU for the deforming clipmap meshes
-        carb.settings.get_settings().set("/rtx/hydra/TBNFrameMode", 3)
 
     def generate_geometry_clip_maps_configs(
         self,
