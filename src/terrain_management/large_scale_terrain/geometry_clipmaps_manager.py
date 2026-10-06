@@ -1,4 +1,4 @@
-__author__ = "Antoine Richard"
+__author__ = "Antoine Richard, Shamistan Karimov"
 __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
 
@@ -138,7 +138,9 @@ class GeoClipmapManager:
             self._stage.DefinePrim(self._root_path, "Xform")
         if not self._stage.GetPrimAtPath(self._root_path + "/Terrain"):
             self._stage.DefinePrim(self._root_path + "/Terrain", "Xform")
-        self._stage.DefinePrim(self._mesh_path)
+        mesh = UsdGeom.Mesh.Define(self._stage, self._mesh_path)
+        mesh.CreateOrientationAttr(UsdGeom.Tokens.leftHanded)
+        mesh.CreateDoubleSidedAttr(True)
 
     def render_mesh(
         self,
@@ -171,11 +173,11 @@ class GeoClipmapManager:
 
         if update_topology:
             idxs = np.array(indices).reshape(-1, 3)
-            mesh.GetFaceVertexIndicesAttr().Set(idxs)
+            mesh.GetFaceVertexIndicesAttr().Set(idxs.ravel())
             mesh.GetFaceVertexCountsAttr().Set([3] * len(idxs))
             pv = UsdGeom.PrimvarsAPI(mesh.GetPrim()).CreatePrimvar("st", Sdf.ValueTypeNames.Float2Array)
-            pv.Set(uvs)
-            pv.SetInterpolation("faceVarying")
+            pv.Set(points[:, :2])
+            pv.SetInterpolation("vertex")
 
         set_xform_ops(
             mesh,
