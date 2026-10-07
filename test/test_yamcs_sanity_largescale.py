@@ -253,7 +253,9 @@ def test_no_fatal_errors(sim):
 
 
 def test_lander_static_asset_found(sim):
-    assert "Defaulting to global position reporting" not in sim.log, "Lander static asset missing at /StaticAssets/lander"
+    assert "Defaulting to global position reporting" not in sim.log, (
+        "Lander static asset missing at /StaticAssets/lander"
+    )
 
 
 def test_sim_process_alive(sim):
