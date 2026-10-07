@@ -7,7 +7,12 @@ def startSim(cfg: dict):
     import omni
     from isaacsim import SimulationApp
 
-    from src.environments.rendering import set_chromatic_aberrations, set_lens_flares, set_motion_blur
+    from src.environments.rendering import (
+        set_chromatic_aberrations,
+        set_lens_flares,
+        set_motion_blur,
+        set_tbn_frame_mode,
+    )
 
     class SimulationApp_wait(SimulationApp):
         def __init__(self, launch_config: dict = None, experience: str = "") -> None:
@@ -85,7 +90,10 @@ def startSim(cfg: dict):
 
     # Starts the simulation and allows to import things related to Isaac and PXR
     renderer_cfg = cfg["rendering"]["renderer"]
-    simulation_app = SimulationApp_wait(renderer_cfg.__dict__)
+    launch_config = renderer_cfg.__dict__.copy()
+    tbn_frame_mode = launch_config.pop("tbn_frame_mode")
+    simulation_app = SimulationApp_wait(launch_config)
+    set_tbn_frame_mode(tbn_frame_mode)
     set_lens_flares(cfg)
     set_motion_blur(cfg)
     set_chromatic_aberrations(cfg)

@@ -2693,6 +2693,7 @@ packages:
   - pcre2 >=10.47,<10.48.0a0
   - python_abi 3.11.* *_cp311
   - numpy >=1.23,<3
+  - python_abi 3.11.* *_cp311
   license: MIT
   license_family: MIT
   purls:

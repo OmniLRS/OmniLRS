@@ -346,7 +346,7 @@ class WriteInstanceData(BaseWriter):
     def __init__(
         self,
         root_path: str,
-        name: str = "semantic_segmentation",
+        name: str = "instance_segmentation",
         prefix: str = "",
         element_per_folder: int = 10000,
         image_format: str = "png",
@@ -358,7 +358,7 @@ class WriteInstanceData(BaseWriter):
 
         Args:
             root_path (str): The root path of the data.
-            name (str, optional): The name of the data. Defaults to "semantic_segmentation".
+            name (str, optional): The name of the data. Defaults to "instance_segmentation".
             prefix (str, optional): The prefix of the data. Defaults to "".
             element_per_folder (int, optional): The number of elements per folder. Defaults to 10000.
             image_format (str, optional): The image format. Defaults to "png".

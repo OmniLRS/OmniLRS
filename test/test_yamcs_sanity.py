@@ -28,6 +28,11 @@ SIM_COMMAND = [
     "ci",
     "yamcs",
     "rendering.renderer.headless=true",
+    # For some reason AWS EKS AMI's duplicate NVIDIA Vulkan ICDs, making one GPU enumerate
+    # causing Isaac to think there are two gpus available and then die.
+    # Disable and pin.
+    "rendering.renderer.multi_gpu=false",
+    "rendering.renderer.active_gpu=0",
 ]
 
 # The last startup message to appear; once seen, startup is complete.
@@ -38,6 +43,7 @@ FATAL_MARKERS = [
     "Error executing job",
     "ModuleNotFoundError",
     "is not available in environment",
+    "carb.crashreporter-breakpad",
 ]
 
 

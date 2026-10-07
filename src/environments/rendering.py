@@ -40,6 +40,11 @@ def enable_RTX_interactive(*kwargs) -> None:
     action.execute()
 
 
+def set_tbn_frame_mode(mode: int) -> None:
+    """Sets the RTX mode used to generate tangent and bitangent frames."""
+    carb.settings.get_settings().set("/rtx/hydra/TBNFrameMode", mode)
+
+
 # ==============================================================================
 # Lens Flares Controls
 # ==============================================================================

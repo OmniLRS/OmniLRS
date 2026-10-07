@@ -84,6 +84,9 @@ class RendererConf:
     subdiv_refinement_level: int = dataclasses.field(default_factory=int)
     renderer: str = dataclasses.field(default_factory=str)
     headless: bool = dataclasses.field(default_factory=bool)
+    multi_gpu: bool = True
+    active_gpu: int = None
+    tbn_frame_mode: int = 0
 
     def __post_init__(self):
         assert type(self.samples_per_pixel_per_frame) is int, "samples_per_pixel_per_frame must be an integer"
@@ -95,12 +98,16 @@ class RendererConf:
         assert type(self.subdiv_refinement_level) is int, "subdiv_refinement_level must be an integer"
         assert type(self.headless) is bool, "headless must be a boolean"
         assert type(self.renderer) is str, "renderer must be a string"
+        assert type(self.multi_gpu) is bool, "multi_gpu must be a boolean"
+        assert self.active_gpu is None or type(self.active_gpu) is int, "active_gpu must be an integer or None"
+        assert type(self.tbn_frame_mode) is int, "tbn_frame_mode must be an integer"
 
         assert self.samples_per_pixel_per_frame > 0, "samples_per_pixel_per_frame must be greater than 0"
         assert self.max_bounces > 0, "max_bounces must be greater than 0"
         assert self.max_specular_transmission_bounces > 0, "max_specular_transmission_bounces must be greater than 0"
         assert self.max_volume_bounces > 0, "max_volume_bounces must be greater than 0"
         assert self.subdiv_refinement_level >= 0, "subdiv_refinement_level must be greater or equal to 0"
+        assert self.tbn_frame_mode in [0, 1, 2, 3], "tbn_frame_mode must be between 0 and 3"
         assert self.renderer in [
             "PathTracing",
             "RayTracedLighting",

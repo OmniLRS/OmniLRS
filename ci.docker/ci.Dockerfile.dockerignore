@@ -1,0 +1,44 @@
+
+.pixi
+.git
+*.docker
+docs
+
+# Ignore hidden thumbnail/cache files that can have restrictive permissions
+.thumbs
+**/.thumbs
+**/.thumbnails
+**/.DS_Store
+
+# Generated Python artifacts that the editable `pixi install` rewrites into the
+# source tree on every build — including these busts the COPY cache spuriously
+**/__pycache__
+**/*.py[cod]
+**/*.egg-info
+.pytest_cache
+**/.pytest_cache
+.ruff_cache
+**/.ruff_cache
+
+# Build outputs / downloaded data that change independently of source
+data
+results.txt
+run.log
+**/.venv
+**/venv
+
+# Large asset sets not needed for every build — keep the CI context/image small
+assets/Terrains/SouthPole/*
+# SouthPole DEMs: keep only the smallest one (Site20) for dev/test purposes of largescale environment
+!assets/Terrains/SouthPole/Site20_final_adj_5mpp_surf
+!assets/Terrains/SouthPole/Site20_final_adj_5mpp_surf/**
+
+# landscape_cropped is large and unused in CI
+assets/Terrains/landscape_cropped
+
+# Lander models: keep only the ispace and Vikram landers
+assets/USD_Assets/common/lander/*
+!assets/USD_Assets/common/lander/ispace_ultra
+!assets/USD_Assets/common/lander/ispace_ultra/**
+!assets/USD_Assets/common/lander/Vikram
+!assets/USD_Assets/common/lander/Vikram/**

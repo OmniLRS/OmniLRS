@@ -1,4 +1,4 @@
-__author__ = "Antoine Richard"
+__author__ = "Antoine Richard, Shamistan Karimov"
 __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
 
