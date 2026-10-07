@@ -6,7 +6,7 @@ from enum import StrEnum
 
 import numpy as np
 from isaacsim.sensors.camera import Camera
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFont
 
 from src.environments.monitoring_cameras_manager import MonitoringCamerasManager
 from src.tmtc.yamcs_TMTC import ImagesHandler
@@ -122,6 +122,20 @@ class PragyaanCameraHandler:
 
         return camera_view
 
+    def _add_compression(self, image: Image.Image) -> Image:
+        compressed_image = image.copy()
+        image_draw = ImageDraw.Draw(compressed_image)
+        font = ImageFont.load_default()
+        image_draw.text(
+            (compressed_image.width / 2, compressed_image.height / 2),
+            "COMPRESSED",
+            font=font,
+            fill=(255, 0, 0, 255),
+            anchor="mm",
+        )
+
+        return compressed_image
+
     def transmit_camera_view(self, bucket: str, resolution: str, type: CameraViewType = CameraViewType.RGBA):
         camera_view: Image = None
 
@@ -129,6 +143,7 @@ class PragyaanCameraHandler:
             camera_view: Image = self._snap_camera_view_depth(resolution)
         elif type == CameraViewType.RGBA:
             camera_view: Image = self._snap_camera_view_rgb(resolution)
+            camera_view = self._add_compression(camera_view)
         else:
             print("in transmit_camera_view: unknown type:", type)
             return
