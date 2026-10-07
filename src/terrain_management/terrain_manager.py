@@ -10,11 +10,11 @@ import omni
 import warp as wp
 from pxr import Sdf, UsdGeom
 from semantics.schema.editor import PrimSemanticData
+from WorldBuilders import pxr_utils
 
 from assets import get_assets_path
 from src.configurations.procedural_terrain_confs import TerrainManagerConf
 from src.terrain_management.terrain_generation import GenerateProceduralMoonYard
-from WorldBuilders import pxr_utils
 
 
 class TerrainManager:
