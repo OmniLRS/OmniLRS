@@ -9,6 +9,7 @@ import omni
 from pxr import Gf, PhysxSchema, UsdGeom, UsdPhysics
 
 from assets import get_assets_path
+from src.environments.utils import resolve_position
 
 
 class StaticAssetsManager:
@@ -32,9 +33,7 @@ class StaticAssetsManager:
             self._create_reference(prim_path, a["usd_path"])
             pose = a.get("pose", {})
 
-            position = list(pose["position"])
-            if get_height_func is not None:
-                position[2] = get_height_func((position[0], position[1])) + position[2]
+            position = resolve_position(pose["position"], pose.get("height_above_terrain_override"), get_height_func)
 
             self._apply_pose(prim_path, position, pose["orientation"])
             self._set_collision(prim_path, a.get("collision", True))

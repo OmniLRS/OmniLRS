@@ -21,7 +21,7 @@ from WorldBuilders.pxr_utils import createObject, createXform
 
 from src.configurations.robot_confs import RobotManagerConf
 from src.configurations.simulator_mode_enum import SimulatorMode
-from src.environments.utils import transform_orientation_from_xyzw_into_xyz
+from src.environments.utils import resolve_position, transform_orientation_from_xyzw_into_xyz
 from src.robots.articulation_control import ArticulationControl
 from src.robots.articulation_telemetry import ArticulationTelemetry
 from src.subsystems.robot_subsystems_handler import RobotSubsystemsHandler
@@ -59,17 +59,20 @@ class RobotManager:
     def preload_robot(
         self,
         world: World,
+        get_height_func: callable = None,
     ) -> None:
         """
         Preload the robot in the scene.
         Args:
             world (Usd.Stage): The usd stage scene.
+            get_height_func (callable): terrain height query, used when pose.height_above_terrain_override is set.
         """
+        pose = self.robot_parameters.pose
         self.add_robot(
             self.robot_parameters.usd_path,
             self.robot_parameters.robot_name,
-            self.robot_parameters.pose.position,
-            self.robot_parameters.pose.orientation,
+            resolve_position(pose.position, pose.height_above_terrain_override, get_height_func),
+            pose.orientation,
             self.robot_parameters.domain_id,
             self.robot_parameters.wheel_joints,
             self.robot_parameters.camera,

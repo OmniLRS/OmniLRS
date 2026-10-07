@@ -328,6 +328,33 @@ class TerrainManager:
 
         return self._DEM
 
+    def get_height(self, position) -> float:
+        """
+        Returns the terrain height at a world (x, y) position, bilinearly interpolated and clamped to the terrain
+        bounds. Assumes the terrain mesh is not rotated or scaled.
+
+        Args:
+            position (Tuple[float, float]): the (x, y) position in meters.
+
+        Returns:
+            float: the terrain height in meters.
+        """
+
+        # Mesh vertex (xi, yi) sits at (xi, yi) * grid_size with height np.flip(DEM, 0)[yi, xi] (see update()).
+        dem = np.flip(self._DEM, 0)
+        x = float(np.clip((position[0] - self._mesh_pos[0]) / self._grid_size, 0, self._sim_width - 1))
+        y = float(np.clip((position[1] - self._mesh_pos[1]) / self._grid_size, 0, self._sim_length - 1))
+        x0, y0 = int(x), int(y)
+        x1, y1 = min(x0 + 1, self._sim_width - 1), min(y0 + 1, self._sim_length - 1)
+        dx, dy = x - x0, y - y0
+        height = (
+            dem[y0, x0] * (1 - dx) * (1 - dy)
+            + dem[y0, x1] * dx * (1 - dy)
+            + dem[y1, x0] * (1 - dx) * dy
+            + dem[y1, x1] * dx * dy
+        )
+        return float(height) + self._mesh_pos[2]
+
     def getMask(self):
         """
         Returns the mask of the terrain.

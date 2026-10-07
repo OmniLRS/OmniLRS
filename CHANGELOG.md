@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 [WIP]
 
+### Added
+
+- Optional `pose.height_above_terrain_override` for robots, static assets and monitoring cameras: when set, z is the terrain height at (x, y) plus this value. Works the same in Lunaryard, Lunalab and LargeScale.
+- `largescale_workshop` environment: the LargeScale counterpart of `lunaryard_40m_workshop` (lander, rock and monitoring camera), differing only in terrain.
+
+### Changed
+
+- LargeScale static assets no longer implicitly add the terrain height to their z; set `height_above_terrain_override` instead.
+- LargeScale robot spawn uses the configured pose in both ROS2 and Yamcs modes (ROS2 previously forced `(0, 0)`); the `largescale*` configs set `height_above_terrain_override: 0.5` to keep the previous spawn height.
+- The Lunaryard workshop configs and `robot=pragyaan` now place the rover, lander, rock and monitoring camera relative to the terrain height.
+
 ### Fixed
 
 - Yamcs mode with the LargeScale environment: terrain, rocks and colliders now follow the rover, terrain worker threads are joined on shutdown, and the simulation stops if a terrain worker dies.

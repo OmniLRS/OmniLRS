@@ -108,10 +108,10 @@ class LargeScaleController(BaseEnv, StellarEngineEnvMixin):
             self.SE.set_lat_lon(*self.LSTM.get_lat_lon())
 
         if self.SAM:
-            self.SAM.spawn(get_height_func=self.LSTM.get_height_local)
+            self.SAM.spawn(get_height_func=self.get_terrain_height)
 
         if self.MCM:
-            self.MCM.spawn()
+            self.MCM.spawn(get_height_func=self.get_terrain_height)
 
     def add_robot_manager(self, robotManager: RobotManager) -> None:
         """
@@ -127,6 +127,16 @@ class LargeScaleController(BaseEnv, StellarEngineEnvMixin):
     # ==============================================================================
     # Terrain info
     # ==============================================================================
+
+    def get_terrain_height(self, position: Tuple[float, float]) -> float:
+        """
+        Returns the terrain height at a local (x, y) position.
+
+        Args:
+            position (Tuple[float, float]): the (x, y) position in meters.
+        """
+
+        return self.LSTM.get_height_local(position)
 
     def get_height_and_normal(
         self, position: Tuple[float, float, float]

@@ -147,11 +147,7 @@ class ROS2_SimulationManager:
             self.enable_deformation = False
 
         # Preload the assets
-        if cfg["environment"]["name"] == "LargeScale":
-            height, quat = self.ROSEnvironmentManager.EC.get_height_and_normal((0.0, 0.0, 0.0))
-            self.ROSRobotManager.RM.preload_robot_at_pose(self.world, (0, 0, height + 0.5), (1, 0, 0, 0))
-        else:
-            self.ROSRobotManager.RM.preload_robot(self.world)
+        self.ROSRobotManager.RM.preload_robot(self.world, get_height_func=self.ROSEnvironmentManager.EC.get_terrain_height)
         self.ROSEnvironmentManager.EC.add_robot_manager(self.ROSRobotManager.RM)
         if (
             isinstance(self.ROSEnvironmentManager.EC, StellarEngineEnvMixin)

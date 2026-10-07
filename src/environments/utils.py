@@ -18,6 +18,28 @@ def get_moon_env_name():
     return MOON_ENVIRONMENT_NAME
 
 
+def resolve_position(position, height_above_terrain_override=None, get_height_func=None):
+    """
+    Returns the position unchanged, or with z = terrain height at (x, y) + height_above_terrain_override when set.
+
+    Args:
+        position (List[float]): absolute (x, y, z) position.
+        height_above_terrain_override (float): optional height above the terrain, replaces z.
+        get_height_func (callable): returns the terrain height at an (x, y) position.
+
+    Returns:
+        List[float]: the resolved (x, y, z) position.
+    """
+
+    position = list(position)
+    if height_above_terrain_override is None:
+        return position
+    if get_height_func is None:
+        raise ValueError("height_above_terrain_override is set but no terrain height query is available.")
+    position[2] = float(get_height_func((position[0], position[1]))) + height_above_terrain_override
+    return position
+
+
 def set_xform_pose(xform, position, orientation):
     _set_xform_translate(xform, position)
     _set_xform_orientation(xform, orientation)
