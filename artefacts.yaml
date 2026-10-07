@@ -12,7 +12,7 @@ jobs:
     runtime:
       framework: other
       simulator: isaacsim
-      
+
     scenarios:
       settings:
         - name: test_ros2_sanity
