@@ -82,10 +82,10 @@ class LunalabController(BaseEnv, TerrainControlMixin):
         self.switch_terrain(0)
 
         if self.SAM:
-            self.SAM.spawn()
+            self.SAM.spawn(get_height_func=self.get_terrain_height)
 
         if self.MCM:
-            self.MCM.spawn()
+            self.MCM.spawn(get_height_func=self.get_terrain_height)
 
     # ==============================================================================
     # Lunalab-specific configs

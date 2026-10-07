@@ -9,7 +9,7 @@ from isaacsim.sensors.camera import Camera
 from pxr import Gf, UsdGeom
 
 from src.configurations.simulator_mode_enum import SimulatorMode
-from src.environments.utils import set_xform_pose
+from src.environments.utils import resolve_position, set_xform_pose
 
 
 class MonitoringCamerasManager:
@@ -26,7 +26,7 @@ class MonitoringCamerasManager:
         self._stage = omni.usd.get_context().get_stage()
         self._stage.DefinePrim(self._root_path, "Xform")
 
-    def spawn(self):
+    def spawn(self, get_height_func=None):
         if "camera_definitions" not in self._cfg:
             return
 
@@ -45,7 +45,7 @@ class MonitoringCamerasManager:
             set_xform_pose(
                 xform,
                 # prim_path,prim_path
-                pose["position"],
+                resolve_position(pose["position"], pose.get("height_above_terrain_override"), get_height_func),
                 pose["orientation"],
             )
             self._set_camera_attributes(cam, c["camera_params"])
