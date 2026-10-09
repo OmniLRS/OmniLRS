@@ -1,6 +1,6 @@
+# @package mode
 # Preset: the exact settings used to render the stride-moon-seg-v1 dataset (LargeScale, LOLA Site20).
-#   python run.py mode=SDG_Dataset_moonseg environment=largescale4Dataset rendering=ray_tracing rendering.renderer.headless=True
-name: SDG_Dataset
+#   python run.py mode=SDG dataset=moonseg environment=largescale4Dataset rendering=ray_tracing rendering.renderer.headless=True
 generation_settings:
   num_images: 1                  # unused: the loop is bounded by num_terrains * frames_per_terrain
   prim_path: Rig

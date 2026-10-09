@@ -78,7 +78,7 @@ def _range(r, name: str) -> None:
 @dataclasses.dataclass
 class DatasetConf:
     """
-    Settings for mode=SDG_Dataset (see docs/sdg_dataset.md).
+    Settings for mode=SDG dataset=<preset> (see docs/sdg_dataset.md).
 
     Args:
         base_seed (int): terrain k of this shard uses seed base_seed * 1000 + k.

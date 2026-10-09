@@ -1,4 +1,4 @@
-"""Pure helpers of mode=SDG_Dataset (no Isaac Sim)."""
+"""Pure helpers of mode=SDG dataset=<preset> (no Isaac Sim)."""
 
 import numpy as np
 import pytest

@@ -1,4 +1,4 @@
-"""Shared rig, sun and manifest code for the SDG_Dataset environments. The host class provides self.stage,
+"""Shared rig, sun and manifest code for the SDG dataset environments. The host class provides self.stage,
 self.scene_name, StellarEngineEnvMixin's set_sun_* and ground_height(x, y)."""
 
 __author__ = "Sam S. Yu"
@@ -17,7 +17,7 @@ from src.environments_wrappers.sdg.dataset import sampling
 class RigMixin:
     def init_dataset(self, ds, camera_names: list, resolution: tuple) -> None:
         assert ds is not None and camera_names is not None and resolution is not None, (
-            "SDG_Dataset environments need dataset=, camera_names= and resolution= (passed by the SDG_Dataset manager)"
+            "SDG dataset environments need dataset=, camera_names= and resolution= (passed by the SDG dataset manager)"
         )
         self.ds = ds
         self.camera_names = list(camera_names)

@@ -1,8 +1,8 @@
-# Dataset generation (`mode=SDG_Dataset`)
+# Dataset generation (`mode=SDG dataset=<preset>`)
 
-`mode=SDG_Dataset` renders segmentation datasets with a stereo (or mono) camera rig on procedural Lunaryard terrain or on real LOLA terrain (LargeScale), and `scripts/sdg_dataset/` turns the raw capture into training labels. The two halves are independent:
+`mode=SDG` with a dataset preset (`dataset=default` or `dataset=moonseg`, from `cfg/dataset/`) renders segmentation datasets with a stereo (or mono) camera rig on procedural Lunaryard terrain or on real LOLA terrain (LargeScale), and `scripts/sdg_dataset/` turns the raw capture into training labels. The two halves are independent:
 
-- **Capture** (`python run.py mode=SDG_Dataset ...`) needs Isaac Sim 5.0 and a GPU. It writes a *shard*: RGB, semantic and instance masks, depth, normals, exact poses, and the terrain ground truth (DEM, craters, rocks).
+- **Capture** (`python run.py mode=SDG dataset=default ...`) needs Isaac Sim 5.0 and a GPU. It writes a *shard*: RGB, semantic and instance masks, depth, normals, exact poses, and the terrain ground truth (DEM, craters, rocks).
 - **Post-processing** (`scripts/sdg_dataset/*.py`) needs only `numpy scipy opencv-python pyyaml`. It reads any shard that follows the [output contract](#output-contract) and writes size classes, traversability, slope/crater masks and train/val splits. A shard from another simulator works as long as it follows the contract.
 
 Contents: [What it produces](#what-it-produces) - [A: capture only](#workflow-a-capture-only-needs-isaac-sim) - [B: post-processing only](#workflow-b-post-processing-only-no-isaac-sim) - [C: end to end](#workflow-c-end-to-end) - [Changing the site](#changing-the-site) - [Quality guards](#quality-guards) - [Reproducing the reference dataset](#reproducing) - [Known limitations](#known-limitations)
@@ -39,18 +39,20 @@ Run from the repository root with the Isaac Sim 5.0 Python (the same way you run
 Lunaryard (procedural 20 m yard, one shard = 10 terrains x 25 frames = 250 frames by default):
 
 ```bash
-python run.py mode=SDG_Dataset environment=lunaryard_20m4Dataset \
+python run.py mode=SDG dataset=default environment=lunaryard_20m4Dataset \
     rendering.renderer.headless=True mode.dataset_settings.base_seed=0
 ```
 
 LargeScale (real LOLA DEM, default site Site20; one shard = 10 locations x 25 frames):
 
 ```bash
-python run.py mode=SDG_Dataset environment=largescale4Dataset \
+python run.py mode=SDG dataset=default environment=largescale4Dataset \
     rendering.renderer.headless=True mode.dataset_settings.base_seed=0
 ```
 
-Every option lives under `mode.dataset_settings.<key>` (defaults in `cfg/mode/SDG_Dataset.yaml`, validated in `src/configurations/dataset_confs.py`):
+A preset in `cfg/dataset/` is merged into the `mode` node (`# @package mode`): it overrides the stock SDG `generation_settings` and `camera_settings` and adds `dataset_settings`, which is what makes `mode=SDG` run the dataset manager instead of the stock SDG loop. Without `dataset=`, `mode=SDG` is unchanged. To make your own preset, copy `cfg/dataset/default.yaml` and pass `dataset=<your copy>`.
+
+Every option lives under `mode.dataset_settings.<key>` (defaults in `cfg/dataset/default.yaml`, validated in `src/configurations/dataset_confs.py`):
 
 | Key | Default | Meaning |
 |---|---|---|
@@ -237,7 +239,7 @@ OUT/
 # shared between shards and the terrain-seed split keeps train and val apart.
 POS=("[2800,-2200]" "[-3000,1500]" "[1000,4500]")    # bash array, 0-indexed
 for s in 0 1 2; do
-  python run.py mode=SDG_Dataset environment=largescale4Dataset rendering=ray_tracing \
+  python run.py mode=SDG dataset=default environment=largescale4Dataset rendering=ray_tracing \
       rendering.renderer.headless=True mode.dataset_settings.base_seed=$s \
       environment.seed=$((42 + s)) "environment.large_scale_terrain.starting_position=${POS[$s]}"
 done
@@ -278,7 +280,7 @@ After changing the site, do a two-terrain smoke run and run `validate.py`: it ch
 
 ## Quality guards
 
-All guards default to **off** (`mode.dataset_settings.guards.<name>`). They exist because real relief and streamed terrain produce failure modes that a flat-yard run never sees. The `cfg/mode/SDG_Dataset_moonseg.yaml` preset enables all of them.
+All guards default to **off** (`mode.dataset_settings.guards.<name>`). They exist because real relief and streamed terrain produce failure modes that a flat-yard run never sees. The `dataset=moonseg` preset (`cfg/dataset/moonseg.yaml`) enables all of them.
 
 | Guard | What it fixes | Cost | Settings (defaults) |
 |---|---|---|---|
@@ -294,15 +296,15 @@ A guard that cannot run (mesh_probe, dark_frame or auto_exposure without `rgb` a
 
 ## Reproducing stride-moon-seg-v1
 
-The stride-moon-seg-v1 dataset (LargeScale, LOLA Site20) was produced with the `SDG_Dataset_moonseg` preset and these build settings. The dataset itself is not published from this repository.
+The stride-moon-seg-v1 dataset (LargeScale, LOLA Site20) was produced with the `dataset=moonseg` preset and these build settings. The dataset itself is not published from this repository.
 
 ```bash
-python run.py mode=SDG_Dataset_moonseg environment=largescale4Dataset rendering=ray_tracing \
+python run.py mode=SDG dataset=moonseg environment=largescale4Dataset rendering=ray_tracing \
     rendering.renderer.headless=True mode.dataset_settings.base_seed=<seed>
 python scripts/sdg_dataset/build.py --shards <shards> --out <out> --wheel-clearance-m 0.05 --val-frac 0.15
 ```
 
-What the preset changes against `cfg/mode/SDG_Dataset.yaml`:
+What the preset changes against `cfg/dataset/default.yaml`:
 
 - resolution 1640 x 1232 per camera (default 1280 x 960)
 - 50 terrains (locations) per shard (default 10), 25 frames each

@@ -1,4 +1,4 @@
-"""Isaac-free sampling and camera math for mode=SDG_Dataset. Draw order matters: a seed must keep meaning the
+"""Isaac-free sampling and camera math for mode=SDG dataset=<preset>. Draw order matters: a seed must keep meaning the
 same frames, so do not reorder the rng calls."""
 
 __author__ = "Sam S. Yu"
@@ -51,7 +51,7 @@ def camera_offsets(camera_names: list, baseline_m: float) -> dict:
     if len(camera_names) == 2:
         b = float(baseline_m)
         return {camera_names[0]: b / 2, camera_names[1]: -b / 2}
-    raise ValueError(f"SDG_Dataset supports 1 (mono) or 2 (stereo) cameras, got {camera_names}")
+    raise ValueError(f"SDG dataset generation supports 1 (mono) or 2 (stereo) cameras, got {camera_names}")
 
 
 def sample_sun(rng: np.random.Generator, sun: dict, min_elevation: float = None) -> dict:

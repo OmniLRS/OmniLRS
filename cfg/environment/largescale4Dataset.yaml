@@ -1,4 +1,4 @@
-# LargeScale environment for mode=SDG_Dataset (real LOLA DEM + procedural craters and rocks around the rig).
+# LargeScale environment for mode=SDG dataset=<preset> (real LOLA DEM + procedural craters and rocks around the rig).
 # Change the site: large_scale_terrain.lr_dem_name / starting_position (see docs/sdg_dataset.md, "Changing the site").
 # Differences from largescale.yaml: no robot, labelled rock groups (semantic_label: rock -> instance ids),
 # the 2-5 cm pebble group stays an unlabelled PointInstancer, colliders off, hr_dem_num_blocks 4 (450 m window).

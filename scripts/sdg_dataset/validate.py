@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Prove a raw mode=SDG_Dataset shard is usable before spending hours on a long run.
+"""Prove a raw mode=SDG dataset=<preset> shard is usable before spending hours on a long run.
 
     python scripts/sdg_dataset/validate.py <shard_dir> [--n 12] [--wheel-clearance-m 0.05] [--footprint-m 0.30]
 

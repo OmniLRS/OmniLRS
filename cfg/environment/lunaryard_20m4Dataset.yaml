@@ -1,4 +1,4 @@
-# Lunaryard environment for mode=SDG_Dataset (20 m procedural yard: craters, rocks, LunarRegolith8k texture).
+# Lunaryard environment for mode=SDG dataset=<preset> (20 m procedural yard: craters, rocks, LunarRegolith8k texture).
 # Differences from lunaryard_20m4SDG.yaml: texture_path -> LunarRegolith8k (the hi-res regolith); every rock group uses
 # the CustomInstancer (use_point_instancer: False) so each rock is a prim with a semantic class and an instance id
 # (PointInstancer rocks are invisible to the instance annotator, which would drop the small-rock class); rock densities

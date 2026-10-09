@@ -1,6 +1,7 @@
-# Dataset generation: terrains x frames with a stereo (or mono) rig. See docs/sdg_dataset.md.
-#   python run.py mode=SDG_Dataset environment=lunaryard_20m4Dataset rendering.renderer.headless=True
-name: SDG_Dataset
+# @package mode
+# Dataset generation on top of mode=SDG: terrains x frames with a stereo (or mono) rig. See docs/sdg_dataset.md.
+# Merged into the mode node; dataset_settings is what routes mode=SDG to the dataset manager.
+#   python run.py mode=SDG dataset=default environment=lunaryard_20m4Dataset rendering.renderer.headless=True
 generation_settings:
   num_images: 1                  # unused: the loop is bounded by num_terrains * frames_per_terrain
   prim_path: Rig

@@ -1,4 +1,4 @@
-"""DatasetConf (mode=SDG_Dataset) validation. No Isaac Sim required."""
+"""DatasetConf (mode=SDG dataset=<preset>) validation. No Isaac Sim required."""
 
 from pathlib import Path
 
@@ -60,11 +60,19 @@ def test_right_types_still_merge():
     assert c.guards["dark_frame"]["enabled"] is True and c.guards["dark_frame"]["retries"] == 3
 
 
-@pytest.mark.parametrize("name", ["SDG_Dataset.yaml", "SDG_Dataset_moonseg.yaml"])
-def test_mode_yamls_validate(name):
-    y = yaml.safe_load((REPO / "cfg" / "mode" / name).read_text())
-    assert y["name"] == "SDG_Dataset"
+@pytest.mark.parametrize("name", ["default.yaml", "moonseg.yaml"])
+def test_dataset_yamls_validate(name):
+    text = (REPO / "cfg" / "dataset" / name).read_text()
+    # merged into mode=SDG; without the header Hydra would put the keys at the config root
+    assert text.startswith("# @package mode\n")
+    y = yaml.safe_load(text)
+    assert "name" not in y  # mode=SDG keeps its name; dataset_settings selects the dataset manager
     DatasetConf(**y["dataset_settings"])
+
+
+def test_config_has_optional_dataset_group():
+    defaults = yaml.safe_load((REPO / "cfg" / "config.yaml").read_text())["defaults"]
+    assert defaults.index({"optional dataset": None}) > defaults.index({"mode": "ROS2"})
 
 
 def test_registered_in_config_factory():

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Turn raw mode=SDG_Dataset shards into the training dataset (S / M / L, split by terrain seed).
+"""Turn raw mode=SDG dataset=<preset> shards into the training dataset (S / M / L, split by terrain seed).
 
     python scripts/sdg_dataset/build.py --shards data/sdg_dataset/shard_00000 [...] --out data/sdg_dataset_built \
         [--wheel-clearance-m 0.05] [--slope-caution-deg 15] [--slope-hazard-deg 25] [--footprint-m 0.30] \
@@ -62,7 +62,7 @@ def rock_class(height_m: float, clearance_m: float) -> str:
 
 
 def guard_field(fr: dict, key: str, default=None):
-    """A generator guard outcome: under fr["guards"] (SDG_Dataset manager), else top-level (older raw shards)."""
+    """A generator guard outcome: under fr["guards"] (SDG dataset manager), else top-level (older raw shards)."""
     g = fr.get("guards") or {}
     return g[key] if key in g else fr.get(key, default)
 

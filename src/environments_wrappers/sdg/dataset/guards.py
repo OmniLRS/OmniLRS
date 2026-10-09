@@ -1,4 +1,4 @@
-"""Isaac-free statistics behind the opt-in quality guards of mode=SDG_Dataset."""
+"""Isaac-free statistics behind the opt-in quality guards of mode=SDG dataset=<preset>."""
 
 __author__ = "Sam S. Yu"
 __maintainer__ = "Louis Burtz"

@@ -1,4 +1,4 @@
-"""Shared I/O, camera and terrain helpers for the SDG_Dataset offline tools (no Isaac Sim)."""
+"""Shared I/O, camera and terrain helpers for the SDG dataset offline tools (no Isaac Sim)."""
 
 __author__ = "Sam S. Yu"
 __maintainer__ = "Louis Burtz"
@@ -18,7 +18,7 @@ CAM_Q = np.array([0.5, -0.5, -0.5, 0.5])  # rig->camera, xyzw; equals sampling.C
 
 
 class ContractError(ValueError):
-    """The shard does not follow the SDG_Dataset output contract (docs/sdg_dataset.md, 'Output contract')."""
+    """The shard does not follow the SDG dataset output contract (docs/sdg_dataset.md, 'Output contract')."""
 
 
 _FRAME_KEYS = ("index", "terrain_index", "terrain_seed", "frame_in_terrain", "render", "sun", "rig")

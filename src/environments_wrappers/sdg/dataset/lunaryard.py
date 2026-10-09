@@ -1,4 +1,4 @@
-"""Lunaryard controller specialised for mode=SDG_Dataset.
+"""Lunaryard controller specialised for mode=SDG dataset=<preset>.
 
 What differs from src/environments_wrappers/sdg/lunaryard_sdg.py and why:
 

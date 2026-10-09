@@ -1,4 +1,4 @@
-"""Synthetic SDG_Dataset shards for the offline-tool tests: flat ground, optional rocks, optional crater."""
+"""Synthetic SDG dataset shards for the offline-tool tests: flat ground, optional rocks, optional crater."""
 
 __author__ = "Sam S. Yu"
 __maintainer__ = "Louis Burtz"

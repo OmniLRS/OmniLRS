@@ -1,4 +1,4 @@
-"""Simulation manager for mode=SDG_Dataset: terrains x frames loop with settle steps and opt-in quality guards.
+"""Simulation manager for mode=SDG dataset=<preset>: terrains x frames loop with settle steps and opt-in quality guards.
 
 Stock SDG_SimulationManager records one step after each randomize(); under RTX real-time that frame still carries
 temporal-AA history from the previous camera pose. settle_steps renders a few frames after every re-roll before
@@ -51,7 +51,7 @@ class SDGDataset_SimulationManager:
 
         res = [list(r) for r in self.gen.camera_resolutions]
         assert all(r == res[0] for r in res), (
-            f"SDG_Dataset renders every rig camera at one resolution; generation_settings.camera_resolutions "
+            f"SDG dataset renders every rig camera at one resolution; generation_settings.camera_resolutions "
             f"must be identical, got {res}"
         )
         for name in ("mesh_probe", "dark_frame", "auto_exposure"):
@@ -82,7 +82,9 @@ class SDGDataset_SimulationManager:
 
             self.LC = DatasetLargeScale(**env_cfg, **env_kwargs, is_simulation_alive=simulation_app.is_running)
         else:
-            raise ValueError(f"SDG_Dataset supports environment Lunaryard or LargeScale, got {env_cfg['name']}")
+            raise ValueError(
+                f"SDG dataset generation supports environment Lunaryard or LargeScale, got {env_cfg['name']}"
+            )
         self.LC.load()
         for _ in range(60):
             self.world.step(render=True)
