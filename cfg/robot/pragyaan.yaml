@@ -29,7 +29,7 @@ robots_settings:
     camera:
       prim_path: "/Robots/pragyaan/Body/body_main/depth_cam"
       resolutions:
-        low: [320, 240]
+        low: [640, 480]
         high: [1440, 1080]
     imu_sensor_path: "/Robots/pragyaan/base_link/Imu_Sensor"
     solar_panel_joint: "solarJoint"  # finds it within the main robot articulation

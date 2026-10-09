@@ -30,6 +30,7 @@ rdfind = "*"
 
 [feature.core.pypi-dependencies]
 opencv-python = "*"
+av = "*"
 omegaconf = "*"
 hydra-core = "*"
 skyfield = "*"
