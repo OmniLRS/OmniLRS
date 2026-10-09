@@ -127,13 +127,23 @@ def startSim(cfg: dict):
 
         SM = ROS2_SimulationManager(cfg, simulation_app)
 
+    # dataset=<name> (cfg/dataset) merges dataset_settings into the mode node; only SDG consumes it.
+    if "dataset_settings" in cfg["mode"] and cfg["mode"]["name"] != "SDG":
+        raise ValueError(f"dataset= requires mode=SDG, got mode={cfg['mode']['name']}")
+
     # Starts the replicator stuff. Allows to acquire synthetic data.
     if cfg["mode"]["name"] == "SDG":
-        # Call to the environment factory to load the correct environment.
-        from src.environments_wrappers.sdg.simulation_manager_sdg import (
-            SDG_SimulationManager,
-        )
+        if "dataset_settings" in cfg["mode"]:
+            # Dataset generation (terrains x frames with a camera rig). See docs/sdg_dataset.md.
+            from src.environments_wrappers.sdg.dataset.manager import SDGDataset_SimulationManager
 
-        SM = SDG_SimulationManager(cfg, simulation_app)
+            SM = SDGDataset_SimulationManager(cfg, simulation_app)
+        else:
+            # Call to the environment factory to load the correct environment.
+            from src.environments_wrappers.sdg.simulation_manager_sdg import (
+                SDG_SimulationManager,
+            )
+
+            SM = SDG_SimulationManager(cfg, simulation_app)
 
     return SM, simulation_app
