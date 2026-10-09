@@ -146,6 +146,33 @@ class SimProcess:
         self._log_file.close()
 
 
+class FreshTelemetry:
+    """Parameter values received from this sim run only, waited for up to a shared deadline."""
+
+    def __init__(self, names, subscription, timeout):
+        self.names = names
+        self._subscription = subscription
+        self._deadline = time.monotonic() + timeout
+
+    def _wait(self, match):
+        while True:
+            hits = {
+                name: pval.eng_value
+                for name, pval in list(self._subscription.value_cache.items())
+                if match(name) and pval.eng_value is not None
+            }
+            if hits or time.monotonic() >= self._deadline:
+                return hits
+            time.sleep(1)
+
+    def get(self, name):
+        assert name in self.names, f"{name!r} is not defined in the MDB of instance {YAMCS_INSTANCE!r}"
+        return self._wait(lambda n: n == name).get(name)
+
+    def with_prefix(self, prefix):
+        return self._wait(lambda n: n.startswith(prefix))
+
+
 @pytest.fixture(scope="session")
 def yamcs_server():
     # In case you're using an already-running server
@@ -171,7 +198,29 @@ def yamcs_server():
 
 
 @pytest.fixture(scope="session")
-def sim(yamcs_server):
+def subscription(yamcs_server):
+    from yamcs.client import YamcsClient
+
+    client = YamcsClient(YAMCS_ADDRESS)
+    mdb = client.get_mdb(instance=YAMCS_INSTANCE)
+    names = [p.qualified_name for p in mdb.list_parameters() if not p.qualified_name.startswith("/yamcs")]
+    assert names, f"No parameters defined in the MDB of instance {YAMCS_INSTANCE!r}"
+
+    processor = client.get_processor(instance=YAMCS_INSTANCE, processor=YAMCS_PROCESSOR)
+    # Enforce no cached values because a reused Yamcs server may hold values from an earlier sim run.
+    sub = processor.create_parameter_subscription(names, send_from_cache=False)
+    try:
+        yield names, sub
+    finally:
+        print("\nTelemetry received from this sim run:")
+        for name, pval in sorted(sub.value_cache.items()):
+            print(f"  {name} = {pval.eng_value}")
+        sub.cancel()
+
+
+# Depends on subscription so values the sim publishes once at startup are captured.
+@pytest.fixture(scope="session")
+def sim(yamcs_server, subscription):
     process = SimProcess()
     try:
         process.wait_for_startup(STARTUP_TIMEOUT)
@@ -181,36 +230,9 @@ def sim(yamcs_server):
 
 
 @pytest.fixture(scope="session")
-def telemetry(sim):
-    from yamcs.client import YamcsClient
-
-    client = YamcsClient(YAMCS_ADDRESS)
-    mdb = client.get_mdb(instance=YAMCS_INSTANCE)
-    processor = client.get_processor(instance=YAMCS_INSTANCE, processor=YAMCS_PROCESSOR)
-
-    names = [p.qualified_name for p in mdb.list_parameters() if not p.qualified_name.startswith("/yamcs")]
-    assert names, f"No parameters defined in the MDB of instance {YAMCS_INSTANCE!r}"
-
-    published = {}
-    deadline = time.monotonic() + TELEMETRY_TIMEOUT
-    while time.monotonic() < deadline:
-        values = processor.get_parameter_values(names, from_cache=True)
-        before = len(published)
-        published.update(
-            {
-                name: pval.eng_value
-                for name, pval in zip(names, values)
-                if pval is not None and pval.eng_value is not None
-            }
-        )
-        if published and len(published) == before:
-            break
-        time.sleep(2)
-
-    print("\nPublished rover telemetry parameters:")
-    for name in sorted(published):
-        print(f"  {name} = {published[name]}")
-    return published
+def telemetry(sim, subscription):
+    names, sub = subscription
+    return FreshTelemetry(names, sub, TELEMETRY_TIMEOUT)
 
 
 """
@@ -276,7 +298,7 @@ def test_telemetry_battery_voltage_exists(telemetry):
 
 
 def test_telemetry_camera_exists(telemetry):
-    assert any(name.startswith("/Rover/camera/") for name in telemetry)
+    assert telemetry.with_prefix("/Rover/camera/")
 
 
 def test_telemetry_go_nogo_is_nogo(telemetry):
@@ -288,7 +310,7 @@ def test_telemetry_motor_current_not_empty(telemetry):
 
 
 def test_telemetry_payload_exists(telemetry):
-    assert any(name.startswith("/Rover/payload/") for name in telemetry)
+    assert telemetry.with_prefix("/Rover/payload/")
 
 
 def test_telemetry_pose_ground_truth_has_position_and_orientation(telemetry):
@@ -299,8 +321,10 @@ def test_telemetry_pose_ground_truth_has_position_and_orientation(telemetry):
 
 
 def test_telemetry_has_7_temperatures(telemetry):
-    temperatures = [name for name in telemetry if name.startswith("/Rover/temperature_")]
-    assert len(temperatures) == 7, f"Expected 7 temperature parameters, got {temperatures}"
+    temperatures = [name for name in telemetry.names if name.startswith("/Rover/temperature_")]
+    assert len(temperatures) == 7, f"Expected 7 temperature parameters in the MDB, got {temperatures}"
+    missing = [name for name in temperatures if telemetry.get(name) is None]
+    assert not missing, f"No value from this sim run for {missing}"
 
 
 def test_telemetry_total_current_in_exists(telemetry):
