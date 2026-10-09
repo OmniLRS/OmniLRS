@@ -10,7 +10,7 @@ robots_settings:
       - "cfg/mdb/pragyaan/admin.xml"
     intervals:
       robot_stats: 1
-      camera_streaming: 2
+      camera_streaming: 1
     lander_camera:
       prim_path: "/StaticAssets/lander/Lander/Cam_Right/Lander_Camera"
       resolution: [1440, 1080]

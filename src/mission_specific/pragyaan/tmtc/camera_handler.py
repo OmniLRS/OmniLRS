@@ -6,9 +6,10 @@ from enum import StrEnum
 
 import numpy as np
 from isaacsim.sensors.camera import Camera
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image
 
 from src.environments.monitoring_cameras_manager import MonitoringCamerasManager
+from src.subsystems.robot_physics_models.camera_compression_model import CameraCompressionModel
 from src.tmtc.yamcs_TMTC import ImagesHandler
 
 
@@ -50,6 +51,8 @@ class PragyaanCameraHandler:
         self._robot = robot
         self._lander_cam = None
         self._monitoring_cam = None
+        # One model per (bucket, resolution)
+        self._compression_models: dict[tuple[str, str], CameraCompressionModel] = {}
         self._initialize_lander_cam(lander_camera_conf)
         self._initialize_monitoring_cam()
 
@@ -122,19 +125,17 @@ class PragyaanCameraHandler:
 
         return camera_view
 
-    def _add_compression(self, image: Image.Image) -> Image:
-        compressed_image = image.copy()
-        image_draw = ImageDraw.Draw(compressed_image)
-        font = ImageFont.load_default()
-        image_draw.text(
-            (compressed_image.width / 2, compressed_image.height / 2),
-            "COMPRESSED",
-            font=font,
-            fill=(255, 0, 0, 255),
-            anchor="mm",
-        )
+    def _compress(self, image: Image, bucket: str, resolution: str) -> Image:
+        key = (bucket, resolution)
+        if key not in self._compression_models:
+            model = CameraCompressionModel()
+            model.initialize()
+            self._compression_models[key] = model
 
-        return compressed_image
+        model = self._compression_models[key]
+        model.set_inputs(image)
+        model.compute(0.0)
+        return model.get_outputs()["compressed_image"]
 
     def transmit_camera_view(self, bucket: str, resolution: str, type: CameraViewType = CameraViewType.RGBA):
         camera_view: Image = None
@@ -143,7 +144,8 @@ class PragyaanCameraHandler:
             camera_view: Image = self._snap_camera_view_depth(resolution)
         elif type == CameraViewType.RGBA:
             camera_view: Image = self._snap_camera_view_rgb(resolution)
-            camera_view = self._add_compression(camera_view)
+            if bucket == self.BUCKET_STREAMING:  # remove this condition to compress every RGBA view
+                camera_view = self._compress(camera_view, bucket, resolution)
         else:
             print("in transmit_camera_view: unknown type:", type)
             return

@@ -19,6 +19,7 @@ dependencies = [
     "omegaconf",
     "hydra-core",
     "opencv-python",
+    "av",
 ]
 
 [tool.ruff]
