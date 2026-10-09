@@ -55,10 +55,24 @@ class BaseEnv:
 
     def update(self) -> None:
         """
-        Updates the environment.
+        Per-step environment update. No-op unless the environment needs it (e.g. LargeScale terrain following).
         """
 
-        raise NotImplementedError()
+        pass
+
+    def monitor_thread_is_alive(self) -> bool:
+        """
+        Returns False if a background worker the environment depends on has died.
+        """
+
+        return True
+
+    def get_wait_for_threads(self) -> list:
+        """
+        Returns callables that join the environment's background threads on shutdown.
+        """
+
+        return []
 
     def load(self) -> None:
         """

@@ -76,6 +76,7 @@ class Yamcs_SimulationManager:
 
         self.EC = self._get_environment_controller(self.cfg["environment"]["name"])
         self.EC.load()
+        self.simulation_app.add_wait(self.EC.get_wait_for_threads())
 
         self.RM = RobotManager(cfg["environment"]["robots_settings"], mode=SimulatorMode.YAMCS)
 
@@ -238,8 +239,15 @@ class Yamcs_SimulationManager:
                     if self.RM.robot is not None:
                         self.RM.robot.invalidate_articulation_api()
 
-                if not did_reset and self.RM.robot is not None:
-                    self.RM.robot.update_articulation_api()
+                if not did_reset:
+                    # Must happen before EC.update(), because LargeScale calls robot.get_pose().
+                    if self.RM.robot is not None:
+                        self.RM.robot.update_articulation_api()
+                    self.EC.update()
+
+            if not self.EC.monitor_thread_is_alive():
+                logger.warning("Environment worker thread died. Stopping the simulation.")
+                break
 
             self.rate.sleep()
 

@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 [WIP]
 
+### Fixed
+
+- Yamcs mode with the LargeScale environment: terrain, rocks and colliders now follow the rover, terrain worker threads are joined on shutdown, and the simulation stops if a terrain worker dies.
+
 See also the [Roadmap and Milestones tracking](https://github.com/orgs/OmniLRS/projects/1)
 
 ## [3.0.0] - 2026-06-29

@@ -30,6 +30,7 @@ class LargeScaleController(BaseEnv, StellarEngineEnvMixin):
         stellar_engine_settings: StellarEngineConf = None,
         sun_settings: SunConf = None,
         is_simulation_alive: callable = lambda: True,
+        close_simulation: callable = lambda: None,
         static_assets_settings: Dict = None,
         monitoring_cameras_settings: Dict = None,
         **kwargs,
@@ -51,6 +52,7 @@ class LargeScaleController(BaseEnv, StellarEngineEnvMixin):
         self.scene_name = "/LargeScaleLunar"
         self.stage_settings = large_scale_terrain
         self.is_simulation_alive = is_simulation_alive
+        self.close_simulation = close_simulation
 
         if static_assets_settings:
             self.SAM = StaticAssetsManager(static_assets_settings)
@@ -95,7 +97,11 @@ class LargeScaleController(BaseEnv, StellarEngineEnvMixin):
 
         self.build_scene()
         # Instantiates the terrain manager
-        self.LSTM = LargeScaleTerrainManager(self.stage_settings, is_simulation_alive=self.is_simulation_alive)
+        self.LSTM = LargeScaleTerrainManager(
+            self.stage_settings,
+            is_simulation_alive=self.is_simulation_alive,
+            close_simulation=self.close_simulation,
+        )
         self.LSTM.build()
         # Sets the sun using the stellar engine if enabled
         if self.enable_stellar_engine:
