@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Optional `pose.height_above_terrain_override` for robots, static assets and monitoring cameras: when set, z is the terrain height at (x, y) plus this value. Works the same in Lunaryard, Lunalab and LargeScale.
+- Optional yaml config key `pose.height_above_terrain_override` for robots, static assets and monitoring cameras: when set, the (absolute) z of pose.position is overriden by the (absolute) terrain height at (x, y) plus this value. Works the same in Lunaryard, Lunalab and LargeScale.
 - `largescale_workshop` environment: the LargeScale counterpart of `lunaryard_40m_workshop` (lander, rock and monitoring camera), differing only in terrain.
 
 ### Changed
@@ -22,7 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- Yamcs mode with the LargeScale environment: terrain, rocks and colliders now follow the rover, terrain worker threads are joined on shutdown, and the simulation stops if a terrain worker dies.
+- Yamcs mode with the LargeScale environment: terrain, rocks and colliders now update (EC.update()) as the  rover drives, terrain worker threads are joined on shutdown, and the simulation stops if a terrain worker dies.
 
 See also the [Roadmap and Milestones tracking](https://github.com/orgs/OmniLRS/projects/1)
 

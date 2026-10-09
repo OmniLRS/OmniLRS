@@ -26,7 +26,7 @@ SIM_COMMAND = [
     "run",
     "--environment",
     "ci",
-    "yamcs",
+    "yamcs-largescale",
     "rendering.renderer.headless=true",
     # For some reason AWS EKS AMI's duplicate NVIDIA Vulkan ICDs, making one GPU enumerate
     # causing Isaac to think there are two gpus available and then die.
@@ -44,6 +44,7 @@ FATAL_MARKERS = [
     "ModuleNotFoundError",
     "is not available in environment",
     "carb.crashreporter-breakpad",
+    "Simulation exited before being fully initialized",
 ]
 
 
@@ -66,7 +67,7 @@ def _port_open(address):
 
 class YamcsServer:
     def __init__(self, mc_dir):
-        self.log_path = _log_dir() / "yamcs_server.log"
+        self.log_path = _log_dir() / "yamcs_server_largescale.log"
         self._log_file = open(self.log_path, "w")
         self.proc = subprocess.Popen(
             ["./mvnw", "-B", "yamcs:run"],
@@ -101,7 +102,7 @@ class YamcsServer:
 
 class SimProcess:
     def __init__(self):
-        self.log_path = _log_dir() / "sim_startup.log"
+        self.log_path = _log_dir() / "sim_startup_yamcs_largescale.log"
         self._log_file = open(self.log_path, "w")
         self.proc = subprocess.Popen(
             SIM_COMMAND,
@@ -247,6 +248,19 @@ def test_app_ready(sim):
     sim.assert_marker("app ready")
 
 
+# Printed by LargeScaleTerrainManager.update_visual_mesh() during the initial build.
+def test_terrain_clipmaps_built(sim):
+    sim.assert_marker("clipmaps updated")
+
+
+def test_terrain_rocks_sampled(sim):
+    sim.assert_marker("rock manager sampled")
+
+
+def test_terrain_colliders_built(sim):
+    sim.assert_marker("collider manager updated")
+
+
 def test_articulation_control_initialized(sim):
     sim.assert_marker("ArticulationControl initialized")
 
@@ -258,6 +272,12 @@ def test_articulation_telemetry_initialized(sim):
 def test_no_fatal_errors(sim):
     for fatal in FATAL_MARKERS:
         assert fatal not in sim.log, f"Fatal marker {fatal!r} found in sim output"
+
+
+def test_lander_static_asset_found(sim):
+    assert "Defaulting to global position reporting" not in sim.log, (
+        "Lander static asset missing at /StaticAssets/lander"
+    )
 
 
 def test_sim_process_alive(sim):
