@@ -206,14 +206,7 @@ class Yamcs_SimulationManager:
             self.enable_deformation = False
 
     def _preload_robot(self):
-        if self.cfg["environment"]["name"] == "LargeScale":
-            robot_pos = self.RM.robot_parameters.pose.position
-            robot_ori = self.RM.robot_parameters.pose.orientation
-            height, _ = self.EC.get_height_and_normal((robot_pos[0], robot_pos[1], 0.0))
-            self.RM.preload_robot_at_pose(self.world, (robot_pos[0], robot_pos[1], height + 0.5), robot_ori)
-
-        else:
-            self.RM.preload_robot(self.world)
+        self.RM.preload_robot(self.world, get_height_func=self.EC.get_terrain_height)
 
     def run_simulation(self) -> None:
         """

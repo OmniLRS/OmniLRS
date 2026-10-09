@@ -66,6 +66,16 @@ class TerrainControlMixin:
         self.dem = self.T.getDEM()
         self.mask = self.T.getMask()
 
+    def get_terrain_height(self, position) -> float:
+        """
+        Returns the terrain height at a world (x, y) position.
+
+        Args:
+            position (Tuple[float, float]): the (x, y) position in meters.
+        """
+
+        return self.T.get_height(position)
+
     def switch_terrain(self, flag: int = -1) -> None:
         """
         Switches the terrain to a new DEM.

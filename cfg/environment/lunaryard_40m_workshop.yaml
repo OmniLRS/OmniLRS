@@ -183,6 +183,7 @@ static_assets_settings:
         position: [28, 19., 0.0]
         # position: [5.0, 7.5, 0.0]
         orientation: [1, 0, 0, 1]
+        height_above_terrain_override: 0.0 # optional, replaces position z with terrain height at (x, y) + this value
       collision: True
 
     - asset_name: lander
@@ -191,6 +192,7 @@ static_assets_settings:
         position: [25.7, 10.6, 0.2]
         # orientation: [0.70711, 0. , 0., 0.70711]   # w/x/y/z
         orientation: [0.5, 0.5 , 0.5, 0.5]   # w/x/y/z
+        height_above_terrain_override: 0.2
       collision: True
 
 monitoring_cameras_settings:
@@ -201,6 +203,7 @@ monitoring_cameras_settings:
       pose:
         position: [32.0, 22.0, 25.0]
         orientation: [0.082948, 0.091931, 0.700333, 0.702995] # [x,y,z,w]
+        height_above_terrain_override: 25.0
       camera_params:
         focal_length: 1.93
         horizontal_aperture:  2.4

@@ -4,13 +4,14 @@ __email__ = "ljburtz@jaops.com"
 
 import os
 from dataclasses import dataclass, field
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 
 @dataclass
 class Pose:
     position: List[float] = field(default_factory=list)
     orientation: List[float] = field(default_factory=list)
+    height_above_terrain_override: Optional[float] = None
 
 
 @dataclass
