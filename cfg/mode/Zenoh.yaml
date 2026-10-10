@@ -1,0 +1,17 @@
+name: Zenoh
+default_wire_format: "json"   # "json" | "msgspec" (camera uses raw ndarray / msgspec)
+pub_log_every_n: 50 # log frequency, shared by publishers
+sub_log_every_n: 5000 # log frequency, shared by subscribers
+
+keyexprs:
+
+  # multi-instance channels: child topics will be appended (sensor / resolution name from robot.yaml)
+  camera:            "OmniLRS/{robot_name}/camera"   # pub, -> OmniLRS/husky/camera/cam_color/high
+  imu:               "OmniLRS/{robot_name}/imu"      # pub, -> OmniLRS/husky/imu/adxl6090
+
+  # singletons: full keys, nothing appended
+  joint_telemetry:   "OmniLRS/{robot_name}/joint_telemetry" # pub
+  joint_commands:    "OmniLRS/{robot_name}/joint_cmd" # sub
+  ground_truth_pose: "OmniLRS/{robot_name}/gt_pose" # pub
+  is_sim_running:    "OmniLRS/sim/is_running" # pub
+  randomize_rocks:   "OmniLRS/terrain/randomize_rocks" # sub

@@ -1,4 +1,4 @@
-__author__ = "Antoine Richard"
+__author__ = "Antoine Richard, Bach Nguyen"
 __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
 
@@ -101,6 +101,14 @@ def startSim(cfg: dict):
     # NOTE mode is chosen by setting the value of "mode" property within "defaults" @cfg/config.yaml
     # it can also be overwritten through console, same as environment
     # mode is required to exist also @cfg/mode/[mode_name].yaml with "name" property
+
+    # Zenoh mode
+    if cfg["mode"]["name"] == "Zenoh":
+        from src.environments_wrappers.zenoh.simulation_manager_zenoh import (
+            Zenoh_SimulationManager,
+        )
+
+        SM = Zenoh_SimulationManager(cfg, simulation_app)
 
     # Omits ROS settings, purely Yamcs-native
     if cfg["mode"]["name"] == "Yamcs":
