@@ -104,11 +104,15 @@ class ZenohCommandReceiver:
                     self.log("[ZenohCommandReceiver] skipped command: articulation API is not ready")
                     continue
 
-                ok = robot.set_joint_targets(
-                    position_targets=position_targets,
-                    velocity_targets=velocity_targets,
-                    effort_targets=effort_targets,
-                )
+                try:
+                    ok = robot.set_joint_targets(
+                        position_targets=position_targets,
+                        velocity_targets=velocity_targets,
+                        effort_targets=effort_targets,
+                    )
+                except Exception:
+                    logger.exception("[ZenohCommandReceiver] failed to apply command")
+                    continue
 
                 self._count += 1
 
