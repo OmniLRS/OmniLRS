@@ -88,8 +88,16 @@ class Zenoh_LargeScaleManager(Zenoh_BaseManager):
             async for sample in sub.listen_reliable():
                 self.log("[ZenohLargeScaleManager] received cmd: randomize_rocks")
 
-                data = int(sample.payload.to_string())
-                assert data > 0, "The number of rocks must be greater than 0."
+                try:
+                    data = int(sample.payload.to_string())
+                except ValueError as e:
+                    self.log(f"[ZenohLargeScaleManager] invalid randomize_rocks command: {e}")
+                    continue
+
+                if data <= 0:
+                    self.log("[ZenohLargeScaleManager] number of rocks must be greater than 0")
+                    continue
+
                 self.modifications.append([self.LC.randomize_rocks, {"num": data}])
                 self.trigger_reset = True
 

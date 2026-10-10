@@ -79,8 +79,16 @@ class Zenoh_LunaryardManager(Zenoh_BaseManager):
             async for sample in sub.listen_reliable():
                 self.log("[ZenohLunaryardManager] received cmd: randomize_rocks")
 
-                data = int(sample.payload.to_string())
-                assert data > 0, "The number of rocks must be greater than 0."
+                try:
+                    data = int(sample.payload.to_string())
+                except ValueError as e:
+                    self.log(f"[ZenohLunaryardManager] invalid randomize_rocks command: {e}")
+                    continue
+
+                if data <= 0:
+                    self.log("[ZenohLunaryardManager] number of rocks must be greater than 0")
+                    continue
+
                 self.modifications.append([self.LC.randomize_rocks, {"num": data}])
                 self.trigger_reset = True
 
