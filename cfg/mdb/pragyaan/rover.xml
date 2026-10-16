@@ -450,6 +450,60 @@ See https://github.com/yamcs/pymdb
             </Variable>
           </StringDataEncoding>
         </StringArgumentType>
+        <IntegerArgumentType name="set_camera_streaming_params__bitrate" signed="false" sizeInBits="32">
+          <UnitSet>
+            <Unit form="calibrated">bit/s</Unit>
+          </UnitSet>
+          <IntegerDataEncoding sizeInBits="32" encoding="unsigned" byteOrder="mostSignificantByteFirst"/>
+          <ValidRangeSet validRangeAppliesToCalibrated="true">
+            <ValidRange minInclusive="1"/>
+          </ValidRangeSet>
+        </IntegerArgumentType>
+        <IntegerArgumentType name="set_camera_streaming_params__crf" signed="true" sizeInBits="8">
+          <IntegerDataEncoding sizeInBits="8" encoding="twosComplement"/>
+          <ValidRangeSet validRangeAppliesToCalibrated="true">
+            <ValidRange minInclusive="-1" maxInclusive="51"/>
+          </ValidRangeSet>
+        </IntegerArgumentType>
+        <IntegerArgumentType name="set_camera_streaming_params__keyframe_interval" signed="false" sizeInBits="16">
+          <UnitSet>
+            <Unit form="calibrated">frames</Unit>
+          </UnitSet>
+          <IntegerDataEncoding sizeInBits="16" encoding="unsigned" byteOrder="mostSignificantByteFirst"/>
+          <ValidRangeSet validRangeAppliesToCalibrated="true">
+            <ValidRange minInclusive="1"/>
+          </ValidRangeSet>
+        </IntegerArgumentType>
+        <IntegerArgumentType name="set_camera_streaming_params__max_payload_size" signed="false" sizeInBits="16">
+          <UnitSet>
+            <Unit form="calibrated">bytes</Unit>
+          </UnitSet>
+          <IntegerDataEncoding sizeInBits="16" encoding="unsigned" byteOrder="mostSignificantByteFirst"/>
+          <ValidRangeSet validRangeAppliesToCalibrated="true">
+            <ValidRange minInclusive="1"/>
+          </ValidRangeSet>
+        </IntegerArgumentType>
+        <FloatArgumentType name="set_camera_streaming_params__loss_probability" sizeInBits="32">
+          <FloatDataEncoding sizeInBits="32" encoding="IEEE754_1985" byteOrder="mostSignificantByteFirst"/>
+          <ValidRangeSet validRangeAppliesToCalibrated="true">
+            <ValidRange minInclusive="0.0" maxInclusive="1.0"/>
+          </ValidRangeSet>
+        </FloatArgumentType>
+        <IntegerArgumentType name="set_camera_streaming_params__seed" signed="true" sizeInBits="32">
+          <IntegerDataEncoding sizeInBits="32" encoding="twosComplement" byteOrder="mostSignificantByteFirst"/>
+          <ValidRangeSet validRangeAppliesToCalibrated="true">
+            <ValidRange minInclusive="-1"/>
+          </ValidRangeSet>
+        </IntegerArgumentType>
+        <FloatArgumentType name="set_camera_streaming_params__bandwidth_window_seconds" sizeInBits="32">
+          <UnitSet>
+            <Unit form="calibrated">s</Unit>
+          </UnitSet>
+          <FloatDataEncoding sizeInBits="32" encoding="IEEE754_1985" byteOrder="mostSignificantByteFirst"/>
+          <ValidRangeSet validRangeAppliesToCalibrated="true">
+            <ValidRange minExclusive="0.0"/>
+          </ValidRangeSet>
+        </FloatArgumentType>
       </ArgumentTypeSet>
       <MetaCommandSet>
         <MetaCommand name="camera_capture_depth" abstract="false" shortDescription="Capture a depth image">
@@ -511,6 +565,63 @@ See https://github.com/yamcs/pymdb
                 </LocationInContainerInBits>
               </FixedValueEntry>
               <ArgumentRefEntry argumentRef="config_path" shortDescription="Configuration file path argument">
+                <LocationInContainerInBits referenceLocation="previousEntry">
+                  <FixedValue>0</FixedValue>
+                </LocationInContainerInBits>
+              </ArgumentRefEntry>
+            </EntryList>
+          </CommandContainer>
+          <DefaultSignificance consequenceLevel="normal"/>
+          <VerifierSet/>
+        </MetaCommand>
+        <MetaCommand name="set_camera_streaming_params" abstract="false" shortDescription="Set the camera streaming compression and packet loss parameters">
+          <ArgumentList>
+            <Argument name="bitrate" argumentTypeRef="set_camera_streaming_params__bitrate" shortDescription="Target bitrate, used only when crf is not set"/>
+            <Argument name="crf" argumentTypeRef="set_camera_streaming_params__crf" shortDescription="Constant rate factor 0-51 (lower is higher quality), -1 to use the bitrate instead"/>
+            <Argument name="keyframe_interval" argumentTypeRef="set_camera_streaming_params__keyframe_interval" shortDescription="Number of frames between keyframes"/>
+            <Argument name="max_payload_size" argumentTypeRef="set_camera_streaming_params__max_payload_size" shortDescription="Maximum payload size of one transport packet"/>
+            <Argument name="loss_probability" argumentTypeRef="set_camera_streaming_params__loss_probability" shortDescription="Probability of dropping each transport packet"/>
+            <Argument name="seed" argumentTypeRef="set_camera_streaming_params__seed" shortDescription="Seed for reproducible packet loss, -1 for a random seed"/>
+            <Argument name="bandwidth_window_seconds" argumentTypeRef="set_camera_streaming_params__bandwidth_window_seconds" shortDescription="Duration of the rolling bandwidth measurement window"/>
+          </ArgumentList>
+          <CommandContainer name="set_camera_streaming_params">
+            <EntryList>
+              <FixedValueEntry binaryValue="7365745f63616d6572615f73747265616d696e675f706172616d73" sizeInBits="216" name="command_name" shortDescription="Command name identifier">
+                <LocationInContainerInBits referenceLocation="previousEntry">
+                  <FixedValue>0</FixedValue>
+                </LocationInContainerInBits>
+              </FixedValueEntry>
+              <ArgumentRefEntry argumentRef="bitrate" shortDescription="Bitrate argument">
+                <LocationInContainerInBits referenceLocation="previousEntry">
+                  <FixedValue>0</FixedValue>
+                </LocationInContainerInBits>
+              </ArgumentRefEntry>
+              <ArgumentRefEntry argumentRef="crf" shortDescription="CRF argument">
+                <LocationInContainerInBits referenceLocation="previousEntry">
+                  <FixedValue>0</FixedValue>
+                </LocationInContainerInBits>
+              </ArgumentRefEntry>
+              <ArgumentRefEntry argumentRef="keyframe_interval" shortDescription="Keyframe interval argument">
+                <LocationInContainerInBits referenceLocation="previousEntry">
+                  <FixedValue>0</FixedValue>
+                </LocationInContainerInBits>
+              </ArgumentRefEntry>
+              <ArgumentRefEntry argumentRef="max_payload_size" shortDescription="Maximum payload size argument">
+                <LocationInContainerInBits referenceLocation="previousEntry">
+                  <FixedValue>0</FixedValue>
+                </LocationInContainerInBits>
+              </ArgumentRefEntry>
+              <ArgumentRefEntry argumentRef="loss_probability" shortDescription="Loss probability argument">
+                <LocationInContainerInBits referenceLocation="previousEntry">
+                  <FixedValue>0</FixedValue>
+                </LocationInContainerInBits>
+              </ArgumentRefEntry>
+              <ArgumentRefEntry argumentRef="seed" shortDescription="Seed argument">
+                <LocationInContainerInBits referenceLocation="previousEntry">
+                  <FixedValue>0</FixedValue>
+                </LocationInContainerInBits>
+              </ArgumentRefEntry>
+              <ArgumentRefEntry argumentRef="bandwidth_window_seconds" shortDescription="Bandwidth window argument">
                 <LocationInContainerInBits referenceLocation="previousEntry">
                   <FixedValue>0</FixedValue>
                 </LocationInContainerInBits>
@@ -583,8 +694,29 @@ See https://github.com/yamcs/pymdb
     <SpaceSystem name="images_streaming" shortDescription="Streaming capture metadata">
       <TelemetryMetaData>
         <ParameterTypeSet>
+          <FloatParameterType name="bandwidth" sizeInBits="32">
+            <UnitSet>
+              <Unit form="calibrated">bit/s</Unit>
+            </UnitSet>
+            <ValidRange validRangeAppliesToCalibrated="true" minInclusive="0.0"/>
+          </FloatParameterType>
+          <IntegerParameterType name="decode_errors" signed="false" sizeInBits="32">
+            <UnitSet>
+              <Unit form="calibrated">counts</Unit>
+            </UnitSet>
+          </IntegerParameterType>
           <StringParameterType name="name"/>
           <IntegerParameterType name="number" signed="false" sizeInBits="32"/>
+          <IntegerParameterType name="packets_lost" signed="false" sizeInBits="32">
+            <UnitSet>
+              <Unit form="calibrated">counts</Unit>
+            </UnitSet>
+          </IntegerParameterType>
+          <IntegerParameterType name="packets_sent" signed="false" sizeInBits="32">
+            <UnitSet>
+              <Unit form="calibrated">counts</Unit>
+            </UnitSet>
+          </IntegerParameterType>
           <EnumeratedParameterType name="state">
             <EnumerationList>
               <Enumeration value="0" label="OFF"/>
@@ -596,10 +728,22 @@ See https://github.com/yamcs/pymdb
           <StringParameterType name="url_storage"/>
         </ParameterTypeSet>
         <ParameterSet>
+          <Parameter name="bandwidth" parameterTypeRef="bandwidth" shortDescription="Rolling encoded H.264 bitrate of the streaming camera">
+            <ParameterProperties dataSource="local" persistence="true"/>
+          </Parameter>
+          <Parameter name="decode_errors" parameterTypeRef="decode_errors" shortDescription="Cumulative streaming H.264 decode errors">
+            <ParameterProperties dataSource="local" persistence="true"/>
+          </Parameter>
           <Parameter name="name" parameterTypeRef="name" shortDescription="Friendly name for the streaming capture">
             <ParameterProperties dataSource="local" persistence="true"/>
           </Parameter>
           <Parameter name="number" parameterTypeRef="number" shortDescription="Sequence identifier for streaming captures">
+            <ParameterProperties dataSource="local" persistence="true"/>
+          </Parameter>
+          <Parameter name="packets_lost" parameterTypeRef="packets_lost" shortDescription="Cumulative streaming packets lost">
+            <ParameterProperties dataSource="local" persistence="true"/>
+          </Parameter>
+          <Parameter name="packets_sent" parameterTypeRef="packets_sent" shortDescription="Cumulative streaming packets sent">
             <ParameterProperties dataSource="local" persistence="true"/>
           </Parameter>
           <Parameter name="state" parameterTypeRef="state" shortDescription="Streaming pipeline state">

@@ -59,7 +59,8 @@ RUN /isaac-sim/python.sh -m pip install \
     em \
     lark \
     yamcs-client \
-    pandas
+    pandas \
+    av
 
 RUN /isaac-sim/python.sh -m pip install \
     omegaconf \

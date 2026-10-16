@@ -10,8 +10,16 @@ robots_settings:
       - "cfg/mdb/pragyaan/admin.xml"
     intervals:
       robot_stats: 1
-      camera_streaming: 2
       neutron_count: 2
+      camera_streaming: 1
+    camera_compression:
+      bitrate: 150_000 # Target bits/s with Video Buffering Verifier (VBV) constraints
+      crf: null # Set 0-51 for quality-based mode; higher means lower quality, bitrate is ignored
+      keyframe_interval: 10
+      max_payload_size: 1200
+      loss_probability: 0.0 # Per-fragment drop probability; e.g. 0.01 to degrade the stream
+      seed: null
+      bandwidth_window_seconds: 10.0 # Rolling bitrate measurement window
     lander_camera:
       prim_path: "/StaticAssets/lander/Lander/Cam_Right/Lander_Camera"
       resolution: [1440, 1080]
@@ -70,6 +78,10 @@ robots_settings:
       current_draw_eps: "/Rover/current_draw_eps"
       neutron_counts: "/Rover/neutron_counts"
       camera_streaming_state: "/Rover/camera/images_streaming/state"
+      camera_bandwidth: "/Rover/camera/images_streaming/bandwidth"
+      camera_packets_sent: "/Rover/camera/images_streaming/packets_sent"
+      camera_packets_lost: "/Rover/camera/images_streaming/packets_lost"
+      camera_decode_errors: "/Rover/camera/images_streaming/decode_errors"
       solar_panel_state: "/Rover/solar_panel_state"
       motor_encoder: "/Rover/motor_encoder"
     commands:
@@ -78,6 +90,7 @@ robots_settings:
       camera_capture_high: "/Rover/camera/camera_capture_high"
       camera_streaming_on_off: "/Rover/camera/camera_streaming"
       camera_capture_depth: "/Rover/camera/camera_capture_depth"
+      set_camera_streaming_params: "/Rover/camera/set_camera_streaming_params"
       solar_panel: "/Rover/system/deploy_solar_panel"
       power_electronics: "/Rover/power/power_electronics"
       go_nogo: "/Rover/system/go_nogo_command"

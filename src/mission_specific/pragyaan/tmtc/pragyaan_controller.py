@@ -33,7 +33,13 @@ class PragyaanController(YamcsTMTC):
         super().__init__(yamcs_instance_conf, yamcs_conf, robot_name, robot_RG, robot)
         self._intervals = yamcs_conf["intervals"]
         self._payload_handler: PayloadHandler = PayloadHandler(self._images_handler, self._yamcs_conf["payload"])
-        self._camera_handler = PragyaanCameraHandler(self._images_handler, robot, yamcs_conf["lander_camera"])
+        self._camera_handler = PragyaanCameraHandler(
+            self._images_handler,
+            robot,
+            yamcs_conf["lander_camera"],
+            streaming_interval=self._intervals["camera_streaming"],
+            compression_conf=yamcs_conf["camera_compression"],
+        )
         self._transmitter: PragyaanTransmitter = PragyaanTransmitter(
             self.transmit_to_yamcs,
             self._intervals_handler,
@@ -41,6 +47,7 @@ class PragyaanController(YamcsTMTC):
             self._robot_RG,
             robot_name,
             self._yamcs_conf["parameters"],
+            self._camera_handler,
         )
         self._commander: PragyaanCommander = PragyaanCommander(
             self._robot,
@@ -69,6 +76,19 @@ class PragyaanController(YamcsTMTC):
             commands_conf["camera_streaming_on_off"], self._commander.set_activity_of_camera_streaming, args=["action"]
         )
         self._commands_handler.add_command(commands_conf["camera_capture_depth"], self._commander.handle_depth_capture)
+        self._commands_handler.add_command(
+            commands_conf["set_camera_streaming_params"],
+            self._commander.set_camera_streaming_params,
+            args=[
+                "bitrate",
+                "crf",
+                "keyframe_interval",
+                "max_payload_size",
+                "loss_probability",
+                "seed",
+                "bandwidth_window_seconds",
+            ],
+        )
         self._commands_handler.add_command(
             commands_conf["power_electronics"],
             self._commander.handle_electronics_on_off,
@@ -110,6 +130,13 @@ class PragyaanController(YamcsTMTC):
             is_repeating=True,
             execute_immediately=True,
             function=self._transmitter.transmit_camera_streaming_state,
+        )
+        self._intervals_handler.add_new_interval(
+            name="Camera compression",
+            seconds=self._intervals["robot_stats"],
+            is_repeating=True,
+            execute_immediately=True,
+            function=self._transmitter.transmit_camera_compression_info,
         )
         self._intervals_handler.add_new_interval(
             name="GO_NOGO",
