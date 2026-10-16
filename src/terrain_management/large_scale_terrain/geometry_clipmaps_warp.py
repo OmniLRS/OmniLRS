@@ -414,5 +414,5 @@ def _get_random_tangent_vector(normal: wp.vec3f, state: wp.uint32) -> wp.quatf:
     vx = wp.cross(normal, vx)
     vx = vx / wp.length(vx)
     vy = wp.cross(normal, vx)
-    mat = wp.mat33f(vx, vy, normal)
+    mat = wp.matrix_from_rows(vx, vy, normal)
     return wp.quat_from_matrix(mat)

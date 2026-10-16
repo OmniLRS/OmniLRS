@@ -1,4 +1,4 @@
-FROM nvcr.io/nvidia/isaac-sim:5.0.0
+FROM nvcr.io/nvidia/isaac-sim:6.0.1
 
 RUN /isaac-sim/python.sh -m pip install --upgrade pip
 
@@ -32,7 +32,7 @@ RUN echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/r
 # setup environment
 ENV LANG=C.UTF-8
 ENV LC_ALL=C.UTF-8
-ENV ROS_DISTRO=humble
+ENV ROS_DISTRO=jazzy
 ENV OMNILRS_ROOT=/workspace/omnilrs
 
 # install ros2 packages
@@ -75,14 +75,14 @@ RUN /isaac-sim/python.sh -m pip install gdal==$(gdal-config --version)
 # isaac ros2_bridge config
 ENV isaac_sim_package_path=/isaac-sim
 ENV RMW_IMPLEMENTATION=rmw_fastrtps_cpp
-ENV LD_LIBRARY_PATH=/isaac-sim/exts/isaacsim.ros2.bridge/humble/lib
+ENV LD_LIBRARY_PATH=/isaac-sim/exts/isaacsim.ros2.bridge/jazzy/lib
 
 ## For convenience:
 RUN echo "alias kk='clear'" >> /root/.bashrc
 RUN echo "alias tt='tmux new'" >> /root/.bashrc
 RUN echo "alias isaacpy='/isaac-sim/python.sh'" >> /root/.bashrc
 RUN echo "alias isaacapp='/isaac-sim/runapp.sh'" >> /root/.bashrc
-RUN echo "alias humble='unset LD_LIBRARY_PATH && source /opt/ros/$ROS_DISTRO/setup.bash'" >> /root/.bashrc
+RUN echo "alias jazzy='unset LD_LIBRARY_PATH && source /opt/ros/$ROS_DISTRO/setup.bash'" >> /root/.bashrc
 # Save the bash history immediately on each execution
 RUN echo "export PROMPT_COMMAND='history -a'" >> /root/.bashrc
 RUN echo "export HISTFILE=/commandhistory/.bash_history" >> /root/.bashrc
