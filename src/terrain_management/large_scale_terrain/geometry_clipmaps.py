@@ -12,6 +12,7 @@ import warp as wp
 
 from src.terrain_management.large_scale_terrain.geometry_clipmaps_numba import (
     _build_mesh,
+    _mesh_to_numpy,
 )
 from src.terrain_management.large_scale_terrain.geometry_clipmaps_warp import (
     _bicubic_interpolation,
@@ -145,9 +146,9 @@ class GeoClipmap:
                     self.specs.meshBaseLODExtentHeightfieldTexels,
                 )
             with ScopedTimer("cast to numpy", active=self.profiling):
-                self.points = np.array(self.points) * 2 * self.specs.minimum_target_resolution
-                self.uvs = np.array(self.uvs) * 2 * self.specs.minimum_target_resolution
-                self.indices = np.array(self.indices)
+                self.points, self.uvs, self.indices = _mesh_to_numpy(self.points, self.uvs, self.indices)
+                self.points = self.points * 2 * self.specs.minimum_target_resolution
+                self.uvs = self.uvs * 2 * self.specs.minimum_target_resolution
 
     def save_mesh(self) -> None:
         """

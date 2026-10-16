@@ -5,6 +5,7 @@ __email__ = "ljburtz@jaops.com"
 import logging
 
 import numba as nb
+import numpy as np
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(format="%(asctime)s %(message)s", datefmt="%m/%d/%Y %I:%M:%S %p")
@@ -250,3 +251,46 @@ def _build_mesh(start_level, num_levels, meshBaseLODExtentHeightfieldTexels):
         prev_indices = new_indices.copy()
         new_indices = nb.typed.Dict.empty(key_type=point2, value_type=nb.types.int32)
     return points, uvs, indices
+
+
+@nb.jit(
+    nb.types.Tuple((nb.types.float64[:, ::1], nb.types.float64[:, ::1], nb.types.int64[::1]))(
+        point3_list_type,
+        point2_list_type,
+        idx_list_type,
+    ),
+    nopython=True,
+)
+def _mesh_to_numpy(points, uvs, indices):
+    """
+    Convert the typed lists returned by _build_mesh to numpy arrays. Calling np.array on numba
+    typed lists from Python boxes every element one by one, which is extremely slow for large
+    meshes. Doing the conversion inside numba is orders of magnitude faster. The output dtypes
+    (float64 for points and UVs, int64 for indices) match those obtained with np.array so that
+    the generated mesh backbone is identical.
+
+    Args:
+        points (point3_list_type): List of vertices in the mesh.
+        uvs (point2_list_type): List of UV coordinates of the vertices in the mesh.
+        indices (idx_list_type): List of indices of the vertices in the mesh.
+
+    Returns:
+        Tuple[np.ndarray, np.ndarray, np.ndarray]: Vertices (N, 3), UV coordinates (M, 2), and
+        indices (M,) in the mesh backbone.
+    """
+
+    points_np = np.empty((len(points), 3), dtype=np.float64)
+    for i in range(len(points)):
+        point = points[i]
+        points_np[i, 0] = point[0]
+        points_np[i, 1] = point[1]
+        points_np[i, 2] = point[2]
+    uvs_np = np.empty((len(uvs), 2), dtype=np.float64)
+    for i in range(len(uvs)):
+        uv = uvs[i]
+        uvs_np[i, 0] = uv[0]
+        uvs_np[i, 1] = uv[1]
+    indices_np = np.empty(len(indices), dtype=np.int64)
+    for i in range(len(indices)):
+        indices_np[i] = indices[i]
+    return points_np, uvs_np, indices_np
