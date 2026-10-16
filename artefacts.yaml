@@ -4,7 +4,7 @@ version: 0.1.0
 jobs:
   test-startup:
     type: test
-    timeout: 15 # minutes
+    timeout: 30 # minutes
     package:
       docker:
         build:
@@ -12,10 +12,14 @@ jobs:
     runtime:
       framework: other
       simulator: isaacsim
-      
+
     scenarios:
       settings:
         - name: test_ros2_sanity
           run: "pixi run test-ros2"
+        - name: test_ros2_sanity_largescale
+          run: "pixi run test-ros2-largescale"
         - name: test_yamcs_sanity
           run: "pixi run test-yamcs"
+        - name: test_yamcs_sanity_largescale
+          run: "pixi run test-yamcs-largescale"
