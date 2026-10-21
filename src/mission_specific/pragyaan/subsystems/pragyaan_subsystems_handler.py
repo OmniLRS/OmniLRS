@@ -3,6 +3,7 @@ __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
 
 import logging
+import math
 
 import numpy as np
 from isaacsim.core.utils.prims import is_prim_path_valid
@@ -21,8 +22,15 @@ logger = logging.getLogger(__name__)
 
 
 class PragyaanSubsystemsHandler(RobotSubsystemsHandler):
-    # Default sun direction in the world frame (only used in case Sun prim path is not set or invalid)
-    SUN_DIRECTION = (0.0, 1.0, 0.0)
+    # Defaults Sun position (only used in case Sun prim path is not set or invalid)
+    SUN_DISTANCE = 1000.0  # m
+    SUN_AZYMUTH_DEG = 65.0
+    SUN_ELEVATION_DEG = 2.0
+    SUN_POSITION = (
+        -SUN_DISTANCE * math.sin(math.pi * SUN_AZYMUTH_DEG / 180.0),
+        SUN_DISTANCE * math.cos(math.pi * SUN_AZYMUTH_DEG / 180.0),
+        SUN_DISTANCE * math.sin(math.pi * SUN_ELEVATION_DEG / 180.0),
+    )
     # Default lander position in the world frame (only used in case no valid prim path is provided)
     LANDER_POSITION = (0.0, 0.0, 0.0)
 
@@ -46,7 +54,7 @@ class PragyaanSubsystemsHandler(RobotSubsystemsHandler):
         self._setup_power_model()
         self.LANDER_PATH = pos_relative_to_prim
         self._sun_prim_path = None
-        self._sun_direction = np.asarray(self.SUN_DIRECTION)
+        self._sun_direction = np.asarray(self.SUN_POSITION) / np.linalg.norm(self.SUN_POSITION)
         self._sun_default_warned = False
         self._neutron_spectrometer = NeutronSpectrometerModel()
 
@@ -110,7 +118,7 @@ class PragyaanSubsystemsHandler(RobotSubsystemsHandler):
             w, x, y, z = quat_wxyz
             self._sun_direction = Rotation.from_quat([x, y, z, w]).apply([-1.0, 0.0, 0.0])  # fixed coordinates
         elif not self._sun_default_warned:
-            # sun direction keeps its previous value (SUN_DIRECTION if no valid sun prim was ever read)
+            # sun direction keeps its previous value (SUN_POSITION if no valid sun prim was ever read)
             logger.warning(
                 "[PragyaanSubsystemsHandler] sun prim path '%s' is not set or invalid. Using default sun direction %s.",
                 self._sun_prim_path,
