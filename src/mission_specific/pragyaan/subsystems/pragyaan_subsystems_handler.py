@@ -2,6 +2,8 @@ __author__ = "Aleksa Stanivuk"
 __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
 
+import logging
+
 import numpy as np
 from isaacsim.core.utils.prims import is_prim_path_valid
 from isaacsim.core.utils.xforms import get_world_pose
@@ -15,8 +17,13 @@ from src.subsystems.device import CommonDevice, Device, HealthState, PowerState
 from src.subsystems.robot_enums import ObcState, SolarPanelState
 from src.subsystems.robot_subsystems_handler import RobotSubsystemsHandler
 
+logger = logging.getLogger(__name__)
+
 
 class PragyaanSubsystemsHandler(RobotSubsystemsHandler):
+    # Default sun direction in the world frame (only used in case Sun prim path is not set or invalid)
+    SUN_DIRECTION = (0.0, 1.0, 0.0)
+    # Default lander position in the world frame (only used in case no valid prim path is provided)
     LANDER_POSITION = (0.0, 0.0, 0.0)
 
     # for setting up the Pragyaan-specific PowerModel:
@@ -39,7 +46,8 @@ class PragyaanSubsystemsHandler(RobotSubsystemsHandler):
         self._setup_power_model()
         self.LANDER_PATH = pos_relative_to_prim
         self._sun_prim_path = None
-        self._sun_direction = np.array((0.0, 1.0, 0.0))  # default: sun along +Y
+        self._sun_direction = np.asarray(self.SUN_DIRECTION)
+        self._sun_default_warned = False
         self._neutron_spectrometer = NeutronSpectrometerModel()
 
         # handle reporting of the rover position relative to the lander. If no prim path provided or path is invalid, default to reporting global position
@@ -47,18 +55,23 @@ class PragyaanSubsystemsHandler(RobotSubsystemsHandler):
             self._lander_pos, rot = get_world_pose(self.LANDER_PATH)
         else:
             if pos_relative_to_prim == "":
-                print(
-                    "[PragyaanSubsystemsHandler] WARNING: no lander prim path provided. Defaulting to global position reporting."
+                logger.warning(
+                    "[PragyaanSubsystemsHandler] no lander prim path provided. Defaulting to LANDER_POSITION %s.",
+                    self.LANDER_POSITION,
                 )
             else:
-                print(
-                    f"[PragyaanSubsystemsHandler] WARNING: lander prim path '{self.LANDER_PATH}' not found in the world. Defaulting to global position reporting."
+                logger.warning(
+                    "[PragyaanSubsystemsHandler] lander prim path '%s' not found in the world. "
+                    "Defaulting to LANDER_POSITION %s.",
+                    self.LANDER_PATH,
+                    self.LANDER_POSITION,
                 )
             self._lander_pos = self.LANDER_POSITION
 
     def set_sun_prim_path(self, sun_prim_path: str):
         # should be called from within the instance of SimulationManager after setting the EnvironmentManager and spawning the robot
         self._sun_prim_path = sun_prim_path
+        self._sun_default_warned = False
 
     def _setup_devices(self):
         # Pragyaan and workshop-specific values for the subsystem devices
@@ -92,11 +105,18 @@ class PragyaanSubsystemsHandler(RobotSubsystemsHandler):
         )
 
     def _update_sun_direction(self):
-        if self._sun_prim_path is not None:
+        if self._sun_prim_path is not None and is_prim_path_valid(self._sun_prim_path):
             _, quat_wxyz = get_world_pose(self._sun_prim_path)
             w, x, y, z = quat_wxyz
             self._sun_direction = Rotation.from_quat([x, y, z, w]).apply([-1.0, 0.0, 0.0])  # fixed coordinates
-        # if _sun_prim_path is None, sun direction stays as the default
+        elif not self._sun_default_warned:
+            # sun direction keeps its previous value (SUN_DIRECTION if no valid sun prim was ever read)
+            logger.warning(
+                "[PragyaanSubsystemsHandler] sun prim path '%s' is not set or invalid. Using default sun direction %s.",
+                self._sun_prim_path,
+                np.round(self._sun_direction, 3).tolist(),
+            )
+            self._sun_default_warned = True
 
     @staticmethod
     def _update_sun_direction_before(func):
