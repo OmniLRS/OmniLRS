@@ -161,7 +161,7 @@ terrain_manager:
     is_lab: True
 
   root_path: /Lunaryard
-  texture_path: /Lunaryard/Looks/LunarRegolith8k
+  texture_path: /Lunaryard/Looks/LunarRegolithInfinite
   dems_path: Terrains/Lunaryard
   mesh_position: [0, 0, 0]
   mesh_orientation: [0, 0, 0, 1] # Quaternion x,y,z,w
