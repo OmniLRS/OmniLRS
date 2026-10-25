@@ -426,6 +426,53 @@ class WriteInstanceData(BaseWriter):
         self.counter += 1
 
 
+class WriteNormalsData(BaseWriter):
+    """
+    Write surface normals (float16 xyz, npz) to a file.
+    """
+
+    def __init__(
+        self,
+        root_path: str,
+        name: str = "normals",
+        prefix: str = "",
+        element_per_folder: int = 1000,
+        **kwargs,
+    ) -> None:
+        """
+        Initialize the WriteNormalsData class.
+
+        Args:
+            root_path (str): The root path of the data.
+            name (str, optional): The name of the data. Defaults to "normals".
+            prefix (str, optional): The prefix of the data. Defaults to "".
+            element_per_folder (int, optional): The number of elements per folder. Defaults to 1000.
+            **kwargs: Additional arguments.
+        """
+
+        super().__init__(root_path, name=name, prefix=prefix, element_per_folder=element_per_folder)
+
+    def write(self, data: np.ndarray, **kwargs) -> None:
+        """
+        Write surface normals data to a file.
+
+        Args:
+            data (np.ndarray): The surface normals data.
+            **kwargs: Additional arguments.
+        """
+
+        arr = np.asarray(data)
+        if arr.dtype != np.float32:
+            arr = np.frombuffer(arr, dtype=np.float32).reshape(*arr.shape, -1)
+        arr = np.squeeze(arr)
+        xyz = arr[..., :3].astype(np.float16)
+        self.makeFolder()
+        np.savez_compressed(
+            os.path.join(self.current_folder, f"{self.counter:0{self.image_fix_name_size}d}.npz"), normals=xyz
+        )
+        self.counter += 1
+
+
 class WriterFactory:
     """
     A factory class to create writers.
@@ -471,3 +518,4 @@ writerFactory.registerWriter("ir", WriteIRData)
 writerFactory.registerWriter("depth", WriteDepthData)
 writerFactory.registerWriter("semantic_segmentation", WriteSemanticData)
 writerFactory.registerWriter("instance_segmentation", WriteInstanceData)
+writerFactory.registerWriter("normals", WriteNormalsData)

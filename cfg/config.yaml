@@ -3,6 +3,7 @@ defaults:
   - environment: lunalab
   - rendering: ray_tracing
   - mode: ROS2
+  - optional dataset: null
   - physics: default_physics
   - optional robot: null
   - optional controller: null
