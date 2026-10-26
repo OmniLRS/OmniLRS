@@ -2,8 +2,8 @@ __author__ = "Bach Nguyen, Shamistan Karimov"
 __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
 
-import asyncio
 import argparse
+import asyncio
 
 import cv2
 import msgspec
@@ -26,13 +26,10 @@ async def main(robot_name: str, camera_name: str):
     finally:
         sub.close()
 
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="View camera stream over Zenoh.")
-    parser.add_argument(
-        "robot_name",
-        nargs="?",
-        default="husky"
-    )
+    parser.add_argument("robot_name", nargs="?", default="husky")
     parser.add_argument(
         "camera_name",
         nargs="?",

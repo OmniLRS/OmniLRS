@@ -99,7 +99,7 @@ class CameraBridge:
             camera_name = transport.keyexpr.split("/")[-2]
 
             camera_idx, _ = self.RM.robot.get_camera_by_name(camera_name)
-            
+
             frame = self.RM.robot.get_rgba_camera_view_by_idx(camera_idx, resolution)
 
             if frame.size != 0:

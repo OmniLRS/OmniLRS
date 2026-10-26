@@ -62,7 +62,7 @@ class HuskyCommander:
             f"{HuskyCameraHandler.BUCKET_ONCOMMAND_PREFIX}_{camera_name}",
             HuskyCameraResolution.HIGH.value,
             CameraViewType.RGBA,
-            camera_idx
+            camera_idx,
         )
         self._obc_handler.set_obc_state(ObcState.CAMERA, 10)
 
@@ -73,7 +73,7 @@ class HuskyCommander:
             f"{HuskyCameraHandler.BUCKET_DEPTH_PREFIX}_{camera_name}",
             HuskyCameraResolution.HIGH.value,
             CameraViewType.DEPTH,
-            camera_idx
+            camera_idx,
         )
         self._obc_handler.set_obc_state(ObcState.CAMERA, 10)
 
@@ -94,7 +94,7 @@ class HuskyCommander:
                         f"{HuskyCameraHandler.BUCKET_STREAMING_PREFIX}_{camera_name}",
                         HuskyCameraResolution.LOW.value,
                         CameraViewType.RGBA,
-                        camera_idx
+                        camera_idx,
                     ),
                 )
         else:

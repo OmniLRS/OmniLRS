@@ -261,7 +261,7 @@ class Robot:
         self._last_joint_velocities: dict[str, float] = {}
         self._last_joint_efforts: dict[str, float] = {}
         self._last_wheel_joint_angles: list[float] = []
-        self._camera_conf = camera_conf # expecting a list of cameras
+        self._camera_conf = camera_conf  # expecting a list of cameras
         self._cameras = []
         self.dimensions = dimensions
         self.turn_speed_coef = turn_speed_coef
@@ -413,7 +413,7 @@ class Robot:
 
             camera["resolutions"] = {}
             for res in resolutions:
-                # Note: each camera resolution has its own RGBA camera instance & Depth camera instance 
+                # Note: each camera resolution has its own RGBA camera instance & Depth camera instance
                 camera["resolutions"][res] = {
                     "resolution": camera_conf["resolutions"][res],
                     "rgba": Camera(
@@ -434,14 +434,7 @@ class Robot:
 
     def get_camera_by_name(self, camera_name) -> tuple[int, Dict] | None:
         """Return camera index & camera dict from given camera_name"""
-        return next(
-            (
-                (i, cam) 
-                for i, cam in enumerate(self._cameras) 
-                if cam["name"] == camera_name
-            ), 
-            None
-        )
+        return next(((i, cam) for i, cam in enumerate(self._cameras) if cam["name"] == camera_name), None)
 
     def get_rgba_camera_view_by_idx(self, idx, resolution) -> np.ndarray:
         return self._cameras[idx]["resolutions"][resolution]["rgba"].get_rgba()

@@ -140,7 +140,9 @@ class PragyaanTransmitter:
         packets_lost = compression_status["packets_lost"] % self.PACKET_COUNTER_MODULO
         self._transmit(self._parameters_conf[f"camera_packets_sent_{camera_name}"], packets_sent)
         self._transmit(self._parameters_conf[f"camera_packets_lost_{camera_name}"], packets_lost)
-        self._transmit(self._parameters_conf[f"camera_decode_errors_{camera_name}"], compression_status["decode_errors"])
+        self._transmit(
+            self._parameters_conf[f"camera_decode_errors_{camera_name}"], compression_status["decode_errors"]
+        )
 
     def transmit_go_nogo(self):
         go_nogo_state = self._robot.subsystems.get_go_nogo_state().value

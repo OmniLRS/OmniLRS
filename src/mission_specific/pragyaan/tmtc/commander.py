@@ -65,7 +65,10 @@ class PragyaanCommander:
         if self._robot.subsystems.get_device_power_state(CommonDevice.CAMERA) == PowerState.ON:
             camera_idx, _ = self._robot.get_camera_by_name(camera_name)
             self._camera_handler.transmit_camera_view(
-                f"{PragyaanCameraHandler.BUCKET_ONCOMMAND_PREFIX}_{camera_name}", PragyaanCameraResolution.HIGH.value, CameraViewType.RGBA, camera_idx
+                f"{PragyaanCameraHandler.BUCKET_ONCOMMAND_PREFIX}_{camera_name}",
+                PragyaanCameraResolution.HIGH.value,
+                CameraViewType.RGBA,
+                camera_idx,
             )
             self._obc_handler.set_obc_state(ObcState.CAMERA, 10)
 
@@ -73,7 +76,10 @@ class PragyaanCommander:
         if self._robot.subsystems.get_device_power_state(CommonDevice.CAMERA) == PowerState.ON:
             camera_idx, _ = self._robot.get_camera_by_name(camera_name)
             self._camera_handler.transmit_camera_view(
-                f"{PragyaanCameraHandler.BUCKET_DEPTH_PREFIX}_{camera_name}", PragyaanCameraResolution.HIGH.value, CameraViewType.DEPTH, camera_idx
+                f"{PragyaanCameraHandler.BUCKET_DEPTH_PREFIX}_{camera_name}",
+                PragyaanCameraResolution.HIGH.value,
+                CameraViewType.DEPTH,
+                camera_idx,
             )
             self._obc_handler.set_obc_state(ObcState.CAMERA, 10)
 
@@ -142,7 +148,12 @@ class PragyaanCommander:
                     is_repeating=True,
                     execute_immediately=False,
                     function=self._camera_handler.transmit_camera_view,
-                    f_args=(f"{PragyaanCameraHandler.BUCKET_STREAMING_PREFIX}_{camera_name}", PragyaanCameraResolution.LOW.value, CameraViewType.RGBA, camera_idx),
+                    f_args=(
+                        f"{PragyaanCameraHandler.BUCKET_STREAMING_PREFIX}_{camera_name}",
+                        PragyaanCameraResolution.LOW.value,
+                        CameraViewType.RGBA,
+                        camera_idx,
+                    ),
                 )
         else:
             print("Unknown action:", action)

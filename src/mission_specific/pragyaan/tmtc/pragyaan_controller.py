@@ -29,7 +29,7 @@ class PragyaanController(YamcsTMTC):
     Besides utilizing handlers provided by YamcsTMTC, the controller implements its own specific handlers that adhere to rover's use case.
     """
 
-    def __init__(self, yamcs_instance_conf, yamcs_conf, robot_name, robot_RG, robot, cameras_conf = None):
+    def __init__(self, yamcs_instance_conf, yamcs_conf, robot_name, robot_RG, robot, cameras_conf=None):
         super().__init__(yamcs_instance_conf, yamcs_conf, robot_name, robot_RG, robot)
         self._intervals = yamcs_conf["intervals"]
         self._payload_handler: PayloadHandler = PayloadHandler(self._images_handler, self._yamcs_conf["payload"])
@@ -75,9 +75,13 @@ class PragyaanController(YamcsTMTC):
             commands_conf["camera_capture_high"], self._commander.handle_high_res_capture, args=["camera_name"]
         )
         self._commands_handler.add_command(
-            commands_conf["camera_streaming_on_off"], self._commander.set_activity_of_camera_streaming, args=["action", "camera_name"]
+            commands_conf["camera_streaming_on_off"],
+            self._commander.set_activity_of_camera_streaming,
+            args=["action", "camera_name"],
         )
-        self._commands_handler.add_command(commands_conf["camera_capture_depth"], self._commander.handle_depth_capture, args=["camera_name"])
+        self._commands_handler.add_command(
+            commands_conf["camera_capture_depth"], self._commander.handle_depth_capture, args=["camera_name"]
+        )
         self._commands_handler.add_command(
             commands_conf["set_camera_streaming_params"],
             self._commander.set_camera_streaming_params,

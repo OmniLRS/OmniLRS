@@ -153,16 +153,22 @@ class PragyaanCameraHandler:
         return model.get_outputs()["compressed_image"]
 
     def get_compression_model_outputs(self, camera_name):
-        model = self._compression_models.get((f"{self.BUCKET_STREAMING_PREFIX}_{camera_name}", PragyaanCameraResolution.LOW.value))
+        model = self._compression_models.get(
+            (f"{self.BUCKET_STREAMING_PREFIX}_{camera_name}", PragyaanCameraResolution.LOW.value)
+        )
         if model is None:
             return None
         return model.get_outputs()
 
     def set_streaming_compression_params(self, **params):
-        model = self._get_compression_model(f"{self.BUCKET_STREAMING_PREFIX}_{params['camera_name']}", PragyaanCameraResolution.LOW.value)
+        model = self._get_compression_model(
+            f"{self.BUCKET_STREAMING_PREFIX}_{params['camera_name']}", PragyaanCameraResolution.LOW.value
+        )
         model.update_parameters(**params)
 
-    def transmit_camera_view(self, bucket: str, resolution: str, type: CameraViewType = CameraViewType.RGBA, camera_idx: int = 0):
+    def transmit_camera_view(
+        self, bucket: str, resolution: str, type: CameraViewType = CameraViewType.RGBA, camera_idx: int = 0
+    ):
         camera_view: Image = None
 
         if type == CameraViewType.DEPTH:

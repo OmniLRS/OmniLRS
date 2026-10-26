@@ -21,15 +21,7 @@ class HuskyController(YamcsTMTC):
         start_streaming_data()                  — schedules periodic telemetry transmissions.
     """
 
-    def __init__(
-        self,
-        yamcs_instance_conf,
-        yamcs_conf,
-        robot_name,
-        robot_RG,
-        robot,
-        cameras_conf = None
-    ):
+    def __init__(self, yamcs_instance_conf, yamcs_conf, robot_name, robot_RG, robot, cameras_conf=None):
         super().__init__(yamcs_instance_conf, yamcs_conf, robot_name, robot_RG, robot)
         self._drive_handler = HuskyDriveHandler(robot, self._intervals_handler, self._obc_handler)
 
@@ -71,9 +63,7 @@ class HuskyController(YamcsTMTC):
             args=["angular_velocity", "angle"],
         )
         self._commands_handler.add_command(
-            commands_conf["camera_capture_high"],
-            self._commander.handle_high_res_capture,
-            args=["camera_name"]
+            commands_conf["camera_capture_high"], self._commander.handle_high_res_capture, args=["camera_name"]
         )
         self._commands_handler.add_command(
             commands_conf["camera_streaming_on_off"],
@@ -81,9 +71,7 @@ class HuskyController(YamcsTMTC):
             args=["action", "camera_name"],
         )
         self._commands_handler.add_command(
-            commands_conf["camera_capture_depth"],
-            self._commander.handle_depth_capture,
-            args=["camera_name"]
+            commands_conf["camera_capture_depth"], self._commander.handle_depth_capture, args=["camera_name"]
         )
 
     def start_streaming_data(self):
