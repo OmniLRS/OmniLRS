@@ -47,18 +47,19 @@ class CameraBridge:
 
     def make_transports(self):
         if self.camera_cfg:
-            resolutions = self.camera_cfg["resolutions"]
             specs = []
-            for res in resolutions:
-                specs.append(
-                    {
-                        "type": "zenoh",
-                        "keyexpr": self.build_camera_keyexpr(self.camera_cfg["name"], res),
-                        "wire_format": self.wire_format,
-                        "is_logging": self.is_logging,
-                        "log_every_n": self.log_every_n,
-                    }
-                )
+            for camera in self.camera_cfg:
+                resolutions = camera["resolutions"]
+                for res in resolutions:
+                    specs.append(
+                        {
+                            "type": "zenoh",
+                            "keyexpr": self.build_camera_keyexpr(camera["name"], res),
+                            "wire_format": self.wire_format,
+                            "is_logging": self.is_logging,
+                            "log_every_n": self.log_every_n,
+                        }
+                    )
             self.transports = make_transports(specs)
 
     def maybe_initialize(self):
@@ -93,9 +94,13 @@ class CameraBridge:
             return False
         self._t_last_publish = now
 
-        for i, transport in enumerate(self.transports):
+        for transport in self.transports:
             resolution = transport.keyexpr.split("/")[-1]
-            frame = self.RM.robot.get_rgba_camera_view(resolution)
+            camera_name = transport.keyexpr.split("/")[-2]
+
+            camera_idx, _ = self.RM.robot.get_camera_by_name(camera_name)
+
+            frame = self.RM.robot.get_rgba_camera_view_by_idx(camera_idx, resolution)
 
             if frame.size != 0:
                 transport.publish_array(frame)

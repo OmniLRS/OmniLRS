@@ -29,7 +29,7 @@ class PragyaanController(YamcsTMTC):
     Besides utilizing handlers provided by YamcsTMTC, the controller implements its own specific handlers that adhere to rover's use case.
     """
 
-    def __init__(self, yamcs_instance_conf, yamcs_conf, robot_name, robot_RG, robot):
+    def __init__(self, yamcs_instance_conf, yamcs_conf, robot_name, robot_RG, robot, cameras_conf=None):
         super().__init__(yamcs_instance_conf, yamcs_conf, robot_name, robot_RG, robot)
         self._intervals = yamcs_conf["intervals"]
         self._payload_handler: PayloadHandler = PayloadHandler(self._images_handler, self._yamcs_conf["payload"])
@@ -60,6 +60,8 @@ class PragyaanController(YamcsTMTC):
             self._intervals_handler,
         )
 
+        self.cameras_conf = cameras_conf
+
     "Performs mapping between yamcs commands and functions that affect the simulation and rover's state"
 
     def setup_command_callbacks(self, commands_conf):
@@ -70,16 +72,21 @@ class PragyaanController(YamcsTMTC):
             commands_conf["drive_turn"], self._commander.drive_turn, args=["angular_velocity", "angle"]
         )
         self._commands_handler.add_command(
-            commands_conf["camera_capture_high"], self._commander.handle_high_res_capture
+            commands_conf["camera_capture_high"], self._commander.handle_high_res_capture, args=["camera_name"]
         )
         self._commands_handler.add_command(
-            commands_conf["camera_streaming_on_off"], self._commander.set_activity_of_camera_streaming, args=["action"]
+            commands_conf["camera_streaming_on_off"],
+            self._commander.set_activity_of_camera_streaming,
+            args=["action", "camera_name"],
         )
-        self._commands_handler.add_command(commands_conf["camera_capture_depth"], self._commander.handle_depth_capture)
+        self._commands_handler.add_command(
+            commands_conf["camera_capture_depth"], self._commander.handle_depth_capture, args=["camera_name"]
+        )
         self._commands_handler.add_command(
             commands_conf["set_camera_streaming_params"],
             self._commander.set_camera_streaming_params,
             args=[
+                "camera_name",
                 "bitrate",
                 "crf",
                 "keyframe_interval",
@@ -122,20 +129,27 @@ class PragyaanController(YamcsTMTC):
             execute_immediately=True,
             function=self._transmitter.transmit_pose_of_base_link,
         )
-        self._intervals_handler.add_new_interval(
-            name="camera streaming state",
-            seconds=self._intervals["robot_stats"],
-            is_repeating=True,
-            execute_immediately=True,
-            function=self._transmitter.transmit_camera_streaming_state,
-        )
-        self._intervals_handler.add_new_interval(
-            name="Camera compression",
-            seconds=self._intervals["robot_stats"],
-            is_repeating=True,
-            execute_immediately=True,
-            function=self._transmitter.transmit_camera_compression_info,
-        )
+
+        for camera_conf in self.cameras_conf:
+            camera_name = camera_conf["name"]
+
+            self._intervals_handler.add_new_interval(
+                name=f"camera_streaming_state_{camera_name}",
+                seconds=self._intervals["robot_stats"],
+                is_repeating=True,
+                execute_immediately=True,
+                function=self._transmitter.transmit_camera_streaming_state,
+                f_args=[camera_name],
+            )
+            self._intervals_handler.add_new_interval(
+                name=f"camera_compression_{camera_name}",
+                seconds=self._intervals["robot_stats"],
+                is_repeating=True,
+                execute_immediately=True,
+                function=self._transmitter.transmit_camera_compression_info,
+                f_args=[camera_name],
+            )
+
         self._intervals_handler.add_new_interval(
             name="GO_NOGO",
             seconds=self._intervals["robot_stats"],

@@ -122,25 +122,27 @@ class PragyaanTransmitter:
         self._transmit(self._parameters_conf["imu_gyroscope"], imu_gyroscope)
         self._transmit(self._parameters_conf["imu_orientation"], orientation)
 
-    def transmit_camera_streaming_state(self):
+    def transmit_camera_streaming_state(self, camera_name):
         is_camera_streaming = self._intervals_handler.does_exist(IntervalName.CAMERA_STREAMING.value)
         state = PowerState.ON if is_camera_streaming else PowerState.OFF
-        self._transmit(self._parameters_conf["camera_streaming_state"], state)
+        self._transmit(self._parameters_conf[f"camera_streaming_state_{camera_name}"], state)
 
-    def transmit_camera_compression_info(self):
-        compression_status = self._camera_handler.get_compression_model_outputs()
+    def transmit_camera_compression_info(self, camera_name):
+        compression_status = self._camera_handler.get_compression_model_outputs(camera_name)
         if compression_status is None:
             return
         # The bandwidth is 0 until the first frame is encoded; skip it as it is below the Yamcs MDB minimum
         bandwidth = compression_status["bandwidth"]
         if bandwidth > 0:
-            self._transmit(self._parameters_conf["camera_bandwidth"], int(bandwidth))
+            self._transmit(self._parameters_conf[f"camera_bandwidth_{camera_name}"], int(bandwidth))
         # Packet counters roll over like hardware counters; the model keeps the full counts.
         packets_sent = compression_status["packets_sent"] % self.PACKET_COUNTER_MODULO
         packets_lost = compression_status["packets_lost"] % self.PACKET_COUNTER_MODULO
-        self._transmit(self._parameters_conf["camera_packets_sent"], packets_sent)
-        self._transmit(self._parameters_conf["camera_packets_lost"], packets_lost)
-        self._transmit(self._parameters_conf["camera_decode_errors"], compression_status["decode_errors"])
+        self._transmit(self._parameters_conf[f"camera_packets_sent_{camera_name}"], packets_sent)
+        self._transmit(self._parameters_conf[f"camera_packets_lost_{camera_name}"], packets_lost)
+        self._transmit(
+            self._parameters_conf[f"camera_decode_errors_{camera_name}"], compression_status["decode_errors"]
+        )
 
     def transmit_go_nogo(self):
         go_nogo_state = self._robot.subsystems.get_go_nogo_state().value

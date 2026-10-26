@@ -21,14 +21,7 @@ class HuskyController(YamcsTMTC):
         start_streaming_data()                  — schedules periodic telemetry transmissions.
     """
 
-    def __init__(
-        self,
-        yamcs_instance_conf,
-        yamcs_conf,
-        robot_name,
-        robot_RG,
-        robot,
-    ):
+    def __init__(self, yamcs_instance_conf, yamcs_conf, robot_name, robot_RG, robot, cameras_conf=None):
         super().__init__(yamcs_instance_conf, yamcs_conf, robot_name, robot_RG, robot)
         self._drive_handler = HuskyDriveHandler(robot, self._intervals_handler, self._obc_handler)
 
@@ -55,6 +48,8 @@ class HuskyController(YamcsTMTC):
             self._intervals_handler,
         )
 
+        self.cameras_conf = cameras_conf
+
     def setup_command_callbacks(self, commands_conf):
         """Register Yamcs command → HuskyCommander method mappings."""
         self._commands_handler.add_command(
@@ -68,17 +63,15 @@ class HuskyController(YamcsTMTC):
             args=["angular_velocity", "angle"],
         )
         self._commands_handler.add_command(
-            commands_conf["camera_capture_high"],
-            self._commander.handle_high_res_capture,
+            commands_conf["camera_capture_high"], self._commander.handle_high_res_capture, args=["camera_name"]
         )
         self._commands_handler.add_command(
             commands_conf["camera_streaming_on_off"],
             self._commander.set_activity_of_camera_streaming,
-            args=["action"],
+            args=["action", "camera_name"],
         )
         self._commands_handler.add_command(
-            commands_conf["camera_capture_depth"],
-            self._commander.handle_depth_capture,
+            commands_conf["camera_capture_depth"], self._commander.handle_depth_capture, args=["camera_name"]
         )
 
     def start_streaming_data(self):
@@ -94,13 +87,18 @@ class HuskyController(YamcsTMTC):
             execute_immediately=True,
             function=self._transmitter.transmit_pose_of_base_link,
         )
-        self._intervals_handler.add_new_interval(
-            name="camera streaming state",
-            seconds=interval,
-            is_repeating=True,
-            execute_immediately=True,
-            function=self._transmitter.transmit_camera_streaming_state,
-        )
+        for camera_conf in self.cameras_conf:
+            camera_name = camera_conf["name"]
+
+            self._intervals_handler.add_new_interval(
+                name=f"camera_streaming_state_{camera_name}",
+                seconds=interval,
+                is_repeating=True,
+                execute_immediately=True,
+                function=self._transmitter.transmit_camera_streaming_state,
+                f_args=[camera_name],
+            )
+
         self._intervals_handler.add_new_interval(
             name="IMU readings",
             seconds=interval,

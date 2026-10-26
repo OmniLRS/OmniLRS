@@ -129,7 +129,7 @@ class HuskyTransmitter:
             modulo = angles[i] % (2 * math.pi)
             angles[i] = int(modulo * (1024.0 / (2 * math.pi)))
 
-    def transmit_camera_streaming_state(self):
+    def transmit_camera_streaming_state(self, camera_name):
         is_streaming = self._intervals_handler.does_exist(IntervalName.CAMERA_STREAMING.value)
         state = PowerState.ON if is_streaming else PowerState.OFF
-        self._transmit(self._parameters_conf["camera_streaming_state"], state)
+        self._transmit(self._parameters_conf[f"camera_streaming_state_{camera_name}"], state)

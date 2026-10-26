@@ -61,17 +61,25 @@ class PragyaanCommander:
     def handle_lander_camera_capture(self):
         self._camera_handler.transmit_lander_camera_view()
 
-    def handle_high_res_capture(self):
+    def handle_high_res_capture(self, camera_name: str):
         if self._robot.subsystems.get_device_power_state(CommonDevice.CAMERA) == PowerState.ON:
+            camera_idx, _ = self._robot.get_camera_by_name(camera_name)
             self._camera_handler.transmit_camera_view(
-                PragyaanCameraHandler.BUCKET_ONCOMMAND, PragyaanCameraResolution.HIGH.value, CameraViewType.RGBA
+                f"{PragyaanCameraHandler.BUCKET_ONCOMMAND_PREFIX}_{camera_name}",
+                PragyaanCameraResolution.HIGH.value,
+                CameraViewType.RGBA,
+                camera_idx,
             )
             self._obc_handler.set_obc_state(ObcState.CAMERA, 10)
 
-    def handle_depth_capture(self):
+    def handle_depth_capture(self, camera_name: str):
         if self._robot.subsystems.get_device_power_state(CommonDevice.CAMERA) == PowerState.ON:
+            camera_idx, _ = self._robot.get_camera_by_name(camera_name)
             self._camera_handler.transmit_camera_view(
-                PragyaanCameraHandler.BUCKET_DEPTH, PragyaanCameraResolution.HIGH.value, CameraViewType.DEPTH
+                f"{PragyaanCameraHandler.BUCKET_DEPTH_PREFIX}_{camera_name}",
+                PragyaanCameraResolution.HIGH.value,
+                CameraViewType.DEPTH,
+                camera_idx,
             )
             self._obc_handler.set_obc_state(ObcState.CAMERA, 10)
 
@@ -98,9 +106,10 @@ class PragyaanCommander:
         self._robot.subsystems.set_device_power_state(electronics, new_state)
 
         if electronics == CommonDevice.CAMERA:
-            self.set_activity_of_camera_streaming(
-                "START"
-            ) if new_state == PowerState.ON else self.set_activity_of_camera_streaming("STOP")
+            for camera in self._robot._cameras:
+                self.set_activity_of_camera_streaming(
+                    "START", camera["name"]
+                ) if new_state == PowerState.ON else self.set_activity_of_camera_streaming("STOP", camera["name"])
         elif electronics == CommonDevice.NEUTRON_SPECTROMETER:
             self.set_activity_of_neutron_streaming(new_state)
             pass
@@ -126,24 +135,32 @@ class PragyaanCommander:
         if decision == GoNogoState.NOGO:
             self._drive_handler.stop_robot()
 
-    def set_activity_of_camera_streaming(self, action: str):
+    def set_activity_of_camera_streaming(self, action: str, camera_name: str):
         if action == PragyaanYamcsArguments.STOP.value:
-            self._intervals_handler.remove_interval(IntervalName.CAMERA_STREAMING.value)
+            self._intervals_handler.remove_interval(f"{IntervalName.CAMERA_STREAMING.value}_{camera_name}")
         elif action == PragyaanYamcsArguments.START.value:
-            if not self._intervals_handler.does_exist(IntervalName.CAMERA_STREAMING.value):
+            if not self._intervals_handler.does_exist(f"{IntervalName.CAMERA_STREAMING.value}_{camera_name}"):
+                camera_idx, _ = self._robot.get_camera_by_name(camera_name)
+
                 self._intervals_handler.add_new_interval(
-                    name=IntervalName.CAMERA_STREAMING.value,
+                    name=f"{IntervalName.CAMERA_STREAMING.value}_{camera_name}",
                     seconds=self._intervals["camera_streaming"],
                     is_repeating=True,
                     execute_immediately=False,
                     function=self._camera_handler.transmit_camera_view,
-                    f_args=(PragyaanCameraHandler.BUCKET_STREAMING, PragyaanCameraResolution.LOW.value),
+                    f_args=(
+                        f"{PragyaanCameraHandler.BUCKET_STREAMING_PREFIX}_{camera_name}",
+                        PragyaanCameraResolution.LOW.value,
+                        CameraViewType.RGBA,
+                        camera_idx,
+                    ),
                 )
         else:
             print("Unknown action:", action)
 
     def set_camera_streaming_params(
         self,
+        camera_name: str,
         bitrate: int,
         crf: int,
         keyframe_interval: int,
@@ -153,6 +170,7 @@ class PragyaanCommander:
         # MDB arguments can not be null, so crf = -1 stands for None (bitrate mode)
         try:
             self._camera_handler.set_streaming_compression_params(
+                camera_name=camera_name,
                 bitrate=bitrate,
                 keyframe_interval=keyframe_interval,
                 crf=None if crf < 0 else crf,

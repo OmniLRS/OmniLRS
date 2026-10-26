@@ -261,9 +261,8 @@ class Robot:
         self._last_joint_velocities: dict[str, float] = {}
         self._last_joint_efforts: dict[str, float] = {}
         self._last_wheel_joint_angles: list[float] = []
-        self._camera_conf = camera_conf
-        self._cameras = {}
-        self._depth_cameras = {}
+        self._camera_conf = camera_conf  # expecting a list of cameras
+        self._cameras = []
         self.dimensions = dimensions
         self.turn_speed_coef = turn_speed_coef
         self._imu_sensor_interface = _sensor.acquire_imu_sensor_interface()
@@ -400,35 +399,48 @@ class Robot:
     def _initialize_cameras(self) -> None:
         # Camera is a wrapper, therefore it just wraps around the camera instance if it already exists
         # otherwise it creates a new camera instance on the provided prim_path
-        if "resolutions" not in self._camera_conf:
-            return
 
-        resolutions = list(self._camera_conf.get("resolutions").keys())
+        for camera_conf in self._camera_conf:
+            if "resolutions" not in camera_conf:
+                raise RuntimeError("Missing 'resolutions' in camera config.")
 
-        for res in resolutions:
-            self._cameras[res] = Camera(
-                self._camera_conf["prim_path"],
-                resolution=(self._camera_conf["resolutions"][res][0], self._camera_conf["resolutions"][res][1]),
-            )
-            self._cameras[res].initialize()
+            camera = {}
 
-        for res in resolutions:
-            self._depth_cameras[res] = Camera(
-                self._camera_conf["prim_path"],
-                resolution=(self._camera_conf["resolutions"][res][0], self._camera_conf["resolutions"][res][1]),
-            )
-            self._depth_cameras[res].initialize()
-            self._depth_cameras[res].add_distance_to_image_plane_to_frame()
+            resolutions = list(camera_conf["resolutions"].keys())
 
-    def get_rgba_camera_view(self, resolution) -> np.ndarray:
-        return self._cameras[resolution].get_rgba()
+            camera["name"] = camera_conf["name"]
+            camera["prim_path"] = camera_conf["prim_path"]
 
-    def get_depth_camera_view(self, resolution) -> np.ndarray:
-        """Returns depth image in meters as (H, W) float32 array."""
-        depth = self._depth_cameras[resolution].get_depth()
-        print("depth")
-        print(depth)
-        return depth
+            camera["resolutions"] = {}
+            for res in resolutions:
+                # Note: each camera resolution has its own RGBA camera instance & Depth camera instance
+                camera["resolutions"][res] = {
+                    "resolution": camera_conf["resolutions"][res],
+                    "rgba": Camera(
+                        camera_conf["prim_path"],
+                        resolution=(camera_conf["resolutions"][res][0], camera_conf["resolutions"][res][1]),
+                    ),
+                    "depth": Camera(
+                        camera_conf["prim_path"],
+                        resolution=(camera_conf["resolutions"][res][0], camera_conf["resolutions"][res][1]),
+                    ),
+                }
+
+                camera["resolutions"][res]["rgba"].initialize()
+                camera["resolutions"][res]["depth"].initialize()
+                camera["resolutions"][res]["depth"].add_distance_to_image_plane_to_frame()
+
+            self._cameras.append(camera)
+
+    def get_camera_by_name(self, camera_name) -> tuple[int, Dict] | None:
+        """Return camera index & camera dict from given camera_name"""
+        return next(((i, cam) for i, cam in enumerate(self._cameras) if cam["name"] == camera_name), None)
+
+    def get_rgba_camera_view_by_idx(self, idx, resolution) -> np.ndarray:
+        return self._cameras[idx]["resolutions"][resolution]["rgba"].get_rgba()
+
+    def get_depth_camera_view_by_idx(self, idx, resolution) -> np.ndarray:
+        return self._cameras[idx]["resolutions"][resolution]["depth"].get_depth()
 
     def get_imu_readings(self):
         if self._imu_sensor_path == "":

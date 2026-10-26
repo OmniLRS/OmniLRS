@@ -55,36 +55,46 @@ class HuskyCommander:
     # Camera commands
     # ------------------------------------------------------------------
 
-    def handle_high_res_capture(self):
+    def handle_high_res_capture(self, camera_name: str):
+        camera_idx, _ = self._robot.get_camera_by_name(camera_name)
+
         self._camera_handler.transmit_camera_view(
-            HuskyCameraHandler.BUCKET_ONCOMMAND,
+            f"{HuskyCameraHandler.BUCKET_ONCOMMAND_PREFIX}_{camera_name}",
             HuskyCameraResolution.HIGH.value,
             CameraViewType.RGBA,
+            camera_idx,
         )
         self._obc_handler.set_obc_state(ObcState.CAMERA, 10)
 
-    def handle_depth_capture(self):
+    def handle_depth_capture(self, camera_name: str):
+        camera_idx, _ = self._robot.get_camera_by_name(camera_name)
+
         self._camera_handler.transmit_camera_view(
-            HuskyCameraHandler.BUCKET_DEPTH,
+            f"{HuskyCameraHandler.BUCKET_DEPTH_PREFIX}_{camera_name}",
             HuskyCameraResolution.HIGH.value,
             CameraViewType.DEPTH,
+            camera_idx,
         )
         self._obc_handler.set_obc_state(ObcState.CAMERA, 10)
 
-    def set_activity_of_camera_streaming(self, action: str):
+    def set_activity_of_camera_streaming(self, action: str, camera_name: str):
         if action == HuskyYamcsArguments.STOP.value:
-            self._intervals_handler.remove_interval(IntervalName.CAMERA_STREAMING.value)
+            self._intervals_handler.remove_interval(f"{IntervalName.CAMERA_STREAMING.value}_{camera_name}")
         elif action == HuskyYamcsArguments.START.value:
             if not self._intervals_handler.does_exist(IntervalName.CAMERA_STREAMING.value):
+                camera_idx, _ = self._robot.get_camera_by_name(camera_name)
+
                 self._intervals_handler.add_new_interval(
-                    name=IntervalName.CAMERA_STREAMING.value,
+                    name=f"{IntervalName.CAMERA_STREAMING.value}_{camera_name}",
                     seconds=self._intervals["camera_streaming"],
                     is_repeating=True,
                     execute_immediately=False,
                     function=self._camera_handler.transmit_camera_view,
                     f_args=(
-                        HuskyCameraHandler.BUCKET_STREAMING,
+                        f"{HuskyCameraHandler.BUCKET_STREAMING_PREFIX}_{camera_name}",
                         HuskyCameraResolution.LOW.value,
+                        CameraViewType.RGBA,
+                        camera_idx,
                     ),
                 )
         else:

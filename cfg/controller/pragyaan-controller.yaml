@@ -14,11 +14,11 @@ robots_settings:
       camera_streaming: 1
     camera_compression:
       bitrate: 150_000 # Target bits/s with Video Buffering Verifier (VBV) constraints
-      crf: null # Set 0-51 for quality-based mode; higher means lower quality, bitrate is ignored
+      crf:      # Set 0-51 for quality-based mode; higher means lower quality, bitrate is ignored
       keyframe_interval: 10 # Keyframe interval in number of frames
       max_payload_size: 1200 # Maximum payload size in bytes
       loss_probability: 0.01 # between 0.0 and 1.0; Per-network-packet drop probability (not commandable)
-      seed: null # Seed for reproducible packet loss (not commandable)
+      seed:      # Seed for reproducible packet loss (not commandable)
       bandwidth_window_seconds: 10.0 # Rolling bitrate measurement window in seconds
     lander_camera:
       prim_path: "/StaticAssets/lander/Lander/Cam_Right/Lander_Camera"
@@ -26,16 +26,28 @@ robots_settings:
     images:
       no_data_image_path: "${oc.env:OMNILRS_ROOT,.}/assets/images/no_data_grafana.png"
       buckets:
-        - name: "images_streaming"
-          path: "/Rover/camera/images_streaming"
-        - name: "images_oncommand"
-          path: "/Rover/camera/images_oncommand"
-        - name: "images_depth"
-          path: "/Rover/camera/images_depth"
-        - name: "images_lander"
-          path: "/Lander/camera/images_oncommand"
-        - name: "images_monitoring"
-          path: "/Admin/camera/images_monitoring"
+        - name: images_lander
+          path: /Lander/camera/images_oncommand
+        - name: images_monitoring
+          path: /Admin/camera/images_monitoring
+        - name: images_depth_cam_depth
+          path: /Rover/camera/images_depth_cam_depth
+        - name: images_oncommand_cam_depth
+          path: /Rover/camera/images_oncommand_cam_depth
+        - name: images_streaming_cam_depth
+          path: /Rover/camera/images_streaming_cam_depth
+        - name: images_depth_NavCam_left
+          path: /Rover/camera/images_depth_NavCam_left
+        - name: images_oncommand_NavCam_left
+          path: /Rover/camera/images_oncommand_NavCam_left
+        - name: images_streaming_NavCam_left
+          path: /Rover/camera/images_streaming_NavCam_left
+        - name: images_depth_NavCam_right
+          path: /Rover/camera/images_depth_NavCam_right
+        - name: images_oncommand_NavCam_right
+          path: /Rover/camera/images_oncommand_NavCam_right
+        - name: images_streaming_NavCam_right
+          path: /Rover/camera/images_streaming_NavCam_right
     payload:
       apxs:
         resolution: [1440, 1080]
@@ -77,13 +89,38 @@ robots_settings:
       current_draw_radio: "/Rover/current_draw_radio"
       current_draw_eps: "/Rover/current_draw_eps"
       neutron_counts: "/Rover/neutron_counts"
-      camera_streaming_state: "/Rover/camera/images_streaming/state"
-      camera_bandwidth: "/Rover/camera/images_streaming/bandwidth"
-      camera_packets_sent: "/Rover/camera/images_streaming/packets_sent"
-      camera_packets_lost: "/Rover/camera/images_streaming/packets_lost"
-      camera_decode_errors: "/Rover/camera/images_streaming/decode_errors"
       solar_panel_state: "/Rover/solar_panel_state"
       motor_encoder: "/Rover/motor_encoder"
+      camera_streaming_state_cam_depth: 
+        /Rover/camera/images_streaming_cam_depth/state
+      camera_streaming_state_NavCam_left: 
+        /Rover/camera/images_streaming_NavCam_left/state
+      camera_streaming_state_NavCam_right: 
+        /Rover/camera/images_streaming_NavCam_right/state
+      camera_bandwidth_cam_depth: 
+        /Rover/camera/images_streaming_cam_depth/bandwidth
+      camera_bandwidth_NavCam_left: 
+        /Rover/camera/images_streaming_NavCam_left/bandwidth
+      camera_bandwidth_NavCam_right: 
+        /Rover/camera/images_streaming_NavCam_right/bandwidth
+      camera_packets_sent_cam_depth: 
+        /Rover/camera/images_streaming_cam_depth/packets_sent
+      camera_packets_sent_NavCam_left: 
+        /Rover/camera/images_streaming_NavCam_left/packets_sent
+      camera_packets_sent_NavCam_right: 
+        /Rover/camera/images_streaming_NavCam_right/packets_sent
+      camera_packets_lost_cam_depth: 
+        /Rover/camera/images_streaming_cam_depth/packets_lost
+      camera_packets_lost_NavCam_left: 
+        /Rover/camera/images_streaming_NavCam_left/packets_lost
+      camera_packets_lost_NavCam_right: 
+        /Rover/camera/images_streaming_NavCam_right/packets_lost
+      camera_decode_errors_cam_depth: 
+        /Rover/camera/images_streaming_cam_depth/decode_errors
+      camera_decode_errors_NavCam_left: 
+        /Rover/camera/images_streaming_NavCam_left/decode_errors
+      camera_decode_errors_NavCam_right: 
+        /Rover/camera/images_streaming_NavCam_right/decode_errors
     commands:
       drive_straight: "/Rover/motor/drive_straight"
       drive_turn: "/Rover/motor/drive_turn"

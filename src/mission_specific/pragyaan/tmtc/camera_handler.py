@@ -41,9 +41,9 @@ class PragyaanCameraHandler:
     """
 
     # reflects the buckets defined in yaml
-    BUCKET_STREAMING = "images_streaming"
-    BUCKET_ONCOMMAND = "images_oncommand"
-    BUCKET_DEPTH = "images_depth"
+    BUCKET_STREAMING_PREFIX = "images_streaming"
+    BUCKET_ONCOMMAND_PREFIX = "images_oncommand"
+    BUCKET_DEPTH_PREFIX = "images_depth"
     BUCKET_LANDER = "images_lander"
     BUCKET_MONITORING = "images_monitoring"
 
@@ -87,15 +87,15 @@ class PragyaanCameraHandler:
         camera_name = list(MonitoringCamerasManager.cameras.keys())[0]
         self._monitoring_cam = MonitoringCamerasManager.cameras[camera_name]
 
-    def _snap_camera_view_rgb(self, resolution: str) -> Image:
-        frame = self._robot.get_rgba_camera_view(resolution)
+    def _snap_camera_view_rgb(self, resolution: str, camera_idx: int) -> Image:
+        frame = self._robot.get_rgba_camera_view_by_idx(camera_idx, resolution)
         frame_uint8 = frame.astype(np.uint8)
         camera_view = Image.fromarray(frame_uint8, CameraViewType.RGBA.value)
 
         return camera_view
 
-    def _snap_camera_view_depth(self, resolution: str) -> Image:
-        frame = self._robot.get_depth_camera_view(resolution)
+    def _snap_camera_view_depth(self, resolution: str, camera_idx: int) -> Image:
+        frame = self._robot.get_depth_camera_view_by_idx(camera_idx, resolution)
         depth = np.nan_to_num(frame, nan=0.0, posinf=0.0, neginf=0.0)
 
         valid = depth > 0
@@ -152,24 +152,30 @@ class PragyaanCameraHandler:
         model.compute(0.0)
         return model.get_outputs()["compressed_image"]
 
-    def get_compression_model_outputs(self):
-        model = self._compression_models.get((self.BUCKET_STREAMING, PragyaanCameraResolution.LOW.value))
+    def get_compression_model_outputs(self, camera_name):
+        model = self._compression_models.get(
+            (f"{self.BUCKET_STREAMING_PREFIX}_{camera_name}", PragyaanCameraResolution.LOW.value)
+        )
         if model is None:
             return None
         return model.get_outputs()
 
     def set_streaming_compression_params(self, **params):
-        model = self._get_compression_model(self.BUCKET_STREAMING, PragyaanCameraResolution.LOW.value)
+        model = self._get_compression_model(
+            f"{self.BUCKET_STREAMING_PREFIX}_{params['camera_name']}", PragyaanCameraResolution.LOW.value
+        )
         model.update_parameters(**params)
 
-    def transmit_camera_view(self, bucket: str, resolution: str, type: CameraViewType = CameraViewType.RGBA):
+    def transmit_camera_view(
+        self, bucket: str, resolution: str, type: CameraViewType = CameraViewType.RGBA, camera_idx: int = 0
+    ):
         camera_view: Image = None
 
         if type == CameraViewType.DEPTH:
-            camera_view: Image = self._snap_camera_view_depth(resolution)
+            camera_view: Image = self._snap_camera_view_depth(resolution, camera_idx)
         elif type == CameraViewType.RGBA:
-            camera_view: Image = self._snap_camera_view_rgb(resolution)
-            if bucket == self.BUCKET_STREAMING:  # remove this condition to compress every RGBA view
+            camera_view: Image = self._snap_camera_view_rgb(resolution, camera_idx)
+            if self.BUCKET_STREAMING_PREFIX in bucket:  # remove this condition to compress every RGBA view
                 camera_view = self._compress(camera_view, bucket, resolution)
         else:
             print("in transmit_camera_view: unknown type:", type)
