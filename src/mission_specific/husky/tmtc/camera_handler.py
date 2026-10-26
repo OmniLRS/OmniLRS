@@ -26,9 +26,9 @@ class HuskyCameraHandler:
     been removed because Husky does not have an associated lander.
     """
 
-    BUCKET_STREAMING = "images_streaming"
-    BUCKET_ONCOMMAND = "images_oncommand"
-    BUCKET_DEPTH = "images_depth"
+    BUCKET_STREAMING_PREFIX = "images_streaming"
+    BUCKET_ONCOMMAND_PREFIX = "images_oncommand"
+    BUCKET_DEPTH_PREFIX = "images_depth"
 
     def __init__(self, images_handler: ImagesHandler, robot) -> None:
         self._images_handler = images_handler
@@ -38,15 +38,13 @@ class HuskyCameraHandler:
     # Internal snap helpers
     # ------------------------------------------------------------------
 
-    def _snap_camera_view_rgb(self, resolution: str) -> Image:
-        # Note: from 1st camera (index 0) as default
-        frame = self._robot.get_rgba_camera_view_by_idx(0, resolution)
+    def _snap_camera_view_rgb(self, resolution: str, camera_idx: int) -> Image:
+        frame = self._robot.get_rgba_camera_view_by_idx(camera_idx, resolution)
         frame_uint8 = frame.astype(np.uint8)
         return Image.fromarray(frame_uint8, CameraViewType.RGBA.value)
 
-    def _snap_camera_view_depth(self, resolution: str) -> Image:
-        # Note: from 1st camera (index 0) as default
-        frame = self._robot.get_depth_camera_view_by_idx(0, resolution)
+    def _snap_camera_view_depth(self, resolution: str, camera_idx: int) -> Image:
+        frame = self._robot.get_depth_camera_view_by_idx(camera_idx, resolution)
         depth = np.nan_to_num(frame, nan=0.0, posinf=0.0, neginf=0.0)
 
         valid = depth > 0
@@ -68,11 +66,12 @@ class HuskyCameraHandler:
         bucket: str,
         resolution: str,
         type: CameraViewType = CameraViewType.RGBA,
+        camera_idx: int = 0,
     ):
         if type == CameraViewType.DEPTH:
-            camera_view = self._snap_camera_view_depth(resolution)
+            camera_view = self._snap_camera_view_depth(resolution, camera_idx)
         elif type == CameraViewType.RGBA:
-            camera_view = self._snap_camera_view_rgb(resolution)
+            camera_view = self._snap_camera_view_rgb(resolution, camera_idx)
         else:
             print("HuskyCameraHandler.transmit_camera_view: unknown type:", type)
             return

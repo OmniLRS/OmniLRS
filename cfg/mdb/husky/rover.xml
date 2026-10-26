@@ -406,11 +406,35 @@ See https://github.com/yamcs/pymdb
     <TelemetryMetaData/>
     <CommandMetaData>
       <ArgumentTypeSet>
+        <EnumeratedArgumentType name="camera_capture_depth__camera_name">
+          <IntegerDataEncoding sizeInBits="8" encoding="unsigned"/>
+          <EnumerationList>
+            <Enumeration value="0" label="cam_color"/>
+            <Enumeration value="1" label="cam_left"/>
+            <Enumeration value="2" label="cam_right"/>
+          </EnumerationList>
+        </EnumeratedArgumentType>
+        <EnumeratedArgumentType name="camera_capture_high__camera_name">
+          <IntegerDataEncoding sizeInBits="8" encoding="unsigned"/>
+          <EnumerationList>
+            <Enumeration value="0" label="cam_color"/>
+            <Enumeration value="1" label="cam_left"/>
+            <Enumeration value="2" label="cam_right"/>
+          </EnumerationList>
+        </EnumeratedArgumentType>
         <EnumeratedArgumentType name="camera_streaming__action">
           <IntegerDataEncoding sizeInBits="8" encoding="unsigned"/>
           <EnumerationList>
             <Enumeration value="0" label="STOP"/>
             <Enumeration value="1" label="START"/>
+          </EnumerationList>
+        </EnumeratedArgumentType>
+        <EnumeratedArgumentType name="camera_streaming__camera_name">
+          <IntegerDataEncoding sizeInBits="8" encoding="unsigned"/>
+          <EnumerationList>
+            <Enumeration value="0" label="cam_color"/>
+            <Enumeration value="1" label="cam_left"/>
+            <Enumeration value="2" label="cam_right"/>
           </EnumerationList>
         </EnumeratedArgumentType>
         <StringArgumentType name="change_camera_settings__config_path">
@@ -426,6 +450,9 @@ See https://github.com/yamcs/pymdb
       </ArgumentTypeSet>
       <MetaCommandSet>
         <MetaCommand name="camera_capture_depth" abstract="false" shortDescription="Capture a depth image">
+          <ArgumentList>
+            <Argument name="camera_name" argumentTypeRef="camera_capture_depth__camera_name" shortDescription="Camera streaming action"/>
+          </ArgumentList>
           <CommandContainer name="camera_capture_depth">
             <EntryList>
               <FixedValueEntry binaryValue="63616d6572615f636170747572655f6465707468" sizeInBits="160" name="command_name" shortDescription="Command name identifier">
@@ -433,12 +460,20 @@ See https://github.com/yamcs/pymdb
                   <FixedValue>0</FixedValue>
                 </LocationInContainerInBits>
               </FixedValueEntry>
+              <ArgumentRefEntry argumentRef="camera_name" shortDescription="Camera name argument">
+                <LocationInContainerInBits referenceLocation="previousEntry">
+                  <FixedValue>0</FixedValue>
+                </LocationInContainerInBits>
+              </ArgumentRefEntry>
             </EntryList>
           </CommandContainer>
           <DefaultSignificance consequenceLevel="normal"/>
           <VerifierSet/>
         </MetaCommand>
         <MetaCommand name="camera_capture_high" abstract="false" shortDescription="Capture a high-resolution image">
+          <ArgumentList>
+            <Argument name="camera_name" argumentTypeRef="camera_capture_high__camera_name" shortDescription="Camera streaming action"/>
+          </ArgumentList>
           <CommandContainer name="camera_capture_high">
             <EntryList>
               <FixedValueEntry binaryValue="63616d6572615f636170747572655f68696768" sizeInBits="152" name="command_name" shortDescription="Command name identifier">
@@ -446,6 +481,11 @@ See https://github.com/yamcs/pymdb
                   <FixedValue>0</FixedValue>
                 </LocationInContainerInBits>
               </FixedValueEntry>
+              <ArgumentRefEntry argumentRef="camera_name" shortDescription="Camera name argument">
+                <LocationInContainerInBits referenceLocation="previousEntry">
+                  <FixedValue>0</FixedValue>
+                </LocationInContainerInBits>
+              </ArgumentRefEntry>
             </EntryList>
           </CommandContainer>
           <DefaultSignificance consequenceLevel="normal"/>
@@ -454,6 +494,7 @@ See https://github.com/yamcs/pymdb
         <MetaCommand name="camera_streaming" abstract="false" shortDescription="Start or stop camera streaming">
           <ArgumentList>
             <Argument name="action" argumentTypeRef="camera_streaming__action" shortDescription="Camera streaming action"/>
+            <Argument name="camera_name" argumentTypeRef="camera_streaming__camera_name" shortDescription="Camera streaming action"/>
           </ArgumentList>
           <CommandContainer name="camera_streaming">
             <EntryList>
@@ -463,6 +504,11 @@ See https://github.com/yamcs/pymdb
                 </LocationInContainerInBits>
               </FixedValueEntry>
               <ArgumentRefEntry argumentRef="action" shortDescription="Camera action argument">
+                <LocationInContainerInBits referenceLocation="previousEntry">
+                  <FixedValue>0</FixedValue>
+                </LocationInContainerInBits>
+              </ArgumentRefEntry>
+              <ArgumentRefEntry argumentRef="camera_name" shortDescription="Camera name argument">
                 <LocationInContainerInBits referenceLocation="previousEntry">
                   <FixedValue>0</FixedValue>
                 </LocationInContainerInBits>
@@ -495,7 +541,7 @@ See https://github.com/yamcs/pymdb
         </MetaCommand>
       </MetaCommandSet>
     </CommandMetaData>
-    <SpaceSystem name="images_depth" shortDescription="Depth camera image metadata">
+    <SpaceSystem name="images_depth_cam_color" shortDescription="Depth camera image metadata">
       <TelemetryMetaData>
         <ParameterTypeSet>
           <StringParameterType name="name"/>
@@ -524,7 +570,65 @@ See https://github.com/yamcs/pymdb
       </TelemetryMetaData>
       <CommandMetaData/>
     </SpaceSystem>
-    <SpaceSystem name="images_oncommand" shortDescription="On-command capture metadata">
+    <SpaceSystem name="images_depth_cam_left" shortDescription="Depth camera image metadata">
+      <TelemetryMetaData>
+        <ParameterTypeSet>
+          <StringParameterType name="name"/>
+          <IntegerParameterType name="number" signed="false" sizeInBits="32"/>
+          <StringParameterType name="url_full"/>
+          <StringParameterType name="url_full_nginx"/>
+          <StringParameterType name="url_storage"/>
+        </ParameterTypeSet>
+        <ParameterSet>
+          <Parameter name="name" parameterTypeRef="name" shortDescription="Friendly name for the depth capture">
+            <ParameterProperties dataSource="local" persistence="true"/>
+          </Parameter>
+          <Parameter name="number" parameterTypeRef="number" shortDescription="Sequence identifier for depth captures">
+            <ParameterProperties dataSource="local" persistence="true"/>
+          </Parameter>
+          <Parameter name="url_full" parameterTypeRef="url_full" shortDescription="External URL for depth captures">
+            <ParameterProperties dataSource="local" persistence="true"/>
+          </Parameter>
+          <Parameter name="url_full_nginx" parameterTypeRef="url_full_nginx" shortDescription="NGINX reverse proxy URL for depth captures">
+            <ParameterProperties dataSource="local" persistence="true"/>
+          </Parameter>
+          <Parameter name="url_storage" parameterTypeRef="url_storage" shortDescription="Storage endpoint for depth captures">
+            <ParameterProperties dataSource="local" persistence="true"/>
+          </Parameter>
+        </ParameterSet>
+      </TelemetryMetaData>
+      <CommandMetaData/>
+    </SpaceSystem>
+    <SpaceSystem name="images_depth_cam_right" shortDescription="Depth camera image metadata">
+      <TelemetryMetaData>
+        <ParameterTypeSet>
+          <StringParameterType name="name"/>
+          <IntegerParameterType name="number" signed="false" sizeInBits="32"/>
+          <StringParameterType name="url_full"/>
+          <StringParameterType name="url_full_nginx"/>
+          <StringParameterType name="url_storage"/>
+        </ParameterTypeSet>
+        <ParameterSet>
+          <Parameter name="name" parameterTypeRef="name" shortDescription="Friendly name for the depth capture">
+            <ParameterProperties dataSource="local" persistence="true"/>
+          </Parameter>
+          <Parameter name="number" parameterTypeRef="number" shortDescription="Sequence identifier for depth captures">
+            <ParameterProperties dataSource="local" persistence="true"/>
+          </Parameter>
+          <Parameter name="url_full" parameterTypeRef="url_full" shortDescription="External URL for depth captures">
+            <ParameterProperties dataSource="local" persistence="true"/>
+          </Parameter>
+          <Parameter name="url_full_nginx" parameterTypeRef="url_full_nginx" shortDescription="NGINX reverse proxy URL for depth captures">
+            <ParameterProperties dataSource="local" persistence="true"/>
+          </Parameter>
+          <Parameter name="url_storage" parameterTypeRef="url_storage" shortDescription="Storage endpoint for depth captures">
+            <ParameterProperties dataSource="local" persistence="true"/>
+          </Parameter>
+        </ParameterSet>
+      </TelemetryMetaData>
+      <CommandMetaData/>
+    </SpaceSystem>
+    <SpaceSystem name="images_oncommand_cam_color" shortDescription="On-command capture metadata">
       <TelemetryMetaData>
         <ParameterTypeSet>
           <StringParameterType name="name"/>
@@ -553,7 +657,141 @@ See https://github.com/yamcs/pymdb
       </TelemetryMetaData>
       <CommandMetaData/>
     </SpaceSystem>
-    <SpaceSystem name="images_streaming" shortDescription="Streaming capture metadata">
+    <SpaceSystem name="images_oncommand_cam_left" shortDescription="On-command capture metadata">
+      <TelemetryMetaData>
+        <ParameterTypeSet>
+          <StringParameterType name="name"/>
+          <IntegerParameterType name="number" signed="false" sizeInBits="32"/>
+          <StringParameterType name="url_full"/>
+          <StringParameterType name="url_full_nginx"/>
+          <StringParameterType name="url_storage"/>
+        </ParameterTypeSet>
+        <ParameterSet>
+          <Parameter name="name" parameterTypeRef="name" shortDescription="Friendly name for the on-command capture">
+            <ParameterProperties dataSource="local" persistence="true"/>
+          </Parameter>
+          <Parameter name="number" parameterTypeRef="number" shortDescription="Sequence identifier for on-command captures">
+            <ParameterProperties dataSource="local" persistence="true"/>
+          </Parameter>
+          <Parameter name="url_full" parameterTypeRef="url_full" shortDescription="External URL for on-command captures">
+            <ParameterProperties dataSource="local" persistence="true"/>
+          </Parameter>
+          <Parameter name="url_full_nginx" parameterTypeRef="url_full_nginx" shortDescription="NGINX reverse proxy URL for on-command captures">
+            <ParameterProperties dataSource="local" persistence="true"/>
+          </Parameter>
+          <Parameter name="url_storage" parameterTypeRef="url_storage" shortDescription="Storage endpoint for on-command captures">
+            <ParameterProperties dataSource="local" persistence="true"/>
+          </Parameter>
+        </ParameterSet>
+      </TelemetryMetaData>
+      <CommandMetaData/>
+    </SpaceSystem>
+    <SpaceSystem name="images_oncommand_cam_right" shortDescription="On-command capture metadata">
+      <TelemetryMetaData>
+        <ParameterTypeSet>
+          <StringParameterType name="name"/>
+          <IntegerParameterType name="number" signed="false" sizeInBits="32"/>
+          <StringParameterType name="url_full"/>
+          <StringParameterType name="url_full_nginx"/>
+          <StringParameterType name="url_storage"/>
+        </ParameterTypeSet>
+        <ParameterSet>
+          <Parameter name="name" parameterTypeRef="name" shortDescription="Friendly name for the on-command capture">
+            <ParameterProperties dataSource="local" persistence="true"/>
+          </Parameter>
+          <Parameter name="number" parameterTypeRef="number" shortDescription="Sequence identifier for on-command captures">
+            <ParameterProperties dataSource="local" persistence="true"/>
+          </Parameter>
+          <Parameter name="url_full" parameterTypeRef="url_full" shortDescription="External URL for on-command captures">
+            <ParameterProperties dataSource="local" persistence="true"/>
+          </Parameter>
+          <Parameter name="url_full_nginx" parameterTypeRef="url_full_nginx" shortDescription="NGINX reverse proxy URL for on-command captures">
+            <ParameterProperties dataSource="local" persistence="true"/>
+          </Parameter>
+          <Parameter name="url_storage" parameterTypeRef="url_storage" shortDescription="Storage endpoint for on-command captures">
+            <ParameterProperties dataSource="local" persistence="true"/>
+          </Parameter>
+        </ParameterSet>
+      </TelemetryMetaData>
+      <CommandMetaData/>
+    </SpaceSystem>
+    <SpaceSystem name="images_streaming_cam_color" shortDescription="Streaming capture metadata">
+      <TelemetryMetaData>
+        <ParameterTypeSet>
+          <StringParameterType name="name"/>
+          <IntegerParameterType name="number" signed="false" sizeInBits="32"/>
+          <EnumeratedParameterType name="state">
+            <EnumerationList>
+              <Enumeration value="0" label="OFF"/>
+              <Enumeration value="1" label="ON"/>
+            </EnumerationList>
+          </EnumeratedParameterType>
+          <StringParameterType name="url_full"/>
+          <StringParameterType name="url_full_nginx"/>
+          <StringParameterType name="url_storage"/>
+        </ParameterTypeSet>
+        <ParameterSet>
+          <Parameter name="name" parameterTypeRef="name" shortDescription="Friendly name for the streaming capture">
+            <ParameterProperties dataSource="local" persistence="true"/>
+          </Parameter>
+          <Parameter name="number" parameterTypeRef="number" shortDescription="Sequence identifier for streaming captures">
+            <ParameterProperties dataSource="local" persistence="true"/>
+          </Parameter>
+          <Parameter name="state" parameterTypeRef="state" shortDescription="Streaming pipeline state">
+            <ParameterProperties dataSource="local" persistence="true"/>
+          </Parameter>
+          <Parameter name="url_full" parameterTypeRef="url_full" shortDescription="External URL for streaming captures">
+            <ParameterProperties dataSource="local" persistence="true"/>
+          </Parameter>
+          <Parameter name="url_full_nginx" parameterTypeRef="url_full_nginx" shortDescription="NGINX reverse proxy URL for streaming captures">
+            <ParameterProperties dataSource="local" persistence="true"/>
+          </Parameter>
+          <Parameter name="url_storage" parameterTypeRef="url_storage" shortDescription="Storage endpoint for streaming captures">
+            <ParameterProperties dataSource="local" persistence="true"/>
+          </Parameter>
+        </ParameterSet>
+      </TelemetryMetaData>
+      <CommandMetaData/>
+    </SpaceSystem>
+    <SpaceSystem name="images_streaming_cam_left" shortDescription="Streaming capture metadata">
+      <TelemetryMetaData>
+        <ParameterTypeSet>
+          <StringParameterType name="name"/>
+          <IntegerParameterType name="number" signed="false" sizeInBits="32"/>
+          <EnumeratedParameterType name="state">
+            <EnumerationList>
+              <Enumeration value="0" label="OFF"/>
+              <Enumeration value="1" label="ON"/>
+            </EnumerationList>
+          </EnumeratedParameterType>
+          <StringParameterType name="url_full"/>
+          <StringParameterType name="url_full_nginx"/>
+          <StringParameterType name="url_storage"/>
+        </ParameterTypeSet>
+        <ParameterSet>
+          <Parameter name="name" parameterTypeRef="name" shortDescription="Friendly name for the streaming capture">
+            <ParameterProperties dataSource="local" persistence="true"/>
+          </Parameter>
+          <Parameter name="number" parameterTypeRef="number" shortDescription="Sequence identifier for streaming captures">
+            <ParameterProperties dataSource="local" persistence="true"/>
+          </Parameter>
+          <Parameter name="state" parameterTypeRef="state" shortDescription="Streaming pipeline state">
+            <ParameterProperties dataSource="local" persistence="true"/>
+          </Parameter>
+          <Parameter name="url_full" parameterTypeRef="url_full" shortDescription="External URL for streaming captures">
+            <ParameterProperties dataSource="local" persistence="true"/>
+          </Parameter>
+          <Parameter name="url_full_nginx" parameterTypeRef="url_full_nginx" shortDescription="NGINX reverse proxy URL for streaming captures">
+            <ParameterProperties dataSource="local" persistence="true"/>
+          </Parameter>
+          <Parameter name="url_storage" parameterTypeRef="url_storage" shortDescription="Storage endpoint for streaming captures">
+            <ParameterProperties dataSource="local" persistence="true"/>
+          </Parameter>
+        </ParameterSet>
+      </TelemetryMetaData>
+      <CommandMetaData/>
+    </SpaceSystem>
+    <SpaceSystem name="images_streaming_cam_right" shortDescription="Streaming capture metadata">
       <TelemetryMetaData>
         <ParameterTypeSet>
           <StringParameterType name="name"/>
