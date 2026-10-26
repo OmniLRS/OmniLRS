@@ -33,5 +33,15 @@ robots_settings:
         resolutions:
           low: [640, 480]
           high: [1440, 1080]
+      - name: "NavCam_left"
+        prim_path: "/Robots/pragyaan/Body/NavCam_left/NavCam_left"
+        resolutions:
+          low: [640, 480]
+          high: [1440, 1080]
+      - name: "NavCam_right"
+        prim_path: "/Robots/pragyaan/Body/NavCam_right/NavCam_right"
+        resolutions:
+          low: [640, 480]
+          high: [1440, 1080]
     imu_sensor_path: "/Robots/pragyaan/base_link/Imu_Sensor"
     solar_panel_joint: "solarJoint"  # finds it within the main robot articulation
