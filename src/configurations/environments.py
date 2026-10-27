@@ -169,8 +169,8 @@ class LargeScaleTerrainConf:
     geo_cm_coarse_acceleration_mode: str = "gpu"
     geo_cm_apply_smooth_shading: bool = False
     geo_cm_semantic_label: str = "terrain"
-    geo_cm_texture_name: str = "LunarRegolithInfinite" 
-    geo_cm_texture_path: str = "assets/Textures/LunarRegolithInfinite.mdl" 
+    geo_cm_texture_name: str = "LunarRegolithInfinite"
+    geo_cm_texture_path: str = "assets/Textures/LunarRegolithInfinite.mdl"
 
     terrain_collider_enabled: bool = True
     terrain_collider_resolution: float = 0.05
