@@ -81,6 +81,7 @@ class LunaryardController(BaseEnv, StellarEngineEnvMixin, TerrainControlMixin):
         load_material("Basalt", "assets/Textures/GravelStones.mdl", looks_path)
         load_material("Sand", "assets/Textures/Sand.mdl", looks_path)
         load_material("LunarRegolith8k", "assets/Textures/LunarRegolith8k.mdl", looks_path)
+        load_material("LunarRegolithInfinite", "assets/Textures/LunarRegolithInfinite.mdl", looks_path)
 
     def load(self) -> None:
         """

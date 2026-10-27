@@ -106,14 +106,16 @@ class GeoClipmapManager:
         """
         with wp.ScopedTimer("complete update loop", active=self.profiling):
             self._geo_clipmap.update_elevation(position)
+            # Keep the texture anchored to the simulation world as the mesh moves.
+            self._mesh_pos = np.array(mesh_position, dtype=float, copy=True)
+            uvs = self._geo_clipmap.points[:, :2] + self._mesh_pos[:2]
             with wp.ScopedTimer("mesh update", active=self.profiling):
                 self.render_mesh(
                     self._geo_clipmap.points,
                     self._geo_clipmap.indices,
-                    self._geo_clipmap.uvs,
+                    uvs,
                     update_topology=self.update_topology,
                 )
-        self.move_mesh(mesh_position)
         self.update_topology = False
 
     def move_mesh(self, position: np.ndarray) -> None:
@@ -155,8 +157,7 @@ class GeoClipmapManager:
         Args:
             points (np.ndarray): array of points to set as the mesh vertices.
             indices (np.ndarray): array of indices to set as the mesh indices.
-            uvs (np.ndarray): array of uvs to set as the mesh uvs.
-            colors (np.ndarray): array of colors to set as the mesh colors.
+            uvs (np.ndarray): world XY coordinates in meters to set as the mesh uvs.
             update_topology (bool): whether to update the mesh topology.
         """
 
@@ -175,9 +176,9 @@ class GeoClipmapManager:
             idxs = np.array(indices).reshape(-1, 3)
             mesh.GetFaceVertexIndicesAttr().Set(idxs.ravel())
             mesh.GetFaceVertexCountsAttr().Set([3] * len(idxs))
-            pv = UsdGeom.PrimvarsAPI(mesh.GetPrim()).CreatePrimvar("st", Sdf.ValueTypeNames.Float2Array)
-            pv.Set(points[:, :2])
-            pv.SetInterpolation("vertex")
+        pv = UsdGeom.PrimvarsAPI(mesh.GetPrim()).CreatePrimvar("st", Sdf.ValueTypeNames.Float2Array)
+        pv.Set(uvs)
+        pv.SetInterpolation("vertex")
 
         set_xform_ops(
             mesh,
