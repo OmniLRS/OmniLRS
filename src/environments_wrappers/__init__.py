@@ -2,9 +2,26 @@ __author__ = "Antoine Richard, Bach Nguyen"
 __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
 
+# Deprecated Isaac Sim extensions OmniLRS still uses. Since Isaac Sim 6.0 they ship under extsDeprecated
+# and are not guaranteed to be enabled by the default app.
+LEGACY_EXTENSIONS = (
+    "isaacsim.core.api",
+    "isaacsim.core.prims",
+    "isaacsim.core.utils",
+    "isaacsim.sensors.camera",
+)
+
+
+def _enable_legacy_extensions() -> None:
+    import omni.kit.app
+
+    ext_manager = omni.kit.app.get_app().get_extension_manager()
+    for ext in LEGACY_EXTENSIONS:
+        if not ext_manager.is_extension_enabled(ext):
+            ext_manager.set_extension_enabled_immediate(ext, True)
+
 
 def startSim(cfg: dict):
-    import omni
     from isaacsim import SimulationApp
 
     from src.environments.rendering import (
@@ -25,74 +42,25 @@ def startSim(cfg: dict):
             """
             self.wait_for_threads += waiting_functions
 
-        def close(self, wait_for_replicator=True) -> None:
-            """Close the running Omniverse Toolkit."""
-            try:
-                # make sure that any replicator workflows finish rendering/writing
-                import omni.replicator.core as rep
+        def close(self, wait_for_replicator: bool = True, **kwargs) -> None:
+            """Joins the registered external threads, then lets Isaac Sim close the application.
 
-                if rep.orchestrator.get_status() not in [
-                    rep.orchestrator.Status.STOPPED,
-                    rep.orchestrator.Status.STOPPING,
-                ]:
-                    rep.orchestrator.stop()
-                if wait_for_replicator:
-                    rep.orchestrator.wait_until_complete()
-
-                # Disable capture on play to avoid replicator engaging on any new timeline events
-                rep.orchestrator.set_capture_on_play(False)
-            except Exception:
-                pass
-
-            for wait in self.wait_for_threads:
-                self._app.print_and_log(f"Waiting for external thread to join: {wait}")
-                wait()
-
-            # workaround for exit issues, clean the stage first:
-            if omni.usd.get_context().can_close_stage():
-                omni.usd.get_context().close_stage()
-            # omni.kit.app.get_app().update()
-            # check if exited already
+            Isaac Sim's own close() stops/flushes Replicator, closes the stage, and shuts Kit down
+            (fast shutdown with a watchdog); it also ignores repeated calls.
+            """
             if not self._exiting:
-                self._exiting = True
-                self._app.print_and_log("Simulation App Shutting Down")
-
-                # We are exisitng but something is still loading, wait for it to load to avoid a deadlock
-                def is_stage_loading() -> bool:
-                    """Convenience function to see if any files are being loaded.
-                    bool: Convenience function to see if any files are being loaded. True if loading, False otherwise
-                    """
-                    import omni.usd
-
-                    context = omni.usd.get_context()
-                    if context is None:
-                        return False
-                    else:
-                        _, _, loading = context.get_stage_loading_status()
-                        return loading > 0
-
-                if is_stage_loading():
-                    print(
-                        "   Waiting for USD resource operations to complete (this may take a few seconds), use Ctrl-C to exit immediately"
-                    )
-                while is_stage_loading():
-                    self._app.update()
-
-                self._app.shutdown()
-                # disabled on linux to workaround issues where unloading plugins causes carb to fail
-                self._framework.unload_all_plugins()
-                # Force all omni module to unload on close
-                # This prevents crash on exit
-                # for m in list(sys.modules.keys()):
-                #     if "omni" in m and m != "omni.kit.app":
-                #         del sys.modules[m]
-                print("Simulation App Shutdown Complete")
+                for wait in self.wait_for_threads:
+                    self._app.print_and_log(f"Waiting for external thread to join: {wait}")
+                    wait()
+                self.wait_for_threads = []
+            super().close(wait_for_replicator=wait_for_replicator, **kwargs)
 
     # Starts the simulation and allows to import things related to Isaac and PXR
     renderer_cfg = cfg["rendering"]["renderer"]
     launch_config = renderer_cfg.__dict__.copy()
     tbn_frame_mode = launch_config.pop("tbn_frame_mode")
     simulation_app = SimulationApp_wait(launch_config)
+    _enable_legacy_extensions()
     set_tbn_frame_mode(tbn_frame_mode)
     set_lens_flares(cfg)
     set_motion_blur(cfg)

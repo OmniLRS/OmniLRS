@@ -1,4 +1,5 @@
-FROM public.ecr.aws/artefacts/ros2:humble-harmonic-nvidia
+# Ubuntu 24.04 + ROS 2 Jazzy (Isaac Sim 6.2 uses its bundled Jazzy libraries; the system ROS CLI is used by the tests)
+FROM public.ecr.aws/artefacts/ros2:jazzy-harmonic-nvidia
 
 ENV OMNI_KIT_ACCEPT_EULA=YES
 ENV ACCEPT_EULA=Y

@@ -414,5 +414,6 @@ def _get_random_tangent_vector(normal: wp.vec3f, state: wp.uint32) -> wp.quatf:
     vx = wp.cross(normal, vx)
     vx = vx / wp.length(vx)
     vy = wp.cross(normal, vx)
-    mat = wp.mat33f(vx, vy, normal)
+    # Columns are the basis vectors (Warp < 1.12 built kernel-scope matrices from vectors as columns).
+    mat = wp.matrix_from_cols(vx, vy, normal)
     return wp.quat_from_matrix(mat)
