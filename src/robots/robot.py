@@ -317,8 +317,8 @@ class Robot:
             self.stage,
             self.usd_path,
             is_instance=False,
-            position=Gf.Vec3d(*position),
-            rotation=Gf.Quatd(*orientation),
+            position=Gf.Vec3d(*np.asarray(position, dtype=np.float64)),
+            rotation=Gf.Quatd(*np.asarray(orientation, dtype=np.float64)),
         )
         self.edit_graphs()
         self._initialize_cameras()

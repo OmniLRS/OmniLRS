@@ -55,9 +55,9 @@ def _set_xform_translate(xform, position):
         translate_op = xform.AddTranslateOp()
 
     if translate_op.GetPrecision() == UsdGeom.XformOp.PrecisionDouble:
-        translate_op.Set(Gf.Vec3d(position[0], position[1], position[2]))
+        translate_op.Set(Gf.Vec3d(*(float(v) for v in position[:3])))
     else:
-        translate_op.Set(Gf.Vec3f(position[0], position[1], position[2]))
+        translate_op.Set(Gf.Vec3f(*(float(v) for v in position[:3])))
 
 
 def _set_xform_orientation(xform, orientation):
@@ -70,9 +70,9 @@ def _set_xform_orientation(xform, orientation):
         orient_op = xform.AddOrientOp()
 
     if orient_op.GetPrecision() == UsdGeom.XformOp.PrecisionDouble:
-        q = Gf.Quatd(orientation[3], Gf.Vec3d(orientation[0], orientation[1], orientation[2]))
+        q = Gf.Quatd(float(orientation[3]), Gf.Vec3d(*(float(v) for v in orientation[:3])))
     else:
-        q = Gf.Quatf(orientation[3], Gf.Vec3f(orientation[0], orientation[1], orientation[2]))
+        q = Gf.Quatf(float(orientation[3]), Gf.Vec3f(*(float(v) for v in orientation[:3])))
     orient_op.Set(q)
 
 
