@@ -14,7 +14,8 @@
 | `test-yamcs-largescale` (largescale_workshop, pragyaan) | ✅ 21 passed |
 | Analysis-only paths (§8.1) | Done. No further changes needed (details in §8.1) |
 | WorldBuilders | Submodule bumped to `c68be67` (WorldBuilders #7 deprecated imports + #8 ruff setup, incl. the `add_update_semantics` fix); all 4 canonical scenarios re-pass |
-| Open | Host driver upgrade to 595.x (shared host, needs reboot). The CI base image `omni-ci-0.4.0` must be built from `ci.docker/ci.Dockerfile` and pushed. |
+| Host driver | Upgraded 580.178.04 → **595.99.02** (`nvidia-driver-595`, Ubuntu archive, DKMS, proprietary module; EC2 g6e.4xlarge / L40S, DCV OK). All 4 canonical scenarios re-pass on 595 (6p/8s, 8p/9s, 17p, 21p) |
+| Open | The CI base image `omni-ci-0.4.0` must be built from `ci.docker/ci.Dockerfile` and pushed. |
 **Scope:** `OmniLRS/` (pixi envs, Docker, CI, `src/`, `WorldBuilders` submodule, tests, docs). Isaac Sim 7.x is out of scope.
 **Sources:** Isaac Sim release notes for [5.1.0](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/overview/release_notes.html), [6.0.0 (EDR + GA)](https://docs.isaacsim.omniverse.nvidia.com/6.0.0/overview/release_notes.html), [6.0.1](https://docs.isaacsim.omniverse.nvidia.com/6.0.1/overview/release_notes.html), [6.1.0](https://docs.isaacsim.omniverse.nvidia.com/6.1.0/overview/release_notes.html), [6.2.0](https://docs.isaacsim.omniverse.nvidia.com/6.2.0/overview/release_notes.html), the [6.0](https://docs.isaacsim.omniverse.nvidia.com/6.2.0/migration_guides/isaac_sim_6_0/index.html) and [6.1](https://docs.isaacsim.omniverse.nvidia.com/6.2.0/migration_guides/isaac_sim_6_1/index.html) migration guides, the 6.2 install/ROS/container docs, and **files read directly from the published 6.2.0.0 pip wheels and the `nvcr.io/nvidia/isaac-sim:6.2.0` image config**. The wheel and image checks matter because several deps (numpy, Python, container OS) don't appear in the release notes.
 
