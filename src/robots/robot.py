@@ -492,7 +492,8 @@ class Robot:
                 "Call update_articulation_api() from the simulation loop first."
             )
 
-        position, quat_wxyz = self.telemetry.articulation.get_world_pose()
+        positions, orientations = self.telemetry.articulation.get_world_poses()
+        position, quat_wxyz = positions.numpy()[0], orientations.numpy()[0]
 
         quat_xyzw = [
             float(quat_wxyz[1]),
@@ -532,13 +533,11 @@ class Robot:
         quat_wxyz = np.asarray([q[3], q[0], q[1], q[2]], dtype=np.float32)
         position = np.asarray(p, dtype=np.float32)
 
-        self.control.articulation.set_world_pose(
-            position=position,
-            orientation=quat_wxyz,
+        self.control.articulation.set_world_poses(positions=position[np.newaxis], orientations=quat_wxyz[np.newaxis])
+        self.control.articulation.set_velocities(
+            linear_velocities=np.zeros((1, 3), dtype=np.float32),
+            angular_velocities=np.zeros((1, 3), dtype=np.float32),
         )
-
-        self.control.articulation.set_linear_velocity(np.zeros(3, dtype=np.float32))
-        self.control.articulation.set_angular_velocity(np.zeros(3, dtype=np.float32))
 
         self._last_joint_positions = {}
         self._last_joint_velocities = {}

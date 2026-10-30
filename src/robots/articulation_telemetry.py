@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
 
 import numpy as np
-from isaacsim.core.prims import SingleArticulation
+from isaacsim.core.experimental.prims import Articulation
 
 logger = logging.getLogger(__name__)
 
@@ -44,9 +44,9 @@ class ArticulationTelemetry:
     """
     OmniLRS wrapper for reading Isaac Sim articulation telemetry.
 
-    This class owns a `SingleArticulation` view for one robot articulation and
-    samples joint positions, joint velocities, measured efforts, and measured
-    joint/link forces.
+    This class owns a Core Experimental `Articulation` for one robot articulation
+    and samples joint positions, joint velocities, measured efforts (DOF projected
+    joint forces), and measured link incoming joint forces.
 
     Simulation managers should call `maybe_initialize()` and `sample()` from the
     simulation update loop after the world has stepped. Other code should access
@@ -58,8 +58,7 @@ class ArticulationTelemetry:
     whose force norm is below the configured threshold.
 
     Isaac Sim articulation reference:
-    https://docs.isaacsim.omniverse.nvidia.com/5.0.0/robot_simulation/articulation_controller.html
-    https://docs.isaacsim.omniverse.nvidia.com/5.0.0/py/source/extensions/isaacsim.core.prims/docs/index.html#isaacsim.core.prims.SingleArticulation
+    https://docs.isaacsim.omniverse.nvidia.com/6.2.0/py/source/extensions/isaacsim.core.experimental.prims/docs/index.html
     """
 
     def __init__(
@@ -80,7 +79,7 @@ class ArticulationTelemetry:
             prim_path:
                 USD prim path of the articulation root to read.
             name:
-                Name assigned to the Isaac `SingleArticulation` wrapper.
+                Name used in log messages.
             init_retry_s:
                 Minimum wall-clock time between initialization attempts.
             sample_period_s:
@@ -106,7 +105,7 @@ class ArticulationTelemetry:
 
         self.log = logger.info
 
-        self.articulation: Optional[SingleArticulation] = None
+        self.articulation: Optional[Articulation] = None
 
         self.joint_names: List[str] = []
         self.joint_name_to_index: Dict[str, int] = {}
@@ -147,17 +146,16 @@ class ArticulationTelemetry:
         self._t_last_init_try = now
 
         try:
-            self.articulation = SingleArticulation(
-                prim_path=self.prim_path,
-                name=self.name,
-            )
-            self.articulation.initialize()
+            articulation = Articulation(self.prim_path)
+            if not articulation.is_physics_tensor_entity_valid():
+                raise RuntimeError("physics tensor view is not ready")
 
-            dof_names = self.articulation.dof_names
+            dof_names = articulation.dof_names
 
             if dof_names is None:
                 raise RuntimeError(f"No DOF names found for articulation {self.prim_path}")
 
+            self.articulation = articulation
             self.joint_names = list(dof_names)
             self.joint_name_to_index = {name: i for i, name in enumerate(self.joint_names)}
 
@@ -182,7 +180,7 @@ class ArticulationTelemetry:
         Sample articulation telemetry from Isaac.
 
         This reads joint positions, velocities, measured efforts, and measured
-        joint/link forces from the `SingleArticulation` view. The result is stored
+        joint/link forces from the `Articulation` physics view. The result is stored
         in `last_frame` and returned to the caller.
 
         Args:
@@ -204,13 +202,13 @@ class ArticulationTelemetry:
 
         articulation = self.articulation
 
-        q = self._safe_array(articulation.get_joint_positions())
+        q = self._read(articulation.get_dof_positions)
         if q is None:
             return None  # instead of publishing all zeros
 
-        dq = self._safe_array(articulation.get_joint_velocities())
-        efforts_arr = self._safe_array(articulation.get_measured_joint_efforts())
-        forces_arr = self._safe_array(articulation.get_measured_joint_forces())
+        dq = self._read(articulation.get_dof_velocities)
+        efforts_arr = self._read(articulation.get_dof_projected_joint_forces)
+        forces_arr = self._read(articulation.get_link_incoming_joint_force)
 
         forces_ready = efforts_arr is not None and forces_arr is not None
         joints: Dict[str, JointSample] = {}
@@ -308,13 +306,20 @@ class ArticulationTelemetry:
             del buf[: len(buf) - self.history_len]
 
     @staticmethod
-    def _safe_array(x):
-        if x is None:
-            return None
+    def _read(getter) -> Optional[np.ndarray]:
+        """
+        Read one articulation quantity for the single wrapped prim as a numpy array.
+
+        Returns None when the physics view is not available (e.g. right after a reset).
+        Getters returning a (forces, torques) tuple are concatenated into (..., 6) wrenches.
+        """
         try:
-            return np.asarray(x)
-        except Exception:
+            data = getter()
+        except (AssertionError, RuntimeError):
             return None
+        if isinstance(data, tuple):
+            return np.concatenate([d.numpy()[0] for d in data], axis=-1)
+        return data.numpy()[0]
 
     @staticmethod
     def _reshape_wrenches(forces_arr: np.ndarray) -> np.ndarray:
