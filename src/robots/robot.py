@@ -14,7 +14,6 @@ from isaacsim.core.api.world import World
 from isaacsim.core.prims import RigidPrim, SingleRigidPrim
 
 # from src.robots.subsystems_manager import RobotSubsystemsManager
-from isaacsim.sensors.camera import Camera
 from isaacsim.sensors.experimental.physics import IMUSensor
 from pxr import Gf, Usd
 from scipy.spatial.transform import Rotation as R
@@ -25,6 +24,7 @@ from src.configurations.simulator_mode_enum import SimulatorMode
 from src.environments.utils import resolve_position, transform_orientation_from_xyzw_into_xyz
 from src.robots.articulation_control import ArticulationControl
 from src.robots.articulation_telemetry import ArticulationTelemetry
+from src.sensors.camera import RtxCamera
 from src.subsystems.robot_subsystems_handler import RobotSubsystemsHandler
 
 
@@ -264,7 +264,6 @@ class Robot:
         self._last_wheel_joint_angles: list[float] = []
         self._camera_conf = camera_conf
         self._cameras = {}
-        self._depth_cameras = {}
         self.dimensions = dimensions
         self.turn_speed_coef = turn_speed_coef
         self._imu_sensor: Optional[IMUSensor] = None
@@ -400,34 +399,25 @@ class Robot:
         return (self._camera_conf["resolutions"]["high"][0], self._camera_conf["resolutions"]["high"][1])
 
     def _initialize_cameras(self) -> None:
-        # Camera is a wrapper, therefore it just wraps around the camera instance if it already exists
-        # otherwise it creates a new camera instance on the provided prim_path
+        # One RTX render product per resolution on the camera prim (created if missing), with RGBA and depth.
         if "resolutions" not in self._camera_conf:
             return
 
         resolutions = list(self._camera_conf.get("resolutions").keys())
 
         for res in resolutions:
-            self._cameras[res] = Camera(
+            self._cameras[res] = RtxCamera(
                 self._camera_conf["prim_path"],
-                resolution=(self._camera_conf["resolutions"][res][0], self._camera_conf["resolutions"][res][1]),
+                resolution=self._camera_conf["resolutions"][res],
+                depth=True,
             )
-            self._cameras[res].initialize()
-
-        for res in resolutions:
-            self._depth_cameras[res] = Camera(
-                self._camera_conf["prim_path"],
-                resolution=(self._camera_conf["resolutions"][res][0], self._camera_conf["resolutions"][res][1]),
-            )
-            self._depth_cameras[res].initialize()
-            self._depth_cameras[res].add_distance_to_image_plane_to_frame()
 
     def get_rgba_camera_view(self, resolution) -> np.ndarray:
         return self._cameras[resolution].get_rgba()
 
     def get_depth_camera_view(self, resolution) -> np.ndarray:
         """Returns depth image in meters as (H, W) float32 array."""
-        depth = self._depth_cameras[resolution].get_depth()
+        depth = self._cameras[resolution].get_depth()
         print("depth")
         print(depth)
         return depth

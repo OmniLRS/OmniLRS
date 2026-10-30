@@ -5,11 +5,11 @@ __email__ = "ljburtz@jaops.com"
 from enum import StrEnum
 
 import numpy as np
-from isaacsim.sensors.camera import Camera
 from PIL import Image
 
 from src.environments.monitoring_cameras_manager import MonitoringCamerasManager
 from src.mission_specific.pragyaan.tmtc.enums import PragyaanCameraResolution
+from src.sensors.camera import RtxCamera
 from src.subsystems.robot_physics_models.camera_compression_model import CameraCompressionModel
 from src.tmtc.yamcs_TMTC import ImagesHandler
 
@@ -72,11 +72,7 @@ class PragyaanCameraHandler:
         if lander_camera_conf is None:
             return
 
-        self._lander_cam = Camera(
-            lander_camera_conf["prim_path"],
-            resolution=(lander_camera_conf["resolution"][0], lander_camera_conf["resolution"][1]),
-        )
-        self._lander_cam.initialize()
+        self._lander_cam = RtxCamera(lander_camera_conf["prim_path"], resolution=lander_camera_conf["resolution"])
 
     def _initialize_monitoring_cam(self) -> None:
         # NOTE TODO implemented for one camera right now, in the future make for multiple idea: dict same as for cameras in MonCamManager,
