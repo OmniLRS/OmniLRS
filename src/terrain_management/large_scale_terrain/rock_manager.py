@@ -11,8 +11,8 @@ from typing import List, Tuple
 
 import numpy as np
 import omni
+from isaacsim.core.experimental.utils.semantics import add_labels
 from pxr import Gf, Sdf, Usd, UsdGeom, Vt
-from semantics.schema.editor import PrimSemanticData
 
 from src.terrain_management.large_scale_terrain.pxr_utils import (
     add_collider,
@@ -102,8 +102,7 @@ class Instancer:
             logger.warn("Texture name not provided. Material will not be loaded.")
 
     def apply_semantic_label(self, prim_path: Usd.Prim):
-        prim_sd = PrimSemanticData(self.stage.GetPrimAtPath(prim_path))
-        prim_sd.add_entry("class", self.semantic_label)
+        add_labels(self.stage.GetPrimAtPath(prim_path), labels=self.semantic_label, taxonomy="class")
 
     def create_instancer(self):
         """
@@ -247,8 +246,7 @@ class CustomInstancer:
             logger.warn("Texture name not provided. Material will not be loaded.")
 
     def apply_semantic_label(self, prim_path: Usd.Prim):
-        prim_sd = PrimSemanticData(self.stage.GetPrimAtPath(prim_path))
-        prim_sd.add_entry("class", self.semantic_label)
+        add_labels(self.stage.GetPrimAtPath(prim_path), labels=self.semantic_label, taxonomy="class")
 
     def create_instancer(self):
         """
@@ -427,8 +425,7 @@ class ChangeBlock:
             logger.warn("Texture name not provided. Material will not be loaded.")
 
     def apply_semantic_label(self, prim_path: Usd.Prim):
-        prim_sd = PrimSemanticData(self.stage.GetPrimAtPath(prim_path))
-        prim_sd.add_entry("class", self.semantic_label)
+        add_labels(self.stage.GetPrimAtPath(prim_path), labels=self.semantic_label, taxonomy="class")
 
     def create_instancer(self):
         """

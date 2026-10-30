@@ -2,9 +2,9 @@ __author__ = "Amaan Javed"
 __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
 
+import isaacsim.core.experimental.utils.prim as prim_utils
+import isaacsim.core.experimental.utils.xform as xform_utils
 import numpy as np
-from isaacsim.core.utils.prims import is_prim_path_valid
-from isaacsim.core.utils.xforms import get_world_pose
 from scipy.spatial.transform import Rotation
 
 from src.mission_specific.husky.subsystems.husky_power_model import (
@@ -45,8 +45,9 @@ class HuskySubsystemsHandler(RobotSubsystemsHandler):
         self._sun_prim_path = None
         self._sun_direction = np.array((0.0, 1.0, 0.0))
 
-        if is_prim_path_valid(pos_relative_to_prim):
-            self._base_station_pos, _ = get_world_pose(pos_relative_to_prim)
+        if prim_utils.is_prim_valid(pos_relative_to_prim):
+            base_station_pos, _ = xform_utils.get_world_pose(pos_relative_to_prim, device="cpu")
+            self._base_station_pos = base_station_pos.numpy()
         else:
             if pos_relative_to_prim == "":
                 print(
@@ -102,8 +103,8 @@ class HuskySubsystemsHandler(RobotSubsystemsHandler):
 
     def _update_sun_direction(self):
         if self._sun_prim_path is not None:
-            _, quat_wxyz = get_world_pose(self._sun_prim_path)
-            w, x, y, z = quat_wxyz
+            _, quat_wxyz = xform_utils.get_world_pose(self._sun_prim_path, device="cpu")
+            w, x, y, z = quat_wxyz.numpy()
             self._sun_direction = Rotation.from_quat([x, y, z, w]).apply([-1.0, 0.0, 0.0])
 
     @staticmethod

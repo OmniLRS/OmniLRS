@@ -19,7 +19,7 @@ def enable_ros2(simulation_app, bridge_name="jazzy", **kwargs) -> None:
 
     import os
 
-    from isaacsim.core.utils.extensions import enable_extension
+    from isaacsim.core.experimental.utils.app import enable_extension
 
     if bridge_name not in SUPPORTED_ROS_DISTROS:
         raise ValueError(f"Bridge not supported, please choose between {', '.join(SUPPORTED_ROS_DISTROS)}.")

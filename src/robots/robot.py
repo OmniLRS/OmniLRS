@@ -6,11 +6,12 @@ import math
 import os
 from typing import Dict, List, Optional, Tuple
 
+import isaacsim.core.experimental.utils.prim as prim_utils
+import isaacsim.core.experimental.utils.xform as xform_utils
 import numpy as np
 import omni
 from isaacsim.core.api.world import World
-from isaacsim.core.prims import RigidPrim, SingleRigidPrim, SingleXFormPrim
-from isaacsim.core.utils.rotations import quat_to_rot_matrix
+from isaacsim.core.prims import RigidPrim, SingleRigidPrim
 
 # from src.robots.subsystems_manager import RobotSubsystemsManager
 from isaacsim.sensors.camera import Camera
@@ -768,7 +769,7 @@ class RobotRigidGroup:
         self.prims = []
         self.prim_views = []
         self.base_link = base_link
-        self.base_prim = None
+        self.base_prim_path = None
 
     def initialize(self, world: World) -> None:
         """
@@ -800,15 +801,12 @@ class RobotRigidGroup:
                 f"Robot '{self.robot_name}' is missing required 'base_link' in its YAML configuration. "
                 'Please add e.g. base_link: "base_link" under the robot\'s parameters.'
             )
-        # Use SingleXFormPrim instead of SingleRigidPrim for the base link.
-        # SingleRigidPrim eagerly queries physics velocities in its constructor,
-        # which fails when the physics tensor simulation view has been invalidated
-        # by prior RigidPrim view creations. The base link only needs get_world_pose(),
-        # so a transform-only prim is sufficient and avoids the tensor dependency.
-        self.base_prim = SingleXFormPrim(
-            prim_path=os.path.join(self.root_path, self.robot_name, self.base_link),
-            name=f"{self.robot_name}/{self.base_link}",
-        )
+        # The base link only needs its world pose, read from USD. A physics-backed rigid prim
+        # would depend on the physics tensor view, which prior RigidPrim view creations invalidate.
+        base_prim_path = os.path.join(self.root_path, self.robot_name, self.base_link)
+        if not prim_utils.is_prim_valid(base_prim_path):
+            raise ValueError(f"Robot '{self.robot_name}' base link prim not found at '{base_prim_path}'.")
+        self.base_prim_path = base_prim_path
         print("initialized base link")
 
     def _initialize_link(self, link):
@@ -837,7 +835,7 @@ class RobotRigidGroup:
         pose = np.zeros((n_links, 4, 4))
         for i, prim in enumerate(self.prims):
             position, orientation = prim.get_world_pose()
-            orientation = quat_to_rot_matrix(orientation)
+            orientation = R.from_quat(orientation, scalar_first=True).as_matrix()
             pose[i, :3, 3] = 1
             pose[i, :3, :3] = orientation
             pose[i, :3, 3] = position
@@ -892,11 +890,11 @@ class RobotRigidGroup:
 
         Returns:
             position (np.ndarray): The position of base link. (x, y, z)
-            orientation (np.ndarray): The orientation of base link. (x, y, z, w)
+            orientation (np.ndarray): The orientation of base link. (w, x, y, z)
         """
-        position, orientation = self.base_prim.get_world_pose()
+        position, orientation = xform_utils.get_world_pose(self.base_prim_path, device="cpu")
 
-        return position, orientation
+        return position.numpy(), orientation.numpy()
 
     def get_velocities(self) -> Tuple[np.ndarray, np.ndarray]:
         """

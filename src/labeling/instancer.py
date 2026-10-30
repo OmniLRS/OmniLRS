@@ -4,10 +4,11 @@ __email__ = "ljburtz@jaops.com"
 
 import os
 
+import isaacsim.core.experimental.utils.prim as prim_utils
+import isaacsim.core.experimental.utils.stage as stage_utils
 import numpy as np
 import omni
-from isaacsim.core.utils.prims import delete_prim
-from isaacsim.core.utils.semantics import add_labels
+from isaacsim.core.experimental.utils.semantics import add_labels
 from pxr import Gf, UsdGeom
 from WorldBuilders.pxr_utils import createObject, createXform
 
@@ -93,8 +94,7 @@ class CustomInstancer:
         for i, id in enumerate(self.ids):
             source_prim_path = self.prototypes[id]
             prefix = os.path.join(self.instancer_path, f"instance_{i}")
-            self.instance_paths.append(prefix)
-            prim, _ = createObject(
+            prim, prim_path = createObject(
                 prefix,
                 self.stage,
                 source_prim_path,
@@ -103,8 +103,9 @@ class CustomInstancer:
                 castVec3d(self.scale[i]),
                 True,
             )
+            self.instance_paths.append(prim_path)
             if self.semantic_classes[i] is not None:
-                add_labels(prim, [self.semantic_classes[i]], instance_name="class")
+                add_labels(prim, labels=[self.semantic_classes[i]], taxonomy="class")
         self.flag = True
 
     def destroy(self):
@@ -112,7 +113,8 @@ class CustomInstancer:
         Destroy the instancer."""
 
         for instance_path in self.instance_paths:
-            delete_prim(instance_path)
+            if prim_utils.is_prim_valid(instance_path):
+                stage_utils.delete_prim(instance_path)
         self.num = None
         self.position = None
         self.orientation = None
