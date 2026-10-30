@@ -4,17 +4,18 @@ __email__ = "ljburtz@jaops.com"
 
 import math
 import os
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
 
+import isaacsim.core.experimental.utils.prim as prim_utils
+import isaacsim.core.experimental.utils.xform as xform_utils
 import numpy as np
 import omni
 from isaacsim.core.api.world import World
-from isaacsim.core.prims import RigidPrim, SingleRigidPrim, SingleXFormPrim
-from isaacsim.core.utils.rotations import quat_to_rot_matrix
+from isaacsim.core.prims import RigidPrim, SingleRigidPrim
 
 # from src.robots.subsystems_manager import RobotSubsystemsManager
 from isaacsim.sensors.camera import Camera
-from isaacsim.sensors.physics import _sensor
+from isaacsim.sensors.experimental.physics import IMUSensor
 from pxr import Gf, Usd
 from scipy.spatial.transform import Rotation as R
 from WorldBuilders.pxr_utils import createObject, createXform
@@ -266,7 +267,7 @@ class Robot:
         self._depth_cameras = {}
         self.dimensions = dimensions
         self.turn_speed_coef = turn_speed_coef
-        self._imu_sensor_interface = _sensor.acquire_imu_sensor_interface()
+        self._imu_sensor: Optional[IMUSensor] = None
         self._imu_sensor_path: str = imu_sensor_path
         self._solar_panel_joint = solar_panel_joint
         self._setup_subsystems_handler(pos_relative_to_prim)
@@ -317,8 +318,8 @@ class Robot:
             self.stage,
             self.usd_path,
             is_instance=False,
-            position=Gf.Vec3d(*position),
-            rotation=Gf.Quatd(*orientation),
+            position=Gf.Vec3d(*np.asarray(position, dtype=np.float64)),
+            rotation=Gf.Quatd(*np.asarray(orientation, dtype=np.float64)),
         )
         self.edit_graphs()
         self._initialize_cameras()
@@ -380,6 +381,7 @@ class Robot:
         self._last_joint_velocities = {}
         self._last_joint_efforts = {}
         self._last_wheel_joint_angles = []
+        self._imu_sensor = None
 
         try:
             self.control.close()
@@ -436,24 +438,31 @@ class Robot:
                 "Path to imu sensor is not defined. Please check your .yaml configuration file. 'imu_sensor_path' should be defined on the same level as 'robot_name'."
             )
 
-        # https://docs.isaacsim.omniverse.nvidia.com/4.5.0/sensors/isaacsim_sensors_physics_imu.html#reading-sensor-output
-        sensor_reading = self._imu_sensor_interface.get_sensor_reading(
-            self._imu_sensor_path, use_latest_data=True, read_gravity=True
-        )
+        # https://docs.isaacsim.omniverse.nvidia.com/6.2.0/sensors/isaacsim_sensors_physics_imu.html
+        # The reading is a snapshot of the latest physics step and includes gravity (specific force).
+        if self._imu_sensor is None:
+            self._imu_sensor = IMUSensor(self._imu_sensor_path)
+        sensor_reading = self._imu_sensor.get_sensor_reading()
         linear_acceleration = {
-            "ax": sensor_reading.lin_acc_x,
-            "ay": sensor_reading.lin_acc_y,
-            "az": sensor_reading.lin_acc_z,
+            "ax": sensor_reading.linear_acceleration_x,
+            "ay": sensor_reading.linear_acceleration_y,
+            "az": sensor_reading.linear_acceleration_z,
         }
         angular_velocity = {
-            "gx": sensor_reading.ang_vel_x,
-            "gy": sensor_reading.ang_vel_y,
-            "gz": sensor_reading.ang_vel_z,
+            "gx": sensor_reading.angular_velocity_x,
+            "gy": sensor_reading.angular_velocity_y,
+            "gz": sensor_reading.angular_velocity_z,
         }
 
-        # orientation = sensor_reading.orientation # w, x, y, z
-
-        raw_orientation = np.asarray(sensor_reading.orientation, dtype=float)
+        raw_orientation = np.array(
+            [
+                sensor_reading.orientation_x,
+                sensor_reading.orientation_y,
+                sensor_reading.orientation_z,
+                sensor_reading.orientation_w,
+            ],
+            dtype=float,
+        )
 
         if raw_orientation.shape != (4,):
             print(f"[WARN] Invalid IMU orientation shape: {raw_orientation}")
@@ -760,7 +769,7 @@ class RobotRigidGroup:
         self.prims = []
         self.prim_views = []
         self.base_link = base_link
-        self.base_prim = None
+        self.base_prim_path = None
 
     def initialize(self, world: World) -> None:
         """
@@ -792,15 +801,12 @@ class RobotRigidGroup:
                 f"Robot '{self.robot_name}' is missing required 'base_link' in its YAML configuration. "
                 'Please add e.g. base_link: "base_link" under the robot\'s parameters.'
             )
-        # Use SingleXFormPrim instead of SingleRigidPrim for the base link.
-        # SingleRigidPrim eagerly queries physics velocities in its constructor,
-        # which fails when the physics tensor simulation view has been invalidated
-        # by prior RigidPrim view creations. The base link only needs get_world_pose(),
-        # so a transform-only prim is sufficient and avoids the tensor dependency.
-        self.base_prim = SingleXFormPrim(
-            prim_path=os.path.join(self.root_path, self.robot_name, self.base_link),
-            name=f"{self.robot_name}/{self.base_link}",
-        )
+        # The base link only needs its world pose, read from USD. A physics-backed rigid prim
+        # would depend on the physics tensor view, which prior RigidPrim view creations invalidate.
+        base_prim_path = os.path.join(self.root_path, self.robot_name, self.base_link)
+        if not prim_utils.is_prim_valid(base_prim_path):
+            raise ValueError(f"Robot '{self.robot_name}' base link prim not found at '{base_prim_path}'.")
+        self.base_prim_path = base_prim_path
         print("initialized base link")
 
     def _initialize_link(self, link):
@@ -829,7 +835,7 @@ class RobotRigidGroup:
         pose = np.zeros((n_links, 4, 4))
         for i, prim in enumerate(self.prims):
             position, orientation = prim.get_world_pose()
-            orientation = quat_to_rot_matrix(orientation)
+            orientation = R.from_quat(orientation, scalar_first=True).as_matrix()
             pose[i, :3, 3] = 1
             pose[i, :3, :3] = orientation
             pose[i, :3, 3] = position
@@ -884,11 +890,11 @@ class RobotRigidGroup:
 
         Returns:
             position (np.ndarray): The position of base link. (x, y, z)
-            orientation (np.ndarray): The orientation of base link. (x, y, z, w)
+            orientation (np.ndarray): The orientation of base link. (w, x, y, z)
         """
-        position, orientation = self.base_prim.get_world_pose()
+        position, orientation = xform_utils.get_world_pose(self.base_prim_path, device="cpu")
 
-        return position, orientation
+        return position.numpy(), orientation.numpy()
 
     def get_velocities(self) -> Tuple[np.ndarray, np.ndarray]:
         """

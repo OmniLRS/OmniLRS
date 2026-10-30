@@ -1,12 +1,13 @@
 renderer:
-  renderer: "RayTracedLighting"
+  renderer: "RealTimePathTracing" # RTX Real-Time 2.0, the Isaac Sim 6.x default (replaces legacy "RayTracedLighting")
   headless: False
   multi_gpu: True
   active_gpu: null
-  samples_per_pixel_per_frame: 32
-  max_bounces: 6
-  max_specular_transmission_bounces: 6
-  max_volume_bounces: 4
+  samples_per_pixel_per_frame: 32 # Only used by PathTracing
+  # Isaac Sim's RealTimePathTracing defaults; these were ignored by the legacy RayTracedLighting renderer
+  max_bounces: 3
+  max_specular_transmission_bounces: 3
+  max_volume_bounces: 15
   subdiv_refinement_level: 0
   tbn_frame_mode: 3
 

@@ -1,4 +1,5 @@
-FROM public.ecr.aws/artefacts/ros2:humble-harmonic-nvidia
+# Ubuntu 24.04 + ROS 2 Jazzy (Isaac Sim 6.2 uses its bundled Jazzy libraries; the system ROS CLI is used by the tests)
+FROM public.ecr.aws/artefacts/ros2:jazzy-harmonic-nvidia
 
 ENV OMNI_KIT_ACCEPT_EULA=YES
 ENV ACCEPT_EULA=Y
@@ -12,7 +13,8 @@ RUN apt-get update && apt-get install -q -y --no-install-recommends \
     git \
     && rm -rf /var/lib/apt/lists/*
 
-RUN curl -fsSL https://pixi.sh/install.sh | PIXI_HOME=/usr/local bash
+# Same pixi version as the lock-check workflow (.github/workflows/pixi-lock.yaml)
+RUN curl -fsSL https://pixi.sh/install.sh | PIXI_HOME=/usr/local PIXI_VERSION=v0.81.0 bash
 
 WORKDIR /workspace/omnilrs
 

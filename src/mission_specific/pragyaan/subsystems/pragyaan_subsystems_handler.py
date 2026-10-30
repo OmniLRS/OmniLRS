@@ -2,9 +2,9 @@ __author__ = "Aleksa Stanivuk"
 __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
 
+import isaacsim.core.experimental.utils.prim as prim_utils
+import isaacsim.core.experimental.utils.xform as xform_utils
 import numpy as np
-from isaacsim.core.utils.prims import is_prim_path_valid
-from isaacsim.core.utils.xforms import get_world_pose
 from scipy.spatial.transform import Rotation
 
 from src.mission_specific.pragyaan.subsystems.neutron_spectrometer_model import NeutronSpectrometerModel
@@ -43,8 +43,9 @@ class PragyaanSubsystemsHandler(RobotSubsystemsHandler):
         self._neutron_spectrometer = NeutronSpectrometerModel()
 
         # handle reporting of the rover position relative to the lander. If no prim path provided or path is invalid, default to reporting global position
-        if is_prim_path_valid(self.LANDER_PATH):
-            self._lander_pos, rot = get_world_pose(self.LANDER_PATH)
+        if prim_utils.is_prim_valid(self.LANDER_PATH):
+            lander_pos, _ = xform_utils.get_world_pose(self.LANDER_PATH, device="cpu")
+            self._lander_pos = lander_pos.numpy()
         else:
             if pos_relative_to_prim == "":
                 print(
@@ -93,8 +94,8 @@ class PragyaanSubsystemsHandler(RobotSubsystemsHandler):
 
     def _update_sun_direction(self):
         if self._sun_prim_path is not None:
-            _, quat_wxyz = get_world_pose(self._sun_prim_path)
-            w, x, y, z = quat_wxyz
+            _, quat_wxyz = xform_utils.get_world_pose(self._sun_prim_path, device="cpu")
+            w, x, y, z = quat_wxyz.numpy()
             self._sun_direction = Rotation.from_quat([x, y, z, w]).apply([-1.0, 0.0, 0.0])  # fixed coordinates
         # if _sun_prim_path is None, sun direction stays as the default
 

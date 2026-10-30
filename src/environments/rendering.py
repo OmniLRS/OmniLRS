@@ -16,15 +16,24 @@ from src.configurations.rendering_confs import ChromaticAberrationsConf, FlaresC
 
 def enable_RTX_real_time(**kwargs) -> None:
     """
-    Enables the RTX real time renderer. The ray-traced render.
+    Enables the RTX real time renderer (RTX Real-Time 2.0, "RealTimePathTracing").
+
+    The viewport action "set_renderer_rtx_realtime" still selects the legacy "RaytracedLighting" mode,
+    so the render mode is set directly.
 
     Args:
         data (int, optional): Not used. Defaults to 0.
     """
 
-    action_registry = omni.kit.actions.core.get_action_registry()
-    action = action_registry.get_action("omni.kit.viewport.actions", "set_renderer_rtx_realtime")
-    action.execute()
+    carb.settings.get_settings().set("/rtx/rendermode", "RealTimePathTracing")
+    try:
+        from omni.kit.viewport.utility import get_active_viewport
+
+        viewport = get_active_viewport()
+    except ImportError:
+        viewport = None
+    if viewport is not None:
+        viewport.set_hd_engine("rtx", "RealTimePathTracing")
 
 
 def enable_RTX_interactive(*kwargs) -> None:

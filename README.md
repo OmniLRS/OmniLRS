@@ -69,9 +69,15 @@ Mission Operations Update:
 
 ## Installation
 
-Follow the instruction on the Wiki: we strongly recommend following the [docker installation](https://github.com/OmniLRS/OmniLRS/wiki/Installation#docker-installation) steps.
+OmniLRS runs on **Isaac Sim 6.2** (Python 3.12) and is installed with [pixi](https://pixi.sh):
 
-Then Follow the [Getting Started steps](https://github.com/OmniLRS/OmniLRS/wiki/getting_started) to run your first OmniLRS simulations!
+- Linux x86_64 with glibc ≥ 2.35 (Ubuntu 24.04 recommended; Ubuntu 22.04 is deprecated by Isaac Sim), an RTX GPU, and an NVIDIA driver ≥ 580 (Isaac Sim 6.2 is tested with 595.58).
+- Clone with submodules and LFS assets, then run e.g. `pixi run -e ros2 ros2` or `pixi run -e yamcs yamcs` (see the tasks in `pixi.toml`).
+- ROS 2 uses the **Jazzy** libraries bundled with Isaac Sim; external ROS 2 nodes should run Jazzy.
+
+The user-facing Docker image (`omnilrs.docker/`) was removed with the Isaac Sim 6.2 migration; Docker is only used for CI (`ci.docker/`). See [docs/migration_plan_6.2.md](docs/migration_plan_6.2.md) for the migration details.
+
+Then follow the [Getting Started steps](https://github.com/OmniLRS/OmniLRS/wiki/getting_started) to run your first OmniLRS simulations!
 
 ### ROS2 Integration
 
@@ -81,8 +87,9 @@ https://github.com/jnskkmhr/omnilrs_ros2_demo
 
 The simulation allows user to interact with the Scene through ROS topics. This allows for instance to reset or teleport a robot, or to change the intensity of a light! We provide a complete description of the interactions available with the sim from ROS on the Wiki [here](https://github.com/OmniLRS/OmniLRS/wiki/ros_topics).
 
-To use this simulation with SpaceROS, the ROS2 simulation docker must first be spinned up, and then in a second time, another container running SpaceROS must be launched to interact with the simulation.
+To use this simulation with SpaceROS, the ROS2 simulation must first be spun up, and then a container running SpaceROS must be launched to interact with the simulation.
 To illustrate this, we provide a simple teleop demonstration with the sim in ROS2 and SpaceROS sending velocity commands. Check the Wiki for a [step-by-step guide](https://github.com/OmniLRS/OmniLRS/wiki#run-with-spaceros) on how to run this demo.
+Note: `spaceros_demo.docker/` is an unmaintained demo; it targets Isaac Sim 5.0 / ROS 2 Humble and has not been migrated to Isaac Sim 6.2.
 
 ## Yamcs (Mission Control System) Integration
 See the separate git repository to run the Yamcs and Grafana demo

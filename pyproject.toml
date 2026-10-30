@@ -18,13 +18,12 @@ dependencies = [
     "gdal",
     "omegaconf",
     "hydra-core",
-    "opencv-python",
     "av",
 ]
 
 [tool.ruff]
 line-length = 120
-target-version = "py311"
+target-version = "py312"
 # WorldBuilders is a vendored git submodule — don't lint/format third-party code.
 extend-exclude = ["WorldBuilders"]
 

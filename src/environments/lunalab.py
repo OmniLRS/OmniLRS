@@ -4,7 +4,7 @@ __email__ = "ljburtz@jaops.com"
 
 from typing import Dict, List, Tuple
 
-from isaacsim.core.utils.stage import add_reference_to_stage
+from isaacsim.core.experimental.utils.stage import add_reference_to_stage
 from pxr import Gf, Usd, UsdGeom, UsdLux
 
 from assets import get_assets_path

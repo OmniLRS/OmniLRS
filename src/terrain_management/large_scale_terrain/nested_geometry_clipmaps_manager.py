@@ -9,7 +9,7 @@ from typing import Tuple
 
 import numpy as np
 import omni
-from semantics.schema.editor import PrimSemanticData
+from isaacsim.core.experimental.utils.semantics import add_labels
 
 from src.terrain_management.large_scale_terrain.geometry_clipmaps import GeometryClipmapConf
 from src.terrain_management.large_scale_terrain.geometry_clipmaps_manager import (
@@ -252,7 +252,5 @@ class NestedGeometryClipmapManager:
         Add the semantic label to the clipmaps.
         """
         if self.settings.semantic_label is not None:
-            prim_sd = PrimSemanticData(self.stage.GetPrimAtPath(self.fine_clipmap_manager._mesh_path))
-            prim_sd.add_entry("class", self.settings.semantic_label)
-            prim_sd = PrimSemanticData(self.stage.GetPrimAtPath(self.coarse_clipmap_manager._mesh_path))
-            prim_sd.add_entry("class", self.settings.semantic_label)
+            for mesh_path in (self.fine_clipmap_manager._mesh_path, self.coarse_clipmap_manager._mesh_path):
+                add_labels(self.stage.GetPrimAtPath(mesh_path), labels=self.settings.semantic_label, taxonomy="class")

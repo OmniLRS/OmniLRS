@@ -114,7 +114,7 @@ def sim():
 @pytest.fixture(scope="session")
 def topics(sim):
     env = {k: v for k, v in os.environ.items() if k != "PYTHONPATH"}
-    setup = "/opt/ros/humble/setup.bash"
+    setup = f"/opt/ros/{os.environ.get('ROS_DISTRO', 'jazzy')}/setup.bash"
     if Path(setup).exists():
         cmd = f"source {setup} && ros2 topic list"
     elif shutil.which("ros2"):

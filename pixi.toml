@@ -10,26 +10,35 @@ platforms = [
     { platform = "linux-64", glibc = "2.35" },
 ]
 version = "0.1.0"
-description = "Pixi environments for OmniLRS with Isaac Sim 5 and manager-specific features"
+description = "Pixi environments for OmniLRS with Isaac Sim 6.2 and manager-specific features"
 
 [tasks]
 dedup-envs = "rdfind -makehardlinks true .pixi/envs"
+
+[activation.env]
+# Isolate every pixi env from an inherited PYTHONPATH (e.g. a sourced ROS 2 setup, or the CI base
+# image which sets /usr/lib/python3/dist-packages): its system Python is also 3.12, so its packages
+# (numpy 1.26, pytest 7) would otherwise shadow the pixi ones.
+PYTHONPATH = ""
 
 [pypi-options]
 index-url = "https://pypi.org/simple"
 extra-index-urls = ["https://pypi.nvidia.com"]
 index-strategy = "unsafe-best-match"
+# Only allow pre-releases that are requested explicitly (see the isaac feature)
+prerelease-mode = "explicit"
 
 # common deps, tasks, env variables in feature "core"
 [feature.core.dependencies]
-python = "3.11.*"
+python = "3.12.*"
 gdal = "*"
 libgdal = "*"
 libglu = "*"
 rdfind = "*"
+# Isaac Sim 6.2 requires libstdc++ with CXXABI_1.3.15 in conda environments
+libstdcxx-ng = ">=13"
 
 [feature.core.pypi-dependencies]
-opencv-python = "*"
 av = "*"
 omegaconf = "*"
 hydra-core = "*"
@@ -40,6 +49,8 @@ gdown = "*"
 em = "*"
 lark = "*"
 pandas = "*"
+# Used by WorldBuilders; no longer bundled with Isaac Sim since 5.1
+numpy-quaternion = "*"
 OmniLRS = { path = ".", editable = true }
 
 [feature.core.activation.env]
@@ -48,11 +59,19 @@ LD_LIBRARY_PATH = "$CONDA_PREFIX/lib:$LD_LIBRARY_PATH"
 
 # isaacsim-specific deps, tasks, env variables in feature "isaac"
 [feature.isaac.dependencies]
-packaging = "==23.0"
-numpy = "==1.26.0"
+# Must match the numpy pinned by the isaacsim-kernel wheel; conda packages (gdal) would otherwise pull a newer one
+numpy = "==2.3.1"
 
 [feature.isaac.pypi-dependencies]
-isaacsim = { version = "==5.0.0", extras = ["all", "extscache"] }
+# numpy (2.3.1), scipy, OpenCV (headless), torch and warp are pinned by the Isaac Sim wheels
+isaacsim = { version = "==6.2.0.0", extras = ["all", "extscache"] }
+# Isaac Sim 6.2 pins llvmlite==0.46.0, which only numba 0.63.x supports
+numba = "==0.63.*"
+# Match the Warp shipped as Kit extension omni.warp.core in Isaac Sim 6.2
+warp-lang = "==1.17.0"
+# Pre-release versions pinned by the isaacsim-core 6.2 wheel; listed explicitly so they can resolve
+tinyobjloader = "==2.0.0rc13"
+opencv-python-headless-noffmpeg = "==4.14.0.94rc3"
 
 [feature.isaac.activation.env]
 OMNI_KIT_ACCEPT_EULA = "YES"
@@ -65,7 +84,7 @@ isaacsim = "isaacsim"
 scripts = ["scripts/activate_isaac_ros.sh"]
 
 [feature.ros2.activation.env]
-ROS_DISTRO = "humble"
+ROS_DISTRO = "jazzy"
 RMW_IMPLEMENTATION = "rmw_fastrtps_cpp"
 
 [feature.ros2.tasks]
@@ -91,11 +110,15 @@ zenoh_lunaryard = "python run.py mode=Zenoh environment=lunaryard_20m robot=husk
 zenoh_lab = "python run.py mode=Zenoh environment=lunalab robot=husky"
 zenoh_largescale = "python run.py mode=Zenoh environment=largescale robot=husky"
 
+[feature.zenoh-client.pypi-dependencies]
+# GUI OpenCV for cv2.imshow; the Isaac environments use the headless build shipped with Isaac Sim
+opencv-python = "*"
+
 [feature.zenoh-client.tasks]
 zenoh_test_sub = "python scripts/zenoh/sub_camera.py"
 zenoh_test_pub = "python scripts/zenoh/pub_randomize_rocks.py"
 [feature.test-sim.dependencies]
-python = "3.11.*"
+python = "3.12.*"
 
 [feature.test-sim.pypi-dependencies]
 pytest = "*"

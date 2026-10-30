@@ -131,7 +131,7 @@ class ColliderBuilder:
             if not self.settings.visible:
                 mesh.GetVisibilityAttr().Set(UsdGeom.Tokens.invisible)
 
-            set_xform_ops(mesh, translate=Gf.Vec3d(position[0], position[1], 0))
+            set_xform_ops(mesh, translate=Gf.Vec3d(float(position[0]), float(position[1]), 0.0))
             add_collider(self.stage, mesh.GetPath(), mode=self.settings.collider_mode)
         return mesh_path
 
