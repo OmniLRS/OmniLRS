@@ -7,7 +7,6 @@ import time
 
 import omni
 from isaacsim import SimulationApp
-from isaacsim.core.api.world import World
 from yamcs.client import YamcsClient
 
 from src.configurations.procedural_terrain_confs import TerrainManagerConf
@@ -18,6 +17,7 @@ from src.environments.lunaryard import LunaryardController
 from src.environments.stellar_engine_env_mixin import StellarEngineEnvMixin
 from src.environments.utils import set_moon_env_name
 from src.environments_wrappers.rate import Rate
+from src.physics.simulation import Simulation
 from src.robots.robot import RobotManager
 
 logger = logging.getLogger(__name__)
@@ -60,18 +60,17 @@ class Yamcs_SimulationManager:
 
         # Block here until the Yamcs server is reachable. This avoids the
         # ConnectionFailure crash users hit when launching the sim before the
-        # Yamcs server is up. We do this before creating the World/scene so no
+        # Yamcs server is up. We do this before creating the simulation/scene so no
         # simulation state can drift while we wait.
         self._wait_for_yamcs(cfg["mode"]["instance_conf"]["address"])
 
-        self.world = World(
-            stage_units_in_meters=1.0,
+        self.sim = Simulation(
             physics_dt=cfg["environment"]["physics_dt"],
             rendering_dt=cfg["environment"]["rendering_dt"],
         )
 
         set_moon_env_name(cfg["environment"]["name"])
-        self._step_world_and_reset()
+        self._step_and_reset()
         self._setup_rate()
 
         self.EC = self._get_environment_controller(self.cfg["environment"]["name"])
@@ -89,7 +88,7 @@ class Yamcs_SimulationManager:
             self.RM.robot.subsystems.set_sun_prim_path(self.EC.get_sun_prim_path())
         self._start_TMTC()
         self.EC.add_robot_manager(self.RM)
-        self._step_world_and_reset()
+        self._step_and_reset()
 
     def _wait_for_yamcs(self, address: str, poll_interval: float = 1.0) -> None:
         """
@@ -186,10 +185,10 @@ class Yamcs_SimulationManager:
 
         return self.EC
 
-    def _step_world_and_reset(self, n=100):
+    def _step_and_reset(self, n=100):
         for i in range(n):
-            self.world.step(render=True)
-        self.world.reset()
+            self.sim.step()
+        self.sim.reset()
 
     def _setup_rate(self):
         if self.cfg["environment"]["enforce_realtime"]:
@@ -206,7 +205,7 @@ class Yamcs_SimulationManager:
             self.enable_deformation = False
 
     def _preload_robot(self):
-        self.RM.preload_robot(self.world, get_height_func=self.EC.get_terrain_height)
+        self.RM.preload_robot(self.sim, get_height_func=self.EC.get_terrain_height)
 
     def run_simulation(self) -> None:
         """
@@ -216,16 +215,16 @@ class Yamcs_SimulationManager:
         self.timeline.play()
         while self.simulation_app.is_running():
             self.rate.reset()
-            self.world.step(render=True)
+            self.sim.step()
 
-            if self.world.is_playing():
+            if self.sim.is_playing():
                 did_reset = False
 
                 if hasattr(self.EC, "enable_stellar_engine") and self.EC.enable_stellar_engine:
-                    self.EC.update_stellar_engine(dt=self.world.get_physics_dt())
+                    self.EC.update_stellar_engine(dt=self.sim.get_physics_dt())
 
-                if self.world.current_time_step_index == 0:
-                    self.world.reset()
+                if self.sim.current_time_step_index == 0:
+                    self.sim.reset()
 
                     did_reset = True
 
@@ -247,5 +246,5 @@ class Yamcs_SimulationManager:
         if self.RM.robot is not None:
             self.RM.robot.invalidate_articulation_api()
 
-        self.world.stop()
+        self.sim.stop()
         self.timeline.stop()
