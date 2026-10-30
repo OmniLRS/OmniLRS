@@ -47,7 +47,8 @@ Not removable:
 - `isaacsim-utils` (holds `isaacsim.ucx.core`) is a pip dependency of `isaacsim-asset` and `isaacsim-sensor`,
   so UCX can only be deleted as a directory (option B), not dropped as a package.
 - torch + CUDA libraries (~5.7 GB with triton, nvidia-*, onnxruntime-gpu): hard pip dependencies of `isaacsim-core` /
-  `isaacsim-robot`, and the deprecated `isaacsim.sensors.camera` imports torch at runtime.
+  `isaacsim-robot`. OmniLRS no longer imports `isaacsim.sensors.camera` (#165), but Isaac Sim's default app
+  (`apps/isaacsim.exp.base.kit`) still enables it, and it imports torch at runtime.
 
 ## Implementing B or C
 

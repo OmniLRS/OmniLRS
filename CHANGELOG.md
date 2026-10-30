@@ -25,6 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - ROS 2 robot assets (`ros2_husky_PhysX_vlp16*.usd`, `ros2_jackal_PhysX_vlp16*.usd`, `ex1/ex1_spheres.usd`): TF graph migrated to `IsaacComputeTransformTree` → `ROS2PublishTransformTree` (removes the deprecated `targetPrims` path and its per-frame PoseTree warnings; published TF is unchanged).
   - Poses passed to USD `Gf` types are cast to Python floats (Isaac Sim 6.2's pxr rejects non-float64 numpy scalars).
   - CI runs on Ubuntu 24.04 / ROS 2 Jazzy (`public.ecr.aws/artefacts/ros2:jazzy-harmonic-nvidia`).
+  - No deprecated Isaac Sim APIs left (see [docs/TODO_6.2.md](docs/TODO_6.2.md)): `World`/`PhysicsContext` → `src/physics/simulation.py` (`Simulation`, on `SimulationManager`), cameras → `isaacsim.sensors.experimental.rtx` (`src/sensors/camera.py`), articulations and wheel-link rigid bodies → `isaacsim.core.experimental.prims`, `isaacsim.core.utils` helpers → `isaacsim.core.experimental.utils`. The pragyaan and Vikram lander camera prims now author square-pixel apertures.
 - LargeScale static assets no longer implicitly add the terrain height to their z; set `height_above_terrain_override` instead.
 - LargeScale robot spawn uses the configured pose in both ROS2 and Yamcs modes (ROS2 previously forced `(0, 0)`); the `largescale*` configs set `height_above_terrain_override: 0.5` to keep the previous spawn height.
 - The Lunaryard workshop configs and `robot=pragyaan` now place the rover, lander, rock and monitoring camera relative to the terrain height.
