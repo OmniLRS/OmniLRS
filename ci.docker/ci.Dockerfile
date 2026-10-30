@@ -13,7 +13,8 @@ RUN apt-get update && apt-get install -q -y --no-install-recommends \
     git \
     && rm -rf /var/lib/apt/lists/*
 
-RUN curl -fsSL https://pixi.sh/install.sh | PIXI_HOME=/usr/local bash
+# Same pixi version as the lock-check workflow (.github/workflows/pixi-lock.yaml)
+RUN curl -fsSL https://pixi.sh/install.sh | PIXI_HOME=/usr/local PIXI_VERSION=v0.81.0 bash
 
 WORKDIR /workspace/omnilrs
 

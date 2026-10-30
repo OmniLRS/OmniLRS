@@ -9,7 +9,7 @@ This folder contains the base image for CI testing. The main app image is at the
 
 Build the app image with
 ```
-docker build -t omnilrs . -f artefacts.Dockerfile  
+docker build -t omnilrs . -f artefacts.Dockerfile
 ```
 
 ## Running tests
@@ -28,3 +28,14 @@ docker run --gpus all --rm omnilrs pixi run test-ros2 # or test-yamcs
 ## Notes for Building the Base Image
 
 If you wish to build the base image (`ci.Dockerfile`) yourself, note that assets (git lfs) and git submodules must already be available on the machine you are building on.
+
+The base image bakes in the pixi environments (Isaac Sim 6.2, Python 3.12) and the assets (`.artefactsignore` excludes `assets/` from the app image). Rebuild and push a new tag whenever `pixi.toml`/`pixi.lock` or anything under `assets/` changes, then update the `FROM` tag in `artefacts.Dockerfile`.
+
+It is based on `public.ecr.aws/artefacts/ros2:jazzy-harmonic-nvidia` (Ubuntu 24.04, ROS 2 Jazzy). Isaac Sim uses its bundled Jazzy libraries; the system ROS 2 CLI (`/opt/ros/jazzy`) is only used by the tests to check the published topics. Running it needs an NVIDIA driver >= 580.
+
+```
+git lfs pull && git submodule update --init
+docker build -t public.ecr.aws/jaops/jaops-omnilrs:omni-ci-0.4.0 -f ci.docker/ci.Dockerfile .
+aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws
+docker push public.ecr.aws/jaops/jaops-omnilrs:omni-ci-0.4.0
+```
