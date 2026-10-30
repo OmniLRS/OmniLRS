@@ -10,11 +10,9 @@ import isaacsim.core.experimental.utils.prim as prim_utils
 import isaacsim.core.experimental.utils.xform as xform_utils
 import numpy as np
 import omni
-from isaacsim.core.api.world import World
-from isaacsim.core.prims import RigidPrim, SingleRigidPrim
+from isaacsim.core.experimental.prims import RigidPrim
 
 # from src.robots.subsystems_manager import RobotSubsystemsManager
-from isaacsim.sensors.camera import Camera
 from isaacsim.sensors.experimental.physics import IMUSensor
 from pxr import Gf, Usd
 from scipy.spatial.transform import Rotation as R
@@ -23,8 +21,10 @@ from WorldBuilders.pxr_utils import createObject, createXform
 from src.configurations.robot_confs import RobotManagerConf
 from src.configurations.simulator_mode_enum import SimulatorMode
 from src.environments.utils import resolve_position, transform_orientation_from_xyzw_into_xyz
+from src.physics.simulation import Simulation
 from src.robots.articulation_control import ArticulationControl
 from src.robots.articulation_telemetry import ArticulationTelemetry
+from src.sensors.camera import RtxCamera
 from src.subsystems.robot_subsystems_handler import RobotSubsystemsHandler
 
 
@@ -59,13 +59,13 @@ class RobotManager:
 
     def preload_robot(
         self,
-        world: World,
+        sim: Simulation,
         get_height_func: callable = None,
     ) -> None:
         """
         Preload the robot in the scene.
         Args:
-            world (Usd.Stage): The usd stage scene.
+            sim (Simulation): The simulation, used to (re)initialize physics.
             get_height_func (callable): terrain height query, used when pose.height_above_terrain_override is set.
         """
         pose = self.robot_parameters.pose
@@ -87,19 +87,19 @@ class RobotManager:
             self.robot_parameters.robot_name,
             self.robot_parameters.target_links,
             self.robot_parameters.base_link,
-            world,
+            sim,
         )
 
     def preload_robot_at_pose(
         self,
-        world: World,
+        sim: Simulation,
         position: Tuple[float, float, float],
         orientation: Tuple[float, float, float, float],
     ) -> None:
         """
         Preload the robot in the scene.
         Args:
-            world (Usd.Stage): The usd stage scene.
+            sim (Simulation): The simulation, used to (re)initialize physics.
             position (Tuple[float, float, float]): The position of the robot. (x, y, z)
             orientation (Tuple[float, float, float, float]): The orientation of the robot. (w, x, y, z)
         """
@@ -121,7 +121,7 @@ class RobotManager:
             self.robot_parameters.robot_name,
             self.robot_parameters.target_links,
             self.robot_parameters.base_link,
-            world,
+            sim,
         )
 
     def add_robot(
@@ -175,7 +175,7 @@ class RobotManager:
         robot_name: str = None,
         target_links: List[str] = None,
         pose_base_link: str = None,
-        world=None,
+        sim: Simulation = None,
     ) -> None:
         """
         Add a robot rigid group to the scene.
@@ -183,7 +183,7 @@ class RobotManager:
         Args:
             robot_name (str): The name of the robot.
             target_links (List[str]): List of link names.
-            world (Usd.Stage): usd stage scene.
+            sim (Simulation): The simulation, used to (re)initialize physics.
         """
         rrg = RobotRigidGroup(
             self.robots_root,
@@ -191,7 +191,7 @@ class RobotManager:
             target_links,
             pose_base_link,
         )
-        rrg.initialize(world)
+        rrg.initialize(sim)
         self.robot_RG = rrg
 
     def reset_robot(self) -> None:
@@ -264,7 +264,6 @@ class Robot:
         self._last_wheel_joint_angles: list[float] = []
         self._camera_conf = camera_conf
         self._cameras = {}
-        self._depth_cameras = {}
         self.dimensions = dimensions
         self.turn_speed_coef = turn_speed_coef
         self._imu_sensor: Optional[IMUSensor] = None
@@ -373,7 +372,7 @@ class Robot:
 
     def invalidate_articulation_api(self) -> None:
         """
-        Call after world.reset() or when physics views may have been invalidated.
+        Call after a simulation reset or when physics views may have been invalidated.
         """
         self._articulation_api_enabled = False
 
@@ -400,34 +399,25 @@ class Robot:
         return (self._camera_conf["resolutions"]["high"][0], self._camera_conf["resolutions"]["high"][1])
 
     def _initialize_cameras(self) -> None:
-        # Camera is a wrapper, therefore it just wraps around the camera instance if it already exists
-        # otherwise it creates a new camera instance on the provided prim_path
+        # One RTX render product per resolution on the camera prim (created if missing), with RGBA and depth.
         if "resolutions" not in self._camera_conf:
             return
 
         resolutions = list(self._camera_conf.get("resolutions").keys())
 
         for res in resolutions:
-            self._cameras[res] = Camera(
+            self._cameras[res] = RtxCamera(
                 self._camera_conf["prim_path"],
-                resolution=(self._camera_conf["resolutions"][res][0], self._camera_conf["resolutions"][res][1]),
+                resolution=self._camera_conf["resolutions"][res],
+                depth=True,
             )
-            self._cameras[res].initialize()
-
-        for res in resolutions:
-            self._depth_cameras[res] = Camera(
-                self._camera_conf["prim_path"],
-                resolution=(self._camera_conf["resolutions"][res][0], self._camera_conf["resolutions"][res][1]),
-            )
-            self._depth_cameras[res].initialize()
-            self._depth_cameras[res].add_distance_to_image_plane_to_frame()
 
     def get_rgba_camera_view(self, resolution) -> np.ndarray:
         return self._cameras[resolution].get_rgba()
 
     def get_depth_camera_view(self, resolution) -> np.ndarray:
         """Returns depth image in meters as (H, W) float32 array."""
-        depth = self._depth_cameras[resolution].get_depth()
+        depth = self._cameras[resolution].get_depth()
         print("depth")
         print(depth)
         return depth
@@ -502,7 +492,8 @@ class Robot:
                 "Call update_articulation_api() from the simulation loop first."
             )
 
-        position, quat_wxyz = self.telemetry.articulation.get_world_pose()
+        positions, orientations = self.telemetry.articulation.get_world_poses()
+        position, quat_wxyz = positions.numpy()[0], orientations.numpy()[0]
 
         quat_xyzw = [
             float(quat_wxyz[1]),
@@ -542,13 +533,11 @@ class Robot:
         quat_wxyz = np.asarray([q[3], q[0], q[1], q[2]], dtype=np.float32)
         position = np.asarray(p, dtype=np.float32)
 
-        self.control.articulation.set_world_pose(
-            position=position,
-            orientation=quat_wxyz,
+        self.control.articulation.set_world_poses(positions=position[np.newaxis], orientations=quat_wxyz[np.newaxis])
+        self.control.articulation.set_velocities(
+            linear_velocities=np.zeros((1, 3), dtype=np.float32),
+            angular_velocities=np.zeros((1, 3), dtype=np.float32),
         )
-
-        self.control.articulation.set_linear_velocity(np.zeros(3, dtype=np.float32))
-        self.control.articulation.set_angular_velocity(np.zeros(3, dtype=np.float32))
 
         self._last_joint_positions = {}
         self._last_joint_velocities = {}
@@ -560,7 +549,7 @@ class Robot:
         Reset the robot to its original position and orientation.
 
         Note:
-            This requires articulation API to be ready. If called during world reset,
+            This requires articulation API to be ready. If called during a simulation reset,
             queue this from the simulation manager after update_articulation_api() succeeds.
         """
         if not self._articulation_api_enabled:
@@ -749,7 +738,7 @@ class Robot:
 # TODO for v4: separate into a different file (very complex and lengthy classes)
 class RobotRigidGroup:
     """
-    Class which deals with rigidprims and rigidprimview of a single robot.
+    Class which deals with the target link rigid bodies of a single robot (one batched RigidPrim).
     It is used to retrieve world pose, and contact forces, or apply force/torque.
     """
 
@@ -766,34 +755,40 @@ class RobotRigidGroup:
         self.root_path = root_path
         self.robot_name = robot_name
         self.target_links = target_links
-        self.prims = []
-        self.prim_views = []
+        self.links: Optional[RigidPrim] = None
         self.base_link = base_link
         self.base_prim_path = None
 
-    def initialize(self, world: World) -> None:
+    def initialize(self, sim: Simulation) -> None:
         """
-        Initialize the rigidprims and rigidprimviews of the robot.
+        Initialize the target link rigid bodies and the base link of the robot.
 
         Args:
-            world (World): A isaacsim.core.api.world.World object.
+            sim (Simulation): The simulation, used to (re)initialize physics.
         """
 
-        self.dt = world.get_physics_dt()
-        world.reset()
-        self._initialize_target_links()
+        self.dt = sim.get_physics_dt()
+        # Create the links on a stopped simulation: RigidPrim builds its physics views when the simulation plays,
+        # after PhysX has parsed the contact reporting authored here.
+        sim.stop()
+        self._initialize_target_links(sim)
         self._initialize_base_link()
-        world.reset()
+        sim.reset()
 
         print("initialized")
 
-    def _initialize_target_links(self):
-        if len(self.target_links) > 0:
-            for target_link in self.target_links:
-                print(target_link)
-                rigid_prim, rigid_prim_view = self._initialize_link(target_link)
-                self.prims.append(rigid_prim)
-                self.prim_views.append(rigid_prim_view)
+    def _initialize_target_links(self, sim: Simulation):
+        if not self.target_links:
+            return
+        paths = [os.path.join(self.root_path, self.robot_name, link) for link in self.target_links]
+        print(self.target_links)
+        # max_contact_count > 0 makes RigidPrim create the contact view behind get_net_contact_forces().
+        self.links = RigidPrim(paths, resolve_paths=False, max_contact_count=1)
+        # Contact reporting setup, as the deprecated RigidPrim(track_contact_forces=True) did: report all
+        # contacts, never sleep (sleeping bodies report no contacts), and disable scene stabilization.
+        self.links.set_enabled_contact_tracking(True, threshold=0.0)
+        self.links.set_sleep_thresholds(0.0)
+        sim.physics_scene.set_enabled_stabilization(False)
 
     def _initialize_base_link(self):
         if not self.base_link:
@@ -801,27 +796,12 @@ class RobotRigidGroup:
                 f"Robot '{self.robot_name}' is missing required 'base_link' in its YAML configuration. "
                 'Please add e.g. base_link: "base_link" under the robot\'s parameters.'
             )
-        # The base link only needs its world pose, read from USD. A physics-backed rigid prim
-        # would depend on the physics tensor view, which prior RigidPrim view creations invalidate.
+        # The base link only needs its world pose, read from USD (no physics view needed).
         base_prim_path = os.path.join(self.root_path, self.robot_name, self.base_link)
         if not prim_utils.is_prim_valid(base_prim_path):
             raise ValueError(f"Robot '{self.robot_name}' base link prim not found at '{base_prim_path}'.")
         self.base_prim_path = base_prim_path
         print("initialized base link")
-
-    def _initialize_link(self, link):
-        rigid_prim = SingleRigidPrim(
-            prim_path=os.path.join(self.root_path, self.robot_name, link),
-            name=f"{self.robot_name}/{link}",
-        )
-        rigid_prim_view = RigidPrim(
-            prim_paths_expr=os.path.join(self.root_path, self.robot_name, link),
-            name=f"{self.robot_name}/{link}_view",
-            track_contact_forces=True,
-        )
-        rigid_prim_view.initialize()
-
-        return rigid_prim, rigid_prim_view
 
     def get_world_poses(self) -> np.ndarray:
         """
@@ -833,8 +813,7 @@ class RobotRigidGroup:
 
         n_links = len(self.target_links)
         pose = np.zeros((n_links, 4, 4))
-        for i, prim in enumerate(self.prims):
-            position, orientation = prim.get_world_pose()
+        for i, (position, orientation) in enumerate(zip(*self._get_link_world_poses())):
             orientation = R.from_quat(orientation, scalar_first=True).as_matrix()
             pose[i, :3, 3] = 1
             pose[i, :3, :3] = orientation
@@ -859,9 +838,7 @@ class RobotRigidGroup:
         n_links = len(self.target_links)
         positions = np.zeros((n_links, 3))
         orientations = np.zeros((n_links, 4))
-        for i, prim in enumerate(self.prims):
-            position, orientation = prim.get_world_pose()
-
+        for i, (position, orientation) in enumerate(zip(*self._get_link_world_poses())):
             # Rearrange quaternion from (w, x, y, z) to (x, y, z, w) for scipy
             quaternion = [orientation[1], orientation[2], orientation[3], orientation[0]]
             rotation = R.from_quat(quaternion)
@@ -905,14 +882,10 @@ class RobotRigidGroup:
             angular_velocities (np.ndarray): The angular velocity of target links.
         """
 
-        n_links = len(self.target_links)
-        linear_velocities = np.zeros((n_links, 3))
-        angular_velocities = np.zeros((n_links, 3))
-        for i, prim in enumerate(self.prims):
-            linear_velocity, angular_velocity = prim.get_velocities()
-            linear_velocities[i, :] = linear_velocity
-            angular_velocities[i, :] = angular_velocity
-        return linear_velocities, angular_velocities
+        if self.links is None:
+            return np.zeros((0, 3)), np.zeros((0, 3))
+        linear_velocities, angular_velocities = self.links.get_velocities()
+        return linear_velocities.numpy().astype(np.float64), angular_velocities.numpy().astype(np.float64)
 
     def get_net_contact_forces(self) -> np.ndarray:
         """
@@ -922,12 +895,9 @@ class RobotRigidGroup:
             contact_forces (np.ndarray): The net contact forces on each target link.
         """
 
-        n_links = len(self.target_links)
-        contact_forces = np.zeros((n_links, 3))
-        for i, prim_view in enumerate(self.prim_views):
-            contact_force = prim_view.get_net_contact_forces(dt=self.dt).squeeze()
-            contact_forces[i, :] = contact_force
-        return contact_forces
+        if self.links is None:
+            return np.zeros((0, 3))
+        return self.links.get_net_contact_forces(dt=self.dt).numpy().astype(np.float64)
 
     def apply_force_torque(self, forces: np.ndarray, torques: np.ndarray) -> None:
         """
@@ -943,5 +913,12 @@ class RobotRigidGroup:
         n_links = len(self.target_links)
         assert forces.shape[0] == n_links, "given force does not have matching shape."
         assert torques.shape[0] == n_links, "given torque does not have matching shape."
-        for i, prim_view in enumerate(self.prim_views):
-            prim_view.apply_forces_and_torques_at_pos(forces=forces[i], torques=torques[i], is_global=False)
+        if self.links is not None:
+            self.links.apply_forces_and_torques_at_pos(forces=forces, torques=torques, local_frame=True)
+
+    def _get_link_world_poses(self) -> Tuple[np.ndarray, np.ndarray]:
+        """Target link positions (N, 3) and orientations (N, 4, wxyz)."""
+        if self.links is None:
+            return np.zeros((0, 3)), np.zeros((0, 4))
+        positions, orientations = self.links.get_world_poses()
+        return positions.numpy(), orientations.numpy()

@@ -4,11 +4,11 @@ __email__ = "ljburtz@jaops.com"
 
 
 import omni
-from isaacsim.core.api.world import World
 
 from src.environments_wrappers.sdg.lunalab_sdg import SDG_Lunalab
 from src.environments_wrappers.sdg.lunaryard_sdg import SDG_Lunaryard
 from src.labeling.auto_label import AutonomousLabeling
+from src.physics.simulation import Simulation
 
 
 class SyntheticDataGeneration_LabManagerFactory:
@@ -42,16 +42,15 @@ class SDG_SimulationManager:
         self.simulation_app = simulation_app
         self.generation_settings = cfg["mode"]["generation_settings"]
         self.timeline = omni.timeline.get_timeline_interface()
-        self.world = World(stage_units_in_meters=1.0)
-        self.physics_ctx = self.world.get_physics_context()
-        self.physics_ctx.set_solver_type("PGS")
+        self.sim = Simulation(physics_dt=1.0 / 60.0, rendering_dt=1.0 / 60.0)
+        self.sim.physics_scene.set_solver_type("PGS")
         # Lab manager thread
-        self.world.reset()
+        self.sim.reset()
         self.LC = SDG_LMF(cfg)
         self.LC.load()
         print("After lab is loaded")
         for i in range(100):
-            self.world.step(render=True)
+            self.sim.step()
         print("After world reset")
         self.generation_settings.prim_path = self.LC.scene_name + "/" + self.generation_settings.prim_path
         self.AL = AutonomousLabeling(self.generation_settings)
@@ -67,8 +66,8 @@ class SDG_SimulationManager:
 
         self.timeline.play()
         while self.simulation_app.is_running() and (self.count < self.generation_settings.num_images):
-            self.world.step(render=True)
-            if self.world.is_playing():
+            self.sim.step()
+            if self.sim.is_playing():
                 try:
                     self.AL.record()
                     self.count += 1

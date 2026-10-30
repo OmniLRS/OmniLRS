@@ -11,8 +11,7 @@ from enum import Enum
 from typing import Dict, List, Optional
 
 import numpy as np
-from isaacsim.core.prims import SingleArticulation
-from isaacsim.core.utils.types import ArticulationAction
+from isaacsim.core.experimental.prims import Articulation
 
 logger = logging.getLogger(__name__)
 
@@ -67,16 +66,15 @@ class ArticulationControl:
 
     In Isaac Sim, an articulation is a robot/mechanism made of rigid bodies
     connected by joints and controlled from an articulation root. This class
-    wraps one robot articulation with `SingleArticulation` and applies joint
-    commands through Isaac Sim's `ArticulationAction` API.
+    wraps one robot articulation with the Core Experimental `Articulation` and
+    applies joint commands as DOF position/velocity targets or efforts.
 
     The class is transport-agnostic and should be used through `Robot`;
     simulation managers are responsible for initializing/updating it
     after the world is stepped and after resets.
 
     Isaac Sim articulation reference:
-    https://docs.isaacsim.omniverse.nvidia.com/5.0.0/robot_simulation/articulation_controller.html
-    https://docs.isaacsim.omniverse.nvidia.com/5.0.0/py/source/extensions/isaacsim.core.prims/docs/index.html#isaacsim.core.prims.SingleArticulation
+    https://docs.isaacsim.omniverse.nvidia.com/6.2.0/py/source/extensions/isaacsim.core.experimental.prims/docs/index.html
     """
 
     def __init__(
@@ -94,7 +92,7 @@ class ArticulationControl:
             prim_path:
                 USD prim path of the articulation root to control.
             name:
-                Name assigned to the Isaac `SingleArticulation` wrapper.
+                Name used in log messages.
             init_retry_s:
                 Minimum wall-clock time between initialization attempts. This
                 avoids spamming Isaac initialization while the stage or physics
@@ -116,7 +114,7 @@ class ArticulationControl:
 
         self.log = logger.info
 
-        self.articulation: Optional[SingleArticulation] = None
+        self.articulation: Optional[Articulation] = None
 
         self.joint_names: List[str] = []
         self.joint_name_to_index: Dict[str, int] = {}
@@ -145,15 +143,15 @@ class ArticulationControl:
         Initialize the Isaac articulation wrapper if it is not ready yet.
 
         Returns:
-            True when the controller has a valid `SingleArticulation` wrapper
-            and joint-name/index mapping, False otherwise.
+            True when the controller has an `Articulation` backed by a valid
+            physics tensor view and a joint-name/index mapping, False otherwise.
 
         Notes:
             This method intentionally does not read joint positions or other
-            physics state. Those reads require Isaac's physics simulation view
-            to be created, which usually happens only after the world has been
-            stepped/playing. Initialization only needs the articulation DOF
-            names so commands can later be mapped from joint names to indices.
+            physics state. The physics tensor view is created only after the
+            world has been stepped/playing. Without it, `Articulation` setters
+            would fall back to authoring USD drive attributes, so initialization
+            waits for it.
         """
 
         if self.is_ready:
@@ -165,17 +163,16 @@ class ArticulationControl:
         self._t_last_init_try = now
 
         try:
-            self.articulation = SingleArticulation(
-                prim_path=self.prim_path,
-                name=self.name,
-            )
-            self.articulation.initialize()
+            articulation = Articulation(self.prim_path)
+            if not articulation.is_physics_tensor_entity_valid():
+                raise RuntimeError("physics tensor view is not ready")
 
-            dof_names = self.articulation.dof_names
+            dof_names = articulation.dof_names
 
             if dof_names is None:
                 raise RuntimeError(f"No DOF names found for articulation {self.prim_path}")
 
+            self.articulation = articulation
             self.joint_names = list(dof_names)
             self.joint_name_to_index = {name: i for i, name in enumerate(self.joint_names)}
 
@@ -197,8 +194,8 @@ class ArticulationControl:
 
         The command is given by joint name and may contain position, velocity,
         effort, or mixed targets. The method validates the command mode, filters
-        unknown joints, converts joint names to Isaac DOF indices, and sends the
-        corresponding `ArticulationAction`.
+        unknown joints, converts joint names to Isaac DOF indices, and sets the
+        corresponding DOF targets. NaN targets are skipped (previous target kept).
 
         Returns:
             True if at least one valid target was applied, otherwise False.
@@ -368,7 +365,7 @@ class ArticulationControl:
 
     def _apply_targets(
         self,
-        articulation: SingleArticulation,
+        articulation: Articulation,
         kind: JointControlMode,
         targets: Dict[str, float],
     ) -> None:
@@ -384,25 +381,19 @@ class ArticulationControl:
             dtype=np.float32,
         )
 
+        valid = ~np.isnan(values)
+        if not valid.any():
+            return
+        indices, values = indices[valid], values[valid][np.newaxis, :]
+
         if kind == JointControlMode.POSITION:
-            action = ArticulationAction(
-                joint_positions=values,
-                joint_indices=indices,
-            )
+            articulation.set_dof_position_targets(values, dof_indices=indices)
 
         elif kind == JointControlMode.VELOCITY:
-            action = ArticulationAction(
-                joint_velocities=values,
-                joint_indices=indices,
-            )
+            articulation.set_dof_velocity_targets(values, dof_indices=indices)
 
         elif kind == JointControlMode.EFFORT:
-            action = ArticulationAction(
-                joint_efforts=values,
-                joint_indices=indices,
-            )
+            articulation.set_dof_efforts(values, dof_indices=indices)
 
         else:
             raise ValueError(f"Cannot apply target kind: {kind}")
-
-        articulation.apply_action(action)

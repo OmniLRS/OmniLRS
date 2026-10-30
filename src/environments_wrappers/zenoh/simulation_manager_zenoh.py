@@ -6,7 +6,6 @@ import logging
 
 import omni
 from isaacsim import SimulationApp
-from isaacsim.core.api.world import World
 
 from src.configurations.procedural_terrain_confs import TerrainManagerConf
 from src.environments.utils import set_moon_env_name
@@ -15,6 +14,7 @@ from src.environments_wrappers.zenoh.largescale_zenoh import Zenoh_LargeScaleMan
 from src.environments_wrappers.zenoh.lunalab_zenoh import Zenoh_LunalabManager
 from src.environments_wrappers.zenoh.lunaryard_zenoh import Zenoh_LunaryardManager
 from src.environments_wrappers.zenoh.robot_manager_zenoh import Zenoh_RobotManager
+from src.physics.simulation import Simulation
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(format="%(asctime)s %(message)s", datefmt="%m/%d/%Y %I:%M:%S %p")
@@ -48,15 +48,14 @@ class Zenoh_SimulationManager:
 
         # Setups the physics and acquires different interfaces to talk with Isaac
         self.timeline = omni.timeline.get_timeline_interface()
-        self.world = World(
-            stage_units_in_meters=1.0,
+        self.sim = Simulation(
             physics_dt=cfg["environment"]["physics_dt"],
             rendering_dt=cfg["environment"]["rendering_dt"],
         )
 
         set_moon_env_name(cfg["environment"]["name"])
 
-        self._step_world_and_reset()
+        self._step_and_reset()
         self._setup_rate()
 
         self.Zenoh_EC = self._get_environment_controller(self.cfg["environment"]["name"])
@@ -71,14 +70,14 @@ class Zenoh_SimulationManager:
 
         self.Zenoh_EC.LC.add_robot_manager(self.Zenoh_RM.get_RM())
 
-        self._step_world_and_reset()
+        self._step_and_reset()
 
         self.entry_task_is_done = False
 
-    def _step_world_and_reset(self, n=100):
+    def _step_and_reset(self, n=100):
         for i in range(n):
-            self.world.step(render=True)
-        self.world.reset()
+            self.sim.step()
+        self.sim.reset()
 
     def _setup_rate(self):
         if self.cfg["environment"]["enforce_realtime"]:
@@ -121,7 +120,7 @@ class Zenoh_SimulationManager:
             self.enable_deformation = False
 
     def _preload_robot(self):
-        self.Zenoh_RM.get_RM().preload_robot(self.world, get_height_func=self.Zenoh_EC.LC.get_terrain_height)
+        self.Zenoh_RM.get_RM().preload_robot(self.sim, get_height_func=self.Zenoh_EC.LC.get_terrain_height)
 
     def _start_transports(self):
         """
@@ -147,9 +146,9 @@ class Zenoh_SimulationManager:
 
             did_reset = False
 
-            if self.world.is_playing():
-                if self.world.current_time_step_index == 0:
-                    self.world.reset()
+            if self.sim.is_playing():
+                if self.sim.current_time_step_index == 0:
+                    self.sim.reset()
                     did_reset = True
                     self.Zenoh_EC.reset()
                     self.Zenoh_RM.invalidate_articulation_api()
@@ -159,7 +158,7 @@ class Zenoh_SimulationManager:
                 if not did_reset:
                     # Must happen before periodic_update(), because LargeScale calls robot.get_pose().
                     self.Zenoh_RM.update_articulation_api()
-                    self.Zenoh_EC.periodic_update(dt=self.world.get_physics_dt())
+                    self.Zenoh_EC.periodic_update(dt=self.sim.get_physics_dt())
                     self.Zenoh_EC.apply_modifications()
                     if self.Zenoh_EC.trigger_reset:
                         self.Zenoh_RM.invalidate_articulation_api()
@@ -168,13 +167,13 @@ class Zenoh_SimulationManager:
                         did_reset = True
                     self.Zenoh_RM.apply_modifications()
                     if self.enable_deformation:
-                        if self.world.current_time_step_index >= (self.deform_delay * self.world.get_physics_dt()):
+                        if self.sim.current_time_step_index >= (self.deform_delay * self.sim.get_physics_dt()):
                             self.Zenoh_EC.LC.deform_terrain()
 
             if self.Zenoh_EC.pubs_inited:
                 self.Zenoh_EC.pub_sim_is_running(True)
 
-            if self.Zenoh_RM.pubs_inited and self.world.is_playing() and not did_reset:
+            if self.Zenoh_RM.pubs_inited and self.sim.is_playing() and not did_reset:
                 self.Zenoh_RM.apply_modifications()
                 self.Zenoh_RM.publish_telemetry()
                 self.Zenoh_RM.publish_gt()
@@ -186,5 +185,5 @@ class Zenoh_SimulationManager:
         self.Zenoh_EC.close()
         self.Zenoh_RM.close()
 
-        self.world.stop()
+        self.sim.stop()
         self.timeline.stop()

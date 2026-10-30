@@ -370,9 +370,9 @@ if __name__ == "__main__":
     from isaacsim import SimulationApp
 
     simulation_app = SimulationApp({"headless": False})
-    from isaacsim.core.api.world import World
+    from src.physics.simulation import Simulation
 
-    world = World(stage_units_in_meters=1.0)
+    sim = Simulation(physics_dt=1.0 / 60.0, rendering_dt=1.0 / 60.0)
     T = TerrainManager()
 
     j = 0
@@ -381,4 +381,4 @@ if __name__ == "__main__":
         T.loadTerrainId(j)
         j += 1
         for i in range(20):
-            world.step(render=True)
+            sim.step()
