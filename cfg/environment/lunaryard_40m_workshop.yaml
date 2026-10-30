@@ -231,7 +231,7 @@ robots_settings:
     processor: "realtime"
     intervals:
       robot_stats: 1
-      camera_streaming: 2
+      camera_streaming: 0.5
     lander_camera:
       prim_path: "/StaticAssets/lander/Lander/Cam_Right/Lander_Camera"
       resolution: [1440, 1080]
@@ -323,5 +323,5 @@ monitoring_cameras_settings:
         topic: "/monitoring/monitoring_camera"
         frame_id: "monitoring_camera_id"
       type: "Rgb" # make sure to have correct naming - eg. Rgb ; Depth ; SemanticSegmentation ; InstanceSegmentation ; Normals
-      resolution: [320, 240]
+      resolution: [640, 480]
       # stream_frequency: 2.0 #  every 0.5s - in order to not overwhelm the network
