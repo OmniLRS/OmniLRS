@@ -15,6 +15,12 @@ description = "Pixi environments for OmniLRS with Isaac Sim 6.2 and manager-spec
 [tasks]
 dedup-envs = "rdfind -makehardlinks true .pixi/envs"
 
+[activation.env]
+# Isolate every pixi env from an inherited PYTHONPATH (e.g. a sourced ROS 2 setup, or the CI base
+# image which sets /usr/lib/python3/dist-packages): its system Python is also 3.12, so its packages
+# (numpy 1.26, pytest 7) would otherwise shadow the pixi ones.
+PYTHONPATH = ""
+
 [pypi-options]
 index-url = "https://pypi.org/simple"
 extra-index-urls = ["https://pypi.nvidia.com"]
