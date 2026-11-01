@@ -65,7 +65,7 @@ class PragyaanCommander:
         if self._robot.subsystems.get_device_power_state(CommonDevice.CAMERA) == PowerState.ON:
             camera_idx, _ = self._robot.get_camera_by_name(camera_name)
             self._camera_handler.transmit_camera_view(
-                f"{PragyaanCameraHandler.BUCKET_ONCOMMAND_PREFIX}_{camera_name}",
+                f"images_oncommand_{camera_name}",
                 PragyaanCameraResolution.HIGH.value,
                 CameraViewType.RGBA,
                 camera_idx,
@@ -76,7 +76,7 @@ class PragyaanCommander:
         if self._robot.subsystems.get_device_power_state(CommonDevice.CAMERA) == PowerState.ON:
             camera_idx, _ = self._robot.get_camera_by_name(camera_name)
             self._camera_handler.transmit_camera_view(
-                f"{PragyaanCameraHandler.BUCKET_DEPTH_PREFIX}_{camera_name}",
+                f"images_depth_{camera_name}",
                 PragyaanCameraResolution.HIGH.value,
                 CameraViewType.DEPTH,
                 camera_idx,
@@ -149,7 +149,7 @@ class PragyaanCommander:
                     execute_immediately=False,
                     function=self._camera_handler.transmit_camera_view,
                     f_args=(
-                        f"{PragyaanCameraHandler.BUCKET_STREAMING_PREFIX}_{camera_name}",
+                        f"images_streaming_{camera_name}",
                         PragyaanCameraResolution.LOW.value,
                         CameraViewType.RGBA,
                         camera_idx,
@@ -170,12 +170,12 @@ class PragyaanCommander:
         # MDB arguments can not be null, so crf = -1 stands for None (bitrate mode)
         try:
             self._camera_handler.set_streaming_compression_params(
-                camera_name=camera_name,
                 bitrate=bitrate,
                 keyframe_interval=keyframe_interval,
                 crf=None if crf < 0 else crf,
                 max_payload_size=max_payload_size,
                 bandwidth_window_seconds=bandwidth_window_seconds,
+                bucket_name=f"images_streaming_{camera_name}",
             )
         except ValueError as error:
             print("New camera streaming parameters are invalid:", error)

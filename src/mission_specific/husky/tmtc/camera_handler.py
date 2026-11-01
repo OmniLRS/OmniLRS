@@ -26,10 +26,6 @@ class HuskyCameraHandler:
     been removed because Husky does not have an associated lander.
     """
 
-    BUCKET_STREAMING_PREFIX = "images_streaming"
-    BUCKET_ONCOMMAND_PREFIX = "images_oncommand"
-    BUCKET_DEPTH_PREFIX = "images_depth"
-
     def __init__(self, images_handler: ImagesHandler, robot) -> None:
         self._images_handler = images_handler
         self._robot = robot

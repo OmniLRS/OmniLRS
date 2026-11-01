@@ -27,7 +27,7 @@ class HuskyController(YamcsTMTC):
 
         self._intervals = yamcs_conf["intervals"]
 
-        self._camera_handler = HuskyCameraHandler(self._images_handler, robot)
+        self._camera_handler = HuskyCameraHandler(self._images_handler, robot, yamcs_conf["images"]["buckets"])
 
         self._transmitter = HuskyTransmitter(
             self.transmit_to_yamcs,

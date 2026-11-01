@@ -59,8 +59,7 @@ class HuskyCommander:
         camera_idx, _ = self._robot.get_camera_by_name(camera_name)
 
         self._camera_handler.transmit_camera_view(
-            f"{HuskyCameraHandler.BUCKET_ONCOMMAND_PREFIX}_{camera_name}",
-            HuskyCameraResolution.HIGH.value,
+            f"images_oncommand_{camera_name}",
             CameraViewType.RGBA,
             camera_idx,
         )
@@ -70,7 +69,7 @@ class HuskyCommander:
         camera_idx, _ = self._robot.get_camera_by_name(camera_name)
 
         self._camera_handler.transmit_camera_view(
-            f"{HuskyCameraHandler.BUCKET_DEPTH_PREFIX}_{camera_name}",
+            f"images_depth_{camera_name}",
             HuskyCameraResolution.HIGH.value,
             CameraViewType.DEPTH,
             camera_idx,
@@ -91,7 +90,7 @@ class HuskyCommander:
                     execute_immediately=False,
                     function=self._camera_handler.transmit_camera_view,
                     f_args=(
-                        f"{HuskyCameraHandler.BUCKET_STREAMING_PREFIX}_{camera_name}",
+                        f"images_streaming_{camera_name}",
                         HuskyCameraResolution.LOW.value,
                         CameraViewType.RGBA,
                         camera_idx,

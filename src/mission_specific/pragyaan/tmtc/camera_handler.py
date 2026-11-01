@@ -40,13 +40,6 @@ class PragyaanCameraHandler:
     The reference to _robot provides access to rover's cameras, and desired use-case implementation.
     """
 
-    # reflects the buckets defined in yaml
-    BUCKET_STREAMING_PREFIX = "images_streaming"
-    BUCKET_ONCOMMAND_PREFIX = "images_oncommand"
-    BUCKET_DEPTH_PREFIX = "images_depth"
-    BUCKET_LANDER = "images_lander"
-    BUCKET_MONITORING = "images_monitoring"
-
     def __init__(
         self,
         images_handler: ImagesHandler,
@@ -139,7 +132,6 @@ class PragyaanCameraHandler:
             model = CameraCompressionModel()
             model.initialize(**self._compression_conf)
             self._compression_models[key] = model
-
         return self._compression_models[key]
 
     def _compress(self, image: Image, bucket: str, resolution: str) -> Image:
@@ -148,9 +140,9 @@ class PragyaanCameraHandler:
         model.compute(0.0)
         return model.get_outputs()["compressed_image"]
 
-    def get_compression_model_outputs(self, camera_name):
+    def get_compression_model_outputs(self, bucket_name):
         model = self._compression_models.get(
-            (f"{self.BUCKET_STREAMING_PREFIX}_{camera_name}", PragyaanCameraResolution.LOW.value)
+            bucket_name, None
         )
         if model is None:
             return None
@@ -158,7 +150,8 @@ class PragyaanCameraHandler:
 
     def set_streaming_compression_params(self, **params):
         model = self._get_compression_model(
-            f"{self.BUCKET_STREAMING_PREFIX}_{params['camera_name']}", PragyaanCameraResolution.LOW.value
+            # remove "bucket_name" from params before passing into update_parameters
+            params.pop("bucket_name"), PragyaanCameraResolution.LOW.value
         )
         model.update_parameters(**params)
 
@@ -171,7 +164,7 @@ class PragyaanCameraHandler:
             camera_view: Image = self._snap_camera_view_depth(resolution, camera_idx)
         elif type == CameraViewType.RGBA:
             camera_view: Image = self._snap_camera_view_rgb(resolution, camera_idx)
-            if self.BUCKET_STREAMING_PREFIX in bucket:  # remove this condition to compress every RGBA view
+            if "images_streaming" in bucket:  # remove this condition to compress every RGBA view
                 camera_view = self._compress(camera_view, bucket, resolution)
         else:
             print("in transmit_camera_view: unknown type:", type)
@@ -184,7 +177,7 @@ class PragyaanCameraHandler:
             return
 
         camera_view: Image = self._snap_lander_camera_view()
-        self._images_handler.save_image(camera_view, self.BUCKET_LANDER)
+        self._images_handler.save_image(camera_view, "images_lander")
 
     def transmit_monitoring_camera_view(self):
         camera_view: Image = self._snap_monitoring_camera_view()
@@ -192,4 +185,4 @@ class PragyaanCameraHandler:
         if camera_view is None:
             return
 
-        self._images_handler.save_image(camera_view, self.BUCKET_MONITORING)
+        self._images_handler.save_image(camera_view, "images_monitoring")

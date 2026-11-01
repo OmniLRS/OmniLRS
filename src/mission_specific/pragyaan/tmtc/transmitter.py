@@ -128,7 +128,7 @@ class PragyaanTransmitter:
         self._transmit(self._parameters_conf[f"camera_streaming_state_{camera_name}"], state)
 
     def transmit_camera_compression_info(self, camera_name):
-        compression_status = self._camera_handler.get_compression_model_outputs(camera_name)
+        compression_status = self._camera_handler.get_compression_model_outputs(f"images_streaming_{camera_name}")
         if compression_status is None:
             return
         # The bandwidth is 0 until the first frame is encoded; skip it as it is below the Yamcs MDB minimum
