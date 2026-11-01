@@ -141,9 +141,7 @@ class PragyaanCameraHandler:
         return model.get_outputs()["compressed_image"]
 
     def get_compression_model_outputs(self, bucket_name):
-        model = self._compression_models.get(
-            bucket_name, None
-        )
+        model = self._compression_models.get(bucket_name, None)
         if model is None:
             return None
         return model.get_outputs()
@@ -151,7 +149,8 @@ class PragyaanCameraHandler:
     def set_streaming_compression_params(self, **params):
         model = self._get_compression_model(
             # remove "bucket_name" from params before passing into update_parameters
-            params.pop("bucket_name"), PragyaanCameraResolution.LOW.value
+            params.pop("bucket_name"),
+            PragyaanCameraResolution.LOW.value,
         )
         model.update_parameters(**params)
 
