@@ -429,9 +429,6 @@ class Robot:
                     ),
                 }
 
-                camera["resolutions"][res]["rgba"].initialize()
-                camera["resolutions"][res]["depth"].initialize()
-
             self._cameras.append(camera)
 
     def get_camera_by_name(self, camera_name) -> tuple[int, Dict] | None:
