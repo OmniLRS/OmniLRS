@@ -140,6 +140,7 @@ class Yamcs_SimulationManager:
                 robot_name,
                 self.RM.robot_RG,
                 self.RM.robot,
+                self.cfg["environment"]["robots_settings"]["parameters"].get("camera", None),  # may not have camera
             )
         elif controller_name == "husky-controller":
             from src.mission_specific.husky.tmtc.husky_controller import HuskyController
@@ -150,6 +151,7 @@ class Yamcs_SimulationManager:
                 robot_name,
                 self.RM.robot_RG,
                 self.RM.robot,
+                self.cfg["environment"]["robots_settings"]["parameters"].get("camera", None),  # may not have camera
             )
         elif controller_name == "":
             raise Exception("No robot controller was setup in yaml configurations.")

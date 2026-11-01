@@ -262,8 +262,8 @@ class Robot:
         self._last_joint_velocities: dict[str, float] = {}
         self._last_joint_efforts: dict[str, float] = {}
         self._last_wheel_joint_angles: list[float] = []
-        self._camera_conf = camera_conf
-        self._cameras = {}
+        self._camera_conf = camera_conf  # expecting a list of cameras
+        self._cameras = []
         self.dimensions = dimensions
         self.turn_speed_coef = turn_speed_coef
         self._imu_sensor: Optional[IMUSensor] = None
@@ -399,28 +399,50 @@ class Robot:
         return (self._camera_conf["resolutions"]["high"][0], self._camera_conf["resolutions"]["high"][1])
 
     def _initialize_cameras(self) -> None:
-        # One RTX render product per resolution on the camera prim (created if missing), with RGBA and depth.
-        if "resolutions" not in self._camera_conf:
-            return
+        # Camera is a wrapper, therefore it just wraps around the camera instance if it already exists
+        # otherwise it creates a new camera instance on the provided prim_path
 
-        resolutions = list(self._camera_conf.get("resolutions").keys())
+        for camera_conf in self._camera_conf:
+            if "resolutions" not in camera_conf:
+                raise RuntimeError("Missing 'resolutions' in camera config.")
 
-        for res in resolutions:
-            self._cameras[res] = RtxCamera(
-                self._camera_conf["prim_path"],
-                resolution=self._camera_conf["resolutions"][res],
-                depth=True,
-            )
+            camera = {}
 
-    def get_rgba_camera_view(self, resolution) -> np.ndarray:
-        return self._cameras[resolution].get_rgba()
+            resolutions = list(camera_conf["resolutions"].keys())
 
-    def get_depth_camera_view(self, resolution) -> np.ndarray:
-        """Returns depth image in meters as (H, W) float32 array."""
-        depth = self._cameras[resolution].get_depth()
-        print("depth")
-        print(depth)
-        return depth
+            camera["name"] = camera_conf["name"]
+            camera["prim_path"] = camera_conf["prim_path"]
+
+            camera["resolutions"] = {}
+            for res in resolutions:
+                # Note: each camera resolution has its own RGBA camera instance & Depth camera instance
+                camera["resolutions"][res] = {
+                    "resolution": camera_conf["resolutions"][res],
+                    "rgba": RtxCamera(
+                        camera_conf["prim_path"],
+                        resolution=(camera_conf["resolutions"][res][0], camera_conf["resolutions"][res][1]),
+                    ),
+                    "depth": RtxCamera(
+                        camera_conf["prim_path"],
+                        resolution=(camera_conf["resolutions"][res][0], camera_conf["resolutions"][res][1]),
+                        depth=True,
+                    ),
+                }
+
+                camera["resolutions"][res]["rgba"].initialize()
+                camera["resolutions"][res]["depth"].initialize()
+
+            self._cameras.append(camera)
+
+    def get_camera_by_name(self, camera_name) -> tuple[int, Dict] | None:
+        """Return camera index & camera dict from given camera_name"""
+        return next(((i, cam) for i, cam in enumerate(self._cameras) if cam["name"] == camera_name), None)
+
+    def get_rgba_camera_view_by_idx(self, idx, resolution) -> np.ndarray:
+        return self._cameras[idx]["resolutions"][resolution]["rgba"].get_rgba()
+
+    def get_depth_camera_view_by_idx(self, idx, resolution) -> np.ndarray:
+        return self._cameras[idx]["resolutions"][resolution]["depth"].get_depth()
 
     def get_imu_readings(self):
         if self._imu_sensor_path == "":

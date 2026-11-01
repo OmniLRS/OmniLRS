@@ -12,12 +12,24 @@ robots_settings:
     images:
       no_data_image_path: "${oc.env:OMNILRS_ROOT,.}/assets/images/no_data_grafana.png"
       buckets:
-        - name: "images_streaming"
-          path: "/Rover/camera/images_streaming"
-        - name: "images_oncommand"
-          path: "/Rover/camera/images_oncommand"
-        - name: "images_depth"
-          path: "/Rover/camera/images_depth"
+        - name: images_depth_cam_color
+          path: /Rover/camera/images_depth_cam_color
+        - name: images_oncommand_cam_color
+          path: /Rover/camera/images_oncommand_cam_color
+        - name: images_streaming_cam_color
+          path: /Rover/camera/images_streaming_cam_color
+        - name: images_depth_cam_left
+          path: /Rover/camera/images_depth_cam_left
+        - name: images_oncommand_cam_left
+          path: /Rover/camera/images_oncommand_cam_left
+        - name: images_streaming_cam_left
+          path: /Rover/camera/images_streaming_cam_left
+        - name: images_depth_cam_right
+          path: /Rover/camera/images_depth_cam_right
+        - name: images_oncommand_cam_right
+          path: /Rover/camera/images_oncommand_cam_right
+        - name: images_streaming_cam_right
+          path: /Rover/camera/images_streaming_cam_right
     parameters:
       pose_of_base_link: "/Rover/pose_ground_truth"
       go_nogo: "/Rover/go_nogo"
@@ -45,8 +57,13 @@ robots_settings:
       current_draw_camera: "/Rover/current_draw_camera"
       current_draw_radio: "/Rover/current_draw_radio"
       current_draw_eps: "/Rover/current_draw_eps"
-      camera_streaming_state: "/Rover/camera/images_streaming/state"
       motor_encoder: "/Rover/motor_encoder"
+      camera_streaming_state_cam_color: 
+        /Rover/camera/images_streaming_cam_color/state
+      camera_streaming_state_cam_left: 
+        /Rover/camera/images_streaming_cam_left/state
+      camera_streaming_state_cam_right: 
+        /Rover/camera/images_streaming_cam_right/state
     commands:
       drive_straight: "/Rover/motor/drive_straight"
       drive_turn: "/Rover/motor/drive_turn"
