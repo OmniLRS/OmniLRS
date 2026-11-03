@@ -14,7 +14,7 @@ from src.environments_wrappers.zenoh.largescale_zenoh import Zenoh_LargeScaleMan
 from src.environments_wrappers.zenoh.lunalab_zenoh import Zenoh_LunalabManager
 from src.environments_wrappers.zenoh.lunaryard_zenoh import Zenoh_LunaryardManager
 from src.environments_wrappers.zenoh.robot_manager_zenoh import Zenoh_RobotManager
-from src.physics.simulation import Simulation
+from src.simulation import Simulation
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(format="%(asctime)s %(message)s", datefmt="%m/%d/%Y %I:%M:%S %p")

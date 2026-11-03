@@ -22,7 +22,7 @@ the deformable-terrain configs (terramechanics / deformation read the wheel-link
 
 ## A. World / Articulation / Camera (done, #165)
 
-### A1. `World` and `PhysicsContext` -> `src/physics/simulation.py`
+### A1. `World` and `PhysicsContext` -> `src/simulation.py`
 
 `Simulation` implements the lifecycle OmniLRS used from `World` on top of `SimulationManager`/`PhysxScene`, the stage
 utils and the timeline (the migration guide has no single replacement object). `step()` is one app update (Kit's loop in
@@ -108,7 +108,7 @@ camera or semantics changes, also run SDG and compare images / labels with the c
 
 For future reference; not a TODO.
 
-- **Scene:** `Simulation` (`src/physics/simulation.py`) creates a single `PhysicsScene` prim with `PhysxSceneAPI` at
+- **Scene:** `Simulation` (`src/simulation.py`) creates a single `PhysicsScene` prim with `PhysxSceneAPI` at
   `/physicsScene` (`PhysxScene(path)` + `SimulationManager.set_default_physics_scene`). It holds gravity, time step,
   solver, broadphase, CCD, stabilization, GPU dynamics and GPU buffer settings for every rigid body and articulation.
   Robot and asset USDs bring no scene of their own: references only include the default prim, and the stray

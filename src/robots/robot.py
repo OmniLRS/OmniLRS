@@ -22,9 +22,9 @@ from WorldBuilders.pxr_utils import createObject, createXform
 from src.configurations.robot_confs import RobotManagerConf
 from src.configurations.simulator_mode_enum import SimulatorMode
 from src.environments.utils import resolve_position, transform_orientation_from_xyzw_into_xyz
-from src.physics.simulation import Simulation
 from src.robots.articulation_control import ArticulationControl
 from src.robots.articulation_telemetry import ArticulationTelemetry
+from src.simulation import Simulation
 from src.subsystems.robot_subsystems_handler import RobotSubsystemsHandler
 
 

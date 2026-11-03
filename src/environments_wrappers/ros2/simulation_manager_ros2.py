@@ -20,7 +20,7 @@ from src.environments_wrappers.ros2.largescale_ros2 import ROS_LargeScaleManager
 from src.environments_wrappers.ros2.lunalab_ros2 import ROS_LunalabManager
 from src.environments_wrappers.ros2.lunaryard_ros2 import ROS_LunaryardManager
 from src.environments_wrappers.ros2.robot_manager_ros2 import ROS_RobotManager
-from src.physics.simulation import Simulation
+from src.simulation import Simulation
 
 logger = logging.getLogger(__name__)
 

@@ -370,7 +370,7 @@ if __name__ == "__main__":
     from isaacsim import SimulationApp
 
     simulation_app = SimulationApp({"headless": False})
-    from src.physics.simulation import Simulation
+    from src.simulation import Simulation
 
     sim = Simulation(physics_dt=1.0 / 60.0, rendering_dt=1.0 / 60.0)
     T = TerrainManager()

@@ -8,7 +8,7 @@ import omni
 from src.environments_wrappers.sdg.lunalab_sdg import SDG_Lunalab
 from src.environments_wrappers.sdg.lunaryard_sdg import SDG_Lunaryard
 from src.labeling.auto_label import AutonomousLabeling
-from src.physics.simulation import Simulation
+from src.simulation import Simulation
 
 
 class SyntheticDataGeneration_LabManagerFactory:
