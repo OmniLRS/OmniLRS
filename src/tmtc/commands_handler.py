@@ -5,6 +5,7 @@ __email__ = "ljburtz@jaops.com"
 import socket
 import threading
 import time
+import traceback
 
 from src.tmtc.mdb_parsing_service import MdbParsingService
 
@@ -14,10 +15,11 @@ class CommandsHandler:
     SOCKET_TIMEOUT_SEC = 2.0
     HEARTBEAT_EVERY_SEC = 10.0  # how often to log "waiting..." when idle
 
-    def __init__(self, yamcs_processor, yamcs_instance_conf, mdb_files: list[str]):
+    def __init__(self, yamcs_processor, yamcs_instance_conf, registry: dict[bytes, dict]):
+        """registry: wire command name -> command, from the server MDB (ServerMdb.registry)."""
         self._yamcs_processor = yamcs_processor
         self._commands_catalogue = {}
-        self._registry = MdbParsingService.load_mdb_registry(mdb_files)
+        self._registry = registry
         self._config_tc_socket(yamcs_instance_conf)
         self._start_tc_listener()
 
@@ -48,15 +50,24 @@ class CommandsHandler:
                     last_heartbeat = now
                 continue
 
-            decoded = MdbParsingService.decode_tc_payload(tc_data, self._registry)
-            if decoded is None:
-                return
+            try:
+                self._handle_tc(tc_data, addr)
+            except Exception:
+                # one failing command must not stop the listener (every later TC would be ignored)
+                print(f"TC from {addr} failed: {tc_data[:40]!r}")
+                traceback.print_exc()
 
-            command = self._commands_catalogue.get(decoded["full_name"])
-            if command is None:
-                print(f"Command '{decoded['full_name']}' not found in catalogue")
-            else:
-                self._execute(command, decoded["arguments"])
+    def _handle_tc(self, tc_data, addr):
+        decoded = MdbParsingService.decode_tc_payload(tc_data, self._registry)
+        if decoded is None:
+            print(f"TC payload from {addr} matches no command of the server MDB: {tc_data[:40]!r}")
+            return
+
+        command = self._commands_catalogue.get(decoded["full_name"])
+        if command is None:
+            print(f"Command '{decoded['full_name']}' not found in catalogue")
+        else:
+            self._execute(command, decoded["arguments"])
 
     def _execute(self, command, received_arguments):
         arg_names = command["args"]

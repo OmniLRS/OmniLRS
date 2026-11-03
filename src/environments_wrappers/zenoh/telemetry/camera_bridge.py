@@ -7,6 +7,7 @@ import time
 
 from src.environments_wrappers.zenoh.transport.factory import make_transports
 from src.robots.robot import RobotManager
+from src.tmtc import yamcs_naming
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +19,6 @@ class CameraBridge:
 
         self.robot_name = self.robot_cfg["robot_name"]
 
-        self.camera_cfg = self.robot_cfg["camera"]
         self.publish_period_s = self.robot_cfg["zenoh"]["camera"]["publish_period_s"]
 
         self.wire_format = self.robot_cfg["zenoh"]["camera"].get(
@@ -35,6 +35,7 @@ class CameraBridge:
         self.RM = RM
 
         self.transports = []
+        self._camera_views = []  # (camera name, resolution) published by each transport
 
         self.log = logger.info
 
@@ -46,20 +47,24 @@ class CameraBridge:
         return self.keyexpr_template.format(robot_name=self.robot_name) + f"/{camera_name}/{resolution}"
 
     def make_transports(self):
-        if self.camera_cfg:
-            resolutions = self.camera_cfg["resolutions"]
-            specs = []
-            for res in resolutions:
-                specs.append(
-                    {
-                        "type": "zenoh",
-                        "keyexpr": self.build_camera_keyexpr(self.camera_cfg["name"], res),
-                        "wire_format": self.wire_format,
-                        "is_logging": self.is_logging,
-                        "log_every_n": self.log_every_n,
-                    }
-                )
-            self.transports = make_transports(specs)
+        # One transport per rgba camera and resolution of the robot yaml
+        self._camera_views = [
+            (camera["name"], res)
+            for camera in self.RM.robot.cameras
+            if yamcs_naming.has_type(camera, "rgba")
+            for res in camera["resolutions"]
+        ]
+        specs = [
+            {
+                "type": "zenoh",
+                "keyexpr": self.build_camera_keyexpr(camera_name, res),
+                "wire_format": self.wire_format,
+                "is_logging": self.is_logging,
+                "log_every_n": self.log_every_n,
+            }
+            for camera_name, res in self._camera_views
+        ]
+        self.transports = make_transports(specs)
 
     def maybe_initialize(self):
         if self._inited:
@@ -85,7 +90,7 @@ class CameraBridge:
         """
         Publish current frame from each camera
         """
-        if not self._inited or not self.camera_cfg:
+        if not self._inited or not self.transports:
             return False
 
         now = time.time()
@@ -93,9 +98,8 @@ class CameraBridge:
             return False
         self._t_last_publish = now
 
-        for i, transport in enumerate(self.transports):
-            resolution = transport.keyexpr.split("/")[-1]
-            frame = self.RM.robot.get_rgba_camera_view(resolution)
+        for transport, (camera_name, resolution) in zip(self.transports, self._camera_views):
+            frame = self.RM.robot.get_rgba_camera_view(camera_name, resolution)
 
             if frame is not None:
                 transport.publish_array(frame)

@@ -26,6 +26,7 @@ from src.robots.articulation_control import ArticulationControl
 from src.robots.articulation_telemetry import ArticulationTelemetry
 from src.simulation import Simulation
 from src.subsystems.robot_subsystems_handler import RobotSubsystemsHandler
+from src.tmtc import yamcs_naming
 
 
 # TODO for v4: rethink which methods should be in Manager, RRG, what should be in Robot
@@ -132,7 +133,7 @@ class RobotManager:
         q: Tuple[float, float, float, float] = [0, 0, 0, 1],
         domain_id: int = None,
         wheel_joints: dict = {},
-        camera_conf: dict = {},
+        camera_conf: list = None,
         imu_sensor_path: str = "",
         dimensions: dict = {},
         turn_speed_coef: float = 1,
@@ -214,6 +215,9 @@ class Robot:
     and tfs to enable multi-robot operation.
     """
 
+    # Render product annotator for each camera type
+    CAMERA_ANNOTATORS = {"rgba": "rgba", "depth": "distance_to_image_plane"}
+
     # TODO for v4: simplify and refactor the initialization, put some inits into a separate init methods,
     # TODO for v4: lower the number of arguments, simplify
     def __init__(
@@ -224,7 +228,7 @@ class Robot:
         is_ROS2: bool = False,
         domain_id: int = 0,
         wheel_joints: Dict = {},
-        camera_conf: Dict = {},
+        camera_conf: List = None,
         imu_sensor_path: str = "",
         dimensions: dict = {},
         turn_speed_coef: float = 1,
@@ -262,8 +266,9 @@ class Robot:
         self._last_joint_velocities: dict[str, float] = {}
         self._last_joint_efforts: dict[str, float] = {}
         self._last_wheel_joint_angles: list[float] = []
-        self._camera_conf = camera_conf
-        self._cameras = {}
+        # Robot yaml `camera` list: name, prim_path, type (rgba and/or depth), resolutions
+        self.cameras: list[dict] = yamcs_naming.parse_cameras(camera_conf)
+        self._camera_sensors: dict[tuple[str, str], CameraSensor] = {}  # (camera name, resolution) -> sensor
         self.dimensions = dimensions
         self.turn_speed_coef = turn_speed_coef
         self._imu_sensor: Optional[IMUSensor] = None
@@ -392,36 +397,27 @@ class Robot:
         except Exception:
             pass
 
-    def get_streaming_cam_resolution(self):
-        return (self._camera_conf["resolutions"]["low"][0], self._camera_conf["resolutions"]["low"][1])
-
-    def get_high_cam_resolution(self):
-        return (self._camera_conf["resolutions"]["high"][0], self._camera_conf["resolutions"]["high"][1])
-
     def _initialize_cameras(self) -> None:
-        # One render product per resolution on the camera prim (created if missing), with RGBA and depth.
-        if "resolutions" not in self._camera_conf:
-            return
+        # One render product per camera and resolution on the camera prim (created if missing),
+        # with only the annotators of the camera's types.
+        for camera in self.cameras:
+            annotators = [self.CAMERA_ANNOTATORS[camera_type] for camera_type in camera["type"]]
+            for res, (width, height) in camera["resolutions"].items():
+                self._camera_sensors[(camera["name"], res)] = CameraSensor(
+                    camera["prim_path"],
+                    resolution=(height, width),
+                    annotators=annotators,
+                )
 
-        for res, (width, height) in self._camera_conf["resolutions"].items():
-            self._cameras[res] = CameraSensor(
-                self._camera_conf["prim_path"],
-                resolution=(height, width),
-                annotators=["rgba", "distance_to_image_plane"],
-            )
-
-    def get_rgba_camera_view(self, resolution) -> Optional[np.ndarray]:
+    def get_rgba_camera_view(self, camera_name: str, resolution: str) -> Optional[np.ndarray]:
         """Returns the RGBA image as an (H, W, 4) uint8 array, or None while the camera warms up."""
-        data, _ = self._cameras[resolution].get_data("rgba")
+        data, _ = self._camera_sensors[(camera_name, resolution)].get_data("rgba")
         return None if data is None else data.numpy()
 
-    def get_depth_camera_view(self, resolution) -> Optional[np.ndarray]:
+    def get_depth_camera_view(self, camera_name: str, resolution: str) -> Optional[np.ndarray]:
         """Returns the depth image in meters as an (H, W) float32 array, or None while the camera warms up."""
-        data, _ = self._cameras[resolution].get_data("distance_to_image_plane")
-        depth = None if data is None else data.numpy()[..., 0]
-        print("depth")
-        print(depth)
-        return depth
+        data, _ = self._camera_sensors[(camera_name, resolution)].get_data("distance_to_image_plane")
+        return None if data is None else data.numpy()[..., 0]
 
     def get_imu_readings(self):
         if self._imu_sensor_path == "":

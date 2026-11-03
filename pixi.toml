@@ -97,7 +97,8 @@ yamcs-client = "*"
 [feature.yamcs.tasks]
 yamcs = "python run.py mode=Yamcs environment=lunaryard_40m_workshop robot=pragyaan controller=pragyaan-controller"
 yamcs-largescale = "python run.py mode=Yamcs environment=largescale_workshop robot=pragyaan controller=pragyaan-controller"
-fix-tmp = "bash scripts/fix_yamcs_tmp.sh"
+# Check robot + controller config against the running Yamcs server MDB (no Isaac Sim needed)
+check-yamcs-contract = "python scripts/check_yamcs_contract.py --robot pragyaan --controller pragyaan-controller"
 
 # zenoh-specific deps, tasks in feature "zenoh"
 [feature.zenoh.pypi-dependencies]

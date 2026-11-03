@@ -2,13 +2,13 @@ __author__ = "Aleksa Stanivuk"
 __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
 
-from src.mission_specific.pragyaan.tmtc.camera_handler import CameraViewType, PragyaanCameraHandler
-from src.mission_specific.pragyaan.tmtc.enums import PragyaanCameraResolution, PragyaanYamcsArguments
+from src.mission_specific.pragyaan.tmtc.camera_handler import PragyaanCameraHandler
+from src.mission_specific.pragyaan.tmtc.enums import PragyaanYamcsArguments
 from src.mission_specific.pragyaan.tmtc.payload_handler import PayloadHandler
 from src.mission_specific.pragyaan.tmtc.transmitter import PragyaanTransmitter
 from src.subsystems.device import CommonDevice, HealthState, PowerState
 from src.subsystems.robot_enums import GoNogoState, ObcState, SolarPanelState
-from src.tmtc.intervals_handler import IntervalName
+from src.tmtc.intervals_handler import IntervalName, camera_streaming_interval
 
 
 class PragyaanCommander:
@@ -61,18 +61,25 @@ class PragyaanCommander:
     def handle_lander_camera_capture(self):
         self._camera_handler.transmit_lander_camera_view()
 
-    def handle_high_res_capture(self):
+    def _is_camera(self, camera_name: str, camera_type: str) -> bool:
+        # camera_name is an MDB enum label; the server MDB may list cameras this robot does not have (contract warning)
+        if camera_name in self._camera_handler.cameras_of_type(camera_type):
+            return True
+        print(f"Camera {camera_name!r} is not a {camera_type} camera of this robot")
+        return False
+
+    def handle_high_res_capture(self, camera_name: str):
+        if not self._is_camera(camera_name, "rgba"):
+            return
         if self._robot.subsystems.get_device_power_state(CommonDevice.CAMERA) == PowerState.ON:
-            self._camera_handler.transmit_camera_view(
-                PragyaanCameraHandler.BUCKET_ONCOMMAND, PragyaanCameraResolution.HIGH.value, CameraViewType.RGBA
-            )
+            self._camera_handler.transmit_camera_view(camera_name, "oncommand")
             self._obc_handler.set_obc_state(ObcState.CAMERA, 10)
 
-    def handle_depth_capture(self):
+    def handle_depth_capture(self, camera_name: str):
+        if not self._is_camera(camera_name, "depth"):
+            return
         if self._robot.subsystems.get_device_power_state(CommonDevice.CAMERA) == PowerState.ON:
-            self._camera_handler.transmit_camera_view(
-                PragyaanCameraHandler.BUCKET_DEPTH, PragyaanCameraResolution.HIGH.value, CameraViewType.DEPTH
-            )
+            self._camera_handler.transmit_camera_view(camera_name, "depth")
             self._obc_handler.set_obc_state(ObcState.CAMERA, 10)
 
     def handle_solar_panel(self, command: str):
@@ -98,9 +105,9 @@ class PragyaanCommander:
         self._robot.subsystems.set_device_power_state(electronics, new_state)
 
         if electronics == CommonDevice.CAMERA:
-            self.set_activity_of_camera_streaming(
-                "START"
-            ) if new_state == PowerState.ON else self.set_activity_of_camera_streaming("STOP")
+            action = PragyaanYamcsArguments.START if new_state == PowerState.ON else PragyaanYamcsArguments.STOP
+            for camera_name in self._camera_handler.cameras_of_type("rgba"):
+                self.set_activity_of_camera_streaming(camera_name, action.value)
         elif electronics == CommonDevice.NEUTRON_SPECTROMETER:
             self.set_activity_of_neutron_streaming(new_state)
             pass
@@ -126,33 +133,40 @@ class PragyaanCommander:
         if decision == GoNogoState.NOGO:
             self._drive_handler.stop_robot()
 
-    def set_activity_of_camera_streaming(self, action: str):
+    def set_activity_of_camera_streaming(self, camera_name: str, action: str):
+        if not self._is_camera(camera_name, "rgba"):
+            return
+        interval_name = camera_streaming_interval(camera_name)
         if action == PragyaanYamcsArguments.STOP.value:
-            self._intervals_handler.remove_interval(IntervalName.CAMERA_STREAMING.value)
+            self._intervals_handler.remove_interval(interval_name)
         elif action == PragyaanYamcsArguments.START.value:
-            if not self._intervals_handler.does_exist(IntervalName.CAMERA_STREAMING.value):
+            if not self._intervals_handler.does_exist(interval_name):
                 self._intervals_handler.add_new_interval(
-                    name=IntervalName.CAMERA_STREAMING.value,
+                    name=interval_name,
                     seconds=self._intervals["camera_streaming"],
                     is_repeating=True,
                     execute_immediately=False,
                     function=self._camera_handler.transmit_camera_view,
-                    f_args=(PragyaanCameraHandler.BUCKET_STREAMING, PragyaanCameraResolution.LOW.value),
+                    f_args=(camera_name, "streaming"),
                 )
         else:
             print("Unknown action:", action)
 
     def set_camera_streaming_params(
         self,
+        camera_name: str,
         bitrate: int,
         crf: int,
         keyframe_interval: int,
         max_payload_size: int,
         bandwidth_window_seconds: float,
     ):
+        if not self._is_camera(camera_name, "rgba"):
+            return
         # MDB arguments can not be null, so crf = -1 stands for None (bitrate mode)
         try:
             self._camera_handler.set_streaming_compression_params(
+                camera_name,
                 bitrate=bitrate,
                 keyframe_interval=keyframe_interval,
                 crf=None if crf < 0 else crf,

@@ -11,13 +11,13 @@ from PIL import Image
 from src.environments.monitoring_cameras_manager import MonitoringCamerasManager
 from src.mission_specific.pragyaan.tmtc.enums import PragyaanCameraResolution
 from src.subsystems.robot_physics_models.camera_compression_model import CameraCompressionModel
+from src.tmtc import yamcs_naming
 from src.tmtc.yamcs_TMTC import ImagesHandler
 
 
 class CameraViewType(StrEnum):
     RGBA = "RGBA"
     RGB = "RGB"  # only for monitoring, as is more light weight
-    DEPTH = "DEPTH"
 
 
 class PragyaanCameraHandler:
@@ -27,25 +27,19 @@ class PragyaanCameraHandler:
     Rover's own camera(s) are initialized in the file for robot initialization.
     This file initializes additional cameras in the environment, such as lander's camera, and monitoring camera.
 
-    Camera handler contains the methods for snapping camera views of rover's camera, and lander's and monitoring camera.
-    Rover's camera is able to snap DEPTH and RGB views.
+    Camera handler contains the methods for snapping camera views of rover's cameras, and lander's and monitoring camera.
+    Rover's cameras (robot yaml `camera` list) snap RGB views (type rgba: streaming and oncommand images) and/or
+    DEPTH views (type depth: depth images). Streaming images are compressed by one model per rgba camera.
 
     Handler also contains methods for transmitting snapped views to Yamcs, by utilizing saving methods of the images handler property.
 
     CameraHandler is a layer on top of the ImagesHandler, and in that way is implemented a separation between controlling different
-    instances of camera, and concers of low-level image saving to the Yamcs buckets and/or disk.
+    instances of camera, and concers of low-level image saving to the Yamcs buckets.
     Thus CameraHandler(s) are intended to reuse functionalities provided by the ImagesHandler, and not reimplement the communication
     with Yamcs from the scratch.
 
     The reference to _robot provides access to rover's cameras, and desired use-case implementation.
     """
-
-    # reflects the buckets defined in yaml
-    BUCKET_STREAMING = "images_streaming"
-    BUCKET_ONCOMMAND = "images_oncommand"
-    BUCKET_DEPTH = "images_depth"
-    BUCKET_LANDER = "images_lander"
-    BUCKET_MONITORING = "images_monitoring"
 
     def __init__(
         self,
@@ -60,11 +54,15 @@ class PragyaanCameraHandler:
         self._robot = robot
         self._lander_cam = None
         self._monitoring_cam = None
-        self._compression_conf = dict(compression_conf)
+        compression_conf = dict(compression_conf)
         # Use the same nominal rate as the transmission scheduler.
-        self._compression_conf["fps"] = 1 / streaming_interval
-        # One model per (bucket, resolution)
-        self._compression_models: dict[tuple[str, str], CameraCompressionModel] = {}
+        compression_conf["fps"] = 1 / streaming_interval
+        # One model per streaming (rgba) camera
+        self._compression_models: dict[str, CameraCompressionModel] = {}
+        for camera_name in self.cameras_of_type("rgba"):
+            model = CameraCompressionModel()
+            model.initialize(**compression_conf)
+            self._compression_models[camera_name] = model
         self._initialize_lander_cam(lander_camera_conf)
         self._initialize_monitoring_cam()
 
@@ -86,8 +84,12 @@ class PragyaanCameraHandler:
         camera_name = list(MonitoringCamerasManager.cameras.keys())[0]
         self._monitoring_cam = MonitoringCamerasManager.cameras[camera_name]
 
-    def _snap_camera_view_rgb(self, resolution: str) -> Image:
-        frame = self._robot.get_rgba_camera_view(resolution)
+    def cameras_of_type(self, camera_type: str) -> list[str]:
+        """Names of the rover cameras of that type (rgba or depth), in robot yaml order."""
+        return [camera["name"] for camera in self._robot.cameras if yamcs_naming.has_type(camera, camera_type)]
+
+    def _snap_camera_view_rgb(self, camera_name: str, resolution: str) -> Image:
+        frame = self._robot.get_rgba_camera_view(camera_name, resolution)
         if frame is None:  # camera still warming up
             return None
         frame_uint8 = frame.astype(np.uint8)
@@ -95,8 +97,8 @@ class PragyaanCameraHandler:
 
         return camera_view
 
-    def _snap_camera_view_depth(self, resolution: str) -> Image:
-        frame = self._robot.get_depth_camera_view(resolution)
+    def _snap_camera_view_depth(self, camera_name: str, resolution: str) -> Image:
+        frame = self._robot.get_depth_camera_view(camera_name, resolution)
         if frame is None:  # camera still warming up
             return None
         depth = np.nan_to_num(frame, nan=0.0, posinf=0.0, neginf=0.0)
@@ -142,50 +144,36 @@ class PragyaanCameraHandler:
 
         return camera_view
 
-    def _get_compression_model(self, bucket: str, resolution: str) -> CameraCompressionModel:
-        key = (bucket, resolution)
-        if key not in self._compression_models:
-            model = CameraCompressionModel()
-            model.initialize(**self._compression_conf)
-            self._compression_models[key] = model
-
-        return self._compression_models[key]
-
-    def _compress(self, image: Image, bucket: str, resolution: str) -> Image:
-        model = self._get_compression_model(bucket, resolution)
+    def _compress(self, image: Image, camera_name: str) -> Image:
+        model = self._compression_models[camera_name]
         model.set_inputs(image)
         model.compute(0.0)
         return model.get_outputs()["compressed_image"]
 
-    def get_compression_model_outputs(self):
-        model = self._compression_models.get((self.BUCKET_STREAMING, PragyaanCameraResolution.LOW.value))
-        if model is None:
-            return None
-        return model.get_outputs()
+    def get_compression_model_outputs(self, camera_name: str):
+        return self._compression_models[camera_name].get_outputs()
 
-    def set_streaming_compression_params(self, **params):
-        model = self._get_compression_model(self.BUCKET_STREAMING, PragyaanCameraResolution.LOW.value)
-        model.update_parameters(**params)
+    def set_streaming_compression_params(self, camera_name: str, **params):
+        self._compression_models[camera_name].update_parameters(**params)
 
-    def transmit_camera_view(self, bucket: str, resolution: str, type: CameraViewType = CameraViewType.RGBA):
-        camera_view: Image = None
-
-        if type == CameraViewType.DEPTH:
-            camera_view: Image = self._snap_camera_view_depth(resolution)
-            if camera_view is None:
-                return
-        elif type == CameraViewType.RGBA:
-            camera_view: Image = self._snap_camera_view_rgb(resolution)
-            if camera_view is None:
-                return
+    def transmit_camera_view(self, camera_name: str, kind: str):
+        """Snap and upload one image of a rover camera; kind is streaming, oncommand (rgba) or depth (depth)."""
+        if kind == "depth":
+            camera_view: Image = self._snap_camera_view_depth(camera_name, PragyaanCameraResolution.HIGH.value)
+        elif kind == "streaming":
+            camera_view: Image = self._snap_camera_view_rgb(camera_name, PragyaanCameraResolution.LOW.value)
             # only streaming images are compressed
-            if bucket == self.BUCKET_STREAMING:
-                camera_view = self._compress(camera_view, bucket, resolution)
+            if camera_view is not None:
+                camera_view = self._compress(camera_view, camera_name)
+        elif kind == "oncommand":
+            camera_view: Image = self._snap_camera_view_rgb(camera_name, PragyaanCameraResolution.HIGH.value)
         else:
-            print("in transmit_camera_view: unknown type:", type)
+            print("in transmit_camera_view: unknown kind:", kind)
             return
 
-        self._images_handler.save_image(camera_view, bucket)
+        if camera_view is None:  # camera still warming up
+            return
+        self._images_handler.save_camera_image(camera_view, camera_name, kind)
 
     def transmit_lander_camera_view(self):
         if self._lander_cam is None:
@@ -194,7 +182,7 @@ class PragyaanCameraHandler:
         camera_view: Image = self._snap_lander_camera_view()
         if camera_view is None:
             return
-        self._images_handler.save_image(camera_view, self.BUCKET_LANDER)
+        self._images_handler.save_image(camera_view, "lander")
 
     def transmit_monitoring_camera_view(self):
         camera_view: Image = self._snap_monitoring_camera_view()
@@ -202,4 +190,4 @@ class PragyaanCameraHandler:
         if camera_view is None:
             return
 
-        self._images_handler.save_image(camera_view, self.BUCKET_MONITORING)
+        self._images_handler.save_image(camera_view, "monitoring")

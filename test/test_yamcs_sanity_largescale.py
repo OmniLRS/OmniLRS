@@ -1,3 +1,4 @@
+import json
 import os
 import signal
 import socket
@@ -36,6 +37,16 @@ SIM_COMMAND = [
     "rendering.renderer.multi_gpu=false",
     "rendering.renderer.active_gpu=0",
 ]
+
+# Robot of the sim task (robot=pragyaan); its yaml camera list defines the camera image buckets.
+ROBOT = "pragyaan"
+# The test-sim env has no yaml parser, so the expected names are computed in the sim's pixi env.
+CAMERA_IMAGE_META_CODE = (
+    "import json, yaml\n"
+    "from src.tmtc import yamcs_naming\n"
+    f"cameras = yaml.safe_load(open('cfg/robot/{ROBOT}.yaml'))['robots_settings']['parameters']['camera']\n"
+    "print(json.dumps([path for *_, path in yamcs_naming.camera_buckets(yamcs_naming.parse_cameras(cameras))]))\n"
+)
 
 # The last startup message to appear; once seen, startup is complete.
 FINAL_MARKER = "ArticulationTelemetry initialized"
@@ -248,6 +259,19 @@ def telemetry(sim, subscription):
     return FreshTelemetry(names, sub, TELEMETRY_TIMEOUT)
 
 
+@pytest.fixture(scope="session")
+def camera_image_meta_paths():
+    """Image metadata space system of every (camera, kind) of the robot yaml, named by src/tmtc/yamcs_naming.py."""
+    result = subprocess.run(
+        ["pixi", "run", "--environment", "ci", "python", "-c", CAMERA_IMAGE_META_CODE],
+        cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0, f"Computing the camera image buckets failed:\n{result.stderr}"
+    return json.loads(result.stdout.strip().splitlines()[-1])
+
+
 """
 Start up test markers.
 """
@@ -312,6 +336,13 @@ def test_telemetry_battery_voltage_exists(telemetry):
 
 def test_telemetry_camera_exists(telemetry):
     assert telemetry.with_prefix("/Rover/camera/")
+
+
+def test_telemetry_image_metadata_for_every_camera_and_kind(telemetry, camera_image_meta_paths):
+    # OmniLRS uploads a "no data" image to every bucket at startup, which sets <meta path>/number etc.
+    assert camera_image_meta_paths, f"No camera image buckets computed for robot {ROBOT!r}"
+    missing = [path for path in camera_image_meta_paths if telemetry.get(f"{path}/number") is None]
+    assert not missing, f"No image metadata from this sim run for {missing}"
 
 
 def test_telemetry_go_nogo_is_nogo(telemetry):

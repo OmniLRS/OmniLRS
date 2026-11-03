@@ -1,18 +1,21 @@
 # @package environment
 # do not remove the above comment, it injects the below configs into environment configs
+#
+# Hand-written. Nothing in this file is generated.
+# The Yamcs server MDB is the single source of truth for TM/TC. At startup OmniLRS fetches the space systems
+# listed in mdb_space_systems from the server and checks every path below against it (missing -> abort, extra -> warn).
+# Camera buckets and camera telemetry are not listed here: they are computed from the robot yaml cameras
+# (name + type) by src/tmtc/yamcs_naming.py, the same module the Yamcs-side MDB generator uses.
 
 robots_settings:
   robot_controller: "pragyaan-controller"
   yamcs_tmtc: # these settings are relevant if Yamcs mode
-    mdb:
-      - "cfg/mdb/pragyaan/rover.xml"
-      - "cfg/mdb/pragyaan/lander.xml"
-      - "cfg/mdb/pragyaan/admin.xml"
+    mdb_space_systems: ["/Rover", "/Lander", "/Admin"] # fetched from the server (exportXTCE) at startup
     intervals:
       robot_stats: 1
       neutron_count: 2
       camera_streaming: 1
-    camera_compression:
+    camera_compression: # defaults, one model instance per streaming (rgba) camera
       bitrate: 150_000 # Target bits/s with Video Buffering Verifier (VBV) constraints
       crf: null # Set 0-51 for quality-based mode; higher means lower quality, bitrate is ignored
       keyframe_interval: 10 # Keyframe interval in number of frames
@@ -25,17 +28,18 @@ robots_settings:
       resolution: [1440, 1080]
     images:
       no_data_image_path: "${oc.env:OMNILRS_ROOT,.}/assets/images/no_data_grafana.png"
+      clear_buckets_on_startup: true # delete previous objects in every bucket OmniLRS uses
+      # Buckets for rover cameras defined in cfg/robot yaml are created automatically.
+      # Define additional buckets below: (OmniLRS creates them on the server if missing)
+      #   name: Yamcs storage bucket
+      #   path: MDB space system receiving number/name/url_* metadata
       buckets:
-        - name: "images_streaming"
-          path: "/Rover/camera/images_streaming"
-        - name: "images_oncommand"
-          path: "/Rover/camera/images_oncommand"
-        - name: "images_depth"
-          path: "/Rover/camera/images_depth"
-        - name: "images_lander"
-          path: "/Lander/camera/images_oncommand"
-        - name: "images_monitoring"
-          path: "/Admin/camera/images_monitoring"
+        lander:
+          name: images_lander
+          path: /Lander/camera/images_oncommand
+        monitoring:
+          name: images_monitoring
+          path: /Admin/camera/images_monitoring
     payload:
       apxs:
         resolution: [1440, 1080]
@@ -45,6 +49,9 @@ robots_settings:
         bucket:
           name: "images_apxs"
           path: "/Rover/payload/images_apxs"
+    # Per-camera telemetry (streaming state, bandwidth, packets, decode errors)
+    # is computed from the robot cameras, not listed here.
+    # Non-camera telemetry:
     parameters:
       pose_of_base_link: "/Rover/pose_ground_truth"
       go_nogo: "/Rover/go_nogo"
@@ -77,13 +84,10 @@ robots_settings:
       current_draw_radio: "/Rover/current_draw_radio"
       current_draw_eps: "/Rover/current_draw_eps"
       neutron_counts: "/Rover/neutron_counts"
-      camera_streaming_state: "/Rover/camera/images_streaming/state"
-      camera_bandwidth: "/Rover/camera/images_streaming/bandwidth"
-      camera_packets_sent: "/Rover/camera/images_streaming/packets_sent"
-      camera_packets_lost: "/Rover/camera/images_streaming/packets_lost"
-      camera_decode_errors: "/Rover/camera/images_streaming/decode_errors"
       solar_panel_state: "/Rover/solar_panel_state"
       motor_encoder: "/Rover/motor_encoder"
+    # Camera commands take a camera_name argument; its allowed values are checked against the robot cameras' types
+    # (capture_depth -> depth cameras, the other camera commands -> rgba cameras).
     commands:
       drive_straight: "/Rover/motor/drive_straight"
       drive_turn: "/Rover/motor/drive_turn"

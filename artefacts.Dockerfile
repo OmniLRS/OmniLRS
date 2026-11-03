@@ -19,6 +19,12 @@ RUN git clone --depth 1 https://github.com/OmniLRS/yamcs-mission-control-pragyaa
 
 COPY . .
 
+# Regenerate the Yamcs MDB from this OmniLRS commit (robot yaml cameras + src/tmtc/yamcs_naming.py)
+RUN cd /workspace/yamcs-mission-control-pragyaan \
+    && for system in rover lander admin; do \
+        OMNILRS_ROOT=/workspace/omnilrs .venv/workshop/bin/python mdb/generate_mdb_${system}.py || exit 1; \
+    done
+
 # Fast revalidation: no-op if manifests match the base image, fails on lockfile drift
 RUN pixi install --locked -e ci -e test-sim
 

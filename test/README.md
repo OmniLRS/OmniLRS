@@ -29,3 +29,13 @@ python -m src.subsystems.robot_physics_models.camera_compression_model
 Each script will print a message and save a `.png` plot in the current directory.
 
 The camera compression test streams the 640x480 rover frames in `test/inputs/camera_compression/` through the model for six bitrate / packet-loss / keyframe scenarios. For each scenario it writes the processed frames and a 1 fps video to `test/outputs/camera_compression/<scenario>/`, and prints the bandwidth and packet-loss counts.
+
+## Yamcs TM/TC unit tests
+
+The Yamcs naming rule, the parsing of the XTCE exported by the Yamcs server, the startup check against it and the
+image uploads to Yamcs storage (with a fake storage client) run without Isaac Sim or a Yamcs server (`pytest`, plus
+Pillow for the image uploads):
+
+```bash
+python -m pytest -v test/test_yamcs_naming.py test/test_mdb_parsing_service.py test/test_yamcs_contract.py test/test_images_handler.py
+```
