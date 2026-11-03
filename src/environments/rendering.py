@@ -4,7 +4,7 @@ __email__ = "ljburtz@jaops.com"
 
 from typing import Tuple
 
-import carb
+import carb.settings
 import omni
 
 from src.configurations.rendering_confs import ChromaticAberrationsConf, FlaresConf, MotionBlurConf

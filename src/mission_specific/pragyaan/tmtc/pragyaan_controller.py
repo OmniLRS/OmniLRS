@@ -20,7 +20,7 @@ class PragyaanController(YamcsTMTC):
         _setup_command_callbacks(commands_conf) - utilizes CommandsHandler to construct the mapping between high level Yamcs commands,
                                                         and desired functionalities
                                                 - commands_conf are previously defined inside .yaml configuration file
-        start_streaming_data - utilizes IntervalsHandler to setup and trigger update of rover's parameters in Yamcs
+        start_transmitting_data - utilizes IntervalsHandler to setup and trigger update of rover's parameters in Yamcs
 
     The rest of the functions are implementations of specific desired behaviour of the Pragyaan rover.
     Implementations of controllers for other rovers should follow the same architecture, and separation of high level YamcsTMTC concepts, and
@@ -112,7 +112,7 @@ class PragyaanController(YamcsTMTC):
 
     "Creates intervals for automatic transmission of rover's parameters to yamcs"
 
-    def start_streaming_data(self):
+    def start_transmitting_data(self):
         self._payload_handler.snap_apxs()  # snaps initial blank apxs reading
         self._images_handler.snap_no_data_images()
         self._intervals_handler.add_new_interval(

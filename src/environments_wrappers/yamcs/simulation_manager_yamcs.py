@@ -158,7 +158,7 @@ class Yamcs_SimulationManager:
             raise Exception("Settings for '" + str(controller_name) + "' robot controller are not specified.")
 
         self.TMTC.setup_command_callbacks(self.RM.RM_conf.yamcs_tmtc["commands"])
-        self.TMTC.start_streaming_data()
+        self.TMTC.start_transmitting_data()
 
     def _get_environment_controller(self, environment_name: str):
         self.EC = None

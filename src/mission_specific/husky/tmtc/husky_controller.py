@@ -18,7 +18,7 @@ class HuskyController(YamcsTMTC):
 
     Implements the two mandatory abstract methods:
         setup_command_callbacks(commands_conf)  — maps Yamcs commands to HuskyCommander methods.
-        start_streaming_data()                  — schedules periodic telemetry transmissions.
+        start_transmitting_data()               — schedules periodic telemetry transmissions.
     """
 
     def __init__(
@@ -81,7 +81,7 @@ class HuskyController(YamcsTMTC):
             self._commander.handle_depth_capture,
         )
 
-    def start_streaming_data(self):
+    def start_transmitting_data(self):
         """Schedule periodic telemetry intervals."""
         self._images_handler.snap_no_data_images()
 

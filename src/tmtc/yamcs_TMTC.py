@@ -41,7 +41,7 @@ class YamcsTMTC(ABC):
     The class also implements two abstract methods that are required to be implemented by the inheriting controllers:
         setup_command_callbacks(commands_conf) - utilizes CommandsHandler to construct the mapping between high level Yamcs commands,
                                                 and desired functionalities (check PragyaanController for ref. impl.)
-        start_streaming_data - utilizes IntervalsHandler to setup and trigger update of rover's parameters in Yamcs (check PragyaanController for ref. impl.)
+        start_transmitting_data - utilizes IntervalsHandler to setup and trigger update of rover's parameters in Yamcs (check PragyaanController for ref. impl.)
 
     """
 
@@ -81,7 +81,7 @@ class YamcsTMTC(ABC):
         pass
 
     @abstractmethod
-    def start_streaming_data(self):
+    def start_transmitting_data(self):
         """Start streaming data from the robot to Yamcs."""
         pass
 
