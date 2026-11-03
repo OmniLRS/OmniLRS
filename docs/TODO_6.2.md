@@ -38,12 +38,15 @@ did); `ArticulationTelemetry` reads DOF positions, velocities, projected joint f
 wrenches. Both report ready only once the physics tensor view exists: without it the experimental setters write USD
 drive attributes instead. Robot root pose and teleport use `get/set_world_poses` and `set_velocities`.
 
-### A3. Camera -> `isaacsim.sensors.experimental.rtx.CameraSensor` (`src/sensors/camera.py`)
+### A3. Camera -> `isaacsim.sensors.experimental.rtx.CameraSensor`
 
-`RtxCamera` returns numpy frames like the old `Camera` (empty array during warm-up). Config resolutions stay
-`[width, height]`; `CameraSensor` takes `(height, width)`. Robot cameras use one render product per resolution with RGBA
-and depth (was two). The pragyaan `depth_cam` and the Vikram lander camera now author square-pixel apertures (vertical
-15.7162 for 4:3), which the old `Camera` applied at runtime with a warning.
+Used directly, with no OmniLRS wrapper: `get_data(annotator)` returns a warp array, or `None` while the camera warms
+up. Callers convert with `.numpy()` only where frames leave Isaac Sim (PIL for Yamcs, Zenoh, numpy depth processing),
+and skip the frame on `None`. Config resolutions stay `[width, height]`, like USD render products, Replicator, PIL and
+the SDG config; call sites unpack them explicitly into `CameraSensor`'s `(height, width)`. Robot cameras use one
+render product per resolution with the `rgba` and `distance_to_image_plane` annotators (was two render products); the
+monitoring camera uses the `rgb` annotator. The pragyaan `depth_cam` and the Vikram lander camera now author
+square-pixel apertures (vertical 15.7162 for 4:3), which the old `Camera` applied at runtime with a warning.
 
 ### A4. Wheel-link rigid prims -> `isaacsim.core.experimental.prims.RigidPrim`
 

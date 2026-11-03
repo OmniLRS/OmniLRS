@@ -5,11 +5,11 @@ __email__ = "ljburtz@jaops.com"
 import os
 
 import omni
+from isaacsim.sensors.experimental.rtx import CameraSensor
 from pxr import Gf, UsdGeom
 
 from src.configurations.simulator_mode_enum import SimulatorMode
 from src.environments.utils import resolve_position, set_xform_pose
-from src.sensors.camera import RtxCamera
 
 
 class MonitoringCamerasManager:
@@ -49,7 +49,8 @@ class MonitoringCamerasManager:
                 pose["orientation"],
             )
             self._set_camera_attributes(cam, c["camera_params"])
-            self.cameras[name] = RtxCamera(prim_path, resolution=c["resolution"])
+            width, height = c["resolution"]
+            self.cameras[name] = CameraSensor(prim_path, resolution=(height, width), annotators=["rgb"])
 
             # TODO implement camera streaming in ROS mode
 

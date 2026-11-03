@@ -14,6 +14,7 @@ from isaacsim.core.experimental.prims import RigidPrim
 
 # from src.robots.subsystems_manager import RobotSubsystemsManager
 from isaacsim.sensors.experimental.physics import IMUSensor
+from isaacsim.sensors.experimental.rtx import CameraSensor
 from pxr import Gf, Usd
 from scipy.spatial.transform import Rotation as R
 from WorldBuilders.pxr_utils import createObject, createXform
@@ -24,7 +25,6 @@ from src.environments.utils import resolve_position, transform_orientation_from_
 from src.physics.simulation import Simulation
 from src.robots.articulation_control import ArticulationControl
 from src.robots.articulation_telemetry import ArticulationTelemetry
-from src.sensors.camera import RtxCamera
 from src.subsystems.robot_subsystems_handler import RobotSubsystemsHandler
 
 
@@ -399,25 +399,26 @@ class Robot:
         return (self._camera_conf["resolutions"]["high"][0], self._camera_conf["resolutions"]["high"][1])
 
     def _initialize_cameras(self) -> None:
-        # One RTX render product per resolution on the camera prim (created if missing), with RGBA and depth.
+        # One render product per resolution on the camera prim (created if missing), with RGBA and depth.
         if "resolutions" not in self._camera_conf:
             return
 
-        resolutions = list(self._camera_conf.get("resolutions").keys())
-
-        for res in resolutions:
-            self._cameras[res] = RtxCamera(
+        for res, (width, height) in self._camera_conf["resolutions"].items():
+            self._cameras[res] = CameraSensor(
                 self._camera_conf["prim_path"],
-                resolution=self._camera_conf["resolutions"][res],
-                depth=True,
+                resolution=(height, width),
+                annotators=["rgba", "distance_to_image_plane"],
             )
 
-    def get_rgba_camera_view(self, resolution) -> np.ndarray:
-        return self._cameras[resolution].get_rgba()
+    def get_rgba_camera_view(self, resolution) -> Optional[np.ndarray]:
+        """Returns the RGBA image as an (H, W, 4) uint8 array, or None while the camera warms up."""
+        data, _ = self._cameras[resolution].get_data("rgba")
+        return None if data is None else data.numpy()
 
-    def get_depth_camera_view(self, resolution) -> np.ndarray:
-        """Returns depth image in meters as (H, W) float32 array."""
-        depth = self._cameras[resolution].get_depth()
+    def get_depth_camera_view(self, resolution) -> Optional[np.ndarray]:
+        """Returns the depth image in meters as an (H, W) float32 array, or None while the camera warms up."""
+        data, _ = self._cameras[resolution].get_data("distance_to_image_plane")
+        depth = None if data is None else data.numpy()[..., 0]
         print("depth")
         print(depth)
         return depth
