@@ -724,7 +724,7 @@ class Robot:
                 "Call update_articulation_api() from the simulation loop first."
             )
 
-        if self._solar_panel_joint not in self.control.joint_name_to_index:
+        if self._solar_panel_joint not in self.control.joint_names:
             raise RuntimeError(
                 f"Solar panel joint '{self._solar_panel_joint}' was not found in articulation "
                 f"{self.robot_path}. Available joints: {self.control.joint_names}"

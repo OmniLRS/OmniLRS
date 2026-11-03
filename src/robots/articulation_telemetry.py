@@ -108,7 +108,6 @@ class ArticulationTelemetry:
         self.articulation: Optional[Articulation] = None
 
         self.joint_names: List[str] = []
-        self.joint_name_to_index: Dict[str, int] = {}
 
         self._inited = False
         self._t_last_init_try = 0.0
@@ -157,7 +156,6 @@ class ArticulationTelemetry:
 
             self.articulation = articulation
             self.joint_names = list(dof_names)
-            self.joint_name_to_index = {name: i for i, name in enumerate(self.joint_names)}
 
             if self.keep_history:
                 self.joints_history = {name: [] for name in self.joint_names}
@@ -190,7 +188,8 @@ class ArticulationTelemetry:
         Returns:
             A telemetry frame if sampling succeeded, otherwise None.
         """
-        if not self.is_ready or self.articulation is None:
+        # The physics view is gone between a timeline stop and the next play (e.g. during a reset).
+        if not self.is_ready or not self.articulation.is_physics_tensor_entity_valid():
             return None
 
         now = time.time()
@@ -203,9 +202,6 @@ class ArticulationTelemetry:
         articulation = self.articulation
 
         q = self._read(articulation.get_dof_positions)
-        if q is None:
-            return None  # instead of publishing all zeros
-
         dq = self._read(articulation.get_dof_velocities)
         efforts_arr = self._read(articulation.get_dof_projected_joint_forces)
         forces_arr = self._read(articulation.get_link_incoming_joint_force)
@@ -213,7 +209,7 @@ class ArticulationTelemetry:
         forces_ready = efforts_arr is not None and forces_arr is not None
         joints: Dict[str, JointSample] = {}
 
-        for name, i in self.joint_name_to_index.items():
+        for i, name in enumerate(self.joint_names):
             position = float(q[i]) if q is not None and i < len(q) else 0.0
             velocity = float(dq[i]) if dq is not None and i < len(dq) else 0.0
             effort = float(efforts_arr[i]) if efforts_arr is not None and i < len(efforts_arr) else 0.0
@@ -287,7 +283,6 @@ class ArticulationTelemetry:
         self.articulation = None
 
         self.joint_names = []
-        self.joint_name_to_index = {}
 
         self.joints_state.clear()
         self.contacts_state.clear()
@@ -306,17 +301,14 @@ class ArticulationTelemetry:
             del buf[: len(buf) - self.history_len]
 
     @staticmethod
-    def _read(getter) -> Optional[np.ndarray]:
+    def _read(getter) -> np.ndarray:
         """
         Read one articulation quantity for the single wrapped prim as a numpy array.
 
-        Returns None when the physics view is not available (e.g. right after a reset).
+        Requires a valid physics view (checked in `sample()`).
         Getters returning a (forces, torques) tuple are concatenated into (..., 6) wrenches.
         """
-        try:
-            data = getter()
-        except (AssertionError, RuntimeError):
-            return None
+        data = getter()
         if isinstance(data, tuple):
             return np.concatenate([d.numpy()[0] for d in data], axis=-1)
         return data.numpy()[0]

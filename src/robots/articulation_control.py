@@ -117,7 +117,6 @@ class ArticulationControl:
         self.articulation: Optional[Articulation] = None
 
         self.joint_names: List[str] = []
-        self.joint_name_to_index: Dict[str, int] = {}
 
         self._inited = False
         self._t_last_init_try = 0.0
@@ -144,7 +143,7 @@ class ArticulationControl:
 
         Returns:
             True when the controller has an `Articulation` backed by a valid
-            physics tensor view and a joint-name/index mapping, False otherwise.
+            physics tensor view and its joint names, False otherwise.
 
         Notes:
             This method intentionally does not read joint positions or other
@@ -174,7 +173,6 @@ class ArticulationControl:
 
             self.articulation = articulation
             self.joint_names = list(dof_names)
-            self.joint_name_to_index = {name: i for i, name in enumerate(self.joint_names)}
 
             self._inited = True
 
@@ -201,7 +199,8 @@ class ArticulationControl:
             True if at least one valid target was applied, otherwise False.
         """
 
-        if not self.is_ready:
+        # Without a physics view (after a timeline stop) the setters would write USD drive attributes instead.
+        if not self.is_ready or not self.articulation.is_physics_tensor_entity_valid():
             return False
 
         now = time.time()
@@ -226,7 +225,7 @@ class ArticulationControl:
 
         all_names = set(position_targets.keys()) | set(velocity_targets.keys()) | set(effort_targets.keys())
 
-        unknown_joints = sorted(name for name in all_names if name not in self.joint_name_to_index)
+        unknown_joints = sorted(name for name in all_names if name not in self.joint_names)
 
         position_targets = self._filter_known_joints(position_targets)
         velocity_targets = self._filter_known_joints(velocity_targets)
@@ -318,7 +317,6 @@ class ArticulationControl:
         self.articulation = None
 
         self.joint_names = []
-        self.joint_name_to_index = {}
 
         self._inited = False
 
@@ -361,7 +359,7 @@ class ArticulationControl:
             raise ValueError(f"Unsupported joint control mode: {mode}")
 
     def _filter_known_joints(self, targets: Dict[str, float]) -> Dict[str, float]:
-        return {name: value for name, value in targets.items() if name in self.joint_name_to_index}
+        return {name: value for name, value in targets.items() if name in self.joint_names}
 
     def _apply_targets(
         self,
@@ -369,22 +367,12 @@ class ArticulationControl:
         kind: JointControlMode,
         targets: Dict[str, float],
     ) -> None:
-        names = list(targets.keys())
-
-        indices = np.asarray(
-            [self.joint_name_to_index[name] for name in names],
-            dtype=np.int64,
-        )
-
-        values = np.asarray(
-            [targets[name] for name in names],
-            dtype=np.float32,
-        )
-
-        valid = ~np.isnan(values)
-        if not valid.any():
+        # Targets are already filtered to known joints; get_dof_indices asserts on unknown names.
+        names = [name for name, value in targets.items() if not np.isnan(value)]
+        if not names:
             return
-        indices, values = indices[valid], values[valid][np.newaxis, :]
+        indices = articulation.get_dof_indices(names)
+        values = np.asarray([[targets[name] for name in names]], dtype=np.float32)
 
         if kind == JointControlMode.POSITION:
             articulation.set_dof_position_targets(values, dof_indices=indices)
