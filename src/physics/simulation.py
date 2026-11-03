@@ -19,12 +19,13 @@ _PLAY_SIMULATIONS = "/app/player/playSimulations"
 
 class Simulation:
     """
-    Simulation lifecycle for OmniLRS, built on SimulationManager.
+    Simulation lifecycle for OmniLRS, built on the isaacsim.core SimulationManager.
 
-    Replaces the deprecated isaacsim.core.api World/SimulationContext (Isaac Sim 6.0 migration guide: stage utils
-    for the stage, SimulationManager for physics, the timeline for play/stop). It keeps the behavior OmniLRS relied
-    on: a CPU PhysX scene at `physics_prim_path`, Kit's main loop in manual mode stepping `rendering_dt` per update
+    Behavior OmniLRS relies on: a PhysX scene at `physics_prim_path`, Kit's main loop in manual mode stepping `rendering_dt` per update
     (physics substeps follow from `physics_dt`), and a physics step counter that resets when the timeline stops.
+
+    Note: Replaces the deprecated isaacsim.core.api World/SimulationContext (Isaac Sim 6.0 migration guide: stage utils
+    for the stage, SimulationManager for physics, the timeline for play/stop).
 
     Args:
         physics_dt (float): Physics step in seconds.

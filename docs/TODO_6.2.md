@@ -103,3 +103,30 @@ APIs.
 
 Run the 4 canonical scenarios (`artefacts.yaml`): ROS2 lunalab, ROS2 largescale, Yamcs lunalab, Yamcs largescale. For
 camera or semantics changes, also run SDG and compare images / labels with the current output.
+
+## Reference: physics scene setup (CPU PhysX)
+
+For future reference; not a TODO.
+
+- **Scene:** `Simulation` (`src/physics/simulation.py`) creates a single `PhysicsScene` prim with `PhysxSceneAPI` at
+  `/physicsScene` (`PhysxScene(path)` + `SimulationManager.set_default_physics_scene`). It holds gravity, time step,
+  solver, broadphase, CCD, stabilization, GPU dynamics and GPU buffer settings for every rigid body and articulation.
+  Robot and asset USDs bring no scene of their own: references only include the default prim, and the stray
+  `/FlatGrid/PhysicsScene` in `nograph_pragyaan.usd` sits outside it.
+- **CPU pipeline:** GPU dynamics off, a CPU broadphase (MBP by default, SAP from `cfg/physics`), and
+  `/physics/suppressReadback = False`, so PhysX writes poses and velocities back to the stage after every step. This
+  matches Isaac Sim 5.0 (`World` defaulted to the CPU device and numpy backend) and `cfg/physics`
+  `use_gpu_pipeline: false`. The tensor APIs (`Articulation`, `RigidPrim`) also run on the CPU; their warp arrays live
+  on `cpu`.
+- **Why CPU:** one rover with a few dozen bodies plus a terrain mesh collider is fast on the CPU. The GPU pipeline pays
+  off with thousands of bodies or many parallel environments. Some code also reads simulated poses from USD, which
+  needs the readback: the base-link pose (`RobotRigidGroup.get_pose_of_base_link`, used by the Yamcs transmitters).
+- **How settings are layered:**
+  1. `Simulation._set_cpu_defaults()` reproduces what `PhysicsContext` set implicitly: MBP, GPU dynamics off,
+     gravity -9.81, stabilization off, CCD on, TGS, 60 steps/s.
+  2. `Simulation.configure_physics_scene()` applies `cfg/physics` on top. Only ROS2 mode does this, as before:
+     gravity -1.62, PGS, SAP, CCD, stabilization.
+  3. `RobotRigidGroup` turns stabilization off for wheel contact reporting.
+- **Moving to the GPU pipeline** would need `use_gpu_pipeline: true`, the `SimulationManager` device set to CUDA
+  (GPU broadphase, GPU dynamics), and reading simulated poses from physics views instead of USD (the base link).
+  Not hard, to be investigated separately together with overall performance improvements.
