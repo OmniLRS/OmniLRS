@@ -351,7 +351,9 @@ def analyze(output: Path) -> None:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--run", required=True, help="unique output name, e.g. baseline or new-terrain")
-    parser.add_argument("--environment", default="lunaryard_40m_workshop", help="Lunaryard config under cfg/environment")
+    parser.add_argument(
+        "--environment", default="lunaryard_40m_workshop", help="Lunaryard config under cfg/environment"
+    )
     parser.add_argument("--analyze-only", action="store_true", help="skip rendering, reuse saved images")
     args = parser.parse_args()
     if args.run in (".", "..") or Path(args.run).name != args.run:
