@@ -6,7 +6,7 @@ from pxr import Gf, Usd, UsdGeom, UsdPhysics
 from src.configurations.procedural_terrain_confs import TerrainManagerConf
 
 WALL_THICKNESS = 0.5
-WALL_INSET = 0.5
+WALL_INSET = 0.1
 WALL_DEPTH_BELOW_TERRAIN = 1.0
 WALL_HEIGHT_ABOVE_TERRAIN = 2.0
 
@@ -31,12 +31,13 @@ def update_boundary_walls(
     width = (int(terrain_settings.sim_width / resolution) - 1) * resolution
     length = (int(terrain_settings.sim_length / resolution) - 1) * resolution
     if min(width, length) <= 2 * WALL_INSET:
-        raise ValueError("Terrain must span more than 1 meter on both axes to fit the boundary walls.")
+        raise ValueError("Terrain must span more than twice the wall inset on both axes to fit the boundary walls.")
 
     bottom = float(dem.min()) - WALL_DEPTH_BELOW_TERRAIN
     top = float(dem.max()) + WALL_HEIGHT_ABOVE_TERRAIN
     height = top - bottom
     center_z = (top + bottom) / 2
+    # Only the inset lies inside the terrain; the remaining wall thickness extends outside.
     edge_offset = WALL_INSET - WALL_THICKNESS / 2
 
     group = UsdGeom.Xform.Define(stage, root_path)
