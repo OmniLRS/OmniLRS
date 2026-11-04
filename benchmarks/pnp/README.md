@@ -4,6 +4,9 @@ Measures image-to-map localization on Lunaryard terrain using SIFT and PnP.
 Run it before and after a terrain or material change to compare localization
 results. Each run uses one configured terrain and material.
 
+For a rover-camera square route without pose estimation, see the
+[image-matching benchmark](../loop_closure/README.md).
+
 ## Run
 
 From the repository root:
