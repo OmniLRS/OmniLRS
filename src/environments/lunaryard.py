@@ -10,6 +10,7 @@ from src.configurations.procedural_terrain_confs import TerrainManagerConf
 from src.configurations.simulator_mode_enum import SimulatorMode
 from src.configurations.stellar_engine_confs import StellarEngineConf, SunConf
 from src.environments.base_env import BaseEnv
+from src.environments.boundary_walls import update_boundary_walls
 from src.environments.monitoring_cameras_manager import MonitoringCamerasManager
 from src.environments.static_assets_manager import StaticAssetsManager
 from src.environments.stellar_engine_env_mixin import StellarEngineEnvMixin
@@ -52,6 +53,7 @@ class LunaryardController(BaseEnv, StellarEngineEnvMixin, TerrainControlMixin):
         super().__init__(mode, **kwargs)
         self.scene_name = "/Lunaryard"
         self.stage_settings = lunaryard_settings
+        self._terrain_settings = terrain_manager
 
         if static_assets_settings:
             self.SAM = StaticAssetsManager(static_assets_settings)
@@ -104,3 +106,14 @@ class LunaryardController(BaseEnv, StellarEngineEnvMixin, TerrainControlMixin):
 
         if self.MCM:
             self.MCM.spawn(get_height_func=self.get_terrain_height)
+
+    def switch_terrain(self, flag: int = -1) -> None:
+        """Create walls on the initial terrain load, or resize them when terrain is replaced."""
+        super().switch_terrain(flag)
+        update_boundary_walls(
+            self.stage,
+            self._terrain_settings,
+            self.dem,
+            enabled=self.stage_settings.boundary_walls_enabled,
+            visible=self.stage_settings.boundary_walls_visible,
+        )
