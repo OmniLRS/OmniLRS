@@ -93,12 +93,13 @@ ros2 = "python run.py mode=ROS2"
 # yamcs-specific deps, tasks in feature "yamcs"
 [feature.yamcs.pypi-dependencies]
 yamcs-client = "*"
+pyyaml = "*"
 
 [feature.yamcs.tasks]
 yamcs = "python run.py mode=Yamcs environment=lunaryard_40m_workshop robot=pragyaan controller=pragyaan-controller"
 yamcs-largescale = "python run.py mode=Yamcs environment=largescale_workshop robot=pragyaan controller=pragyaan-controller"
 # Check robot + controller config against the running Yamcs server MDB (no Isaac Sim needed)
-check-yamcs-contract = "python scripts/check_yamcs_contract.py --robot pragyaan --controller pragyaan-controller"
+check-yamcs-contract = "python test/check_yamcs_contract.py --robot pragyaan --controller pragyaan-controller"
 
 # zenoh-specific deps, tasks in feature "zenoh"
 [feature.zenoh.pypi-dependencies]
@@ -124,6 +125,8 @@ python = "3.12.*"
 [feature.test-sim.pypi-dependencies]
 pytest = "*"
 yamcs-client = "*"
+# Sanity tests read the robot yaml to compute the expected camera image buckets
+pyyaml = "*"
 
 [feature.test-sim.tasks]
 test-ros2 = "pytest -v -s test/test_ros2_sanity.py"

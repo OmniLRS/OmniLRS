@@ -1,4 +1,5 @@
-"""Unit tests for the startup check against the Yamcs server MDB in src/tmtc/yamcs_contract.py (no Isaac Sim required).
+"""Unit tests for the startup check against the Yamcs server MDB and buckets in src/tmtc/yamcs_contract.py
+(no Isaac Sim required).
 
 python -m pytest -v test/test_yamcs_contract.py
 """
@@ -28,6 +29,7 @@ YAMCS_CONF = {
         "camera_capture_depth": "/Rover/camera/camera_capture_depth",
     },
 }
+# Argument names of the command handlers, as returned by a controller's command_handlers()
 COMMAND_ARGS = {
     "drive_straight": ["linear_velocity", "distance"],
     "camera_capture_high": ["camera_name"],
@@ -74,8 +76,21 @@ def mdb():
     return mdb
 
 
-def _check(mdb, yamcs_conf=YAMCS_CONF, command_args=COMMAND_ARGS):
-    return check_contract(mdb, CAMERAS, ROBOT, yamcs_conf, command_args)
+# Storage buckets on the server: exactly the image buckets CAMERAS and YAMCS_CONF need, plus a Yamcs one
+BUCKETS = {
+    "images_cam_depth_depth",
+    "images_NavCam_left_streaming",
+    "images_NavCam_left_oncommand",
+    "images_lander",
+    "images_apxs",
+    "stacks",
+}
+
+
+def _check(mdb, yamcs_conf=YAMCS_CONF, command_args=COMMAND_ARGS, buckets=BUCKETS):
+    return check_contract(
+        mdb=mdb, buckets=buckets, cameras=CAMERAS, robot_name=ROBOT, yamcs_conf=yamcs_conf, command_args=command_args
+    )
 
 
 def test_complete_mdb_passes(mdb):
@@ -119,9 +134,15 @@ def test_missing_handler_argument_fails(mdb):
     assert _check(mdb).missing == ["argument distance of command /Rover/motor/drive_straight"]
 
 
-def test_command_spec_key_not_in_controller_yaml_fails(mdb):
+def test_handler_key_not_in_controller_yaml_fails(mdb):
     report = _check(mdb, command_args={**COMMAND_ARGS, "drive_turn": ["angle"]})
     assert report.missing == ["commands.drive_turn in the controller yaml (a command handler needs it)"]
+
+
+def test_handler_arguments_not_checked_without_command_args(mdb):
+    # The standalone check cannot import the controllers (Isaac Sim), so it passes command_args=None
+    mdb.commands["/Rover/motor/drive_straight"]["args"].pop()
+    assert _check(mdb, command_args=None).ok
 
 
 def test_missing_camera_name_label_fails(mdb):
@@ -167,3 +188,15 @@ def test_camera_commands_not_handled_by_the_controller_are_not_checked(mdb):
 def test_missing_camera_name_argument_is_reported_once(mdb):
     mdb.commands["/Rover/camera/camera_capture_high"]["args"] = []
     assert _check(mdb).missing == ["argument camera_name of command /Rover/camera/camera_capture_high"]
+
+
+@pytest.mark.parametrize("bucket", ["images_NavCam_left_streaming", "images_lander", "images_apxs"])
+def test_missing_bucket_fails(mdb, bucket):
+    report = _check(mdb, buckets=BUCKETS - {bucket})
+    assert report.missing == [f"bucket {bucket}"]
+
+
+def test_unused_image_bucket_warns(mdb):
+    report = _check(mdb, buckets=BUCKETS | {"images_NavCam_right_streaming", "displays"})
+    assert report.ok
+    assert report.extra == ["bucket images_NavCam_right_streaming (not used by this robot config)"]

@@ -3,7 +3,6 @@ __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
 
 import io
-from collections import OrderedDict
 
 from PIL import Image
 
@@ -15,13 +14,12 @@ class ImagesHandler:
 
     Buckets: one per robot camera and kind (named by yamcs_naming), one per role of images.buckets in the controller
     yaml (e.g. lander, monitoring), plus roles added later with add_bucket (e.g. a payload).
-    Every bucket is created on the server if missing; with images.clear_buckets_on_startup its old objects are deleted.
+    The buckets are defined on the Yamcs side (etc/yamcs.yaml, generated together with the MDB) with limits sized to
+    keep every image of a mission; the startup check (src/tmtc/yamcs_contract.py) verifies they exist. Images are
+    never deleted, except by clear_old_images() at startup when images.clear_buckets_on_startup is set.
     Each image is encoded as PNG in memory and uploaded; then number, name and url_* are set under the bucket's
-    metadata space system.
-
-    Buckets created through the API get the server's default limits (Yamcs 5.13: 100 MB and 1000 objects), so before
-    each upload the oldest objects of the bucket are deleted until the new image fits. A failed upload is logged and
-    skipped, so it never stops the interval or TC thread that saved the image.
+    metadata space system. A failed upload (e.g. a full bucket) is logged and skipped, so it never stops the interval
+    or TC thread that saved the image.
     """
 
     NO_DATA_RESOLUTION = (640, 480)
@@ -40,13 +38,11 @@ class ImagesHandler:
         self._clear_on_startup = images_conf["clear_buckets_on_startup"]
         self._buckets = {}  # bucket name -> metadata space system
         self._counter = {}
-        self._limits = {}  # bucket name -> (max object count, max size in bytes); None = no limit
-        self._stored = {}  # bucket name -> OrderedDict(object name -> size), oldest first
         self._roles = {}  # role -> bucket name
         for _, _, bucket_name, path in yamcs_naming.camera_buckets(cameras):
             self._add_bucket(bucket_name, path)
         for role, bucket_conf in images_conf["buckets"].items():
-            self.add_bucket(role, bucket_conf)
+            self.add_bucket(role=role, bucket_conf=bucket_conf)
 
     def add_bucket(self, role: str, bucket_conf) -> None:
         """Register a bucket by role; bucket_conf has the bucket `name` and the metadata space system `path`."""
@@ -58,38 +54,27 @@ class ImagesHandler:
     def _add_bucket(self, bucket_name, path):
         if bucket_name in self._buckets:
             raise Exception(f"Bucket with name {bucket_name} already exists.")
-        bucket = self._storage.get_bucket(bucket_name, create=True)
-        objects = sorted(bucket.list_objects().objects, key=lambda obj: obj.created)
-        if self._clear_on_startup:
-            for obj in objects:
-                obj.delete()
-            objects = []
         self._buckets[bucket_name] = path
         self._counter[bucket_name] = self.INIT_COUNT
-        self._limits[bucket_name] = (bucket.max_object_count, bucket.max_size)
-        self._stored[bucket_name] = OrderedDict((obj.name, obj.size) for obj in objects)
 
     def image_count(self, role: str) -> int:
         """Number of images uploaded so far to the bucket of that role."""
         return self._counter[self._roles[role]]
 
+    def clear_old_images(self):
+        """At startup, before any upload: with images.clear_buckets_on_startup, delete the objects of every bucket."""
+        if not self._clear_on_startup:
+            return
+        for bucket_name in self._buckets:
+            # Repeat the listing until the bucket is empty, in case a listing does not return every object
+            while objects := self._storage.list_objects(bucket_name).objects:
+                for obj in objects:
+                    self._storage.remove_object(bucket_name, obj.name)
+
     def snap_no_data_images(self):
-        """Called once every bucket is registered: warns about leftover image buckets, then uploads a placeholder
-        image to each bucket."""
-        self._warn_leftover_buckets()
+        """Upload a placeholder image to every bucket."""
         for bucket_name in self._buckets:
             self._snap_no_data_image(bucket_name)
-
-    def _warn_leftover_buckets(self):
-        """Warn about image buckets on the server that OmniLRS no longer uses (e.g. a renamed camera, or a kind its
-        type no longer produces). They are kept: delete them by hand if their images are not needed."""
-        leftovers = sorted(
-            bucket.name
-            for bucket in self._storage.list_buckets()
-            if bucket.name.startswith(yamcs_naming.BUCKET_PREFIX) and bucket.name not in self._buckets
-        )
-        if leftovers:
-            print(f"WARNING: Yamcs storage has image buckets this robot does not use (kept): {', '.join(leftovers)}")
 
     def _snap_no_data_image(self, bucket_name):
         image_path = self._NO_DATA_IMAGE_PATH
@@ -105,36 +90,17 @@ class ImagesHandler:
         self._save(image, self._roles[role])
 
     def _save(self, image: Image, bucket_name: str):
+        image_name = f"{bucket_name}_{self._counter[bucket_name]:04d}.png"
+        png = io.BytesIO()
+        image.save(png, format="PNG")
+        png.seek(0)
         try:
-            image_name = self._upload(image, bucket_name)
+            self._storage.upload_object(bucket_name, image_name, png, content_type="image/png")
         except Exception as e:
             print(f"Image upload to bucket {bucket_name} failed, image skipped: {e}")
             return
         self._inform_yamcs(image_name, bucket_name)
         self._counter[bucket_name] += 1
-
-    def _upload(self, image: Image, bucket_name: str) -> str:
-        image_name = f"{bucket_name}_{self._counter[bucket_name]:04d}.png"
-        png = io.BytesIO()
-        image.save(png, format="PNG")
-        size = png.tell()
-        png.seek(0)
-        self._make_room(bucket_name, image_name, size)
-        self._storage.upload_object(bucket_name, image_name, png, content_type="image/png")
-        self._stored[bucket_name][image_name] = size
-        return image_name
-
-    def _make_room(self, bucket_name: str, image_name: str, size: int):
-        """Delete the oldest objects of the bucket until an upload of `size` bytes as `image_name` fits its limits."""
-        stored = self._stored[bucket_name]
-        stored.pop(image_name, None)  # an upload under an existing name replaces that object
-        max_objects, max_size = self._limits[bucket_name]
-        while stored and (
-            (max_objects is not None and len(stored) >= max_objects)
-            or (max_size is not None and sum(stored.values()) + size > max_size)
-        ):
-            oldest, _ = stored.popitem(last=False)
-            self._storage.remove_object(bucket_name, oldest)
 
     def _inform_yamcs(self, image_name, bucket_name):
         counter_number = self._counter[bucket_name]

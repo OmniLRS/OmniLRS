@@ -2,6 +2,8 @@ __author__ = "Aleksa Stanivuk"
 __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
 
+from functools import partial
+
 from src.mission_specific.pragyaan.tmtc.camera_handler import PragyaanCameraHandler
 from src.mission_specific.pragyaan.tmtc.enums import PragyaanYamcsArguments
 from src.mission_specific.pragyaan.tmtc.payload_handler import PayloadHandler
@@ -72,14 +74,14 @@ class PragyaanCommander:
         if not self._is_camera(camera_name, "rgba"):
             return
         if self._robot.subsystems.get_device_power_state(CommonDevice.CAMERA) == PowerState.ON:
-            self._camera_handler.transmit_camera_view(camera_name, "oncommand")
+            self._camera_handler.transmit_camera_view(camera_name, kind="oncommand")
             self._obc_handler.set_obc_state(ObcState.CAMERA, 10)
 
     def handle_depth_capture(self, camera_name: str):
         if not self._is_camera(camera_name, "depth"):
             return
         if self._robot.subsystems.get_device_power_state(CommonDevice.CAMERA) == PowerState.ON:
-            self._camera_handler.transmit_camera_view(camera_name, "depth")
+            self._camera_handler.transmit_camera_view(camera_name, kind="depth")
             self._obc_handler.set_obc_state(ObcState.CAMERA, 10)
 
     def handle_solar_panel(self, command: str):
@@ -146,8 +148,7 @@ class PragyaanCommander:
                     seconds=self._intervals["camera_streaming"],
                     is_repeating=True,
                     execute_immediately=False,
-                    function=self._camera_handler.transmit_camera_view,
-                    f_args=(camera_name, "streaming"),
+                    function=partial(self._camera_handler.transmit_camera_view, camera_name, kind="streaming"),
                 )
         else:
             print("Unknown action:", action)

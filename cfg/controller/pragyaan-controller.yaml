@@ -1,16 +1,15 @@
 # @package environment
 # do not remove the above comment, it injects the below configs into environment configs
-#
-# Hand-written. Nothing in this file is generated.
-# The Yamcs server MDB is the single source of truth for TM/TC. At startup OmniLRS fetches the space systems
-# listed in mdb_space_systems from the server and checks every path below against it (missing -> abort, extra -> warn).
-# Camera buckets and camera telemetry are not listed here: they are computed from the robot yaml cameras
-# (name + type) by src/tmtc/yamcs_naming.py, the same module the Yamcs-side MDB generator uses.
+
 
 robots_settings:
   robot_controller: "pragyaan-controller"
-  yamcs_tmtc: # these settings are relevant if Yamcs mode
-    mdb_space_systems: ["/Rover", "/Lander", "/Admin"] # fetched from the server (exportXTCE) at startup
+  yamcs_tmtc: # These settings are relevant if mode=Yamcs
+    # The Yamcs server MDB is the single source of truth for TM/TC. At startup OmniLRS fetches the space systems
+    # listed in mdb_space_systems from the server and checks every path below against it (missing -> abort, extra -> warn).
+    # Camera buckets and camera telemetry are not listed here: they are computed from the robot yaml cameras
+    # (name + type) by src/tmtc/yamcs_naming.py, the same module the Yamcs server MDB generator uses.
+    mdb_space_systems: ["/Rover", "/Lander", "/Admin"] # fetched from the Yamcs server at startup
     intervals:
       robot_stats: 1
       neutron_count: 2
@@ -29,8 +28,9 @@ robots_settings:
     images:
       no_data_image_path: "${oc.env:OMNILRS_ROOT,.}/assets/images/no_data_grafana.png"
       clear_buckets_on_startup: true # delete previous objects in every bucket OmniLRS uses
-      # Buckets for rover cameras defined in cfg/robot yaml are created automatically.
-      # Define additional buckets below: (OmniLRS creates them on the server if missing)
+      # Buckets:
+      # For the rover's cameras (which are defined in cfg/robot yaml), buckets are created automatically.
+      # For additional buckets, define them below: (OmniLRS creates them on the Yamcs server if missing)
       #   name: Yamcs storage bucket
       #   path: MDB space system receiving number/name/url_* metadata
       buckets:
@@ -49,10 +49,10 @@ robots_settings:
         bucket:
           name: "images_apxs"
           path: "/Rover/payload/images_apxs"
-    # Per-camera telemetry (streaming state, bandwidth, packets, decode errors)
-    # is computed from the robot cameras, not listed here.
-    # Non-camera telemetry:
     parameters:
+      # Note: the per-camera telemetry (streaming state, bandwidth, packets, decode errors)
+      # is computed from the robot cameras, not listed here.
+      # List other non-camera telemetry here:
       pose_of_base_link: "/Rover/pose_ground_truth"
       go_nogo: "/Rover/go_nogo"
       imu_accelerometer: "/Rover/imu_accelerometer"
@@ -86,18 +86,19 @@ robots_settings:
       neutron_counts: "/Rover/neutron_counts"
       solar_panel_state: "/Rover/solar_panel_state"
       motor_encoder: "/Rover/motor_encoder"
-    # Camera commands take a camera_name argument; its allowed values are checked against the robot cameras' types
-    # (capture_depth -> depth cameras, the other camera commands -> rgba cameras).
     commands:
+      # Note: Camera commands take a camera_name argument; its allowed values are checked against the robot cameras' types
+      # e.g. (capture_depth -> depth cameras, the other camera commands -> rgba cameras).
+      # List all commands here:
+      go_nogo: "/Rover/system/go_nogo_command"
+      power_electronics: "/Rover/power/power_electronics"
+      solar_panel: "/Rover/system/deploy_solar_panel"
       drive_straight: "/Rover/motor/drive_straight"
       drive_turn: "/Rover/motor/drive_turn"
       camera_capture_high: "/Rover/camera/camera_capture_high"
       camera_streaming_on_off: "/Rover/camera/camera_streaming"
       camera_capture_depth: "/Rover/camera/camera_capture_depth"
       set_camera_streaming_params: "/Rover/camera/set_camera_streaming_params"
-      solar_panel: "/Rover/system/deploy_solar_panel"
-      power_electronics: "/Rover/power/power_electronics"
-      go_nogo: "/Rover/system/go_nogo_command"
       capture_apxs: "/Rover/payload/payload_capture_apxs"
       admin_battery_percentage: "/Admin/admin_set_battery_percentage"
       admin_water_detection: "/Admin/admin_water_detection"

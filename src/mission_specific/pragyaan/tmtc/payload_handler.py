@@ -40,7 +40,7 @@ class PayloadHandler:
         self._apxs_conf = payload_conf["apxs"]
         self._APXS_WIDTH = payload_conf["apxs"]["resolution"][0]
         self._APXS_HEIGHT = payload_conf["apxs"]["resolution"][1]
-        self._images_handler.add_bucket(self.APXS_ROLE, payload_conf["apxs"]["bucket"])
+        self._images_handler.add_bucket(role=self.APXS_ROLE, bucket_conf=payload_conf["apxs"]["bucket"])
 
     def snap_apxs(self, apxs_power_state: PowerState = PowerState.OFF):
         APXS_COUNT = self._images_handler.image_count(self.APXS_ROLE)
@@ -56,7 +56,7 @@ class PayloadHandler:
         img = Image.open(apxs_background_path).convert("RGB").resize((self._APXS_WIDTH, self._APXS_HEIGHT))
         draw = ImageDraw.Draw(img)
         self._draw_text(draw, text=text_to_write, fill="black", position="top-right")
-        self._images_handler.save_image(img, self.APXS_ROLE)
+        self._images_handler.save_image(img, role=self.APXS_ROLE)
 
     def _draw_text(self, draw: ImageDraw.ImageDraw, text: str, fill, position: str = "center"):
         APXS_FONT = ImageFont.load_default(self._APXS_HEIGHT // 15)

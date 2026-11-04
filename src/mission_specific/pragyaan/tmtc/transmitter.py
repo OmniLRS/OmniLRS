@@ -130,22 +130,22 @@ class PragyaanTransmitter:
         for camera_name in self._camera_handler.cameras_of_type("rgba"):
             is_camera_streaming = self._intervals_handler.does_exist(camera_streaming_interval(camera_name))
             state = PowerState.ON if is_camera_streaming else PowerState.OFF
-            self._transmit(yamcs_naming.streaming_param(camera_name, "state"), state)
+            self._transmit(yamcs_naming.streaming_param(camera_name, field="state"), state)
 
     def transmit_camera_compression_info(self):
         for camera_name in self._camera_handler.cameras_of_type("rgba"):
             compression_status = self._camera_handler.get_compression_model_outputs(camera_name)
-            # The bandwidth is 0 until the first frame is encoded; skip it as it is below the Yamcs MDB minimum
-            bandwidth = compression_status["bandwidth"]
-            if bandwidth > 0:
-                self._transmit(yamcs_naming.streaming_param(camera_name, "bandwidth"), int(bandwidth))
+            # 0 until the first frame is encoded
+            self._transmit(
+                yamcs_naming.streaming_param(camera_name, field="bandwidth"), int(compression_status["bandwidth"])
+            )
             # Packet counters roll over like hardware counters; the model keeps the full counts.
             packets_sent = compression_status["packets_sent"] % self.PACKET_COUNTER_MODULO
             packets_lost = compression_status["packets_lost"] % self.PACKET_COUNTER_MODULO
-            self._transmit(yamcs_naming.streaming_param(camera_name, "packets_sent"), packets_sent)
-            self._transmit(yamcs_naming.streaming_param(camera_name, "packets_lost"), packets_lost)
+            self._transmit(yamcs_naming.streaming_param(camera_name, field="packets_sent"), packets_sent)
+            self._transmit(yamcs_naming.streaming_param(camera_name, field="packets_lost"), packets_lost)
             self._transmit(
-                yamcs_naming.streaming_param(camera_name, "decode_errors"), compression_status["decode_errors"]
+                yamcs_naming.streaming_param(camera_name, field="decode_errors"), compression_status["decode_errors"]
             )
 
     def transmit_go_nogo(self):

@@ -89,3 +89,19 @@ def test_streaming_fields():
     )
     with pytest.raises(KeyError):
         yamcs_naming.streaming_fields("unknown_robot")
+
+
+def test_image_buckets_cover_cameras_roles_and_payloads():
+    cameras = yamcs_naming.parse_cameras(
+        [{"name": "NavCam_left", "prim_path": "/l", "type": ["rgba"], "resolutions": {"low": [4, 3]}}]
+    )
+    yamcs_tmtc = {
+        "images": {"buckets": {"lander": {"name": "images_lander", "path": "/Lander/camera/images_oncommand"}}},
+        "payload": {"apxs": {"resolution": [4, 3], "bucket": {"name": "images_apxs", "path": "/Rover/payload/apxs"}}},
+    }
+    assert yamcs_naming.image_buckets(cameras, yamcs_tmtc) == [
+        ("images_NavCam_left_streaming", "/Rover/camera/NavCam_left/streaming"),
+        ("images_NavCam_left_oncommand", "/Rover/camera/NavCam_left/oncommand"),
+        ("images_lander", "/Lander/camera/images_oncommand"),
+        ("images_apxs", "/Rover/payload/apxs"),
+    ]

@@ -173,7 +173,7 @@ class PragyaanCameraHandler:
 
         if camera_view is None:  # camera still warming up
             return
-        self._images_handler.save_camera_image(camera_view, camera_name, kind)
+        self._images_handler.save_camera_image(camera_view, camera_name=camera_name, kind=kind)
 
     def transmit_lander_camera_view(self):
         if self._lander_cam is None:
@@ -182,7 +182,7 @@ class PragyaanCameraHandler:
         camera_view: Image = self._snap_lander_camera_view()
         if camera_view is None:
             return
-        self._images_handler.save_image(camera_view, "lander")
+        self._images_handler.save_image(camera_view, role="lander")
 
     def transmit_monitoring_camera_view(self):
         camera_view: Image = self._snap_monitoring_camera_view()
@@ -190,4 +190,4 @@ class PragyaanCameraHandler:
         if camera_view is None:
             return
 
-        self._images_handler.save_image(camera_view, "monitoring")
+        self._images_handler.save_image(camera_view, role="monitoring")

@@ -90,7 +90,7 @@ def meta_path(camera_name: str, kind: str) -> str:
 
 def streaming_param(camera_name: str, field: str) -> str:
     """/Rover/camera/<camera>/streaming/<field>"""
-    return f"{meta_path(camera_name, 'streaming')}/{field}"
+    return f"{meta_path(camera_name, kind='streaming')}/{field}"
 
 
 def bucket_name(camera_name: str, kind: str) -> str:
@@ -105,6 +105,19 @@ def camera_buckets(cameras: Iterable[Mapping]) -> list[tuple[str, str, str, str]
         for cam in cameras
         for kind in camera_kinds(cam)
     ]
+
+
+def image_buckets(cameras: Iterable[Mapping], yamcs_tmtc: Mapping) -> list[tuple[str, str]]:
+    """(bucket name, metadata space system) of every image bucket OmniLRS uploads to: the cameras' buckets, then the
+    images.buckets roles and the payload buckets of the controller yaml `yamcs_tmtc` section."""
+    buckets = [(name, path) for _, _, name, path in camera_buckets(cameras)]
+    buckets += [(bucket["name"], bucket["path"]) for bucket in yamcs_tmtc["images"]["buckets"].values()]
+    buckets += [
+        (payload["bucket"]["name"], payload["bucket"]["path"])
+        for payload in yamcs_tmtc.get("payload", {}).values()
+        if "bucket" in payload
+    ]
+    return buckets
 
 
 def cameras_for_command(cameras: Iterable[Mapping], command: str) -> list[str]:

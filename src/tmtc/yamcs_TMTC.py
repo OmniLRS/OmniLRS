@@ -4,6 +4,7 @@ __email__ = "ljburtz@jaops.com"
 
 import logging
 from abc import ABC, abstractmethod
+from typing import Callable
 
 from yamcs.client import YamcsClient
 
@@ -40,19 +41,18 @@ class YamcsTMTC(ABC):
                             specific functions (functions are implemented inside specific rover controllers that will utilize the CommandsHandler)
         ImagesHandler - facilitates working with Yamcs bucket storages for saving the images created inside the simulator
 
-    At startup the MDB (TM/TC definitions) is fetched from the Yamcs server for the space systems listed in
-    `mdb_space_systems`, and checked against what this robot and controller send and handle (src/tmtc/yamcs_contract.py).
-    Startup aborts before any handler is created if something is missing. Inheriting controllers set COMMAND_ARGS
-    (commands-conf key -> argument names of its handler) and use it in setup_command_callbacks.
+    At construction the MDB (TM/TC definitions) is fetched from the Yamcs server for the space systems listed in
+    `mdb_space_systems`. start() then runs the startup in order: check_yamcs_server() checks the MDB and the storage
+    buckets against what this robot and controller send and handle (src/tmtc/yamcs_contract.py) and aborts if
+    something is missing; old images are cleared if configured; commands are registered; telemetry starts.
 
-    The class also implements two abstract methods that are required to be implemented by the inheriting controllers:
-        setup_command_callbacks(commands_conf) - utilizes CommandsHandler to construct the mapping between high level Yamcs commands,
-                                                and desired functionalities (check PragyaanController for ref. impl.)
-        start_streaming_data - utilizes IntervalsHandler to setup and trigger update of rover's parameters in Yamcs (check PragyaanController for ref. impl.)
+    Inheriting controllers implement two abstract methods (check PragyaanController for ref. impl.):
+        command_handlers() - commands-yaml key -> (handler, argument names it takes). setup_command_callbacks registers
+                             each handler for its command with the CommandsHandler, and check_yamcs_server verifies
+                             the command and its arguments exist in the server MDB.
+        start_streaming_data - utilizes IntervalsHandler to setup and trigger update of rover's parameters in Yamcs
 
     """
-
-    COMMAND_ARGS: dict[str, list[str]] = {}
 
     def __init__(
         self,
@@ -70,10 +70,10 @@ class YamcsTMTC(ABC):
         self._robot_RG = robot_RG
         self._yamcs_conf = yamcs_conf
         self._robot = robot
+        self._storage = yamcs_client.get_storage_client()
         self._mdb: ServerMdb = MdbParsingService.load_from_server(
             yamcs_client.get_mdb(yamcs_instance_conf["instance"]), yamcs_conf["mdb_space_systems"]
         )
-        self._check_mdb_contract()
         # creating the five generic handlers for the main functions of the robot
         self._intervals_handler: IntervalsHandler = IntervalsHandler()
         self._obc_handler: ObcHandler = ObcHandler(self._robot, self._intervals_handler)
@@ -82,7 +82,7 @@ class YamcsTMTC(ABC):
             self._yamcs_processor, yamcs_instance_conf, self._mdb.registry
         )
         self._images_handler: ImagesHandler = ImagesHandler(
-            yamcs_client.get_storage_client(),
+            self._storage,
             self._yamcs_processor,
             yamcs_instance_conf["address"],
             yamcs_conf["images"],
@@ -90,19 +90,40 @@ class YamcsTMTC(ABC):
             robot.cameras,
         )
 
-    def _check_mdb_contract(self) -> None:
-        report = check_contract(self._mdb, self._robot.cameras, self._robot_name, self._yamcs_conf, self.COMMAND_ARGS)
+    def start(self, commands_conf) -> None:
+        """Startup in Yamcs mode, once the controller is built."""
+        self.check_yamcs_server()
+        self._images_handler.clear_old_images()
+        self.setup_command_callbacks(commands_conf)
+        self.start_streaming_data()
+
+    def check_yamcs_server(self) -> None:
+        """Check the Yamcs server MDB and buckets against this robot and controller; raise if anything OmniLRS needs
+        is missing."""
+        report = check_contract(
+            mdb=self._mdb,
+            buckets={bucket.name for bucket in self._storage.list_buckets()},
+            cameras=self._robot.cameras,
+            robot_name=self._robot_name,
+            yamcs_conf=self._yamcs_conf,
+            command_args={key: args for key, (_, args) in self.command_handlers().items()},
+        )
         print(report.summary(self._yamcs_conf["mdb_space_systems"]), flush=True)
         if not report.ok:
             raise RuntimeError(
-                f"The Yamcs server MDB is missing {len(report.missing)} items OmniLRS needs (see the summary above). "
-                "Regenerate the MDB from this OmniLRS checkout and restart Yamcs."
+                f"The Yamcs server is missing {len(report.missing)} items OmniLRS needs (see the summary above). "
+                "Regenerate the MDB and buckets from this OmniLRS checkout and restart Yamcs."
             )
 
     @abstractmethod
-    def setup_command_callbacks(self, commands_conf):
-        """Register command callbacks for the robot."""
+    def command_handlers(self) -> dict[str, tuple[Callable, list[str]]]:
+        """Commands the robot handles: commands-yaml key -> (handler, argument names it takes, in call order)."""
         pass
+
+    def setup_command_callbacks(self, commands_conf):
+        """Register each handler of command_handlers() for its command path in the controller yaml `commands`."""
+        for key, (handler, args) in self.command_handlers().items():
+            self._commands_handler.add_command(commands_conf[key], handler, args=args)
 
     @abstractmethod
     def start_streaming_data(self):

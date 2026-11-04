@@ -1,9 +1,9 @@
 """Startup check of OmniLRS against the Yamcs server MDB (see docs/yamcs-omnilrs-sync.md, section 3).
 
 Compares what OmniLRS sends and handles (robot yaml cameras via yamcs_naming, controller yaml paths, and the
-per-robot command argument spec) with the MDB fetched from the server:
-  - missing in the MDB -> failure (startup aborts, scripts/check_yamcs_contract.py exits 1),
-  - in the MDB but not produced by the robot yaml (cameras, kinds, camera_name labels) -> warning.
+argument names of the controller's command handlers) with the MDB and the storage buckets of the server:
+  - missing on the server -> failure (startup aborts, test/check_yamcs_contract.py exits 1),
+  - on the server but not produced by the robot yaml (cameras, kinds, camera_name labels, image buckets) -> warning.
 
 Standard library only (plus the MDB model from mdb_parsing_service), so it runs without Isaac Sim.
 """
@@ -27,33 +27,30 @@ class ContractReport:
 
     def summary(self, mdb_space_systems: list[str]) -> str:
         status = "OK" if self.ok else f"FAILED: {len(self.missing)} missing"
-        lines = [f"[Yamcs] MDB contract check against {', '.join(mdb_space_systems)}: {self.checked} items, {status}"]
+        lines = [
+            f"[Yamcs] Contract check against the MDB ({', '.join(mdb_space_systems)}) and buckets: "
+            f"{self.checked} items, {status}"
+        ]
         lines += [f"[Yamcs]   missing: {item}" for item in self.missing]
         if self.extra:
-            lines.append("[Yamcs]   warning, the server MDB has items this robot config does not produce:")
+            lines.append("[Yamcs]   warning, the server has items this robot config does not produce:")
             lines += [f"[Yamcs]   extra: {item}" for item in self.extra]
-            lines.append("[Yamcs]   (server MDB generated from a different robot config?)")
+            lines.append("[Yamcs]   (server MDB and buckets generated from a different robot config?)")
         return "\n".join(lines)
-
-
-def image_meta_paths(cameras: list[Mapping], yamcs_conf: Mapping) -> list[str]:
-    """Metadata space system of every image bucket OmniLRS uploads to: robot cameras (yamcs_naming),
-    images.buckets roles and payload buckets of the controller yaml."""
-    paths = [path for *_, path in yamcs_naming.camera_buckets(cameras)]
-    paths += [bucket["path"] for bucket in yamcs_conf["images"]["buckets"].values()]
-    paths += [payload["bucket"]["path"] for payload in yamcs_conf.get("payload", {}).values() if "bucket" in payload]
-    return paths
 
 
 def check_contract(
     mdb: ServerMdb,
+    buckets: set[str],
     cameras: list[Mapping],
     robot_name: str,
     yamcs_conf: Mapping,
-    command_args: Mapping[str, list[str]],
+    command_args: Mapping[str, list[str]] | None,
 ) -> ContractReport:
-    """cameras: yamcs_naming.parse_cameras(robot camera list); yamcs_conf: controller yaml `yamcs_tmtc`;
-    command_args: commands-conf key -> argument names its handler takes (per-robot command_spec.COMMAND_ARGS)."""
+    """buckets: names of the storage buckets on the server;
+    cameras: yamcs_naming.parse_cameras(robot camera list); yamcs_conf: controller yaml `yamcs_tmtc`;
+    command_args: commands-yaml key -> argument names its handler takes (the controller's command_handlers()),
+    or None to skip that check (the standalone check cannot import the controllers, which need Isaac Sim)."""
     report = ContractReport()
 
     def expect(present: bool, item: str) -> None:
@@ -61,8 +58,10 @@ def check_contract(
         if not present and item not in report.missing:
             report.missing.append(item)
 
-    # Image metadata (number, name, url_*) of every bucket OmniLRS uploads to
-    for path in image_meta_paths(cameras, yamcs_conf):
+    # Every bucket OmniLRS uploads to, with its image metadata (number, name, url_*)
+    used_buckets = yamcs_naming.image_buckets(cameras, yamcs_conf)
+    for bucket_name, path in used_buckets:
+        expect(bucket_name in buckets, f"bucket {bucket_name}")
         expect(path in mdb.space_systems, f"space system {path}")
         for meta_field in yamcs_naming.IMAGE_META_FIELDS:
             expect(f"{path}/{meta_field}" in mdb.parameters, f"parameter {path}/{meta_field}")
@@ -83,7 +82,7 @@ def check_contract(
         expect(command in mdb.commands, f"command {command}")
 
     # Argument names each command handler reads
-    for key, arg_names in command_args.items():
+    for key, arg_names in (command_args or {}).items():
         if key not in commands_conf:
             report.missing.append(f"commands.{key} in the controller yaml (a command handler needs it)")
             continue
@@ -112,6 +111,12 @@ def check_contract(
             expect(camera_name in labels, f"{yamcs_naming.CAMERA_NAME_ARG} value {camera_name} of command {path}")
         for label in sorted(labels - set(expected)):
             report.extra.append(f"{yamcs_naming.CAMERA_NAME_ARG} value {label} of command {path}")
+
+    # Image buckets this robot config does not use (e.g. a renamed camera, or a kind its type no longer produces)
+    used_names = {bucket_name for bucket_name, _ in used_buckets}
+    for bucket_name in sorted(buckets):
+        if bucket_name.startswith(yamcs_naming.BUCKET_PREFIX) and bucket_name not in used_names:
+            report.extra.append(f"bucket {bucket_name} (not used by this robot config)")
 
     # Camera space systems (and their kinds) the robot yaml does not produce
     kinds = {camera["name"]: set(yamcs_naming.camera_kinds(camera)) for camera in cameras}

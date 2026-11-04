@@ -33,6 +33,7 @@ def meta_path(camera, kind) -> str            # /Rover/camera/<camera>/<kind>
 def streaming_param(camera, field) -> str     # /Rover/camera/<camera>/streaming/<field>
 def bucket_name(camera, kind) -> str          # images_<camera>_<kind>
 def camera_buckets(cameras) -> list[tuple]    # (camera, kind, bucket_name, meta_path) for every bucket
+def image_buckets(cameras, yamcs_tmtc)        # (bucket_name, meta_path): cameras + controller yaml role/payload buckets
 def cameras_for_command(cameras, command) -> list[str]
 def streaming_fields(robot) -> tuple[str, ...]
 ```
@@ -72,8 +73,8 @@ In `generate_mdb_*.py`:
 - It loads `yamcs_naming.py` by file path from `$OMNILRS_ROOT`.
 - It creates one space system per camera (`camera_system`) with a child per kind (`meta_path`) holding the image metadata, plus the streaming telemetry in the `streaming` child of each rgba camera.
 - For each camera command, the allowed `camera_name` values are only the cameras whose type matches that command.
-- It writes only to its own repo. There is no deploy into OmniLRS, no controller-yaml patching and no `yamcs.yaml` bucket list.
-- The lander and admin generators need their `parse_and_write` calls fixed.
+- It writes the image buckets (`yamcs_naming.image_buckets`) into `etc/yamcs.yaml`: filesystem buckets (one directory of PNG files each) with limits sized to keep every image of a mission (100 GiB and 1,000,000 objects per bucket; Yamcs' default, also for buckets created through the API, is 100 MB and 1000 objects). The rest of `yamcs.yaml` is kept as is (round-trip yaml).
+- It writes only to its own repo. There is no deploy into OmniLRS and no controller-yaml patching.
 
 Yamcs loads the MDB when an instance starts, so Yamcs has to be restarted after regenerating.
 
@@ -84,14 +85,16 @@ Yamcs loads the MDB when an instance starts, so Yamcs has to be restarted after 
    - `registry`: the command decoding table used by `CommandsHandler` (wire name → command),
    - `parameters` and `space_systems`: every qualified parameter and space system name,
    - `commands`: each command's arguments, including the allowed values (enum labels) of `camera_name`.
-3. **Compute what's expected** from the robot yaml (`Robot.cameras`, parsed with `yamcs_naming.parse_cameras`), the controller yaml, `yamcs_naming` and the controller's `COMMAND_ARGS`.
-4. **Check ([§3](#3-how-camera-telemetry-and-buckets-get-checked)), then report** (`YamcsTMTC.__init__`, before any handler exists). Print one summary of everything found. Stop if anything is missing; only warn about extras.
-5. **Set up buckets** (`ImagesHandler`). Call `get_bucket(name, create=True)` for every computed camera bucket, plus `images.buckets.*` and the APXS bucket. If `clear_buckets_on_startup` is set, delete the old objects. Once every bucket is registered (when the "no data" images are sent), warn about `images_*` buckets on the server that none of them uses ([§8](#8-smaller-choices)).
-6. **Continue as today:** register command handlers, send the "no data" placeholder images and start the telemetry intervals.
+3. **Compute what's expected** from the robot yaml (`Robot.cameras`, parsed with `yamcs_naming.parse_cameras`), the controller yaml, `yamcs_naming` and the controller's `command_handlers()`.
+Steps 4–6 run in order in `YamcsTMTC.start()`, which the simulation manager calls once the controller is built:
+
+4. **Check ([§3](#3-how-camera-telemetry-and-buckets-get-checked)), then report** (`check_yamcs_server()`), against the MDB and the server's storage buckets, before any command is registered or any telemetry or image is sent. Print one summary of everything found. Stop if anything is missing; only warn about extras.
+5. **Clear old images** (`ImagesHandler.clear_old_images()`): if `images.clear_buckets_on_startup` is set (the default), delete the objects of every bucket OmniLRS uses. OmniLRS never creates or deletes buckets, and never deletes images otherwise.
+6. **Continue as today:** register command handlers (`setup_command_callbacks`), send the "no data" placeholder images and start the telemetry intervals (`start_streaming_data`).
 
 ## 3. How camera telemetry and buckets get checked
 
-OmniLRS builds an expected set and compares it with the MDB. Example for Pragyaan:
+OmniLRS builds an expected set and compares it with the MDB and the storage buckets of the server. Example for Pragyaan:
 
 | Expected item | Source | Checked against | If missing / extra |
 |---|---|---|---|
@@ -102,19 +105,19 @@ OmniLRS builds an expected set and compares it with the MDB. Example for Pragyaa
 | `camera_capture_depth.camera_name` ∈ {cam_depth} | depth cameras | command argument values | fail if a camera is missing / warn if extra |
 | `camera_capture_high`, `camera_streaming`, `set_camera_streaming_params` ∈ {NavCam_left, NavCam_right} | rgba cameras | command argument values | fail / warn |
 | Every `parameters:` and `commands:` path in the controller yaml | hand-written | MDB | fail / – |
-| Argument names each handler expects (`action`, `camera_name`, `bitrate`, …) | `COMMAND_ARGS` in `src/mission_specific/<robot>/tmtc/command_spec.py` | command arguments (and `commands:` keys) | fail / – |
+| Argument names each handler expects (`action`, `camera_name`, `bitrate`, …) | the controller's `command_handlers()` (sim startup only) | command arguments (and `commands:` keys) | fail / – |
 | `images.buckets.*.path`, `payload.apxs.bucket.path` (+ their `number`, `name`, `url_*`) | hand-written | MDB space systems and parameters | fail / – |
+| Every image bucket (`yamcs_naming.image_buckets`: camera buckets, `images.buckets.*.name`, `payload.apxs.bucket.name`) | robot yaml + controller yaml | storage buckets | fail / – |
+| Other `images_*` buckets on the server (e.g. a renamed camera, or a kind its type no longer produces) | not used by this config | storage buckets | – / warn (kept, never deleted) |
 
-Buckets aren't compared, because OmniLRS creates them in step 5. The only bucket-related thing that can go wrong is the MDB metadata folder, and that's covered in the table.
-
-The checker (`src/tmtc/yamcs_contract.py`) uses only the standard library and the parsed MDB, so it has no Isaac Sim imports. `COMMAND_ARGS` is the single list of handler arguments: the controller's `setup_command_callbacks` registers each handler with it, and the checker verifies it.
+The checker (`src/tmtc/yamcs_contract.py`) uses only the standard library, the parsed MDB and the server's bucket names, so it has no Isaac Sim imports. Each controller's `command_handlers()` (commands-yaml key → handler and its argument names) is the single place for command handlers: `YamcsTMTC.setup_command_callbacks` registers them, and `check_yamcs_server()` verifies their commands and arguments. The standalone `test/check_yamcs_contract.py` cannot import the controllers (they need Isaac Sim), so it checks everything except the handler argument names.
 
 ## 4. Running
 
 - `ImagesHandler.save_camera_image(image, camera, kind)`, or `save_image(image, role)` for lander, monitoring and APXS (the payload handler registers its bucket as role `apxs` with `add_bucket(role, bucket_conf)`):
   - encodes the PNG in memory, uploads it to `bucket_name(camera, kind)` (or the role's bucket), and sets the `number`, `name` and `url_*` values under `meta_path(camera, kind)` (or the role's `path`).
   - The URLs are the same as today (`/storage/buckets/<name>/objects/<file>`), so Grafana keeps working.
-  - Buckets created through the API get the server's default limits (Yamcs 5.13: 100 MB, 1000 objects), so before each upload the bucket's oldest objects are deleted until the new image fits. A failed upload is logged and skipped; a failing command never stops the TC listener.
+  - Every image of the run is kept: the buckets' limits (set by the generator) are sized for a mission. A failed upload (e.g. a full bucket, or an image over Yamcs' 5 MB upload limit) is logged and skipped; a failing command never stops the TC listener.
 - Commanders, the camera handler and transmitters call `yamcs_naming` (or `ImagesHandler`) and never assemble a name themselves.
 - Streaming is per camera: one streaming job and one compression model per rgba camera. The streaming-state telemetry checks that camera's own job.
 - Turning the camera on or off only starts or stops cameras whose type includes `rgba`.
@@ -122,11 +125,11 @@ The checker (`src/tmtc/yamcs_contract.py`) uses only the standard library and th
 
 ## 5. CI
 
-A standalone script runs steps 2–4 against a running Yamcs server for a robot and controller pair, without Isaac Sim (exit code 1 if anything is missing):
+A standalone script runs steps 2–4 against a running Yamcs server for a robot and controller pair, without Isaac Sim (exit code 1 if anything is missing). It checks everything except the handler argument names, which only the sim knows:
 
 ```
 pixi run -e yamcs check-yamcs-contract
-python scripts/check_yamcs_contract.py --robot pragyaan --controller pragyaan-controller [--address localhost:8090 --instance workshop]
+python test/check_yamcs_contract.py --robot pragyaan --controller pragyaan-controller [--address localhost:8090 --instance workshop]
 ```
 
 CI generates the MDB from the OmniLRS commit under test before starting Yamcs: `artefacts.Dockerfile` runs `mdb/generate_mdb_{rover,lander,admin}.py` of yamcs-mission-control-pragyaan with `OMNILRS_ROOT=/workspace/omnilrs`. The sim then runs the same check at startup, and `test/test_yamcs_sanity*.py` checks that the startup "no data" image metadata arrived for every (camera, kind) of the robot yaml.
@@ -141,7 +144,7 @@ CI generates the MDB from the OmniLRS commit under test before starting Yamcs: `
 - **Yamcs repos:**
   - `mdb/cfg/<robot>.yaml` (the robot yaml copy)
   - the deploy paths and `deploy_buckets` logic in `_mdb_cli.py`
-  - the generated image bucket list in `yamcs.yaml` (the `stacks` bucket stays)
+  - the `/tmp` image bucket list in `yamcs.yaml`, replaced by the generated image buckets
 
 ## 7. Yaml layout
 
@@ -159,8 +162,8 @@ CI generates the MDB from the OmniLRS commit under test before starting Yamcs: `
 - Lander and monitoring buckets are named by role, so the code uses `save_image(img, "lander")` and no bucket name is written in Python.
 - APXS stays under `payload.apxs.bucket`, to avoid moving unrelated config.
 - `CAMERA_ROOT = "/Rover/camera"` is a constant in the module, not yaml. Both robots use it, and the generator needs it too.
-- Old images are deleted at startup by default.
+- Every image of a run is kept (bucket limits sized for a mission). Each OmniLRS start is a new run: `clear_buckets_on_startup` (default true) empties the buckets and numbering restarts at 0000.
 
 - **CI generator source:** use yamcs-mission-control main for CI to generate the MDB, so it always runs against the OmniLRS commit under test.
 - **Grafana dashboards:** they refer to camera parameter paths. Disregard for now.
-- **Stale-bucket cleanup:** whether to also delete leftover buckets, e.g. `images_cam_depth_streaming` after `cam_depth` became depth-only, or only warn about them. only warn for now.
+- **Stale-bucket cleanup:** leftover image buckets on the server (e.g. `images_cam_depth_streaming` after `cam_depth` became depth-only) are only warned about by the startup check, never deleted.

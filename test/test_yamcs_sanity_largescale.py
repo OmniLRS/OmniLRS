@@ -1,4 +1,3 @@
-import json
 import os
 import signal
 import socket
@@ -7,6 +6,9 @@ import time
 from pathlib import Path
 
 import pytest
+import yaml
+
+from src.tmtc import yamcs_naming
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 # LargeScale cold start on CI (fresh container: crater/DEM generation, uncached mesh backbone,
@@ -40,13 +42,6 @@ SIM_COMMAND = [
 
 # Robot of the sim task (robot=pragyaan); its yaml camera list defines the camera image buckets.
 ROBOT = "pragyaan"
-# The test-sim env has no yaml parser, so the expected names are computed in the sim's pixi env.
-CAMERA_IMAGE_META_CODE = (
-    "import json, yaml\n"
-    "from src.tmtc import yamcs_naming\n"
-    f"cameras = yaml.safe_load(open('cfg/robot/{ROBOT}.yaml'))['robots_settings']['parameters']['camera']\n"
-    "print(json.dumps([path for *_, path in yamcs_naming.camera_buckets(yamcs_naming.parse_cameras(cameras))]))\n"
-)
 
 # The last startup message to appear; once seen, startup is complete.
 FINAL_MARKER = "ArticulationTelemetry initialized"
@@ -262,14 +257,9 @@ def telemetry(sim, subscription):
 @pytest.fixture(scope="session")
 def camera_image_meta_paths():
     """Image metadata space system of every (camera, kind) of the robot yaml, named by src/tmtc/yamcs_naming.py."""
-    result = subprocess.run(
-        ["pixi", "run", "--environment", "ci", "python", "-c", CAMERA_IMAGE_META_CODE],
-        cwd=REPO_ROOT,
-        capture_output=True,
-        text=True,
-    )
-    assert result.returncode == 0, f"Computing the camera image buckets failed:\n{result.stderr}"
-    return json.loads(result.stdout.strip().splitlines()[-1])
+    with open(REPO_ROOT / "cfg" / "robot" / f"{ROBOT}.yaml") as f:
+        cameras = yaml.safe_load(f)["robots_settings"]["parameters"]["camera"]
+    return [path for *_, path in yamcs_naming.camera_buckets(yamcs_naming.parse_cameras(cameras))]
 
 
 """

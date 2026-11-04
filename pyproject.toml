@@ -38,3 +38,7 @@ known-third-party = ["WorldBuilders"]
 [build-system]
 requires = ["setuptools>=42", "wheel"]
 build-backend = "setuptools.build_meta"
+
+[tool.pytest.ini_options]
+# Tests import OmniLRS modules as `src.*` from the repository root
+pythonpath = ["."]
