@@ -6,9 +6,10 @@ robots_settings:
   robot_controller: "pragyaan-controller"
   yamcs_tmtc: # These settings are relevant if mode=Yamcs
     # The Yamcs server MDB is the single source of truth for TM/TC. At startup OmniLRS fetches the space systems
-    # listed in mdb_space_systems from the server and checks every path below against it (missing -> abort, extra -> warn).
+    # listed in mdb_space_systems from the server and checks every path and image bucket below against it
+    # (missing -> abort, extra -> warn).
     # Camera buckets and camera telemetry are not listed here: they are computed from the robot yaml cameras
-    # (name + type) by src/tmtc/yamcs_naming.py, the same module the Yamcs server MDB generator uses.
+    # (name + type) by src/tmtc/yamcs_naming.py, the same module the Yamcs server MDB and bucket generator uses.
     mdb_space_systems: ["/Rover", "/Lander", "/Admin"] # fetched from the Yamcs server at startup
     intervals:
       robot_stats: 1
@@ -27,10 +28,12 @@ robots_settings:
       resolution: [1440, 1080]
     images:
       no_data_image_path: "${oc.env:OMNILRS_ROOT,.}/assets/images/no_data_grafana.png"
-      clear_buckets_on_startup: true # delete previous objects in every bucket OmniLRS uses
-      # Buckets:
-      # For the rover's cameras (which are defined in cfg/robot yaml), buckets are created automatically.
-      # For additional buckets, define them below: (OmniLRS creates them on the Yamcs server if missing)
+      clear_buckets_on_startup: true # delete the previous images in every bucket OmniLRS uses (otherwise all are kept)
+      # Buckets (Yamcs storage buckets OmniLRS uploads images to):
+      # The buckets of the rover's cameras (which are defined in cfg/robot yaml) are computed, not listed here.
+      # For additional buckets, define them below (and payload buckets under payload).
+      # OmniLRS does not create buckets: generate_mdb_rover.py (yamcs-mission-control repository) declares all of them
+      # in the Yamcs yamcs.yaml, and the startup check aborts if one is missing.
       #   name: Yamcs storage bucket
       #   path: MDB space system receiving number/name/url_* metadata
       buckets:

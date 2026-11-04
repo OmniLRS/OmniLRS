@@ -32,8 +32,9 @@ robots_settings:
     # Define camera names and types here:
     #   type: render products created per resolution. rgba -> streaming + oncommand commands, depth -> capture depth commands
     # Camera bucket and telemetry names are then automatically derived from this list:
-    #   - OmniLRS computes the names at startup with the src/tmtc/yamcs_naming.py module and checks them against the Yamcs server MDB
+    #   - OmniLRS computes the names at startup with the src/tmtc/yamcs_naming.py module and checks them against the Yamcs server MDB and buckets
     #   - in the yamcs-mission-control repository, generate_mdb_rover.py also reads this file and uses that module to build the Yamcs MDB
+    #     and the image buckets (yamcs.yaml)
     camera:
       - name: "cam_depth"
         prim_path: "/Robots/pragyaan/Body/body_main/depth_cam"
