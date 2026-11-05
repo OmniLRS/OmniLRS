@@ -1,6 +1,6 @@
 """Unit tests for src/tmtc/images_handler.py with a fake Yamcs storage client (no Isaac Sim, no Yamcs server).
 
-python -m pytest -v test/test_images_handler.py
+python -m pytest -v test/unit/test_images_handler.py
 """
 
 from types import SimpleNamespace

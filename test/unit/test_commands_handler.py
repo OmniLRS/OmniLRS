@@ -1,6 +1,6 @@
 """Unit tests for the camera argument check of src/tmtc/commands_handler.py (no Isaac Sim, no Yamcs server).
 
-python -m pytest -v test/test_commands_handler.py
+python -m pytest -v test/unit/test_commands_handler.py
 """
 
 import pytest

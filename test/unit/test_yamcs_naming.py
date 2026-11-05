@@ -1,7 +1,7 @@
 """Unit tests for the Yamcs camera naming rule in src/tmtc/yamcs_naming.py (no Isaac Sim required).
 The robot camera config itself (parse_cameras) is tested in test_robot_camera_confs.py.
 
-python -m pytest -v test/test_yamcs_naming.py
+python -m pytest -v test/unit/test_yamcs_naming.py
 """
 
 import re
@@ -17,7 +17,7 @@ from src.mission_specific.pragyaan.tmtc.enums import KIND_RESOLUTION as PRAGYAAN
 from src.mission_specific.pragyaan.tmtc.enums import STREAMING_FIELDS as PRAGYAAN_STREAMING_FIELDS
 from src.tmtc import yamcs_naming
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
+REPO_ROOT = Path(__file__).resolve().parents[2]
 CONTROLLER_YAMLS = sorted((REPO_ROOT / "cfg" / "controller").glob("*.yaml"))
 
 CAMERA_CONF = [

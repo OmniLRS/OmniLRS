@@ -1,6 +1,6 @@
 """Unit tests for the XTCE parsing of the Yamcs server MDB in src/tmtc/mdb_parsing_service.py (no Isaac Sim required).
 
-python -m pytest -v test/test_mdb_parsing_service.py
+python -m pytest -v test/unit/test_mdb_parsing_service.py
 """
 
 import struct

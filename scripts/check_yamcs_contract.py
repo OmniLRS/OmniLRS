@@ -6,7 +6,7 @@ so only the startup check in the sim verifies them.
 Exit code 1 if the server misses anything OmniLRS sends or handles; extras are only warnings.
 
     pixi run -e yamcs check-yamcs-contract
-    python test/check_yamcs_contract.py --robot pragyaan --controller pragyaan-controller \
+    python scripts/check_yamcs_contract.py --robot pragyaan --controller pragyaan-controller \
         [--address localhost:8090 --instance workshop]
 """
 

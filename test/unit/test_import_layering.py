@@ -3,7 +3,7 @@
 src/tmtc and src/mission_specific/<robot>/tmtc are Yamcs code. The robot, the configurations, the environments and the
 other modes (ROS2, Zenoh, SDG) must not import them, so they never depend on Yamcs naming or Yamcs controllers.
 
-python -m pytest -v test/test_import_layering.py
+python -m pytest -v test/unit/test_import_layering.py
 """
 
 import ast
@@ -11,7 +11,7 @@ from pathlib import Path
 
 import pytest
 
-SRC = Path(__file__).resolve().parents[1] / "src"
+SRC = Path(__file__).resolve().parents[2] / "src"
 
 # Packages allowed to import Yamcs code: the Yamcs code itself and the Yamcs mode wrapper
 YAMCS_DIRS = [SRC / "tmtc", SRC / "environments_wrappers" / "yamcs", *SRC.glob("mission_specific/*/tmtc")]

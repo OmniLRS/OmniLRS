@@ -1,7 +1,7 @@
 """Unit tests for the startup check against the Yamcs server MDB and buckets in src/tmtc/yamcs_contract.py
 (no Isaac Sim required).
 
-python -m pytest -v test/test_yamcs_contract.py
+python -m pytest -v test/unit/test_yamcs_contract.py
 """
 
 import pytest

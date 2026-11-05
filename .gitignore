@@ -26,6 +26,6 @@ Session.vim
 results.txt
 
 # Test venv and outputs
-test/venv/
-test/outputs/
-test/sim_startup.log
+test/physics_models/venv/
+test/physics_models/outputs/
+test/ci_artefacts/*.log

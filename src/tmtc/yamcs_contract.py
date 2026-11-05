@@ -2,7 +2,7 @@
 
 Compares what OmniLRS sends and handles (robot yaml cameras via yamcs_naming, controller yaml paths, and the
 argument names of the controller's command handlers) with the MDB and the storage buckets of the server:
-  - missing on the server -> failure (startup aborts, test/check_yamcs_contract.py exits 1),
+  - missing on the server -> failure (startup aborts, scripts/check_yamcs_contract.py exits 1),
   - on the server but not produced by the robot yaml (cameras, kinds, camera_name labels, image buckets) -> warning.
 
 Standard library only (plus the MDB model from mdb_parsing_service), so it runs without Isaac Sim.

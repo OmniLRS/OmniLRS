@@ -1,6 +1,6 @@
 """Unit tests for the robot camera config in src/configurations/robot_camera_confs.py (no Isaac Sim required).
 
-python -m pytest -v test/test_robot_camera_confs.py
+python -m pytest -v test/unit/test_robot_camera_confs.py
 """
 
 from pathlib import Path
@@ -11,7 +11,7 @@ import yaml
 from src.configurations.robot_camera_confs import RobotCameraConf, cameras_of_type, parse_cameras
 from src.configurations.robot_confs import RobotParameters
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
+REPO_ROOT = Path(__file__).resolve().parents[2]
 ROBOT_YAMLS = sorted((REPO_ROOT / "cfg" / "robot").glob("*.yaml"))
 
 CAMERA_CONF = [

@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
+REPO_ROOT = Path(__file__).resolve().parents[2]
 STARTUP_TIMEOUT = int(os.environ.get("OMNILRS_TEST_TIMEOUT", "600"))
 
 SIM_COMMAND = [
@@ -44,7 +44,7 @@ class SimProcess:
     def __init__(self):
         # Artefacts upload dir if available, otherwise a local test dir.
         upload_dir = os.environ.get("ARTEFACTS_SCENARIO_UPLOAD_DIR")
-        log_dir = Path(upload_dir) if upload_dir else REPO_ROOT / "test"
+        log_dir = Path(upload_dir) if upload_dir else Path(__file__).resolve().parent
         log_dir.mkdir(parents=True, exist_ok=True)
         self.log_path = log_dir / "sim_startup.log"
         self._log_file = open(self.log_path, "w")

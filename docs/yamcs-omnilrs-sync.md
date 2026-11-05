@@ -15,7 +15,7 @@ The Yamcs server MDB is the single source of truth for telemetry and commands (T
 
 ### OmniLRS owns the naming rule
 
-The robot camera list itself is plain robot config, the same in every mode: `src/configurations/robot_camera_confs.py` (standard library only) parses and validates it into `RobotCameraConf(name, prim_path, type, resolutions)` objects when the robot config is loaded (`RobotParameters.camera`), and provides `cameras_of_type(cameras, type)`. Only Yamcs mode imports Yamcs code: `test/test_import_layering.py` fails if the robot, the configurations, the environments or the ROS2/Zenoh/SDG modes import `src/tmtc` or `src/mission_specific/<robot>/tmtc`.
+The robot camera list itself is plain robot config, the same in every mode: `src/configurations/robot_camera_confs.py` (standard library only) parses and validates it into `RobotCameraConf(name, prim_path, type, resolutions)` objects when the robot config is loaded (`RobotParameters.camera`), and provides `cameras_of_type(cameras, type)`. Only Yamcs mode imports Yamcs code: `test/unit/test_import_layering.py` fails if the robot, the configurations, the environments or the ROS2/Zenoh/SDG modes import `src/tmtc` or `src/mission_specific/<robot>/tmtc`.
 
 `src/tmtc/yamcs_naming.py` is a new module that uses only the Python standard library and imports nothing from OmniLRS (it works on the `RobotCameraConf` objects it is given):
 
@@ -110,7 +110,7 @@ OmniLRS builds an expected set and compares it with the MDB and the storage buck
 | Every image bucket (`yamcs_naming.image_buckets`: camera buckets, `images.buckets.*.name`, `payload.apxs.bucket.name`) | robot yaml + controller yaml | storage buckets | fail / – |
 | Other `images_*` buckets on the server (e.g. a renamed camera, or a kind its type no longer produces) | not used by this config | storage buckets | – / warn (kept, never deleted) |
 
-The checker (`src/tmtc/yamcs_contract.py`) uses only the standard library, the parsed MDB and the server's bucket names, so it has no Isaac Sim imports. Each controller's `command_handlers()` (commands-yaml key → handler and its argument names) is the single place for command handlers: `YamcsTMTC.setup_command_callbacks` registers them, and `check_yamcs_server()` verifies their commands and arguments. The standalone `test/check_yamcs_contract.py` cannot import the controllers (they need Isaac Sim), so it checks everything except the handler argument names.
+The checker (`src/tmtc/yamcs_contract.py`) uses only the standard library, the parsed MDB and the server's bucket names, so it has no Isaac Sim imports. Each controller's `command_handlers()` (commands-yaml key → handler and its argument names) is the single place for command handlers: `YamcsTMTC.setup_command_callbacks` registers them, and `check_yamcs_server()` verifies their commands and arguments. The standalone `scripts/check_yamcs_contract.py` cannot import the controllers (they need Isaac Sim), so it checks everything except the handler argument names.
 
 ## 4. Running
 
@@ -132,12 +132,12 @@ A standalone script runs steps 2–4 against a running Yamcs server for a robot 
 ```
 pixi run -e yamcs check-yamcs-contract         # Pragyaan, Yamcs instance workshop
 pixi run -e yamcs check-yamcs-contract-husky   # Husky, Yamcs instance husky
-python test/check_yamcs_contract.py --robot pragyaan --controller pragyaan-controller [--address localhost:8090 --instance workshop]
+python scripts/check_yamcs_contract.py --robot pragyaan --controller pragyaan-controller [--address localhost:8090 --instance workshop]
 ```
 
-The unit tests (`test/test_robot_camera_confs.py`, `test/test_yamcs_naming.py`) also check, without a server, that every `cfg/robot` camera list parses, that the husky and pragyaan cameras have the resolution of each of their image kinds (`KIND_RESOLUTION` in `src/mission_specific/<robot>/tmtc/enums.py`, also checked by the camera handler at startup), that their `STREAMING_FIELDS` are valid MDB names, and that every `cfg/controller` yaml has `mdb_space_systems`, a boolean `images.clear_buckets_on_startup` if set, and unique image bucket names.
+The unit tests (`test/unit/test_robot_camera_confs.py`, `test/unit/test_yamcs_naming.py`) also check, without a server, that every `cfg/robot` camera list parses, that the husky and pragyaan cameras have the resolution of each of their image kinds (`KIND_RESOLUTION` in `src/mission_specific/<robot>/tmtc/enums.py`, also checked by the camera handler at startup), that their `STREAMING_FIELDS` are valid MDB names, and that every `cfg/controller` yaml has `mdb_space_systems`, a boolean `images.clear_buckets_on_startup` if set, and unique image bucket names.
 
-CI generates the MDB from the OmniLRS commit under test before starting Yamcs: `artefacts.Dockerfile` runs `mdb/generate_mdb_{rover,lander,admin}.py` of yamcs-mission-control-pragyaan with `OMNILRS_ROOT=/workspace/omnilrs`. The sim then runs the same check at startup, and `test/test_yamcs_sanity*.py` checks that the startup "no data" image metadata arrived for every (camera, kind) of the robot yaml.
+CI generates the MDB from the OmniLRS commit under test before starting Yamcs: `artefacts.Dockerfile` runs `mdb/generate_mdb_{rover,lander,admin}.py` of yamcs-mission-control-pragyaan with `OMNILRS_ROOT=/workspace/omnilrs`. The sim then runs the same check at startup, and `test/ci_artefacts/test_yamcs_sanity*.py` checks that the startup "no data" image metadata arrived for every (camera, kind) of the robot yaml.
 
 ## 6. Deleted
 

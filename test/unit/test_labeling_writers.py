@@ -1,6 +1,6 @@
 """Unit tests for the SDG writers in src/labeling/rep_utils.py (no Isaac Sim required).
 
-pytest -v test/test_labeling_writers.py
+pytest -v test/unit/test_labeling_writers.py
 """
 
 import cv2

@@ -15,7 +15,7 @@ class PragyaanCameraResolution(StrEnum):
 
 
 # Resolution of each image kind: every pragyaan.yaml camera must have the resolutions of its kinds (checked by
-# PragyaanCameraHandler at startup and by test/test_yamcs_naming.py). The Yamcs image mocks load it by file path.
+# PragyaanCameraHandler at startup and by test/unit/test_yamcs_naming.py). The Yamcs image mocks load it by file path.
 KIND_RESOLUTION = {
     "streaming": PragyaanCameraResolution.LOW,
     "oncommand": PragyaanCameraResolution.HIGH,

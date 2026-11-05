@@ -17,7 +17,7 @@ class HuskyCameraResolution(StrEnum):
 
 
 # Resolution of each image kind: every husky.yaml camera must have the resolutions of its kinds (checked by
-# HuskyCameraHandler at startup and by test/test_yamcs_naming.py). The Yamcs image mocks load it by file path.
+# HuskyCameraHandler at startup and by test/unit/test_yamcs_naming.py). The Yamcs image mocks load it by file path.
 KIND_RESOLUTION = {
     "streaming": HuskyCameraResolution.LOW,
     "oncommand": HuskyCameraResolution.HIGH,
