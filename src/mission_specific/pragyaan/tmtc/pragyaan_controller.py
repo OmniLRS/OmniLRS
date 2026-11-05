@@ -192,7 +192,7 @@ class PragyaanController(YamcsTMTC):
             seconds=self._intervals["robot_stats"],
             is_repeating=True,
             execute_immediately=True,
-            function=self._transmitter.transmit_solar_panel_state,
+            function=self._update_and_transmit_solar_panel_state,
         )
         self._intervals_handler.add_new_interval(
             name="Monitoring camera stream",
@@ -209,3 +209,7 @@ class PragyaanController(YamcsTMTC):
             function=self._transmitter.transmit_wheels_joint_angles,
         )
         # here add further intervals and their functionalities
+
+    def _update_and_transmit_solar_panel_state(self):
+        self._commander.update_solar_panel_state()
+        self._transmitter.transmit_solar_panel_state()

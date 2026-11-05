@@ -189,7 +189,8 @@ class ArticulationTelemetry:
             A telemetry frame if sampling succeeded, otherwise None.
         """
         # The physics view is gone between a timeline stop and the next play (e.g. during a reset).
-        if not self.is_ready or not self.articulation.is_physics_tensor_entity_valid():
+        articulation = self.articulation
+        if not self._inited or articulation is None or not articulation.is_physics_tensor_entity_valid():
             return None
 
         now = time.time()
@@ -198,8 +199,6 @@ class ArticulationTelemetry:
             return None
 
         self._t_last_sample = now
-
-        articulation = self.articulation
 
         q = self._read(articulation.get_dof_positions)
         dq = self._read(articulation.get_dof_velocities)

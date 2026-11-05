@@ -39,6 +39,8 @@ attributes, time codes, loop and physics carb settings are identical to `World` 
 did); `ArticulationTelemetry` reads DOF positions, velocities, projected joint forces (efforts) and link incoming joint
 wrenches. Both report ready only once the physics tensor view exists: without it the experimental setters write USD
 drive attributes instead. Robot root pose and teleport use `get/set_world_poses` and `set_velocities`.
+Joint commands are queued and written by `Robot.update_articulation_api()` in the simulation loop: Yamcs and Zenoh
+deliver them on their own threads, and PhysX ignores drive writes made while it is stepping (`World` had the same race).
 
 ### A3. Camera -> `isaacsim.sensors.experimental.rtx.CameraSensor`
 

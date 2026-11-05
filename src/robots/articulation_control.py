@@ -5,6 +5,7 @@ __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
 
 import logging
+import threading
 import time
 from dataclasses import dataclass
 from enum import Enum
@@ -73,6 +74,12 @@ class ArticulationControl:
     simulation managers are responsible for initializing/updating it
     after the world is stepped and after resets.
 
+    Commands may come from transport threads (Yamcs TC listener, Zenoh), but PhysX
+    ignores drive writes made while it is stepping (log message: "setDriveVelocity()
+    not allowed while simulation is running. Call will be ignored").
+    Commands are therefore queued, and `apply_pending()` writes them from the
+    simulation loop, between steps.
+
     Isaac Sim articulation reference:
     https://docs.isaacsim.omniverse.nvidia.com/6.2.0/py/source/extensions/isaacsim.core.experimental.prims/docs/index.html
     """
@@ -121,6 +128,10 @@ class ArticulationControl:
         self._inited = False
         self._t_last_init_try = 0.0
         self._t_last_apply = 0.0
+
+        # Targets queued by apply_command(), by kind and joint name; written by apply_pending().
+        self._lock = threading.Lock()
+        self._pending: Dict[JointControlMode, Dict[str, float]] = self._empty_pending()
 
         self.last_status = JointCommandStatus(
             stamp_s=0.0,
@@ -188,19 +199,22 @@ class ArticulationControl:
 
     def apply_command(self, command: JointCommand) -> bool:
         """
-        Apply one JointCommand to the articulation.
+        Queue one JointCommand for the articulation. Safe to call from any thread.
 
         The command is given by joint name and may contain position, velocity,
         effort, or mixed targets. The method validates the command mode, filters
-        unknown joints, converts joint names to Isaac DOF indices, and sets the
-        corresponding DOF targets. NaN targets are skipped (previous target kept).
+        unknown joints and queues the targets; `apply_pending()` sets them as DOF
+        targets on the next simulation loop update. A later target for the same
+        joint and kind replaces a queued one. NaN targets are skipped (previous
+        target kept).
 
         Returns:
-            True if at least one valid target was applied, otherwise False.
+            True if at least one valid target was queued, otherwise False.
         """
 
-        # Without a physics view (after a timeline stop) the setters would write USD drive attributes instead.
-        if not self.is_ready or not self.articulation.is_physics_tensor_entity_valid():
+        # Reject commands while there is no physics view (e.g. after a timeline stop), as apply_pending() would.
+        articulation = self.articulation  # read once: close() may run on the simulation thread meanwhile
+        if not self._inited or articulation is None or not articulation.is_physics_tensor_entity_valid():
             return False
 
         now = time.time()
@@ -209,8 +223,6 @@ class ArticulationControl:
             return False
 
         self._t_last_apply = now
-
-        articulation = self.articulation
 
         position_targets = dict(command.position_targets or {})
         velocity_targets = dict(command.velocity_targets or {})
@@ -231,31 +243,12 @@ class ArticulationControl:
         velocity_targets = self._filter_known_joints(velocity_targets)
         effort_targets = self._filter_known_joints(effort_targets)
 
-        applied = False
+        applied = bool(position_targets or velocity_targets or effort_targets)
 
-        if position_targets:
-            self._apply_targets(
-                articulation=articulation,
-                kind=JointControlMode.POSITION,
-                targets=position_targets,
-            )
-            applied = True
-
-        if velocity_targets:
-            self._apply_targets(
-                articulation=articulation,
-                kind=JointControlMode.VELOCITY,
-                targets=velocity_targets,
-            )
-            applied = True
-
-        if effort_targets:
-            self._apply_targets(
-                articulation=articulation,
-                kind=JointControlMode.EFFORT,
-                targets=effort_targets,
-            )
-            applied = True
+        with self._lock:
+            self._pending[JointControlMode.POSITION].update(position_targets)
+            self._pending[JointControlMode.VELOCITY].update(velocity_targets)
+            self._pending[JointControlMode.EFFORT].update(effort_targets)
 
         self.last_status = JointCommandStatus(
             stamp_s=now,
@@ -313,12 +306,32 @@ class ArticulationControl:
             )
         )
 
+    def apply_pending(self) -> None:
+        """
+        Write the queued targets to the articulation. Call from the simulation loop, between physics steps
+        (`Robot.update_articulation_api()` does).
+        """
+        # Without a physics view (after a timeline stop) the setters would write USD drive attributes instead.
+        articulation = self.articulation
+        if not self._inited or articulation is None or not articulation.is_physics_tensor_entity_valid():
+            return
+
+        with self._lock:
+            pending, self._pending = self._pending, self._empty_pending()
+
+        for kind, targets in pending.items():
+            if targets:
+                self._apply_targets(articulation=articulation, kind=kind, targets=targets)
+
     def close(self) -> None:
         self.articulation = None
 
         self.joint_names = []
 
         self._inited = False
+
+        with self._lock:
+            self._pending = self._empty_pending()
 
         self.last_status = JointCommandStatus(
             stamp_s=0.0,
@@ -359,7 +372,12 @@ class ArticulationControl:
             raise ValueError(f"Unsupported joint control mode: {mode}")
 
     def _filter_known_joints(self, targets: Dict[str, float]) -> Dict[str, float]:
-        return {name: value for name, value in targets.items() if name in self.joint_names}
+        # NaN targets are dropped before queuing, so they never replace a queued target.
+        return {name: value for name, value in targets.items() if name in self.joint_names and not np.isnan(value)}
+
+    @staticmethod
+    def _empty_pending() -> Dict[JointControlMode, Dict[str, float]]:
+        return {kind: {} for kind in (JointControlMode.POSITION, JointControlMode.VELOCITY, JointControlMode.EFFORT)}
 
     def _apply_targets(
         self,
@@ -368,9 +386,7 @@ class ArticulationControl:
         targets: Dict[str, float],
     ) -> None:
         # Targets are already filtered to known joints; get_dof_indices asserts on unknown names.
-        names = [name for name, value in targets.items() if not np.isnan(value)]
-        if not names:
-            return
+        names = list(targets)
         indices = articulation.get_dof_indices(names)
         values = np.asarray([[targets[name] for name in names]], dtype=np.float32)
 
