@@ -57,8 +57,8 @@ class CraterDistributionConf:
         assert type(self.y_size) is float, "y_size must be a float"
         assert type(self.num_repeat) is int, "num_repeat must be an integer"
         assert type(self.seed) is int, "seed must be an integer"
-        assert type(self.dist_exp) is float,"dist_exp must be float"
-        assert type(self.dist_coef) is float,"dist_coef must be float"
+        assert type(self.dist_exp) is float, "dist_exp must be float"
+        assert type(self.dist_coef) is float, "dist_coef must be float"
 
         assert self.x_size > 0, "x_size must be greater than 0"
         assert self.y_size > 0, "y_size must be greater than 0"
