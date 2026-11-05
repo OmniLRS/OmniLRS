@@ -2,7 +2,8 @@
 
 Single definition of how robot cameras (cfg/robot/<robot>.yaml) map to Yamcs MDB paths and storage buckets.
 Used by OmniLRS at runtime and by the yamcs-mission-control MDB generators, which load this file by path
-from $OMNILRS_ROOT. Keep it standard-library only.
+from $OMNILRS_ROOT. Keep it standard-library only and free of OmniLRS imports: it works on the robot cameras parsed by
+src/configurations/robot_camera_confs.py (RobotCameraConf: name, type, resolutions, has_type) without importing it.
 
 MDB layout (one space system per camera, one child per kind):
     /Rover/camera/<camera>/<kind>/{number,name,url_storage,url_full,url_full_nginx}
@@ -11,13 +12,12 @@ Buckets are flat (Yamcs bucket names cannot contain "/"): images_<camera>_<kind>
 Names are only ever built from (camera, kind), never parsed back.
 """
 
-import re
-from typing import Any, Iterable, Mapping
+from typing import Iterable, Mapping
 
 CAMERA_ROOT = "/Rover/camera"
 BUCKET_PREFIX = "images_"
 
-CAMERA_TYPES = ("rgba", "depth")
+# Image kinds of each camera type (robot_camera_confs.CAMERA_TYPES)
 KINDS_BY_TYPE = {"rgba": ("streaming", "oncommand"), "depth": ("depth",)}
 
 IMAGE_META_FIELDS = ("number", "name", "url_storage", "url_full", "url_full_nginx")
@@ -31,61 +31,26 @@ CAMERA_COMMAND_TYPE = {
 }
 CAMERA_NAME_ARG = "camera_name"
 
-_NAME_RE = re.compile(r"[A-Za-z][A-Za-z0-9_]*")  # whole name (fullmatch)
 
-
-def parse_cameras(camera_conf: Any) -> list[dict]:
-    """Validate the robot yaml `camera` list and return plain dicts: name, prim_path, type (tuple), resolutions."""
-    if camera_conf is None:
-        return []
-    if isinstance(camera_conf, Mapping) or isinstance(camera_conf, str):
-        raise ValueError("robot camera config must be a list of cameras, each with name, prim_path, type, resolutions")
-
-    cameras = []
-    seen = set()
-    for i, cam in enumerate(camera_conf):
-        for key in ("name", "prim_path", "type", "resolutions"):
-            if key not in cam:
-                raise ValueError(f"camera #{i} is missing '{key}'")
-        name = str(cam["name"])
-        if not _NAME_RE.fullmatch(name):
-            raise ValueError(f"camera name {name!r} must match {_NAME_RE.pattern} (used in MDB paths and bucket names)")
-        if name in seen:
-            raise ValueError(f"duplicate camera name {name!r}")
-        seen.add(name)
-        types = tuple(str(t) for t in cam["type"])
-        if not types or any(t not in CAMERA_TYPES for t in types) or len(set(types)) != len(types):
-            raise ValueError(f"camera {name!r}: type must be a non-empty list of distinct values from {CAMERA_TYPES}")
-        resolutions = {str(res): (int(wh[0]), int(wh[1])) for res, wh in dict(cam["resolutions"]).items()}
-        if not resolutions:
-            raise ValueError(f"camera {name!r}: resolutions must not be empty")
-        cameras.append({"name": name, "prim_path": str(cam["prim_path"]), "type": types, "resolutions": resolutions})
-    return cameras
-
-
-def camera_kinds(camera: Mapping) -> tuple[str, ...]:
+def camera_kinds(camera) -> tuple[str, ...]:
     """Image kinds a camera produces, from its type (e.g. rgba -> streaming, oncommand)."""
-    return tuple(kind for t in camera["type"] for kind in KINDS_BY_TYPE[t])
+    return tuple(kind for t in camera.type for kind in KINDS_BY_TYPE[t])
 
 
-def check_kind_resolutions(cameras: Iterable[Mapping], kind_resolution: Mapping[str, str]) -> None:
+def check_kind_resolutions(cameras: Iterable, kind_resolution: Mapping[str, str]) -> None:
     """Raise ValueError if a camera lacks the resolution used for one of its kinds.
 
     kind_resolution: image kind -> resolutions key of the robot yaml (e.g. streaming -> low), defined per robot in
     src/mission_specific/<robot>/tmtc/enums.py and used by its camera handler.
     """
     missing = [
-        f"camera {cam['name']!r}: {kind} images use resolution {kind_resolution[kind]!r}"
+        f"camera {cam.name!r}: {kind} images use resolution {kind_resolution[kind]!r}"
         for cam in cameras
         for kind in camera_kinds(cam)
-        if kind_resolution[kind] not in cam["resolutions"]
+        if kind_resolution[kind] not in cam.resolutions
     ]
     if missing:
         raise ValueError("robot yaml camera resolutions are missing: " + "; ".join(missing))
-
-
-def has_type(camera: Mapping, camera_type: str) -> bool:
-    return camera_type in camera["type"]
 
 
 def camera_system(camera_name: str) -> str:
@@ -108,16 +73,16 @@ def bucket_name(camera_name: str, kind: str) -> str:
     return f"{BUCKET_PREFIX}{camera_name}_{kind}"
 
 
-def camera_buckets(cameras: Iterable[Mapping]) -> list[tuple[str, str, str, str]]:
+def camera_buckets(cameras: Iterable) -> list[tuple[str, str, str, str]]:
     """(camera, kind, bucket_name, meta_path) for every image bucket the cameras produce."""
     return [
-        (cam["name"], kind, bucket_name(cam["name"], kind), meta_path(cam["name"], kind))
+        (cam.name, kind, bucket_name(cam.name, kind), meta_path(cam.name, kind))
         for cam in cameras
         for kind in camera_kinds(cam)
     ]
 
 
-def image_buckets(cameras: Iterable[Mapping], yamcs_tmtc: Mapping) -> list[tuple[str, str]]:
+def image_buckets(cameras: Iterable, yamcs_tmtc: Mapping) -> list[tuple[str, str]]:
     """(bucket name, metadata space system) of every image bucket OmniLRS uploads to: the cameras' buckets, then the
     images.buckets roles and the payload buckets of the controller yaml `yamcs_tmtc` section."""
     buckets = [(name, path) for _, _, name, path in camera_buckets(cameras)]
@@ -130,7 +95,7 @@ def image_buckets(cameras: Iterable[Mapping], yamcs_tmtc: Mapping) -> list[tuple
     return buckets
 
 
-def cameras_for_command(cameras: Iterable[Mapping], command: str) -> list[str]:
+def cameras_for_command(cameras: Iterable, command: str) -> list[str]:
     """Camera names allowed for a camera command's camera_name argument, in robot yaml order."""
     camera_type = CAMERA_COMMAND_TYPE[command]
-    return [cam["name"] for cam in cameras if has_type(cam, camera_type)]
+    return [cam.name for cam in cameras if cam.has_type(camera_type)]

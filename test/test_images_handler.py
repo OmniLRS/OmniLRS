@@ -9,12 +9,11 @@ import pytest
 
 Image = pytest.importorskip("PIL.Image")
 
+from src.configurations.robot_camera_confs import parse_cameras  # noqa: E402
 from src.tmtc import yamcs_naming  # noqa: E402
 from src.tmtc.images_handler import ImagesHandler  # noqa: E402
 
-CAMERAS = yamcs_naming.parse_cameras(
-    [{"name": "NavCam_left", "prim_path": "/l", "type": ["rgba"], "resolutions": {"low": [4, 3]}}]
-)
+CAMERAS = parse_cameras([{"name": "NavCam_left", "prim_path": "/l", "type": ["rgba"], "resolutions": {"low": [4, 3]}}])
 STREAMING = yamcs_naming.bucket_name("NavCam_left", "streaming")
 ONCOMMAND = yamcs_naming.bucket_name("NavCam_left", "oncommand")
 

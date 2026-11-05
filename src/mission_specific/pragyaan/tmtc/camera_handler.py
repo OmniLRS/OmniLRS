@@ -8,6 +8,7 @@ import numpy as np
 from isaacsim.sensors.experimental.rtx import CameraSensor
 from PIL import Image
 
+from src.configurations.robot_camera_confs import cameras_of_type
 from src.environments.monitoring_cameras_manager import MonitoringCamerasManager
 from src.mission_specific.pragyaan.tmtc.enums import KIND_RESOLUTION
 from src.subsystems.robot_physics_models.camera_compression_model import CameraCompressionModel
@@ -60,7 +61,7 @@ class PragyaanCameraHandler:
         compression_conf["fps"] = 1 / streaming_interval
         # One model per streaming (rgba) camera
         self._compression_models: dict[str, CameraCompressionModel] = {}
-        for camera_name in self.cameras_of_type("rgba"):
+        for camera_name in cameras_of_type(robot.cameras, "rgba"):
             model = CameraCompressionModel()
             model.initialize(**compression_conf)
             self._compression_models[camera_name] = model
@@ -84,10 +85,6 @@ class PragyaanCameraHandler:
 
         camera_name = list(MonitoringCamerasManager.cameras.keys())[0]
         self._monitoring_cam = MonitoringCamerasManager.cameras[camera_name]
-
-    def cameras_of_type(self, camera_type: str) -> list[str]:
-        """Names of the rover cameras of that type (rgba or depth), in robot yaml order."""
-        return [camera["name"] for camera in self._robot.cameras if yamcs_naming.has_type(camera, camera_type)]
 
     def _snap_camera_view_rgb(self, camera_name: str, resolution: str) -> Image:
         frame = self._robot.get_rgba_camera_view(camera_name, resolution)

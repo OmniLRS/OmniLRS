@@ -11,6 +11,7 @@ Standard library only (plus the MDB model from mdb_parsing_service), so it runs 
 from dataclasses import dataclass, field
 from typing import Iterable, Mapping
 
+from src.configurations.robot_camera_confs import RobotCameraConf
 from src.tmtc import yamcs_naming
 from src.tmtc.mdb_parsing_service import ServerMdb
 
@@ -42,13 +43,13 @@ class ContractReport:
 def check_contract(
     mdb: ServerMdb,
     buckets: set[str],
-    cameras: list[Mapping],
+    cameras: list[RobotCameraConf],
     streaming_fields: Iterable[str],
     yamcs_conf: Mapping,
     command_args: Mapping[str, list[str]] | None,
 ) -> ContractReport:
     """buckets: names of the storage buckets on the server;
-    cameras: yamcs_naming.parse_cameras(robot camera list);
+    cameras: robot cameras (RobotParameters.camera, parsed by robot_camera_confs.parse_cameras);
     streaming_fields: streaming telemetry sent per rgba camera (STREAMING_FIELDS of the robot's tmtc/enums.py);
     yamcs_conf: controller yaml `yamcs_tmtc`;
     command_args: commands-yaml key -> argument names its handler takes (the controller's command_handlers()),
@@ -70,9 +71,9 @@ def check_contract(
 
     # Streaming telemetry of every rgba camera
     for camera in cameras:
-        if yamcs_naming.has_type(camera, "rgba"):
+        if camera.has_type("rgba"):
             for streaming_field in streaming_fields:
-                param = yamcs_naming.streaming_param(camera["name"], streaming_field)
+                param = yamcs_naming.streaming_param(camera.name, streaming_field)
                 expect(param in mdb.parameters, f"parameter {param}")
 
     # Hand-written controller yaml paths
@@ -120,7 +121,7 @@ def check_contract(
             report.extra.append(f"bucket {bucket_name} (not used by this robot config)")
 
     # Camera space systems (and their kinds) the robot yaml does not produce
-    kinds = {camera["name"]: set(yamcs_naming.camera_kinds(camera)) for camera in cameras}
+    kinds = {camera.name: set(yamcs_naming.camera_kinds(camera)) for camera in cameras}
     prefix = yamcs_naming.CAMERA_ROOT + "/"
     for system in sorted(mdb.space_systems):
         if not system.startswith(prefix):

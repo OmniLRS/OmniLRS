@@ -8,7 +8,7 @@ from typing import Callable
 
 from yamcs.client import YamcsClient
 
-from src.tmtc.commands_handler import CommandsHandler
+from src.tmtc.commands_handler import CommandsHandler, check_camera_argument
 from src.tmtc.drive_handler import DriveHandler
 from src.tmtc.images_handler import ImagesHandler
 from src.tmtc.intervals_handler import IntervalsHandler
@@ -125,9 +125,13 @@ class YamcsTMTC(ABC):
         pass
 
     def setup_command_callbacks(self, commands_conf):
-        """Register each handler of command_handlers() for its command path in the controller yaml `commands`."""
+        """Register each handler of command_handlers() for its command path in the controller yaml `commands`.
+        Camera commands reach their handler only with a camera of the command's camera type (check_camera_argument)."""
         for key, (handler, args) in self.command_handlers().items():
-            self._commands_handler.add_command(commands_conf[key], handler, args=args)
+            path = commands_conf[key]
+            self._commands_handler.add_command(
+                path, check_camera_argument(handler, path, args, self._robot.cameras), args=args
+            )
 
     @abstractmethod
     def start_streaming_data(self):

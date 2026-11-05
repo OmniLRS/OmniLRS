@@ -6,11 +6,12 @@ python -m pytest -v test/test_yamcs_contract.py
 
 import pytest
 
+from src.configurations.robot_camera_confs import parse_cameras
 from src.tmtc import yamcs_naming
 from src.tmtc.mdb_parsing_service import ServerMdb
 from src.tmtc.yamcs_contract import check_contract
 
-CAMERAS = yamcs_naming.parse_cameras(
+CAMERAS = parse_cameras(
     [
         {"name": "cam_depth", "prim_path": "/d", "type": ["depth"], "resolutions": {"high": [4, 3]}},
         {"name": "NavCam_left", "prim_path": "/l", "type": ["rgba"], "resolutions": {"low": [4, 3]}},

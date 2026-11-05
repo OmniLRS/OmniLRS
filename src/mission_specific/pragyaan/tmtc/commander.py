@@ -4,6 +4,7 @@ __email__ = "ljburtz@jaops.com"
 
 from functools import partial
 
+from src.configurations.robot_camera_confs import cameras_of_type
 from src.mission_specific.pragyaan.tmtc.camera_handler import PragyaanCameraHandler
 from src.mission_specific.pragyaan.tmtc.enums import PragyaanYamcsArguments
 from src.mission_specific.pragyaan.tmtc.payload_handler import PayloadHandler
@@ -65,23 +66,15 @@ class PragyaanCommander:
     def handle_lander_camera_capture(self):
         self._camera_handler.transmit_lander_camera_view()
 
-    def _is_camera(self, camera_name: str, camera_type: str) -> bool:
-        # camera_name is an MDB enum label; the server MDB may list cameras this robot does not have (contract warning)
-        if camera_name in self._camera_handler.cameras_of_type(camera_type):
-            return True
-        print(f"Camera {camera_name!r} is not a {camera_type} camera of this robot")
-        return False
+    # Camera commands: YamcsTMTC only calls them with a camera_name of the command's camera type
+    # (commands_handler.check_camera_argument)
 
     def handle_high_res_capture(self, camera_name: str):
-        if not self._is_camera(camera_name, "rgba"):
-            return
         if self._robot.subsystems.get_device_power_state(CommonDevice.CAMERA) == PowerState.ON:
             self._camera_handler.transmit_camera_view(camera_name, kind="oncommand")
             self._obc_handler.set_obc_state(ObcState.CAMERA, 10)
 
     def handle_depth_capture(self, camera_name: str):
-        if not self._is_camera(camera_name, "depth"):
-            return
         if self._robot.subsystems.get_device_power_state(CommonDevice.CAMERA) == PowerState.ON:
             self._camera_handler.transmit_camera_view(camera_name, kind="depth")
             self._obc_handler.set_obc_state(ObcState.CAMERA, 10)
@@ -123,7 +116,7 @@ class PragyaanCommander:
 
         if electronics == CommonDevice.CAMERA:
             action = PragyaanYamcsArguments.START if new_state == PowerState.ON else PragyaanYamcsArguments.STOP
-            for camera_name in self._camera_handler.cameras_of_type("rgba"):
+            for camera_name in cameras_of_type(self._robot.cameras, "rgba"):
                 self.set_activity_of_camera_streaming(camera_name, action.value)
         elif electronics == CommonDevice.NEUTRON_SPECTROMETER:
             self.set_activity_of_neutron_streaming(new_state)
@@ -151,8 +144,6 @@ class PragyaanCommander:
             self._drive_handler.stop_robot()
 
     def set_activity_of_camera_streaming(self, camera_name: str, action: str):
-        if not self._is_camera(camera_name, "rgba"):
-            return
         interval_name = camera_streaming_interval(camera_name)
         if action == PragyaanYamcsArguments.STOP.value:
             self._intervals_handler.remove_interval(interval_name)
@@ -177,8 +168,6 @@ class PragyaanCommander:
         max_payload_size: int,
         bandwidth_window_seconds: float,
     ):
-        if not self._is_camera(camera_name, "rgba"):
-            return
         # MDB arguments can not be null, so crf = -1 stands for None (bitrate mode)
         try:
             self._camera_handler.set_streaming_compression_params(

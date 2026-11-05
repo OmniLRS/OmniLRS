@@ -19,6 +19,7 @@ from pxr import Gf, Usd
 from scipy.spatial.transform import Rotation as R
 from WorldBuilders.pxr_utils import createObject, createXform
 
+from src.configurations.robot_camera_confs import RobotCameraConf
 from src.configurations.robot_confs import RobotManagerConf
 from src.configurations.simulator_mode_enum import SimulatorMode
 from src.environments.utils import resolve_position, transform_orientation_from_xyzw_into_xyz
@@ -26,7 +27,6 @@ from src.robots.articulation_control import ArticulationControl
 from src.robots.articulation_telemetry import ArticulationTelemetry
 from src.simulation import Simulation
 from src.subsystems.robot_subsystems_handler import RobotSubsystemsHandler
-from src.tmtc import yamcs_naming
 
 
 # TODO for v4: rethink which methods should be in Manager, RRG, what should be in Robot
@@ -133,7 +133,7 @@ class RobotManager:
         q: Tuple[float, float, float, float] = [0, 0, 0, 1],
         domain_id: int = None,
         wheel_joints: dict = {},
-        camera_conf: list = None,
+        camera_conf: list[RobotCameraConf] = None,
         imu_sensor_path: str = "",
         dimensions: dict = {},
         turn_speed_coef: float = 1,
@@ -228,7 +228,7 @@ class Robot:
         is_ROS2: bool = False,
         domain_id: int = 0,
         wheel_joints: Dict = {},
-        camera_conf: List = None,
+        camera_conf: list[RobotCameraConf] = None,
         imu_sensor_path: str = "",
         dimensions: dict = {},
         turn_speed_coef: float = 1,
@@ -266,8 +266,8 @@ class Robot:
         self._last_joint_velocities: dict[str, float] = {}
         self._last_joint_efforts: dict[str, float] = {}
         self._last_wheel_joint_angles: list[float] = []
-        # Robot yaml `camera` list: name, prim_path, type (rgba and/or depth), resolutions
-        self.cameras: list[dict] = yamcs_naming.parse_cameras(camera_conf)
+        # Robot yaml `camera` list, parsed with the robot config (RobotParameters)
+        self.cameras: list[RobotCameraConf] = list(camera_conf or [])
         self._camera_sensors: dict[tuple[str, str], CameraSensor] = {}  # (camera name, resolution) -> sensor
         self.dimensions = dimensions
         self.turn_speed_coef = turn_speed_coef
@@ -404,10 +404,10 @@ class Robot:
         # One render product per camera and resolution on the camera prim (created if missing),
         # with only the annotators of the camera's types.
         for camera in self.cameras:
-            annotators = [self.CAMERA_ANNOTATORS[camera_type] for camera_type in camera["type"]]
-            for res, (width, height) in camera["resolutions"].items():
-                self._camera_sensors[(camera["name"], res)] = CameraSensor(
-                    camera["prim_path"],
+            annotators = [self.CAMERA_ANNOTATORS[camera_type] for camera_type in camera.type]
+            for res, (width, height) in camera.resolutions.items():
+                self._camera_sensors[(camera.name, res)] = CameraSensor(
+                    camera.prim_path,
                     resolution=(height, width),
                     annotators=annotators,
                 )

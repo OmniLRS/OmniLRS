@@ -4,6 +4,7 @@ __email__ = "ljburtz@jaops.com"
 
 import math
 
+from src.configurations.robot_camera_confs import cameras_of_type
 from src.robots.robot import Robot
 from src.subsystems.device import CommonDevice, PowerState
 from src.subsystems.robot_enums import SolarPanelState
@@ -127,13 +128,13 @@ class PragyaanTransmitter:
     # enums.STREAMING_FIELDS (state, bandwidth, packets_sent, packets_lost, decode_errors): keep them in step.
 
     def transmit_camera_streaming_state(self):
-        for camera_name in self._camera_handler.cameras_of_type("rgba"):
+        for camera_name in cameras_of_type(self._robot.cameras, "rgba"):
             is_camera_streaming = self._intervals_handler.does_exist(camera_streaming_interval(camera_name))
             state = PowerState.ON if is_camera_streaming else PowerState.OFF
             self._transmit(yamcs_naming.streaming_param(camera_name, field="state"), state)
 
     def transmit_camera_compression_info(self):
-        for camera_name in self._camera_handler.cameras_of_type("rgba"):
+        for camera_name in cameras_of_type(self._robot.cameras, "rgba"):
             compression_status = self._camera_handler.get_compression_model_outputs(camera_name)
             # 0 until the first frame is encoded
             self._transmit(

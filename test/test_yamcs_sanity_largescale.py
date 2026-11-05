@@ -8,6 +8,7 @@ from pathlib import Path
 import pytest
 import yaml
 
+from src.configurations.robot_camera_confs import parse_cameras
 from src.tmtc import yamcs_naming
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -259,7 +260,7 @@ def camera_image_meta_paths():
     """Image metadata space system of every (camera, kind) of the robot yaml, named by src/tmtc/yamcs_naming.py."""
     with open(REPO_ROOT / "cfg" / "robot" / f"{ROBOT}.yaml") as f:
         cameras = yaml.safe_load(f)["robots_settings"]["parameters"]["camera"]
-    return [path for *_, path in yamcs_naming.camera_buckets(yamcs_naming.parse_cameras(cameras))]
+    return [path for *_, path in yamcs_naming.camera_buckets(parse_cameras(cameras))]
 
 
 """

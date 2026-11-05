@@ -58,28 +58,17 @@ class HuskyCommander:
     # Camera commands
     # ------------------------------------------------------------------
 
-    def _is_camera(self, camera_name: str, camera_type: str) -> bool:
-        # camera_name is an MDB enum label; the server MDB may list cameras this robot does not have (contract warning)
-        if camera_name in self._camera_handler.cameras_of_type(camera_type):
-            return True
-        print(f"Camera {camera_name!r} is not a {camera_type} camera of this robot")
-        return False
+    # YamcsTMTC only calls them with a camera_name of the command's camera type (commands_handler.check_camera_argument)
 
     def handle_high_res_capture(self, camera_name: str):
-        if not self._is_camera(camera_name, "rgba"):
-            return
         self._camera_handler.transmit_camera_view(camera_name, kind="oncommand")
         self._obc_handler.set_obc_state(ObcState.CAMERA, 10)
 
     def handle_depth_capture(self, camera_name: str):
-        if not self._is_camera(camera_name, "depth"):
-            return
         self._camera_handler.transmit_camera_view(camera_name, kind="depth")
         self._obc_handler.set_obc_state(ObcState.CAMERA, 10)
 
     def set_activity_of_camera_streaming(self, camera_name: str, action: str):
-        if not self._is_camera(camera_name, "rgba"):
-            return
         interval_name = camera_streaming_interval(camera_name)
         if action == HuskyYamcsArguments.STOP.value:
             self._intervals_handler.remove_interval(interval_name)

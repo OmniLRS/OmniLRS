@@ -1,4 +1,5 @@
 """Unit tests for the Yamcs camera naming rule in src/tmtc/yamcs_naming.py (no Isaac Sim required).
+The robot camera config itself (parse_cameras) is tested in test_robot_camera_confs.py.
 
 python -m pytest -v test/test_yamcs_naming.py
 """
@@ -9,6 +10,7 @@ from pathlib import Path
 import pytest
 import yaml
 
+from src.configurations.robot_camera_confs import CAMERA_TYPES, parse_cameras
 from src.mission_specific.husky.tmtc.enums import KIND_RESOLUTION as HUSKY_KIND_RESOLUTION
 from src.mission_specific.husky.tmtc.enums import STREAMING_FIELDS as HUSKY_STREAMING_FIELDS
 from src.mission_specific.pragyaan.tmtc.enums import KIND_RESOLUTION as PRAGYAAN_KIND_RESOLUTION
@@ -16,7 +18,6 @@ from src.mission_specific.pragyaan.tmtc.enums import STREAMING_FIELDS as PRAGYAA
 from src.tmtc import yamcs_naming
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-ROBOT_YAMLS = sorted((REPO_ROOT / "cfg" / "robot").glob("*.yaml"))
 CONTROLLER_YAMLS = sorted((REPO_ROOT / "cfg" / "controller").glob("*.yaml"))
 
 CAMERA_CONF = [
@@ -26,42 +27,13 @@ CAMERA_CONF = [
 ]
 
 
-def test_parse_cameras_returns_plain_dicts():
-    cameras = yamcs_naming.parse_cameras(CAMERA_CONF)
-    assert [cam["name"] for cam in cameras] == ["cam_depth", "NavCam_left", "both"]
-    assert cameras[1] == {
-        "name": "NavCam_left",
-        "prim_path": "/Robot/left",
-        "type": ("rgba",),
-        "resolutions": {"low": (640, 480)},
-    }
-
-
-@pytest.mark.parametrize("conf", [None, []])
-def test_parse_cameras_without_cameras(conf):
-    assert yamcs_naming.parse_cameras(conf) == []
-
-
-@pytest.mark.parametrize(
-    "conf",
-    [
-        {"name": "cam", "prim_path": "/p", "type": ["rgba"], "resolutions": {"low": [1, 1]}},  # not a list
-        [{"name": "cam", "prim_path": "/p", "resolutions": {"low": [1, 1]}}],  # no type
-        [{"name": "cam", "prim_path": "/p", "type": ["ir"], "resolutions": {"low": [1, 1]}}],  # unknown type
-        [{"name": "cam", "prim_path": "/p", "type": [], "resolutions": {"low": [1, 1]}}],  # empty type
-        [{"name": "cam/x", "prim_path": "/p", "type": ["rgba"], "resolutions": {"low": [1, 1]}}],  # bad name
-        [{"name": "cam\n", "prim_path": "/p", "type": ["rgba"], "resolutions": {"low": [1, 1]}}],  # trailing newline
-        [{"name": "cam", "prim_path": "/p", "type": ["rgba"], "resolutions": {}}],  # no resolution
-        [CAMERA_CONF[0], CAMERA_CONF[0]],  # duplicate
-    ],
-)
-def test_parse_cameras_rejects_invalid_config(conf):
-    with pytest.raises(ValueError):
-        yamcs_naming.parse_cameras(conf)
+def test_every_camera_type_has_kinds():
+    # yamcs_naming does not import robot_camera_confs (the Yamcs generators load it by path)
+    assert set(yamcs_naming.KINDS_BY_TYPE) == set(CAMERA_TYPES)
 
 
 def test_kinds_follow_camera_type():
-    cameras = yamcs_naming.parse_cameras(CAMERA_CONF)
+    cameras = parse_cameras(CAMERA_CONF)
     assert [yamcs_naming.camera_kinds(cam) for cam in cameras] == [
         ("depth",),
         ("streaming", "oncommand"),
@@ -75,10 +47,10 @@ KIND_RESOLUTION = {"streaming": "low", "oncommand": "high", "depth": "high"}
 def test_check_kind_resolutions():
     ok = {"name": "ok", "prim_path": "/p", "type": ["rgba", "depth"], "resolutions": {"low": [4, 3], "high": [8, 6]}}
     depth = {"name": "d", "prim_path": "/p", "type": ["depth"], "resolutions": {"high": [8, 6]}}
-    yamcs_naming.check_kind_resolutions(yamcs_naming.parse_cameras([ok, depth]), KIND_RESOLUTION)
+    yamcs_naming.check_kind_resolutions(parse_cameras([ok, depth]), KIND_RESOLUTION)
     # NavCam_left (rgba) has no high resolution for its oncommand images
     with pytest.raises(ValueError, match="'NavCam_left': oncommand images use resolution 'high'"):
-        yamcs_naming.check_kind_resolutions(yamcs_naming.parse_cameras(CAMERA_CONF), KIND_RESOLUTION)
+        yamcs_naming.check_kind_resolutions(parse_cameras(CAMERA_CONF), KIND_RESOLUTION)
 
 
 def test_paths_and_bucket_names():
@@ -89,7 +61,7 @@ def test_paths_and_bucket_names():
 
 
 def test_camera_buckets():
-    cameras = yamcs_naming.parse_cameras(CAMERA_CONF[:2])
+    cameras = parse_cameras(CAMERA_CONF[:2])
     assert yamcs_naming.camera_buckets(cameras) == [
         ("cam_depth", "depth", "images_cam_depth_depth", "/Rover/camera/cam_depth/depth"),
         ("NavCam_left", "streaming", "images_NavCam_left_streaming", "/Rover/camera/NavCam_left/streaming"),
@@ -98,7 +70,7 @@ def test_camera_buckets():
 
 
 def test_cameras_for_command_by_type_in_yaml_order():
-    cameras = yamcs_naming.parse_cameras(CAMERA_CONF)
+    cameras = parse_cameras(CAMERA_CONF)
     assert yamcs_naming.cameras_for_command(cameras, "camera_capture_depth") == ["cam_depth", "both"]
     for command in ("camera_capture_high", "camera_streaming", "set_camera_streaming_params"):
         assert yamcs_naming.cameras_for_command(cameras, command) == ["NavCam_left", "both"]
@@ -115,7 +87,7 @@ def test_streaming_fields_are_valid_mdb_names(streaming_fields):
 
 
 def test_image_buckets_cover_cameras_roles_and_payloads():
-    cameras = yamcs_naming.parse_cameras(
+    cameras = parse_cameras(
         [{"name": "NavCam_left", "prim_path": "/l", "type": ["rgba"], "resolutions": {"low": [4, 3]}}]
     )
     yamcs_tmtc = {
@@ -134,13 +106,6 @@ def _robots_settings(path: Path) -> dict:
     return yaml.safe_load(path.read_text())["robots_settings"]
 
 
-@pytest.mark.parametrize("robot_yaml", ROBOT_YAMLS, ids=lambda path: path.stem)
-def test_robot_yaml_cameras_parse(robot_yaml):
-    # Robot() parses the camera list in every mode (ROS2, Yamcs, Zenoh): a robot yaml that does not parse breaks the
-    # robot everywhere, not just in Yamcs mode.
-    yamcs_naming.parse_cameras(_robots_settings(robot_yaml)["parameters"].get("camera"))
-
-
 @pytest.mark.parametrize(
     "robot, kind_resolution",
     [("husky", HUSKY_KIND_RESOLUTION), ("pragyaan", PRAGYAAN_KIND_RESOLUTION)],
@@ -149,16 +114,14 @@ def test_robot_yaml_cameras_parse(robot_yaml):
 def test_robot_yaml_cameras_have_the_resolutions_of_their_kinds(robot, kind_resolution):
     # The Yamcs camera handler of each robot snaps every image kind at the resolution of its enums.py
     parameters = _robots_settings(REPO_ROOT / "cfg" / "robot" / f"{robot}.yaml")["parameters"]
-    yamcs_naming.check_kind_resolutions(yamcs_naming.parse_cameras(parameters.get("camera")), kind_resolution)
+    yamcs_naming.check_kind_resolutions(parse_cameras(parameters.get("camera")), kind_resolution)
 
 
 @pytest.mark.parametrize("controller_yaml", CONTROLLER_YAMLS, ids=lambda path: path.stem)
 def test_controller_yaml_has_the_yamcs_startup_keys(controller_yaml):
     # <robot>-controller.yaml pairs with cfg/robot/<robot>.yaml
     robot = controller_yaml.stem.removesuffix("-controller")
-    cameras = yamcs_naming.parse_cameras(
-        _robots_settings(REPO_ROOT / "cfg" / "robot" / f"{robot}.yaml")["parameters"].get("camera")
-    )
+    cameras = parse_cameras(_robots_settings(REPO_ROOT / "cfg" / "robot" / f"{robot}.yaml")["parameters"].get("camera"))
     yamcs_tmtc = _robots_settings(controller_yaml)["yamcs_tmtc"]
     assert yamcs_tmtc["mdb_space_systems"]
     assert isinstance(yamcs_tmtc["images"].get("clear_buckets_on_startup", True), bool)  # optional, default true

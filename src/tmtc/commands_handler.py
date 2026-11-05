@@ -7,7 +7,31 @@ import threading
 import time
 import traceback
 
+from src.tmtc import yamcs_naming
 from src.tmtc.mdb_parsing_service import MdbParsingService
+
+
+def check_camera_argument(func, command_path: str, arg_names: list[str], cameras):
+    """Handler of a camera command (yamcs_naming.CAMERA_COMMAND_TYPE) that only runs with a camera_name of the robot
+    cameras of the command's camera type; any other value is logged and the command dropped. The server MDB may list
+    cameras this robot does not have (a startup check warning). Other commands' handlers are returned unchanged."""
+    command = command_path.rsplit("/", 1)[-1]
+    if command not in yamcs_naming.CAMERA_COMMAND_TYPE:
+        return func
+    if yamcs_naming.CAMERA_NAME_ARG not in arg_names:
+        raise ValueError(f"handler of camera command {command_path} must take {yamcs_naming.CAMERA_NAME_ARG!r}")
+    index = arg_names.index(yamcs_naming.CAMERA_NAME_ARG)
+    allowed = yamcs_naming.cameras_for_command(cameras, command)
+
+    def checked(*args):
+        if args[index] not in allowed:
+            print(
+                f"{command_path}: camera {args[index]!r} is not one of this robot's cameras {allowed}, command dropped"
+            )
+            return
+        func(*args)
+
+    return checked
 
 
 class CommandsHandler:

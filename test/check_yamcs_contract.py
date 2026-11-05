@@ -21,7 +21,7 @@ from yamcs.client import YamcsClient
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT))
 
-from src.tmtc import yamcs_naming  # noqa: E402
+from src.configurations.robot_camera_confs import parse_cameras  # noqa: E402
 from src.tmtc.mdb_parsing_service import MdbParsingService  # noqa: E402
 from src.tmtc.yamcs_contract import check_contract  # noqa: E402
 
@@ -49,7 +49,7 @@ def main() -> int:
     report = check_contract(
         mdb=mdb,
         buckets={bucket.name for bucket in client.get_storage_client().list_buckets()},
-        cameras=yamcs_naming.parse_cameras(robot.get("camera")),
+        cameras=parse_cameras(robot.get("camera")),
         streaming_fields=streaming_fields,
         yamcs_conf=yamcs_conf,
         command_args=None,  # handler argument names: checked at sim startup only

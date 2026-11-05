@@ -32,10 +32,6 @@ class HuskyCameraHandler:
         self._robot = robot
         yamcs_naming.check_kind_resolutions(robot.cameras, KIND_RESOLUTION)
 
-    def cameras_of_type(self, camera_type: str) -> list[str]:
-        """Names of the rover cameras of that type (rgba or depth), in robot yaml order."""
-        return [camera["name"] for camera in self._robot.cameras if yamcs_naming.has_type(camera, camera_type)]
-
     # ------------------------------------------------------------------
     # Internal snap helpers
     # ------------------------------------------------------------------

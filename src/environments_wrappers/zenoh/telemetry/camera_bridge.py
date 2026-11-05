@@ -7,7 +7,6 @@ import time
 
 from src.environments_wrappers.zenoh.transport.factory import make_transports
 from src.robots.robot import RobotManager
-from src.tmtc import yamcs_naming
 
 logger = logging.getLogger(__name__)
 
@@ -49,10 +48,10 @@ class CameraBridge:
     def make_transports(self):
         # One transport per rgba camera and resolution of the robot yaml
         self._camera_views = [
-            (camera["name"], res)
+            (camera.name, res)
             for camera in self.RM.robot.cameras
-            if yamcs_naming.has_type(camera, "rgba")
-            for res in camera["resolutions"]
+            if camera.has_type("rgba")
+            for res in camera.resolutions
         ]
         specs = [
             {
