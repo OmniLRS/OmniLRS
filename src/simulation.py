@@ -4,7 +4,8 @@ __author__ = "Louis Burtz"
 __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
 
-import carb
+import carb.eventdispatcher
+import carb.settings
 import isaacsim.core.experimental.utils.stage as stage_utils
 import omni.kit.app
 import omni.physics.core
@@ -62,6 +63,7 @@ class Simulation:
             self.configure_physics_scene(physics_scene)
 
         self._num_steps = 0
+        self._restart_pending = False
         self._physics_step_sub = omni.physics.core.get_physics_simulation_interface().subscribe_physics_on_step_events(
             pre_step=False, order=0, on_update=self._on_physics_step
         )
@@ -77,8 +79,19 @@ class Simulation:
 
     @property
     def current_time_step_index(self) -> int:
-        """Number of physics steps since the timeline was last stopped."""
+        """Number of physics steps since the timeline was last stopped (includes SimulationManager's warm-up steps)."""
         return self._num_steps
+
+    def consume_restart(self) -> bool:
+        """
+        Return True once when the timeline plays again after an external stop (e.g. stop/play from the GUI).
+
+        Stops made by `reset()` do not count, so the managers' restart handling (which calls `reset()`) runs once.
+        """
+        if self._restart_pending and self.is_playing():
+            self._restart_pending = False
+            return True
+        return False
 
     def get_physics_dt(self) -> float:
         return self._scene.get_dt()
@@ -101,6 +114,11 @@ class Simulation:
         self._timeline.commit()
         self.render()
 
+    def pause(self) -> None:
+        """Pause the timeline, keeping the physics state (a following play resumes, it does not restart)."""
+        self._timeline.pause()
+        self.render()
+
     def stop(self) -> None:
         self._timeline.stop()
         self.render()
@@ -111,6 +129,7 @@ class Simulation:
         self.play()
         if SimulationManager.get_physics_sim_view() is None:
             SimulationManager.initialize_physics()
+        self._restart_pending = False
 
     def configure_physics_scene(self, conf: PhysicsSceneConf) -> None:
         """Apply OmniLRS physics scene settings (cfg/physics)."""
@@ -199,3 +218,4 @@ class Simulation:
 
     def _on_timeline_stop(self, event: object) -> None:
         self._num_steps = 0
+        self._restart_pending = True

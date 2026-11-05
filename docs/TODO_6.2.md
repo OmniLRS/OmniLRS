@@ -27,7 +27,9 @@ the deformable-terrain configs (terramechanics / deformation read the wheel-link
 `Simulation` implements the lifecycle OmniLRS used from `World` on top of `SimulationManager`/`PhysxScene`, the stage
 utils and the timeline (the migration guide has no single replacement object). `step()` is one app update (Kit's loop in
 manual mode steps `rendering_dt`; physics substeps follow from `physics_dt`), `reset()` stops and plays the timeline,
-`current_time_step_index` counts physics steps since the last stop. `cfg/physics` is applied by
+`current_time_step_index` counts physics steps since the last stop. The managers detect a stop/play from outside
+(e.g. the GUI) with `consume_restart()`, set on timeline stop: the step counter is never 0 when they check, because
+`SimulationManager` steps physics while warming up on play (`World` had the same issue). `cfg/physics` is applied by
 `Simulation.configure_physics_scene()` (ROS2 mode only, as before; `PhysicsSceneManager` removed). The physics scene
 attributes, time codes, loop and physics carb settings are identical to `World` for the ROS2 and Yamcs setups.
 
@@ -37,6 +39,8 @@ attributes, time codes, loop and physics carb settings are identical to `World` 
 did); `ArticulationTelemetry` reads DOF positions, velocities, projected joint forces (efforts) and link incoming joint
 wrenches. Both report ready only once the physics tensor view exists: without it the experimental setters write USD
 drive attributes instead. Robot root pose and teleport use `get/set_world_poses` and `set_velocities`.
+Joint commands are queued and written by `Robot.update_articulation_api()` in the simulation loop: Yamcs and Zenoh
+deliver them on their own threads, and PhysX ignores drive writes made while it is stepping (`World` had the same race).
 
 ### A3. Camera -> `isaacsim.sensors.experimental.rtx.CameraSensor`
 
@@ -98,6 +102,11 @@ Behavior notes:
 Not affected: OmniLRS does not use the Euler helpers whose input order changed in 6.0
 (`euler_angles_to_quaternion` / `euler_angles_to_rotation_matrix` now expect XYZ), nor the removed residual-reporting
 APIs.
+
+## Others
+
+1. migrate omnilrs-ros2-demo to Isaac Sim 6.2 and Pixi instead of docker.
+
 
 ## Validation for any of the above
 

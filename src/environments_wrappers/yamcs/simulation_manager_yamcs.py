@@ -224,7 +224,8 @@ class Yamcs_SimulationManager:
                 if hasattr(self.EC, "enable_stellar_engine") and self.EC.enable_stellar_engine:
                     self.EC.update_stellar_engine(dt=self.sim.get_physics_dt())
 
-                if self.sim.current_time_step_index == 0:
+                if self.sim.consume_restart():
+                    logger.info("Timeline restarted: resetting the environment and robot")
                     self.sim.reset()
 
                     did_reset = True

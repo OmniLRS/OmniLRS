@@ -188,7 +188,8 @@ class ROS2_SimulationManager:
             if self.sim.is_playing():
                 did_reset = False
 
-                if self.sim.current_time_step_index == 0:
+                if self.sim.consume_restart():
+                    logger.info("Timeline restarted: resetting the environment and robot")
                     self.sim.reset()
                     did_reset = True
 

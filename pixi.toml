@@ -1,8 +1,9 @@
 [workspace]
 authors = [
-    "Shamistan Karimov <ahresgg@gmail.com>",
+    "Shamistan Karimov",
     "Elian Neppel",
     "Bach Nguyen",
+    "Louis Burtz",
 ]
 channels = ["conda-forge"]
 name = "OmniLRS"
@@ -119,6 +120,7 @@ opencv-python = "*"
 [feature.zenoh-client.tasks]
 zenoh_test_sub = "python scripts/zenoh/sub_camera.py"
 zenoh_test_pub = "python scripts/zenoh/pub_randomize_rocks.py"
+
 [feature.test-sim.dependencies]
 python = "3.12.*"
 
@@ -127,12 +129,15 @@ pytest = "*"
 yamcs-client = "*"
 # Sanity tests read the robot yaml to compute the expected camera image buckets
 pyyaml = "*"
+# Zenoh client for test_zenoh_sanity; same version as the zenoh feature
+eclipse-zenoh = "==1.10.1"
 
 [feature.test-sim.tasks]
 test-ros2 = "pytest -v -s test/test_ros2_sanity.py"
 test-ros2-largescale = "pytest -v -s test/test_ros2_sanity_largescale.py"
 test-yamcs = "pytest -v -s test/test_yamcs_sanity.py"
 test-yamcs-largescale = "pytest -v -s test/test_yamcs_sanity_largescale.py"
+test-zenoh = "pytest -v -s test/test_zenoh_sanity.py"
 
 [environments]
 default = { features = ["core", "isaac"] }
@@ -141,4 +146,4 @@ ros2 = { features = ["core", "isaac", "ros2"] }
 zenoh = { features = ["core", "isaac", "zenoh"]}
 zenoh-client = { features = ["core", "zenoh", "zenoh-client"]}
 test-sim = { features = ["test-sim"] }
-ci = { features = ["core", "isaac", "ros2", "yamcs"] }
+ci = { features = ["core", "isaac", "ros2", "yamcs", "zenoh"] }

@@ -14,6 +14,7 @@ from src.environments_wrappers.zenoh.largescale_zenoh import Zenoh_LargeScaleMan
 from src.environments_wrappers.zenoh.lunalab_zenoh import Zenoh_LunalabManager
 from src.environments_wrappers.zenoh.lunaryard_zenoh import Zenoh_LunaryardManager
 from src.environments_wrappers.zenoh.robot_manager_zenoh import Zenoh_RobotManager
+from src.environments_wrappers.zenoh.transport.zenoh_sim_control import ZenohSimulationControl
 from src.simulation import Simulation
 
 logger = logging.getLogger(__name__)
@@ -133,6 +134,23 @@ class Zenoh_SimulationManager:
         self.Zenoh_RM.start_publishing()
         self.Zenoh_RM.start_listening()
 
+        keyexprs = self.cfg["mode"]["keyexprs"]
+        self.sim_control = ZenohSimulationControl(
+            {action: keyexprs[f"sim_{action}"] for action in ZenohSimulationControl.ACTIONS}
+        )
+        self.sim_control.start()
+
+    def _apply_simulation_control(self) -> None:
+        """Apply the play/pause/stop requests received over Zenoh. A stop then play restarts (see consume_restart)."""
+        for action in self.sim_control.pop_requests():
+            logger.info(f"Simulation control: {action}")
+            if action == "play":
+                self.sim.play()
+            elif action == "pause":
+                self.sim.pause()
+            elif action == "stop":
+                self.sim.stop()
+
     def run_simulation(self) -> None:
         """
         Runs simulation in synchronous manner,
@@ -143,11 +161,13 @@ class Zenoh_SimulationManager:
 
         while self.simulation_app.is_running():
             self.rate.reset()
+            self._apply_simulation_control()
 
             did_reset = False
 
             if self.sim.is_playing():
-                if self.sim.current_time_step_index == 0:
+                if self.sim.consume_restart():
+                    logger.info("Timeline restarted: resetting the environment and robot")
                     self.sim.reset()
                     did_reset = True
                     self.Zenoh_EC.reset()
@@ -171,7 +191,7 @@ class Zenoh_SimulationManager:
                             self.Zenoh_EC.LC.deform_terrain()
 
             if self.Zenoh_EC.pubs_inited:
-                self.Zenoh_EC.pub_sim_is_running(True)
+                self.Zenoh_EC.pub_sim_is_running(True, is_playing=self.sim.is_playing())
 
             if self.Zenoh_RM.pubs_inited and self.sim.is_playing() and not did_reset:
                 self.Zenoh_RM.apply_modifications()
@@ -182,6 +202,7 @@ class Zenoh_SimulationManager:
 
             self.simulation_app.update()
 
+        self.sim_control.close()
         self.Zenoh_EC.close()
         self.Zenoh_RM.close()
 

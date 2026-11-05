@@ -343,6 +343,9 @@ class Robot:
             self._articulation_api_enabled = False
             return
 
+        # Joint commands are queued (they may come from transport threads); write them here, between physics steps.
+        self.control.apply_pending()
+
         frame = self.telemetry.sample()
         if frame is None:
             self._articulation_api_enabled = False
@@ -729,6 +732,11 @@ class Robot:
     def set_solar_panel_angle(self, angle_deg: float):
         self._verify_solar_panel_joint()
         self.set_joint_positions({self._solar_panel_joint: math.radians(angle_deg)})
+
+    def get_solar_panel_angle(self) -> Optional[float]:
+        """Measured solar panel joint angle in degrees, or None until the articulation telemetry has sampled it."""
+        position = self._last_joint_positions.get(self._solar_panel_joint) if self._solar_panel_joint else None
+        return None if position is None else math.degrees(position)
 
 
 # TODO for v4: rethink which methods should be in RRG, what should be in Robot

@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 > **Breaking:** migrated to Isaac Sim 6.2 (from 5.0). See [docs/migration_plan_6.2.md](docs/migration_plan_6.2.md).
 >   - Python 3.12, numpy 2.3.1, numba 0.63, SciPy 1.17, Warp 1.17 (versions pinned by the Isaac Sim 6.2 wheels).
+>   - Docker installation is now deprecated: Pixi is the only (and best) supported method. Docker is used for CI only.
 >   - ROS 2 uses the **Jazzy** libraries bundled with Isaac Sim (`ROS_DISTRO=jazzy`, `bridge_name: jazzy`); external nodes should run Jazzy.
 >   - `cfg/rendering/ray_tracing.yaml` uses the `RealTimePathTracing` renderer (replaces the legacy `RayTracedLighting`); the `/OmniLRS/Render/EnableRTXRealTime` topic switches to it as well.
 >   - The IMU is read through `isaacsim.sensors.experimental.physics.IMUSensor`; the reported values keep the same format.
@@ -29,6 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `largescale_workshop` environment: the LargeScale counterpart of `lunaryard_40m_workshop` (lander, rock and monitoring camera), differing only in terrain.
 - Yamcs mode reads the TM/TC definitions (MDB) from the running Yamcs server and checks the robot and controller config against them and the server's storage buckets at startup: it stops if something it sends or handles is missing and warns about extras. `pixi run -e yamcs check-yamcs-contract` (`test/check_yamcs_contract.py`) runs the same check without Isaac Sim. See [docs/yamcs-omnilrs-sync.md](docs/yamcs-omnilrs-sync.md).
 - Pragyaan has three cameras: `NavCam_left` and `NavCam_right` (rgba) and `cam_depth` (depth).
+- Zenoh simulation control keys `OmniLRS/sim/play`, `OmniLRS/sim/pause` and `OmniLRS/sim/stop` (any payload). A pause keeps the simulation state; a stop then play restarts from the initial state (environment and robot reset). `OmniLRS/sim/is_running` now also reports `is_playing`.
 
 ### Changed
 
@@ -38,6 +40,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Robot yaml `camera` is a list of cameras, each with `name`, `prim_path`, `type` (`rgba` and/or `depth`) and `resolutions`. In Yamcs mode, each camera has its own buckets (`images_<camera>_<kind>`), metadata and streaming telemetry (`/Rover/camera/<camera>/<kind>/...`), streaming job and compression model; the camera commands take a `camera_name` argument. Names come from `src/tmtc/yamcs_naming.py`, which the Yamcs MDB generators also use.
 - Yamcs controller yaml: `mdb` (file list) is replaced by `mdb_space_systems`, `images.buckets` is keyed by role (`lander`, `monitoring`) and `images.clear_buckets_on_startup` is added.
 - Yamcs images are uploaded through the Yamcs storage API instead of written to `/tmp`. The image buckets are generated into the Yamcs `yamcs.yaml` together with the MDB, with limits sized to keep every image of a mission; OmniLRS never deletes images except when clearing the buckets at startup (`images.clear_buckets_on_startup`).
+- Pragyaan `/Rover/solar_panel_state` follows the measured solar panel angle: it changes to DEPLOYED or STOWED once the panel is within 10° of that position, instead of when the command is received. The power model uses the same state.
 
 ### Removed
 
@@ -48,6 +51,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - ROS2 mode exits cleanly on SIGINT/SIGTERM (ROS 2 Jazzy shuts down the ROS context on these signals).
 - Yamcs mode with the LargeScale environment: terrain, rocks and colliders now update (EC.update()) as the  rover drives, terrain worker threads are joined on shutdown, and the simulation stops if a terrain worker dies.
+- Joint commands from Yamcs and Zenoh are no longer dropped, entirely or for some joints, when they arrive while PhysX is stepping: `ArticulationControl` queues them and `Robot.update_articulation_api()` writes them from the simulation loop.
+- Stopping and replaying the timeline (e.g. from the GUI) runs the ROS2, Yamcs and Zenoh restart handling again (environment and robot reset). It was skipped because Isaac Sim's physics warm-up advanced the step counter it relied on.
 
 See also the [Roadmap and Milestones tracking](https://github.com/orgs/OmniLRS/projects/1)
 

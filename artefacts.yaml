@@ -23,3 +23,5 @@ jobs:
           run: "pixi run test-yamcs"
         - name: test_yamcs_sanity_largescale
           run: "pixi run test-yamcs-largescale"
+        - name: test_zenoh_sanity
+          run: "pixi run test-zenoh"

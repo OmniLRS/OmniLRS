@@ -13,6 +13,7 @@ from src.tmtc import yamcs_naming
 REPO_ROOT = Path(__file__).resolve().parents[1]
 STARTUP_TIMEOUT = int(os.environ.get("OMNILRS_TEST_TIMEOUT", "600"))
 TELEMETRY_TIMEOUT = int(os.environ.get("OMNILRS_TELEMETRY_TIMEOUT", "120"))
+JOINT_TIMEOUT = int(os.environ.get("OMNILRS_JOINT_TIMEOUT", "60"))
 
 YAMCS_ADDRESS = os.environ.get("YAMCS_ADDRESS", "localhost:8090")
 YAMCS_INSTANCE = os.environ.get("YAMCS_INSTANCE", "workshop")
@@ -51,6 +52,22 @@ FATAL_MARKERS = [
     "is not available in environment",
     "carb.crashreporter-breakpad",
 ]
+
+# Joint tests: Yamcs commands (cfg/controller/pragyaan-controller.yaml) and the telemetry they act on.
+DRIVE_STRAIGHT = "/Rover/motor/drive_straight"
+DRIVE_TURN = "/Rover/motor/drive_turn"
+SOLAR_PANEL = "/Rover/system/deploy_solar_panel"
+POWER_ELECTRONICS = "/Rover/power/power_electronics"
+GO_NOGO = "/Rover/system/go_nogo_command"
+SOLAR_PANEL_STATE = "/Rover/solar_panel_state"  # DEPLOYED/STOWED once the measured panel angle is within 10 deg
+# Wheel joint angles, sent every 1 s of sim time: left wheels (fl, ml, bl), then right wheels (fr, mr, br).
+ENCODER = "/Rover/motor_encoder"
+ENCODER_COUNTS = 1024  # per turn
+# The drive commands below set wheel velocities of about 2 rad/s, ~330 counts per sample (under half a turn, so the
+# signed change between samples is unambiguous).
+TURNING_COUNTS = 50  # minimum change per sample of a turning wheel
+STILL_COUNTS = 10  # maximum change per sample of a stopped wheel
+IGNORED_WRITE_MARKER = "not allowed while simulation is running"
 
 
 def _log_dir():
@@ -178,6 +195,55 @@ class FreshTelemetry:
         return self._wait(lambda n: n.startswith(prefix))
 
 
+class Rover:
+    """Sends Yamcs commands to the rover and reads the telemetry they change."""
+
+    def __init__(self, processor, subscription):
+        self._processor = processor
+        self._subscription = subscription
+
+    def command(self, name, **args):
+        self._processor.issue_command(name, args=args)
+
+    def next_value(self, name, timeout=JOINT_TIMEOUT):
+        """The first value of `name` the sim sends after this call."""
+        pval = self._subscription.value_cache.get(name)
+        after = None if pval is None else pval.generation_time
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline:
+            pval = self._subscription.value_cache.get(name)
+            if pval is not None and pval.eng_value is not None and (after is None or pval.generation_time > after):
+                return pval.eng_value
+            time.sleep(0.1)
+        pytest.fail(f"No new {name} value within {timeout} s")
+
+    def wait_for(self, name, expected, timeout=JOINT_TIMEOUT):
+        deadline = time.monotonic() + timeout
+        value = None
+        while time.monotonic() < deadline:
+            pval = self._subscription.value_cache.get(name)
+            value = None if pval is None else pval.eng_value
+            if value == expected:
+                return
+            time.sleep(0.5)
+        pytest.fail(f"{name} is {value!r}, expected {expected!r} within {timeout} s")
+
+    def encoder_deltas(self, samples=2):
+        """
+        Signed change of each wheel encoder between consecutive samples, for `samples` sample intervals.
+        The first sample is skipped so a command just sent has taken effect.
+        """
+        half = ENCODER_COUNTS // 2
+        self.next_value(ENCODER)
+        prev = self.next_value(ENCODER)
+        deltas = []
+        for _ in range(samples):
+            cur = self.next_value(ENCODER)
+            deltas.append([(c - p + half) % ENCODER_COUNTS - half for p, c in zip(prev, cur)])
+            prev = cur
+        return deltas
+
+
 @pytest.fixture(scope="session")
 def yamcs_server():
     # In case you're using an already-running server
@@ -200,6 +266,13 @@ def yamcs_server():
         yield server
     finally:
         server.stop()
+
+
+@pytest.fixture(scope="session")
+def processor(yamcs_server):
+    from yamcs.client import YamcsClient
+
+    return YamcsClient(YAMCS_ADDRESS).get_processor(instance=YAMCS_INSTANCE, processor=YAMCS_PROCESSOR)
 
 
 @pytest.fixture(scope="session")
@@ -246,6 +319,17 @@ def camera_image_meta_paths():
     with open(REPO_ROOT / "cfg" / "robot" / f"{ROBOT}.yaml") as f:
         cameras = yaml.safe_load(f)["robots_settings"]["parameters"]["camera"]
     return [path for *_, path in yamcs_naming.camera_buckets(yamcs_naming.parse_cameras(cameras))]
+
+
+# Requested by the joint tests only, which run last: the telemetry tests expect the startup state (e.g. NOGO).
+@pytest.fixture(scope="session")
+def rover(sim, processor, subscription):
+    """The rover ready to drive: motor controller on and GO."""
+    rover = Rover(processor, subscription[1])
+    rover.command(POWER_ELECTRONICS, subsystem_id="MOTOR_CONTROLLER", power_state="ON")
+    rover.command(GO_NOGO, decision="GO")
+    rover.wait_for("/Rover/go_nogo", "GO")
+    return rover
 
 
 """
@@ -338,3 +422,66 @@ def test_telemetry_total_current_out_exists(telemetry):
 
 def test_telemetry_obc_state_exists(telemetry):
     assert telemetry.get("/Rover/obc_state") is not None
+
+
+"""
+Joint tests: wheel velocity and solar panel position commands, checked against the measured joint motion.
+"""
+
+LEFT_BACKWARD_RIGHT_FORWARD = [-1, -1, -1, 1, 1, 1]
+ALL_FORWARD = [1] * 6
+
+
+def _assert_wheels_turning(deltas, directions):
+    for delta in deltas:
+        for wheel, (change, direction) in enumerate(zip(delta, directions)):
+            assert change * direction >= TURNING_COUNTS, (
+                f"Wheel {wheel} not turning in direction {direction}: encoder changes per sample {deltas}"
+            )
+
+
+def _assert_wheels_still(deltas):
+    assert all(abs(change) <= STILL_COUNTS for delta in deltas for change in delta), (
+        f"Wheels still turning after stop: encoder changes per sample {deltas}"
+    )
+
+
+def _stop(rover):
+    rover.command(DRIVE_STRAIGHT, linear_velocity=0.0, distance=0.0)
+
+
+def test_wheels_drive_straight_then_stop(rover):
+    rover.command(DRIVE_STRAIGHT, linear_velocity=0.2, distance=4.0)
+    try:
+        _assert_wheels_turning(rover.encoder_deltas(), ALL_FORWARD)
+    finally:
+        _stop(rover)
+    _assert_wheels_still(rover.encoder_deltas())
+
+
+def test_wheels_turn_sides_independently(rover):
+    # Left and right wheels are commanded separately: the right side command must keep the left side targets.
+    rover.command(DRIVE_TURN, angular_velocity=8.0, angle=40.0)
+    try:
+        _assert_wheels_turning(rover.encoder_deltas(), LEFT_BACKWARD_RIGHT_FORWARD)
+    finally:
+        _stop(rover)
+
+
+def test_solar_panel_deploy_and_stow(rover):
+    rover.wait_for(SOLAR_PANEL_STATE, "STOWED")
+    rover.command(DRIVE_STRAIGHT, linear_velocity=0.2, distance=4.0)
+    rover.command(SOLAR_PANEL, deployment="DEPLOY")
+    try:
+        # The solar panel position command must keep the wheel velocity targets.
+        _assert_wheels_turning(rover.encoder_deltas(), ALL_FORWARD)
+    finally:
+        _stop(rover)
+    rover.wait_for(SOLAR_PANEL_STATE, "DEPLOYED")
+    rover.command(SOLAR_PANEL, deployment="STOW")
+    rover.wait_for(SOLAR_PANEL_STATE, "STOWED")
+
+
+def test_no_ignored_joint_writes(sim):
+    # Runs after the joint tests: PhysX ignores (and logs) joint drive writes made while it is stepping.
+    assert IGNORED_WRITE_MARKER not in sim.log, f"PhysX ignored joint writes (see {sim.log_path.name})"
