@@ -6,7 +6,8 @@ import math
 
 from src.robots.robot import Robot
 from src.subsystems.device import CommonDevice, PowerState
-from src.tmtc.intervals_handler import IntervalName
+from src.tmtc import yamcs_naming
+from src.tmtc.intervals_handler import camera_streaming_interval
 
 
 class HuskyTransmitter:
@@ -17,7 +18,7 @@ class HuskyTransmitter:
     the transmit_func callback provided by YamcsTMTC.
 
     Covers: pose, IMU, OBC metrics & state, radio RSSI, thermal, power, wheel
-    encoder angles, and camera streaming state.
+    encoder angles, and the streaming state of each rgba camera.
     """
 
     def __init__(
@@ -28,9 +29,11 @@ class HuskyTransmitter:
         robot_RG,
         robot_name: str,
         parameters_conf: dict,
+        camera_handler,
     ):
         self._transmit = transmit_func
         self._robot: Robot = robot
+        self._camera_handler = camera_handler
         self._intervals_handler = intervals_handler
         self._parameters_conf = parameters_conf
         self._robot_RG = robot_RG
@@ -129,7 +132,11 @@ class HuskyTransmitter:
             modulo = angles[i] % (2 * math.pi)
             angles[i] = int(modulo * (1024.0 / (2 * math.pi)))
 
+    # Per-camera streaming telemetry, under yamcs_naming.streaming_param(camera, field) with the fields of
+    # yamcs_naming.STREAMING_FIELDS["husky"] (state).
+
     def transmit_camera_streaming_state(self):
-        is_streaming = self._intervals_handler.does_exist(IntervalName.CAMERA_STREAMING.value)
-        state = PowerState.ON if is_streaming else PowerState.OFF
-        self._transmit(self._parameters_conf["camera_streaming_state"], state)
+        for camera_name in self._camera_handler.cameras_of_type("rgba"):
+            is_streaming = self._intervals_handler.does_exist(camera_streaming_interval(camera_name))
+            state = PowerState.ON if is_streaming else PowerState.OFF
+            self._transmit(yamcs_naming.streaming_param(camera_name, field="state"), state)

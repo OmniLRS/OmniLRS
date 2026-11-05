@@ -99,8 +99,11 @@ pyyaml = "*"
 [feature.yamcs.tasks]
 yamcs = "python run.py mode=Yamcs environment=lunaryard_40m_workshop robot=pragyaan controller=pragyaan-controller"
 yamcs-largescale = "python run.py mode=Yamcs environment=largescale_workshop robot=pragyaan controller=pragyaan-controller"
+# Husky against the yamcs-mission-control-husky server (Yamcs instance "husky")
+yamcs-husky = "python run.py mode=Yamcs environment=lunalab robot=husky controller=husky-controller mode.instance_conf.instance=husky"
 # Check robot + controller config against the running Yamcs server MDB (no Isaac Sim needed)
-check-yamcs-contract = "python test/check_yamcs_contract.py --robot pragyaan --controller pragyaan-controller"
+check-yamcs-contract = "python test/check_yamcs_contract.py --robot pragyaan --controller pragyaan-controller --instance workshop"
+check-yamcs-contract-husky = "python test/check_yamcs_contract.py --robot husky --controller husky-controller --instance husky"
 
 # zenoh-specific deps, tasks in feature "zenoh"
 [feature.zenoh.pypi-dependencies]

@@ -3,24 +3,27 @@ __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
 
 
-from src.mission_specific.husky.tmtc.camera_handler import CameraViewType, HuskyCameraHandler
-from src.mission_specific.husky.tmtc.enums import HuskyCameraResolution, HuskyYamcsArguments
+from functools import partial
+
+from src.mission_specific.husky.tmtc.camera_handler import HuskyCameraHandler
+from src.mission_specific.husky.tmtc.enums import HuskyYamcsArguments
 from src.mission_specific.husky.tmtc.transmitter import HuskyTransmitter
 from src.subsystems.robot_enums import ObcState
-from src.tmtc.intervals_handler import IntervalName
+from src.tmtc.intervals_handler import camera_streaming_interval
 
 
 class HuskyCommander:
     """
     Commander for the Husky UGV.
 
-    Contains the rover-specific logic behind each Yamcs command.  Methods here
-    are registered as callbacks inside HuskyController.setup_command_callbacks().
+    Contains the rover-specific logic behind each Yamcs command. Methods here
+    are mapped to their commands in HuskyController.command_handlers().
 
     Husky-specific capabilities vs. Pragyaan:
       * Differential-drive only (drive_straight / drive_turn).
-      * Onboard camera (RGBA + depth capture, streaming on/off).
-      * No solar panel, no GO/NOGO gate.
+      * Onboard cameras (robot yaml `camera` list): on-command and streaming RGB images per rgba camera, depth
+        images per depth camera. Camera commands take a camera_name argument.
+      * No solar panel, no GO/NOGO gate, no camera power command, no streaming compression model.
     """
 
     def __init__(
@@ -55,37 +58,39 @@ class HuskyCommander:
     # Camera commands
     # ------------------------------------------------------------------
 
-    def handle_high_res_capture(self):
-        self._camera_handler.transmit_camera_view(
-            HuskyCameraHandler.BUCKET_ONCOMMAND,
-            HuskyCameraResolution.HIGH.value,
-            CameraViewType.RGBA,
-        )
+    def _is_camera(self, camera_name: str, camera_type: str) -> bool:
+        # camera_name is an MDB enum label; the server MDB may list cameras this robot does not have (contract warning)
+        if camera_name in self._camera_handler.cameras_of_type(camera_type):
+            return True
+        print(f"Camera {camera_name!r} is not a {camera_type} camera of this robot")
+        return False
+
+    def handle_high_res_capture(self, camera_name: str):
+        if not self._is_camera(camera_name, "rgba"):
+            return
+        self._camera_handler.transmit_camera_view(camera_name, kind="oncommand")
         self._obc_handler.set_obc_state(ObcState.CAMERA, 10)
 
-    def handle_depth_capture(self):
-        self._camera_handler.transmit_camera_view(
-            HuskyCameraHandler.BUCKET_DEPTH,
-            HuskyCameraResolution.HIGH.value,
-            CameraViewType.DEPTH,
-        )
+    def handle_depth_capture(self, camera_name: str):
+        if not self._is_camera(camera_name, "depth"):
+            return
+        self._camera_handler.transmit_camera_view(camera_name, kind="depth")
         self._obc_handler.set_obc_state(ObcState.CAMERA, 10)
 
-    def set_activity_of_camera_streaming(self, action: str):
+    def set_activity_of_camera_streaming(self, camera_name: str, action: str):
+        if not self._is_camera(camera_name, "rgba"):
+            return
+        interval_name = camera_streaming_interval(camera_name)
         if action == HuskyYamcsArguments.STOP.value:
-            self._intervals_handler.remove_interval(IntervalName.CAMERA_STREAMING.value)
+            self._intervals_handler.remove_interval(interval_name)
         elif action == HuskyYamcsArguments.START.value:
-            if not self._intervals_handler.does_exist(IntervalName.CAMERA_STREAMING.value):
+            if not self._intervals_handler.does_exist(interval_name):
                 self._intervals_handler.add_new_interval(
-                    name=IntervalName.CAMERA_STREAMING.value,
+                    name=interval_name,
                     seconds=self._intervals["camera_streaming"],
                     is_repeating=True,
                     execute_immediately=False,
-                    function=self._camera_handler.transmit_camera_view,
-                    f_args=(
-                        HuskyCameraHandler.BUCKET_STREAMING,
-                        HuskyCameraResolution.LOW.value,
-                    ),
+                    function=partial(self._camera_handler.transmit_camera_view, camera_name, kind="streaming"),
                 )
         else:
             print("HuskyCommander.set_activity_of_camera_streaming: unknown action:", action)

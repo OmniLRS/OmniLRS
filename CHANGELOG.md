@@ -30,6 +30,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `largescale_workshop` environment: the LargeScale counterpart of `lunaryard_40m_workshop` (lander, rock and monitoring camera), differing only in terrain.
 - Yamcs mode reads the TM/TC definitions (MDB) from the running Yamcs server and checks the robot and controller config against them and the server's storage buckets at startup: it stops if something it sends or handles is missing and warns about extras. `pixi run -e yamcs check-yamcs-contract` (`test/check_yamcs_contract.py`) runs the same check without Isaac Sim. See [docs/yamcs-omnilrs-sync.md](docs/yamcs-omnilrs-sync.md).
 - Pragyaan has three cameras: `NavCam_left` and `NavCam_right` (rgba) and `cam_depth` (depth).
+- Husky has three cameras: `cam_color`, `cam_left` and `cam_right` (rgba), `cam_left` also depth. In Zenoh mode each is published per resolution (`OmniLRS/husky/camera/<camera>/<resolution>`; previously only `cam_color`).
+- Pixi tasks `yamcs-husky` (Husky in Yamcs mode, Yamcs instance `husky`) and `check-yamcs-contract-husky`.
 - Zenoh simulation control keys `OmniLRS/sim/play`, `OmniLRS/sim/pause` and `OmniLRS/sim/stop` (any payload). A pause keeps the simulation state; a stop then play restarts from the initial state (environment and robot reset). `OmniLRS/sim/is_running` now also reports `is_playing`.
 
 ### Changed
@@ -45,7 +47,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Removed
 
 - User-facing Docker image `omnilrs.docker/`; install with pixi instead (Docker is only used for CI). `spaceros_demo.docker/` is kept as an unmaintained demo.
-- `cfg/mdb/pragyaan/` (local MDB copies), `scripts/fix_yamcs_tmp.sh` and the pixi `fix-tmp` task.
+- `cfg/mdb/` (local MDB copies of Pragyaan and Husky), `scripts/fix_yamcs_tmp.sh` and the pixi `fix-tmp` task.
 
 ### Fixed
 

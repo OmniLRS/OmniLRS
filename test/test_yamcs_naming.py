@@ -3,9 +3,16 @@
 python -m pytest -v test/test_yamcs_naming.py
 """
 
+from pathlib import Path
+
 import pytest
+import yaml
 
 from src.tmtc import yamcs_naming
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+ROBOT_YAMLS = sorted((REPO_ROOT / "cfg" / "robot").glob("*.yaml"))
+CONTROLLER_YAMLS = sorted((REPO_ROOT / "cfg" / "controller").glob("*.yaml"))
 
 CAMERA_CONF = [
     {"name": "cam_depth", "prim_path": "/Robot/depth", "type": ["depth"], "resolutions": {"high": [1440, 1080]}},
@@ -105,3 +112,31 @@ def test_image_buckets_cover_cameras_roles_and_payloads():
         ("images_lander", "/Lander/camera/images_oncommand"),
         ("images_apxs", "/Rover/payload/apxs"),
     ]
+
+
+def _robots_settings(path: Path) -> dict:
+    return yaml.safe_load(path.read_text())["robots_settings"]
+
+
+@pytest.mark.parametrize("robot_yaml", ROBOT_YAMLS, ids=lambda path: path.stem)
+def test_robot_yaml_cameras_parse(robot_yaml):
+    # Robot() parses the camera list in every mode (ROS2, Yamcs, Zenoh): a robot yaml that does not parse breaks the
+    # robot everywhere, not just in Yamcs mode.
+    parameters = _robots_settings(robot_yaml)["parameters"]
+    cameras = yamcs_naming.parse_cameras(parameters.get("camera"))
+    if any(yamcs_naming.has_type(camera, "rgba") for camera in cameras):
+        assert yamcs_naming.streaming_fields(parameters["robot_name"])
+
+
+@pytest.mark.parametrize("controller_yaml", CONTROLLER_YAMLS, ids=lambda path: path.stem)
+def test_controller_yaml_has_the_yamcs_startup_keys(controller_yaml):
+    # <robot>-controller.yaml pairs with cfg/robot/<robot>.yaml
+    robot = controller_yaml.stem.removesuffix("-controller")
+    cameras = yamcs_naming.parse_cameras(
+        _robots_settings(REPO_ROOT / "cfg" / "robot" / f"{robot}.yaml")["parameters"].get("camera")
+    )
+    yamcs_tmtc = _robots_settings(controller_yaml)["yamcs_tmtc"]
+    assert yamcs_tmtc["mdb_space_systems"]
+    assert isinstance(yamcs_tmtc["images"]["clear_buckets_on_startup"], bool)
+    buckets = yamcs_naming.image_buckets(cameras, yamcs_tmtc)  # images.buckets is keyed by role
+    assert len({name for name, _ in buckets}) == len(buckets), f"duplicate image bucket names: {buckets}"

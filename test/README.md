@@ -34,7 +34,7 @@ The camera compression test streams the 640x480 rover frames in `test/inputs/cam
 
 The Yamcs naming rule, the parsing of the XTCE exported by the Yamcs server, the startup check against it and the
 image uploads to Yamcs storage (with a fake storage client) run without Isaac Sim or a Yamcs server (`pytest`, plus
-Pillow for the image uploads):
+PyYAML for the checks of the `cfg/robot` and `cfg/controller` yamls, and Pillow for the image uploads):
 
 ```bash
 python -m pytest -v test/test_yamcs_naming.py test/test_mdb_parsing_service.py test/test_yamcs_contract.py test/test_images_handler.py

@@ -17,8 +17,10 @@ class HuskyController(YamcsTMTC):
     Inherits YamcsTMTC and wires up Husky-specific handlers.
 
     Implements the two mandatory abstract methods:
-        setup_command_callbacks(commands_conf)  — maps Yamcs commands to HuskyCommander methods.
-        start_streaming_data()                  — schedules periodic telemetry transmissions.
+        command_handlers()      — maps each command of the controller yaml `commands` (by key) to its HuskyCommander
+                                  method and the argument names it takes; YamcsTMTC registers them and checks them
+                                  against the Yamcs server MDB at startup.
+        start_streaming_data()  — schedules periodic telemetry transmissions.
     """
 
     def __init__(
@@ -43,6 +45,7 @@ class HuskyController(YamcsTMTC):
             robot_RG,
             robot_name,
             yamcs_conf["parameters"],
+            self._camera_handler,
         )
 
         self._commander = HuskyCommander(
@@ -55,31 +58,15 @@ class HuskyController(YamcsTMTC):
             self._intervals_handler,
         )
 
-    def setup_command_callbacks(self, commands_conf):
-        """Register Yamcs command → HuskyCommander method mappings."""
-        self._commands_handler.add_command(
-            commands_conf["drive_straight"],
-            self._commander.drive_straight,
-            args=["linear_velocity", "distance"],
-        )
-        self._commands_handler.add_command(
-            commands_conf["drive_turn"],
-            self._commander.drive_turn,
-            args=["angular_velocity", "angle"],
-        )
-        self._commands_handler.add_command(
-            commands_conf["camera_capture_high"],
-            self._commander.handle_high_res_capture,
-        )
-        self._commands_handler.add_command(
-            commands_conf["camera_streaming_on_off"],
-            self._commander.set_activity_of_camera_streaming,
-            args=["action"],
-        )
-        self._commands_handler.add_command(
-            commands_conf["camera_capture_depth"],
-            self._commander.handle_depth_capture,
-        )
+    def command_handlers(self):
+        # controller yaml `commands` key -> (handler, MDB argument names passed to it, in call order)
+        return {
+            "drive_straight": (self._commander.drive_straight, ["linear_velocity", "distance"]),
+            "drive_turn": (self._commander.drive_turn, ["angular_velocity", "angle"]),
+            "camera_capture_high": (self._commander.handle_high_res_capture, ["camera_name"]),
+            "camera_streaming_on_off": (self._commander.set_activity_of_camera_streaming, ["camera_name", "action"]),
+            "camera_capture_depth": (self._commander.handle_depth_capture, ["camera_name"]),
+        }
 
     def start_streaming_data(self):
         """Schedule periodic telemetry intervals."""

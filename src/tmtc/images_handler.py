@@ -81,15 +81,15 @@ class ImagesHandler:
         img = Image.open(image_path).convert("RGB").resize((self.NO_DATA_RESOLUTION[0], self.NO_DATA_RESOLUTION[1]))
         self._save(img, bucket_name)
 
-    def save_camera_image(self, image: Image, camera_name: str, kind: str):
+    def save_camera_image(self, image: Image.Image, camera_name: str, kind: str):
         """Image of a robot camera; kind is one of yamcs_naming.camera_kinds(camera)."""
         self._save(image, yamcs_naming.bucket_name(camera_name, kind))
 
-    def save_image(self, image: Image, role: str):
+    def save_image(self, image: Image.Image, role: str):
         """Image for a bucket role (images.buckets in the controller yaml, or added with add_bucket)."""
         self._save(image, self._roles[role])
 
-    def _save(self, image: Image, bucket_name: str):
+    def _save(self, image: Image.Image, bucket_name: str):
         image_name = f"{bucket_name}_{self._counter[bucket_name]:04d}.png"
         png = io.BytesIO()
         image.save(png, format="PNG")

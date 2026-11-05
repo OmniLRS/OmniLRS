@@ -128,9 +128,12 @@ The checker (`src/tmtc/yamcs_contract.py`) uses only the standard library, the p
 A standalone script runs steps 2–4 against a running Yamcs server for a robot and controller pair, without Isaac Sim (exit code 1 if anything is missing). It checks everything except the handler argument names, which only the sim knows:
 
 ```
-pixi run -e yamcs check-yamcs-contract
+pixi run -e yamcs check-yamcs-contract         # Pragyaan, Yamcs instance workshop
+pixi run -e yamcs check-yamcs-contract-husky   # Husky, Yamcs instance husky
 python test/check_yamcs_contract.py --robot pragyaan --controller pragyaan-controller [--address localhost:8090 --instance workshop]
 ```
+
+The unit tests (`test/test_yamcs_naming.py`) also check, without a server, that every `cfg/robot` camera list parses and that every `cfg/controller` yaml has the keys this startup reads.
 
 CI generates the MDB from the OmniLRS commit under test before starting Yamcs: `artefacts.Dockerfile` runs `mdb/generate_mdb_{rover,lander,admin}.py` of yamcs-mission-control-pragyaan with `OMNILRS_ROOT=/workspace/omnilrs`. The sim then runs the same check at startup, and `test/test_yamcs_sanity*.py` checks that the startup "no data" image metadata arrived for every (camera, kind) of the robot yaml.
 
