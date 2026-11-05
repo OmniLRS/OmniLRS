@@ -147,7 +147,7 @@ class Zenoh_SimulationManager:
             did_reset = False
 
             if self.sim.is_playing():
-                if self.sim.current_time_step_index == 0:
+                if self.sim.consume_restart():
                     self.sim.reset()
                     did_reset = True
                     self.Zenoh_EC.reset()

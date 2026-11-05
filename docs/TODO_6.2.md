@@ -27,7 +27,9 @@ the deformable-terrain configs (terramechanics / deformation read the wheel-link
 `Simulation` implements the lifecycle OmniLRS used from `World` on top of `SimulationManager`/`PhysxScene`, the stage
 utils and the timeline (the migration guide has no single replacement object). `step()` is one app update (Kit's loop in
 manual mode steps `rendering_dt`; physics substeps follow from `physics_dt`), `reset()` stops and plays the timeline,
-`current_time_step_index` counts physics steps since the last stop. `cfg/physics` is applied by
+`current_time_step_index` counts physics steps since the last stop. The managers detect a stop/play from outside
+(e.g. the GUI) with `consume_restart()`, set on timeline stop: the step counter is never 0 when they check, because
+`SimulationManager` steps physics while warming up on play (`World` had the same issue). `cfg/physics` is applied by
 `Simulation.configure_physics_scene()` (ROS2 mode only, as before; `PhysicsSceneManager` removed). The physics scene
 attributes, time codes, loop and physics carb settings are identical to `World` for the ROS2 and Yamcs setups.
 
