@@ -13,5 +13,10 @@ keyexprs:
   joint_telemetry:   "OmniLRS/{robot_name}/joint_telemetry" # pub
   joint_commands:    "OmniLRS/{robot_name}/joint_cmd" # sub
   ground_truth_pose: "OmniLRS/{robot_name}/gt_pose" # pub
-  is_sim_running:    "OmniLRS/sim/is_running" # pub
+  is_sim_running:    "OmniLRS/sim/is_running" # pub, {"is_running": true, "is_playing": bool}
   randomize_rocks:   "OmniLRS/terrain/randomize_rocks" # sub
+
+  # simulation control (sub, any payload), applied by the main loop between steps
+  sim_play:          "OmniLRS/sim/play"  # play, or resume after a pause
+  sim_pause:         "OmniLRS/sim/pause" # pause, keeping the simulation state
+  sim_stop:          "OmniLRS/sim/stop"  # stop; the next play restarts from the initial state (environment and robot reset)

@@ -114,6 +114,11 @@ class Simulation:
         self._timeline.commit()
         self.render()
 
+    def pause(self) -> None:
+        """Pause the timeline, keeping the physics state (a following play resumes, it does not restart)."""
+        self._timeline.pause()
+        self.render()
+
     def stop(self) -> None:
         self._timeline.stop()
         self.render()

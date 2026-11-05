@@ -224,6 +224,7 @@ class Yamcs_SimulationManager:
                     self.EC.update_stellar_engine(dt=self.sim.get_physics_dt())
 
                 if self.sim.consume_restart():
+                    logger.info("Timeline restarted: resetting the environment and robot")
                     self.sim.reset()
 
                     did_reset = True
