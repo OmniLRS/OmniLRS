@@ -4,7 +4,8 @@ __author__ = "Louis Burtz"
 __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
 
-import carb
+import carb.eventdispatcher
+import carb.settings
 import isaacsim.core.experimental.utils.stage as stage_utils
 import omni.kit.app
 import omni.physics.core

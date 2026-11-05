@@ -99,6 +99,11 @@ Not affected: OmniLRS does not use the Euler helpers whose input order changed i
 (`euler_angles_to_quaternion` / `euler_angles_to_rotation_matrix` now expect XYZ), nor the removed residual-reporting
 APIs.
 
+## Others
+
+1. migrate omnilrs-ros2-demo to Isaac Sim 6.2 and Pixi instead of docker.
+
+
 ## Validation for any of the above
 
 Run the 4 canonical scenarios (`artefacts.yaml`): ROS2 lunalab, ROS2 largescale, Yamcs lunalab, Yamcs largescale. For
