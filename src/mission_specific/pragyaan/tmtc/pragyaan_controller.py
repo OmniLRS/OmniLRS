@@ -5,6 +5,7 @@ __email__ = "ljburtz@jaops.com"
 
 from src.mission_specific.pragyaan.tmtc.camera_handler import PragyaanCameraHandler
 from src.mission_specific.pragyaan.tmtc.commander import PragyaanCommander
+from src.mission_specific.pragyaan.tmtc.enums import STREAMING_FIELDS
 from src.mission_specific.pragyaan.tmtc.payload_handler import PayloadHandler
 from src.mission_specific.pragyaan.tmtc.transmitter import PragyaanTransmitter
 from src.tmtc.yamcs_TMTC import YamcsTMTC
@@ -28,6 +29,8 @@ class PragyaanController(YamcsTMTC):
 
     Besides utilizing handlers provided by YamcsTMTC, the controller implements its own specific handlers that adhere to rover's use case.
     """
+
+    CAMERA_STREAMING_FIELDS = STREAMING_FIELDS
 
     def __init__(self, yamcs_instance_conf, yamcs_conf, robot_name, robot_RG, robot):
         super().__init__(yamcs_instance_conf, yamcs_conf, robot_name, robot_RG, robot)

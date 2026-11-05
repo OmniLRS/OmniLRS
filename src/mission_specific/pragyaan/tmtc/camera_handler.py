@@ -9,7 +9,7 @@ from isaacsim.sensors.experimental.rtx import CameraSensor
 from PIL import Image
 
 from src.environments.monitoring_cameras_manager import MonitoringCamerasManager
-from src.mission_specific.pragyaan.tmtc.enums import PragyaanCameraResolution
+from src.mission_specific.pragyaan.tmtc.enums import KIND_RESOLUTION
 from src.subsystems.robot_physics_models.camera_compression_model import CameraCompressionModel
 from src.tmtc import yamcs_naming
 from src.tmtc.yamcs_TMTC import ImagesHandler
@@ -52,6 +52,7 @@ class PragyaanCameraHandler:
     ) -> None:
         self._images_handler = images_handler
         self._robot = robot
+        yamcs_naming.check_kind_resolutions(robot.cameras, KIND_RESOLUTION)
         self._lander_cam = None
         self._monitoring_cam = None
         compression_conf = dict(compression_conf)
@@ -158,18 +159,17 @@ class PragyaanCameraHandler:
 
     def transmit_camera_view(self, camera_name: str, kind: str):
         """Snap and upload one image of a rover camera; kind is streaming, oncommand (rgba) or depth (depth)."""
-        if kind == "depth":
-            camera_view: Image = self._snap_camera_view_depth(camera_name, PragyaanCameraResolution.HIGH.value)
-        elif kind == "streaming":
-            camera_view: Image = self._snap_camera_view_rgb(camera_name, PragyaanCameraResolution.LOW.value)
-            # only streaming images are compressed
-            if camera_view is not None:
-                camera_view = self._compress(camera_view, camera_name)
-        elif kind == "oncommand":
-            camera_view: Image = self._snap_camera_view_rgb(camera_name, PragyaanCameraResolution.HIGH.value)
-        else:
+        if kind not in KIND_RESOLUTION:
             print("in transmit_camera_view: unknown kind:", kind)
             return
+        resolution = KIND_RESOLUTION[kind].value
+        if kind == "depth":
+            camera_view: Image = self._snap_camera_view_depth(camera_name, resolution)
+        else:
+            camera_view: Image = self._snap_camera_view_rgb(camera_name, resolution)
+            # only streaming images are compressed
+            if kind == "streaming" and camera_view is not None:
+                camera_view = self._compress(camera_view, camera_name)
 
         if camera_view is None:  # camera still warming up
             return

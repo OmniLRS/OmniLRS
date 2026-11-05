@@ -22,12 +22,6 @@ KINDS_BY_TYPE = {"rgba": ("streaming", "oncommand"), "depth": ("depth",)}
 
 IMAGE_META_FIELDS = ("number", "name", "url_storage", "url_full", "url_full_nginx")
 
-# Streaming telemetry sent per rgba camera, under streaming_param(camera, field).
-STREAMING_FIELDS = {
-    "pragyaan": ("state", "bandwidth", "packets_sent", "packets_lost", "decode_errors"),
-    "husky": ("state",),
-}
-
 # Camera commands (MDB command name -> camera type its camera_name argument accepts).
 CAMERA_COMMAND_TYPE = {
     "camera_capture_high": "rgba",
@@ -37,7 +31,7 @@ CAMERA_COMMAND_TYPE = {
 }
 CAMERA_NAME_ARG = "camera_name"
 
-_NAME_RE = re.compile(r"^[A-Za-z][A-Za-z0-9_]*$")
+_NAME_RE = re.compile(r"[A-Za-z][A-Za-z0-9_]*")  # whole name (fullmatch)
 
 
 def parse_cameras(camera_conf: Any) -> list[dict]:
@@ -54,7 +48,7 @@ def parse_cameras(camera_conf: Any) -> list[dict]:
             if key not in cam:
                 raise ValueError(f"camera #{i} is missing '{key}'")
         name = str(cam["name"])
-        if not _NAME_RE.match(name):
+        if not _NAME_RE.fullmatch(name):
             raise ValueError(f"camera name {name!r} must match {_NAME_RE.pattern} (used in MDB paths and bucket names)")
         if name in seen:
             raise ValueError(f"duplicate camera name {name!r}")
@@ -72,6 +66,22 @@ def parse_cameras(camera_conf: Any) -> list[dict]:
 def camera_kinds(camera: Mapping) -> tuple[str, ...]:
     """Image kinds a camera produces, from its type (e.g. rgba -> streaming, oncommand)."""
     return tuple(kind for t in camera["type"] for kind in KINDS_BY_TYPE[t])
+
+
+def check_kind_resolutions(cameras: Iterable[Mapping], kind_resolution: Mapping[str, str]) -> None:
+    """Raise ValueError if a camera lacks the resolution used for one of its kinds.
+
+    kind_resolution: image kind -> resolutions key of the robot yaml (e.g. streaming -> low), defined per robot in
+    src/mission_specific/<robot>/tmtc/enums.py and used by its camera handler.
+    """
+    missing = [
+        f"camera {cam['name']!r}: {kind} images use resolution {kind_resolution[kind]!r}"
+        for cam in cameras
+        for kind in camera_kinds(cam)
+        if kind_resolution[kind] not in cam["resolutions"]
+    ]
+    if missing:
+        raise ValueError("robot yaml camera resolutions are missing: " + "; ".join(missing))
 
 
 def has_type(camera: Mapping, camera_type: str) -> bool:
@@ -124,11 +134,3 @@ def cameras_for_command(cameras: Iterable[Mapping], command: str) -> list[str]:
     """Camera names allowed for a camera command's camera_name argument, in robot yaml order."""
     camera_type = CAMERA_COMMAND_TYPE[command]
     return [cam["name"] for cam in cameras if has_type(cam, camera_type)]
-
-
-def streaming_fields(robot_name: str) -> tuple[str, ...]:
-    if robot_name not in STREAMING_FIELDS:
-        raise KeyError(
-            f"no streaming telemetry fields defined for robot {robot_name!r} in yamcs_naming.STREAMING_FIELDS"
-        )
-    return STREAMING_FIELDS[robot_name]

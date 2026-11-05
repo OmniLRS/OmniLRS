@@ -124,7 +124,7 @@ class PragyaanTransmitter:
         self._transmit(self._parameters_conf["imu_orientation"], orientation)
 
     # Per-camera streaming telemetry, under yamcs_naming.streaming_param(camera, field) with the fields of
-    # yamcs_naming.STREAMING_FIELDS["pragyaan"] (state, bandwidth, packets_sent, packets_lost, decode_errors).
+    # enums.STREAMING_FIELDS (state, bandwidth, packets_sent, packets_lost, decode_errors): keep them in step.
 
     def transmit_camera_streaming_state(self):
         for camera_name in self._camera_handler.cameras_of_type("rgba"):

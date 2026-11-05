@@ -10,13 +10,13 @@ from src.tmtc import yamcs_naming
 from src.tmtc.mdb_parsing_service import ServerMdb
 from src.tmtc.yamcs_contract import check_contract
 
-ROBOT = "pragyaan"
 CAMERAS = yamcs_naming.parse_cameras(
     [
         {"name": "cam_depth", "prim_path": "/d", "type": ["depth"], "resolutions": {"high": [4, 3]}},
         {"name": "NavCam_left", "prim_path": "/l", "type": ["rgba"], "resolutions": {"low": [4, 3]}},
     ]
 )
+STREAMING_FIELDS = ("state", "bandwidth", "packets_sent", "packets_lost", "decode_errors")
 YAMCS_CONF = {
     "images": {"buckets": {"lander": {"name": "images_lander", "path": "/Lander/camera/images_oncommand"}}},
     "payload": {
@@ -65,7 +65,7 @@ def mdb():
     mdb.space_systems = {"/Rover", "/Rover/camera", "/Rover/camera/cam_depth", "/Rover/camera/NavCam_left"}
     mdb.space_systems |= set(meta_paths)
     mdb.parameters = {f"{path}/{field}" for path in meta_paths for field in yamcs_naming.IMAGE_META_FIELDS}
-    mdb.parameters |= {f"/Rover/camera/NavCam_left/streaming/{field}" for field in yamcs_naming.STREAMING_FIELDS[ROBOT]}
+    mdb.parameters |= {f"/Rover/camera/NavCam_left/streaming/{field}" for field in STREAMING_FIELDS}
     mdb.parameters.add("/Rover/go_nogo")
     for command in (
         _command("/Rover/motor/drive_straight", linear_velocity=float32, distance=float32),
@@ -89,7 +89,12 @@ BUCKETS = {
 
 def _check(mdb, yamcs_conf=YAMCS_CONF, command_args=COMMAND_ARGS, buckets=BUCKETS):
     return check_contract(
-        mdb=mdb, buckets=buckets, cameras=CAMERAS, robot_name=ROBOT, yamcs_conf=yamcs_conf, command_args=command_args
+        mdb=mdb,
+        buckets=buckets,
+        cameras=CAMERAS,
+        streaming_fields=STREAMING_FIELDS,
+        yamcs_conf=yamcs_conf,
+        command_args=command_args,
     )
 
 

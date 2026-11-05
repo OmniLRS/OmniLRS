@@ -55,9 +55,10 @@ class FakeProcessor:
 def _handler(storage, clear=True):
     images_conf = {
         "no_data_image_path": "unused.png",
-        "clear_buckets_on_startup": clear,
         "buckets": {"lander": {"name": "images_lander", "path": "/Lander/camera/images_oncommand"}},
     }
+    if clear is not None:  # None: key left out (default true)
+        images_conf["clear_buckets_on_startup"] = clear
     processor = FakeProcessor()
     handler = ImagesHandler(storage, processor, "localhost:8090", images_conf, "http://nginx", CAMERAS)
     return handler, processor
@@ -91,18 +92,30 @@ def test_keeps_every_image():
     assert storage.buckets[STREAMING] == [f"{STREAMING}_{i:04d}.png" for i in range(50)]
 
 
-def test_clear_old_images_empties_every_bucket():
+@pytest.mark.parametrize("clear", [True, None], ids=["clear", "default"])
+def test_prepare_buckets_empties_every_bucket(clear):
     storage = FakeStorage(existing={STREAMING: ["a.png", "b.png", "c.png"], "images_lander": ["d.png"]}, page_size=2)
-    handler, _ = _handler(storage, clear=True)
-    handler.clear_old_images()
+    handler, _ = _handler(storage, clear=clear)
+    handler.prepare_buckets()
     assert storage.buckets == {STREAMING: [], ONCOMMAND: [], "images_lander": []}
+    handler.save_camera_image(_image(), camera_name="NavCam_left", kind="streaming")
+    assert storage.buckets[STREAMING] == [f"{STREAMING}_0000.png"]
 
 
-def test_clear_old_images_keeps_images_when_not_configured():
-    storage = FakeStorage(existing={STREAMING: ["a.png"]})
-    handler, _ = _handler(storage, clear=False)
-    handler.clear_old_images()
-    assert storage.buckets[STREAMING] == ["a.png"]
+def test_prepare_buckets_without_clear_keeps_images_and_continues_numbering():
+    existing = [f"{STREAMING}_0000.png", f"{STREAMING}_0011.png", f"{STREAMING}_0002.png", "image_stream_0099.png"]
+    storage = FakeStorage(existing={STREAMING: existing, "images_lander": ["images_lander_0004.png"]})
+    handler, processor = _handler(storage, clear=False)
+    handler.prepare_buckets()
+    handler.save_camera_image(_image(), camera_name="NavCam_left", kind="streaming")
+    handler.save_camera_image(_image(), camera_name="NavCam_left", kind="oncommand")
+    handler.save_image(_image(), role="lander")
+    # after the highest OmniLRS image (other names ignored); empty buckets start at 0000
+    assert storage.buckets[STREAMING] == existing + [f"{STREAMING}_0012.png"]
+    assert processor.values[yamcs_naming.meta_path("NavCam_left", "streaming") + "/number"] == 12
+    assert storage.buckets[ONCOMMAND] == [f"{ONCOMMAND}_0000.png"]
+    assert storage.buckets["images_lander"] == ["images_lander_0004.png", "images_lander_0005.png"]
+    assert handler.image_count("lander") == 6
 
 
 def test_role_image_goes_to_its_bucket():

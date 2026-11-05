@@ -19,7 +19,7 @@ class PragyaanCommander:
     Functions as a reference implementation for the implementation of other rover commanders.
 
     Commander contains methods specific to the Pragyaan rover.
-    Functions implemented here are called by PragyaanController, and are mapped inside setup_command_callbacks function.
+    Functions implemented here are mapped to their commands in PragyaanController.command_handlers().
 
     This class encodes the logic behind the execution of the received commands specific to the Pragyaan rover.
         For example, in case of receiving command for high res camera capture, the commander checks if the camera is powered on, and only then executes the command by calling the appropriate function in the camera handler.

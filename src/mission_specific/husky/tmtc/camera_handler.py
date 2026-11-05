@@ -7,7 +7,7 @@ from enum import StrEnum
 import numpy as np
 from PIL import Image
 
-from src.mission_specific.husky.tmtc.enums import HuskyCameraResolution
+from src.mission_specific.husky.tmtc.enums import KIND_RESOLUTION
 from src.tmtc import yamcs_naming
 from src.tmtc.yamcs_TMTC import ImagesHandler
 
@@ -30,6 +30,7 @@ class HuskyCameraHandler:
     def __init__(self, images_handler: ImagesHandler, robot) -> None:
         self._images_handler = images_handler
         self._robot = robot
+        yamcs_naming.check_kind_resolutions(robot.cameras, KIND_RESOLUTION)
 
     def cameras_of_type(self, camera_type: str) -> list[str]:
         """Names of the rover cameras of that type (rgba or depth), in robot yaml order."""
@@ -68,15 +69,14 @@ class HuskyCameraHandler:
 
     def transmit_camera_view(self, camera_name: str, kind: str):
         """Snap and upload one image of a rover camera; kind is streaming, oncommand (rgba) or depth (depth)."""
-        if kind == "depth":
-            camera_view = self._snap_camera_view_depth(camera_name, HuskyCameraResolution.HIGH.value)
-        elif kind == "streaming":
-            camera_view = self._snap_camera_view_rgb(camera_name, HuskyCameraResolution.LOW.value)
-        elif kind == "oncommand":
-            camera_view = self._snap_camera_view_rgb(camera_name, HuskyCameraResolution.HIGH.value)
-        else:
+        if kind not in KIND_RESOLUTION:
             print("HuskyCameraHandler.transmit_camera_view: unknown kind:", kind)
             return
+        resolution = KIND_RESOLUTION[kind].value
+        if kind == "depth":
+            camera_view = self._snap_camera_view_depth(camera_name, resolution)
+        else:
+            camera_view = self._snap_camera_view_rgb(camera_name, resolution)
 
         if camera_view is None:  # camera still warming up
             return

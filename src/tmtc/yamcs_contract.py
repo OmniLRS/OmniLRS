@@ -9,7 +9,7 @@ Standard library only (plus the MDB model from mdb_parsing_service), so it runs 
 """
 
 from dataclasses import dataclass, field
-from typing import Mapping
+from typing import Iterable, Mapping
 
 from src.tmtc import yamcs_naming
 from src.tmtc.mdb_parsing_service import ServerMdb
@@ -43,12 +43,14 @@ def check_contract(
     mdb: ServerMdb,
     buckets: set[str],
     cameras: list[Mapping],
-    robot_name: str,
+    streaming_fields: Iterable[str],
     yamcs_conf: Mapping,
     command_args: Mapping[str, list[str]] | None,
 ) -> ContractReport:
     """buckets: names of the storage buckets on the server;
-    cameras: yamcs_naming.parse_cameras(robot camera list); yamcs_conf: controller yaml `yamcs_tmtc`;
+    cameras: yamcs_naming.parse_cameras(robot camera list);
+    streaming_fields: streaming telemetry sent per rgba camera (STREAMING_FIELDS of the robot's tmtc/enums.py);
+    yamcs_conf: controller yaml `yamcs_tmtc`;
     command_args: commands-yaml key -> argument names its handler takes (the controller's command_handlers()),
     or None to skip that check (the standalone check cannot import the controllers, which need Isaac Sim)."""
     report = ContractReport()
@@ -67,10 +69,9 @@ def check_contract(
             expect(f"{path}/{meta_field}" in mdb.parameters, f"parameter {path}/{meta_field}")
 
     # Streaming telemetry of every rgba camera
-    fields = yamcs_naming.streaming_fields(robot_name)
     for camera in cameras:
         if yamcs_naming.has_type(camera, "rgba"):
-            for streaming_field in fields:
+            for streaming_field in streaming_fields:
                 param = yamcs_naming.streaming_param(camera["name"], streaming_field)
                 expect(param in mdb.parameters, f"parameter {param}")
 

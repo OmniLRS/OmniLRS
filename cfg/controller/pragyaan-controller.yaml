@@ -28,7 +28,8 @@ robots_settings:
       resolution: [1440, 1080]
     images:
       no_data_image_path: "${oc.env:OMNILRS_ROOT,.}/assets/images/no_data_grafana.png"
-      clear_buckets_on_startup: true # delete the previous images in every bucket OmniLRS uses (otherwise all are kept)
+      clear_buckets_on_startup: true # (default true) delete the previous images in every bucket OmniLRS uses;
+      # false keeps them and continues each bucket's numbering after its last image
       # Buckets (Yamcs storage buckets OmniLRS uploads images to):
       # The buckets of the rover's cameras (which are defined in cfg/robot yaml) are computed, not listed here.
       # For additional buckets, define them below (and payload buckets under payload).
@@ -53,8 +54,8 @@ robots_settings:
           name: "images_apxs"
           path: "/Rover/payload/images_apxs"
     parameters:
-      # Note: the per-camera telemetry (streaming state, bandwidth, packets, decode errors)
-      # is computed from the robot cameras, not listed here.
+      # Note: the per-camera telemetry (streaming state, bandwidth, packets, decode errors) is computed from the
+      # robot cameras and STREAMING_FIELDS in src/mission_specific/pragyaan/tmtc/enums.py, not listed here.
       # List other non-camera telemetry here:
       pose_of_base_link: "/Rover/pose_ground_truth"
       go_nogo: "/Rover/go_nogo"

@@ -11,6 +11,7 @@ Exit code 1 if the server misses anything OmniLRS sends or handles; extras are o
 """
 
 import argparse
+import importlib
 import sys
 from pathlib import Path
 
@@ -39,6 +40,8 @@ def main() -> int:
     args = parser.parse_args()
 
     robot = load_robots_settings("robot", args.robot)["parameters"]
+    # Streaming telemetry fields of the robot's transmitter (standard-library module, importable without Isaac Sim)
+    streaming_fields = importlib.import_module(f"src.mission_specific.{args.robot}.tmtc.enums").STREAMING_FIELDS
     yamcs_conf = load_robots_settings("controller", args.controller)["yamcs_tmtc"]
 
     client = YamcsClient(args.address)
@@ -47,7 +50,7 @@ def main() -> int:
         mdb=mdb,
         buckets={bucket.name for bucket in client.get_storage_client().list_buckets()},
         cameras=yamcs_naming.parse_cameras(robot.get("camera")),
-        robot_name=robot["robot_name"],
+        streaming_fields=streaming_fields,
         yamcs_conf=yamcs_conf,
         command_args=None,  # handler argument names: checked at sim startup only
     )

@@ -21,7 +21,6 @@ The Yamcs server MDB is the single source of truth for telemetry and commands (T
 CAMERA_ROOT = "/Rover/camera"
 KINDS_BY_TYPE = {"rgba": ("streaming", "oncommand"), "depth": ("depth",)}
 IMAGE_META_FIELDS = ("number", "name", "url_storage", "url_full", "url_full_nginx")
-STREAMING_FIELDS = {"pragyaan": ("state", "bandwidth", ...), "husky": ("state",)}
 CAMERA_COMMAND_TYPE = {"camera_capture_high": "rgba", "camera_streaming": "rgba",
                        "set_camera_streaming_params": "rgba", "camera_capture_depth": "depth"}
 CAMERA_NAME_ARG = "camera_name"
@@ -35,7 +34,7 @@ def bucket_name(camera, kind) -> str          # images_<camera>_<kind>
 def camera_buckets(cameras) -> list[tuple]    # (camera, kind, bucket_name, meta_path) for every bucket
 def image_buckets(cameras, yamcs_tmtc)        # (bucket_name, meta_path): cameras + controller yaml role/payload buckets
 def cameras_for_command(cameras, command) -> list[str]
-def streaming_fields(robot) -> tuple[str, ...]
+def check_kind_resolutions(cameras, kind_resolution)  # every camera has the resolution of each of its kinds
 ```
 
 Camera telemetry is scoped by camera through nested space systems: one space system per camera, with one child per kind. Example for Pragyaan:
@@ -56,20 +55,20 @@ Camera telemetry is scoped by camera through nested space systems: one space sys
 
 Yamcs bucket names can't contain `/`, so buckets stay flat. The camera name comes first so buckets group by camera when listed: `images_NavCam_left_streaming`, `images_NavCam_left_oncommand`, `images_cam_depth_depth`. Nothing ever parses a bucket name back into a camera and kind; `bucket_name()` is only ever called in the forward direction.
 
-The list of streaming telemetry fields is set per robot in `yamcs_naming.STREAMING_FIELDS`:
+The streaming telemetry fields are what each robot's transmitter sends, so they are defined next to it, in `STREAMING_FIELDS` of `src/mission_specific/<robot>/tmtc/enums.py` (standard library only), and not keyed by robot name:
 
-| Robot | Fields |
+| `enums.py` | `STREAMING_FIELDS` |
 |---|---|
-| Husky | `state` |
-| Pragyaan | `state`, `bandwidth`, `packets_sent`, `packets_lost`, `decode_errors` |
+| `mission_specific/husky/tmtc/` | `state` |
+| `mission_specific/pragyaan/tmtc/` | `state`, `bandwidth`, `packets_sent`, `packets_lost`, `decode_errors` |
 
-The Yamcs-side generator imports the same constants.
+The controller passes them to the startup check (`YamcsTMTC.CAMERA_STREAMING_FIELDS`). The Yamcs-side generator loads the same `enums.py` and `yamcs_naming.py` by file path.
 
 ### The Yamcs side generates its MDB from OmniLRS
 
 In `generate_mdb_*.py`:
 
-- It reads `$OMNILRS_ROOT/cfg/robot/<robot>.yaml` directly. There's no copy of the robot yaml in the Yamcs repo.
+- It reads `$OMNILRS_ROOT/cfg/robot/<robot>.yaml`, `cfg/controller/<controller>.yaml` and the streaming telemetry fields of `src/mission_specific/<robot>/tmtc/enums.py` directly. There's no copy of them in the Yamcs repo. Which files is set by `ROBOT` and `CONTROLLER` in the Yamcs repo's `mdb/_omnilrs.py` (`--robot` / `--controller` to read others); the robot name itself is only in the robot yaml.
 - It loads `yamcs_naming.py` by file path from `$OMNILRS_ROOT`.
 - It creates one space system per camera (`camera_system`) with a child per kind (`meta_path`) holding the image metadata, plus the streaming telemetry in the `streaming` child of each rgba camera.
 - For each camera command, the allowed `camera_name` values are only the cameras whose type matches that command.
@@ -89,7 +88,7 @@ Yamcs loads the MDB when an instance starts, so Yamcs has to be restarted after 
 Steps 4–6 run in order in `YamcsTMTC.start()`, which the simulation manager calls once the controller is built:
 
 4. **Check ([§3](#3-how-camera-telemetry-and-buckets-get-checked)), then report** (`check_yamcs_server()`), against the MDB and the server's storage buckets, before any command is registered or any telemetry or image is sent. Print one summary of everything found. Stop if anything is missing; only warn about extras.
-5. **Clear old images** (`ImagesHandler.clear_old_images()`): if `images.clear_buckets_on_startup` is set (the default), delete the objects of every bucket OmniLRS uses. OmniLRS never creates or deletes buckets, and never deletes images otherwise.
+5. **Prepare the buckets** (`ImagesHandler.prepare_buckets()`): images are named `<bucket>_<number>.png`. With `images.clear_buckets_on_startup: true` (the default when the key is left out), delete the objects of every bucket OmniLRS uses; numbering restarts at 0000. With `false`, keep them and continue each bucket's numbering after its highest `<bucket>_<number>.png`. OmniLRS never creates or deletes buckets, and never deletes images otherwise.
 6. **Continue as today:** register command handlers (`setup_command_callbacks`), send the "no data" placeholder images and start the telemetry intervals (`start_streaming_data`).
 
 ## 3. How camera telemetry and buckets get checked
@@ -133,7 +132,7 @@ pixi run -e yamcs check-yamcs-contract-husky   # Husky, Yamcs instance husky
 python test/check_yamcs_contract.py --robot pragyaan --controller pragyaan-controller [--address localhost:8090 --instance workshop]
 ```
 
-The unit tests (`test/test_yamcs_naming.py`) also check, without a server, that every `cfg/robot` camera list parses and that every `cfg/controller` yaml has the keys this startup reads.
+The unit tests (`test/test_yamcs_naming.py`) also check, without a server, that every `cfg/robot` camera list parses, that the husky and pragyaan cameras have the resolution of each of their image kinds (`KIND_RESOLUTION` in `src/mission_specific/<robot>/tmtc/enums.py`, also checked by the camera handler at startup), that their `STREAMING_FIELDS` are valid MDB names, and that every `cfg/controller` yaml has `mdb_space_systems`, a boolean `images.clear_buckets_on_startup` if set, and unique image bucket names.
 
 CI generates the MDB from the OmniLRS commit under test before starting Yamcs: `artefacts.Dockerfile` runs `mdb/generate_mdb_{rover,lander,admin}.py` of yamcs-mission-control-pragyaan with `OMNILRS_ROOT=/workspace/omnilrs`. The sim then runs the same check at startup, and `test/test_yamcs_sanity*.py` checks that the startup "no data" image metadata arrived for every (camera, kind) of the robot yaml.
 
@@ -157,7 +156,7 @@ CI generates the MDB from the OmniLRS commit under test before starting Yamcs: `
   - `mdb:` file list → `mdb_space_systems: ["/Rover", "/Lander", "/Admin"]` for Pragyaan, `["/Rover"]` for Husky
   - camera buckets and per-camera telemetry removed
   - `images.buckets` changed from a list to entries named by role (`lander`, `monitoring`; empty for Husky)
-  - `clear_buckets_on_startup: true` added
+  - `clear_buckets_on_startup: true` added (optional, default true)
   - the `crf` and `seed` nulls restored
 
 ## 8. Smaller choices
@@ -165,7 +164,7 @@ CI generates the MDB from the OmniLRS commit under test before starting Yamcs: `
 - Lander and monitoring buckets are named by role, so the code uses `save_image(img, "lander")` and no bucket name is written in Python.
 - APXS stays under `payload.apxs.bucket`, to avoid moving unrelated config.
 - `CAMERA_ROOT = "/Rover/camera"` is a constant in the module, not yaml. Both robots use it, and the generator needs it too.
-- Every image of a run is kept (bucket limits sized for a mission). Each OmniLRS start is a new run: `clear_buckets_on_startup` (default true) empties the buckets and numbering restarts at 0000.
+- Every image of a run is kept (bucket limits sized for a mission). By default each OmniLRS start is a new run: `clear_buckets_on_startup` (default true) empties the buckets and numbering restarts at 0000. With `false`, the images of earlier runs are kept and numbering continues after the last one.
 
 - **CI generator source:** use yamcs-mission-control main for CI to generate the MDB, so it always runs against the OmniLRS commit under test.
 - **Grafana dashboards:** they refer to camera parameter paths. Disregard for now.

@@ -133,7 +133,7 @@ class HuskyTransmitter:
             angles[i] = int(modulo * (1024.0 / (2 * math.pi)))
 
     # Per-camera streaming telemetry, under yamcs_naming.streaming_param(camera, field) with the fields of
-    # yamcs_naming.STREAMING_FIELDS["husky"] (state).
+    # enums.STREAMING_FIELDS (state): keep them in step.
 
     def transmit_camera_streaming_state(self):
         for camera_name in self._camera_handler.cameras_of_type("rgba"):

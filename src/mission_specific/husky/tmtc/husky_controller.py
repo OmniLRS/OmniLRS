@@ -4,6 +4,7 @@ __email__ = "ljburtz@jaops.com"
 
 
 from src.mission_specific.husky.tmtc.camera_handler import HuskyCameraHandler
+from src.mission_specific.husky.tmtc.enums import STREAMING_FIELDS
 from src.mission_specific.husky.tmtc.husky_commander import HuskyCommander
 from src.mission_specific.husky.tmtc.husky_drive_handler import HuskyDriveHandler
 from src.mission_specific.husky.tmtc.transmitter import HuskyTransmitter
@@ -22,6 +23,8 @@ class HuskyController(YamcsTMTC):
                                   against the Yamcs server MDB at startup.
         start_streaming_data()  — schedules periodic telemetry transmissions.
     """
+
+    CAMERA_STREAMING_FIELDS = STREAMING_FIELDS
 
     def __init__(
         self,

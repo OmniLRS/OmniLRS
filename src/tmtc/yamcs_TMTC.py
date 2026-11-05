@@ -54,6 +54,10 @@ class YamcsTMTC(ABC):
 
     """
 
+    # Streaming telemetry the controller's transmitter sends per rgba camera (STREAMING_FIELDS of
+    # src/mission_specific/<robot>/tmtc/enums.py); the startup check expects them in the server MDB.
+    CAMERA_STREAMING_FIELDS: tuple[str, ...] = ()
+
     def __init__(
         self,
         yamcs_instance_conf,
@@ -93,7 +97,7 @@ class YamcsTMTC(ABC):
     def start(self, commands_conf) -> None:
         """Startup in Yamcs mode, once the controller is built."""
         self.check_yamcs_server()
-        self._images_handler.clear_old_images()
+        self._images_handler.prepare_buckets()
         self.setup_command_callbacks(commands_conf)
         self.start_streaming_data()
 
@@ -104,7 +108,7 @@ class YamcsTMTC(ABC):
             mdb=self._mdb,
             buckets={bucket.name for bucket in self._storage.list_buckets()},
             cameras=self._robot.cameras,
-            robot_name=self._robot_name,
+            streaming_fields=self.CAMERA_STREAMING_FIELDS,
             yamcs_conf=self._yamcs_conf,
             command_args={key: args for key, (_, args) in self.command_handlers().items()},
         )

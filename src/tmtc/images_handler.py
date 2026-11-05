@@ -3,6 +3,7 @@ __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
 
 import io
+import re
 
 from PIL import Image
 
@@ -15,8 +16,10 @@ class ImagesHandler:
     Buckets: one per robot camera and kind (named by yamcs_naming), one per role of images.buckets in the controller
     yaml (e.g. lander, monitoring), plus roles added later with add_bucket (e.g. a payload).
     The buckets are defined on the Yamcs side (etc/yamcs.yaml, generated together with the MDB) with limits sized to
-    keep every image of a mission; the startup check (src/tmtc/yamcs_contract.py) verifies they exist. Images are
-    never deleted, except by clear_old_images() at startup when images.clear_buckets_on_startup is set.
+    keep every image of a mission; the startup check (src/tmtc/yamcs_contract.py) verifies they exist.
+    Images are named <bucket>_<number>.png. At startup, prepare_buckets() either deletes the images of every bucket
+    (images.clear_buckets_on_startup: true, the default), so numbering restarts at 0000, or keeps them and continues
+    each bucket's numbering after its last image (false). Images are never deleted otherwise.
     Each image is encoded as PNG in memory and uploaded; then number, name and url_* are set under the bucket's
     metadata space system. A failed upload (e.g. a full bucket) is logged and skipped, so it never stops the interval
     or TC thread that saved the image.
@@ -35,7 +38,7 @@ class ImagesHandler:
         self._yamcs_address = yamcs_address
         self.URL_FULL_NGINX = url_full_nginx
         self._NO_DATA_IMAGE_PATH = images_conf["no_data_image_path"]
-        self._clear_on_startup = images_conf["clear_buckets_on_startup"]
+        self._clear_on_startup = images_conf.get("clear_buckets_on_startup", True)
         self._buckets = {}  # bucket name -> metadata space system
         self._counter = {}
         self._roles = {}  # role -> bucket name
@@ -61,15 +64,31 @@ class ImagesHandler:
         """Number of images uploaded so far to the bucket of that role."""
         return self._counter[self._roles[role]]
 
-    def clear_old_images(self):
-        """At startup, before any upload: with images.clear_buckets_on_startup, delete the objects of every bucket."""
-        if not self._clear_on_startup:
-            return
+    def prepare_buckets(self):
+        """At startup, before any upload. With images.clear_buckets_on_startup (default true), delete the objects of
+        every bucket; otherwise keep them and continue each bucket's numbering after its last image."""
         for bucket_name in self._buckets:
-            # Repeat the listing until the bucket is empty, in case a listing does not return every object
-            while objects := self._storage.list_objects(bucket_name).objects:
-                for obj in objects:
-                    self._storage.remove_object(bucket_name, obj.name)
+            if self._clear_on_startup:
+                self._clear_bucket(bucket_name)
+            else:
+                self._counter[bucket_name] = self._next_number(bucket_name)
+
+    def _clear_bucket(self, bucket_name):
+        # Repeat the listing until the bucket is empty, in case a listing does not return every object
+        while objects := self._storage.list_objects(bucket_name).objects:
+            for obj in objects:
+                self._storage.remove_object(bucket_name, obj.name)
+
+    def _next_number(self, bucket_name) -> int:
+        """Number after the highest <bucket>_<number>.png in the bucket (INIT_COUNT if there is none); other objects,
+        e.g. uploaded by a mock, are ignored."""
+        image_re = re.compile(re.escape(bucket_name) + r"_(\d+)\.png")
+        numbers = [
+            int(match.group(1))
+            for obj in self._storage.list_objects(bucket_name).objects
+            if (match := image_re.fullmatch(obj.name))
+        ]
+        return max(numbers) + 1 if numbers else self.INIT_COUNT
 
     def snap_no_data_images(self):
         """Upload a placeholder image to every bucket."""
