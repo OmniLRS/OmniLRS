@@ -26,6 +26,8 @@ class PragyaanCommander:
     # TODO for v4: find the optimal place to store the angle values (potentially will refactor robot)
     SOLAR_PANEL_ANGLE_DEPLOYED = 0
     SOLAR_PANEL_ANGLE_STOWED = -80
+    # The solar panel state changes only once the measured angle is this close (deg) to the deployed or stowed angle.
+    SOLAR_PANEL_ANGLE_TOLERANCE = 10
 
     def __init__(
         self,
@@ -79,15 +81,28 @@ class PragyaanCommander:
         if self._robot.subsystems.get_go_nogo_state() == GoNogoState.NOGO:
             return
 
+        # Only the angle is commanded; update_solar_panel_state() reports the state once the panel gets there.
         if command == PragyaanYamcsArguments.DEPLOY.value:
-            self._robot.subsystems.set_solar_panel_state(SolarPanelState.DEPLOYED)
             self._robot.set_solar_panel_angle(self.SOLAR_PANEL_ANGLE_DEPLOYED)
         elif command == PragyaanYamcsArguments.STOW.value:
-            self._robot.subsystems.set_solar_panel_state(SolarPanelState.STOWED)
             self._robot.set_solar_panel_angle(self.SOLAR_PANEL_ANGLE_STOWED)
         else:
             print("Command for solar panel is unknown:", command)
             return
+
+    def update_solar_panel_state(self):
+        """
+        Set the solar panel state from the measured joint angle: DEPLOYED or STOWED once the panel is within
+        SOLAR_PANEL_ANGLE_TOLERANCE of that angle. In between (panel moving or blocked) the previous state is kept.
+        """
+        angle = self._robot.get_solar_panel_angle()
+        if angle is None:
+            return
+
+        if abs(angle - self.SOLAR_PANEL_ANGLE_DEPLOYED) <= self.SOLAR_PANEL_ANGLE_TOLERANCE:
+            self._robot.subsystems.set_solar_panel_state(SolarPanelState.DEPLOYED)
+        elif abs(angle - self.SOLAR_PANEL_ANGLE_STOWED) <= self.SOLAR_PANEL_ANGLE_TOLERANCE:
+            self._robot.subsystems.set_solar_panel_state(SolarPanelState.STOWED)
 
     def handle_electronics_on_off(self, electronics: str, new_state: PowerState):
         if new_state not in [PowerState.ON.value, PowerState.OFF.value]:

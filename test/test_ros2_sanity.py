@@ -27,6 +27,10 @@ SIM_COMMAND = [
 # The last startup message to appear; once seen, startup is complete.
 FINAL_MARKER = "ArticulationTelemetry initialized"
 
+# Topics the tests check; the topics fixture waits up to TOPICS_TIMEOUT seconds for all of them.
+EXPECTED_TOPICS = {"/clock", "/cmd_vel", "/odom", "/parameter_events", "/pointcloud", "/rosout", "/tf"}
+TOPICS_TIMEOUT = int(os.environ.get("OMNILRS_TOPICS_TIMEOUT", "60"))
+
 # Fast fail on the following.
 FATAL_MARKERS = [
     "Error executing job",
@@ -106,9 +110,15 @@ def topics(sim):
         cmd = "ros2 topic list"
     else:
         pytest.skip("No system ROS2 CLI available to verify topics")
-    result = subprocess.run(["bash", "-c", cmd], env=env, capture_output=True, text=True, timeout=120)
-    assert result.returncode == 0, f"'ros2 topic list' failed: {result.stderr}"
-    return result.stdout.split()
+    # DDS discovery of the sim's participants can lag behind the startup marker (slow CI runners), so poll.
+    deadline = time.monotonic() + TOPICS_TIMEOUT
+    while True:
+        result = subprocess.run(["bash", "-c", cmd], env=env, capture_output=True, text=True, timeout=120)
+        assert result.returncode == 0, f"'ros2 topic list' failed: {result.stderr}"
+        topics = result.stdout.split()
+        if EXPECTED_TOPICS.issubset(topics) or time.monotonic() > deadline:
+            return topics
+        time.sleep(2)
 
 
 """

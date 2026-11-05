@@ -9,25 +9,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 [WIP]
 
+> **Breaking:** migrated to Isaac Sim 6.2 (from 5.0). See [docs/migration_plan_6.2.md](docs/migration_plan_6.2.md).
+>   - Python 3.12, numpy 2.3.1, numba 0.63, SciPy 1.17, Warp 1.17 (versions pinned by the Isaac Sim 6.2 wheels).
+>   - Docker installation is now deprecated: Pixi is the only (and best) supported method. Docker is used for CI only.
+>   - ROS 2 uses the **Jazzy** libraries bundled with Isaac Sim (`ROS_DISTRO=jazzy`, `bridge_name: jazzy`); external nodes should run Jazzy.
+>   - `cfg/rendering/ray_tracing.yaml` uses the `RealTimePathTracing` renderer (replaces the legacy `RayTracedLighting`); the `/OmniLRS/Render/EnableRTXRealTime` topic switches to it as well.
+>   - The IMU is read through `isaacsim.sensors.experimental.physics.IMUSensor`; the reported values keep the same format.
+>   - `assets/Terrains/crater_spline_profiles.pkl` was re-pickled with SciPy 1.17 (identical curves; no longer loadable with SciPy < 1.17).
+>   - ROS 2 robot assets (`ros2_husky_PhysX_vlp16*.usd`, `ros2_jackal_PhysX_vlp16*.usd`, `ex1/ex1_spheres.usd`): TF graph migrated to `IsaacComputeTransformTree` → `ROS2PublishTransformTree` (removes the deprecated `targetPrims` path and its per-frame PoseTree warnings; published TF is unchanged).
+>   - Poses passed to USD `Gf` types are cast to Python floats (Isaac Sim 6.2's pxr rejects non-float64 numpy scalars).
+>   - CI runs on Ubuntu 24.04 / ROS 2 Jazzy (`public.ecr.aws/artefacts/ros2:jazzy-harmonic-nvidia`).
+>   - OmniLRS no longer uses or enables the Isaac Sim APIs deprecated in 6.0 (`isaacsim.core.api/prims/utils`, `isaacsim.sensors.camera`); details in [docs/TODO_6.2.md](docs/TODO_6.2.md).
+>   - Cameras use Isaac Sim's `CameraSensor`: robot cameras render RGBA and depth from one render product per resolution, frames requested before a camera has rendered are skipped (Yamcs, Zenoh), and cameras below 300 px (e.g. the 320×240 monitoring camera) render without post anti-aliasing. The pragyaan and Vikram lander camera prims now author square-pixel apertures (images unchanged).
+>   - `World` and `PhysicsSceneManager` are replaced by `Simulation` (`src/simulation.py`, also applies `cfg/physics`), which `RobotManager.preload_robot()` now takes.
+>   - Joint control and telemetry use Isaac Sim's experimental `Articulation`; the `ArticulationControl` / `ArticulationTelemetry` interface is unchanged (`joint_name_to_index` removed, use `joint_names`).
+
 ### Added
 
 - Optional yaml config key `pose.height_above_terrain_override` for robots, static assets and monitoring cameras: when set, the (absolute) z of pose.position is overriden by the (absolute) terrain height at (x, y) plus this value. Works the same in Lunaryard, Lunalab and LargeScale.
 - `largescale_workshop` environment: the LargeScale counterpart of `lunaryard_40m_workshop` (lander, rock and monitoring camera), differing only in terrain.
+- Zenoh simulation control keys `OmniLRS/sim/play`, `OmniLRS/sim/pause` and `OmniLRS/sim/stop` (any payload). A pause keeps the simulation state; a stop then play restarts from the initial state (environment and robot reset). `OmniLRS/sim/is_running` now also reports `is_playing`.
 
 ### Changed
 
-- **Breaking: migrated to Isaac Sim 6.2** (from 5.0). See [docs/migration_plan_6.2.md](docs/migration_plan_6.2.md).
-  - Python 3.12, numpy 2.3.1, numba 0.63, SciPy 1.17, Warp 1.17 (versions pinned by the Isaac Sim 6.2 wheels).
-  - ROS 2 uses the **Jazzy** libraries bundled with Isaac Sim (`ROS_DISTRO=jazzy`, `bridge_name: jazzy`); external nodes should run Jazzy.
-  - `cfg/rendering/ray_tracing.yaml` uses the `RealTimePathTracing` renderer (replaces the legacy `RayTracedLighting`); the `/OmniLRS/Render/EnableRTXRealTime` topic switches to it as well.
-  - The IMU is read through `isaacsim.sensors.experimental.physics.IMUSensor`; the reported values keep the same format.
-  - `assets/Terrains/crater_spline_profiles.pkl` was re-pickled with SciPy 1.17 (identical curves; no longer loadable with SciPy < 1.17).
-  - ROS 2 robot assets (`ros2_husky_PhysX_vlp16*.usd`, `ros2_jackal_PhysX_vlp16*.usd`, `ex1/ex1_spheres.usd`): TF graph migrated to `IsaacComputeTransformTree` → `ROS2PublishTransformTree` (removes the deprecated `targetPrims` path and its per-frame PoseTree warnings; published TF is unchanged).
-  - Poses passed to USD `Gf` types are cast to Python floats (Isaac Sim 6.2's pxr rejects non-float64 numpy scalars).
-  - CI runs on Ubuntu 24.04 / ROS 2 Jazzy (`public.ecr.aws/artefacts/ros2:jazzy-harmonic-nvidia`).
 - LargeScale static assets no longer implicitly add the terrain height to their z; set `height_above_terrain_override` instead.
 - LargeScale robot spawn uses the configured pose in both ROS2 and Yamcs modes (ROS2 previously forced `(0, 0)`); the `largescale*` configs set `height_above_terrain_override: 0.5` to keep the previous spawn height.
 - The Lunaryard workshop configs and `robot=pragyaan` now place the rover, lander, rock and monitoring camera relative to the terrain height.
+- Pragyaan `/Rover/solar_panel_state` follows the measured solar panel angle: it changes to DEPLOYED or STOWED once the panel is within 10° of that position, instead of when the command is received. The power model uses the same state.
 
 ### Removed
 
@@ -37,6 +45,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - ROS2 mode exits cleanly on SIGINT/SIGTERM (ROS 2 Jazzy shuts down the ROS context on these signals).
 - Yamcs mode with the LargeScale environment: terrain, rocks and colliders now update (EC.update()) as the  rover drives, terrain worker threads are joined on shutdown, and the simulation stops if a terrain worker dies.
+- Joint commands from Yamcs and Zenoh are no longer dropped, entirely or for some joints, when they arrive while PhysX is stepping: `ArticulationControl` queues them and `Robot.update_articulation_api()` writes them from the simulation loop.
+- Stopping and replaying the timeline (e.g. from the GUI) runs the ROS2, Yamcs and Zenoh restart handling again (environment and robot reset). It was skipped because Isaac Sim's physics warm-up advanced the step counter it relied on.
 
 See also the [Roadmap and Milestones tracking](https://github.com/orgs/OmniLRS/projects/1)
 
