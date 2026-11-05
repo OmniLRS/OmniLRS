@@ -487,7 +487,8 @@ terrain_manager:
     is_lab: False
 
   root_path: /Lunaryard
-  texture_path: /Looks/LunarRegolith8k
+  # Match the material scope created by LunaryardController.build_scene().
+  texture_path: /Lunaryard/Looks/LunarRegolith8k
   dems_path: Terrains/Lunaryard
   mesh_position: [0, 0, 0]
   mesh_orientation: [0, 0, 0, 1] # Quaternion x,y,z,w
@@ -497,16 +498,24 @@ terrain_manager:
   resolution: ${..lunaryard_settings.resolution}
 
 robots_settings:
-  uses_nucleus: False
-  is_ROS2: True
-  max_robots: 5
   robots_root: "/Robots"
-  parameters:  
-    -
-      robot_name: viper
-      usd_path: assets/USD_Assets/robots/viper_lidar_only.usd
-      pose:
-        position: [5.0, 5.0, 0.5]
-        orientation: [1, 0, 0, 0]
-      domain_id: 0
-      target_links: ["front_left_wheel_link", "front_right_wheel_link", "rear_left_wheel_link", "rear_right_wheel_link"]
+  # RobotManagerConf expects one parameter mapping, not the historical list.
+  parameters:
+    robot_name: husky
+    usd_path: assets/USD_Assets/robots/nograph_husky.usd
+    pose:
+      position: [5.0, 5.0, 0.5]
+      orientation: [1, 0, 0, 0]
+    domain_id: 0
+    target_links: ["front_left_wheel_link", "front_right_wheel_link", "rear_left_wheel_link", "rear_right_wheel_link"]
+    base_link: "base_link"
+    wheel_joints:
+      left: ["front_left_wheel", "rear_left_wheel"]
+      right: ["front_right_wheel", "rear_right_wheel"]
+    # Match the current cfg/robot/husky.yaml camera settings for this asset.
+    camera:
+      name: "cam_color"
+      prim_path: "/Robots/husky/d455/RSD455/Camera_OmniVision_OV9782_Color"
+      resolutions:
+        low: [320, 240]
+        high: [1280, 720]
