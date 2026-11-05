@@ -15,16 +15,16 @@ lunaryard_settings:
   lab_width: 100.0
   resolution: 0.04
   coordinates:
-    latitude: 46.8
-    longitude: -26.3
+    latitude: -84.8
+    longitude: 29.2
 
 stellar_engine_settings:
   start_date:
-    year: 2024
-    month: 5
-    day: 21
-    hour: 5
-    minute: 1
+    year: 2025
+    month: 3
+    day: 7
+    hour: 0
+    minute: 0
   time_scale: 1
   update_interval: 600
 
@@ -452,9 +452,9 @@ terrain_manager:
       x_size: ${....lunaryard_settings.lab_length}
       y_size: ${....lunaryard_settings.lab_width}
       resolution: ${....lunaryard_settings.resolution}
-      max_elevation: 1.0
-      min_elevation: -1.0
-      z_scale: 1.0
+      max_elevation: 0.25
+      min_elevation: -0.25
+      z_scale: 5.0
       seed: ${....seed}
     
     deformation_engine:
