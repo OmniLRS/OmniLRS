@@ -18,8 +18,8 @@ class HuskyTransmitter:
     Collects telemetry data from the simulation and forwards it to Yamcs via
     the transmit_func callback provided by YamcsTMTC.
 
-    Covers: pose, IMU, OBC metrics & state, radio RSSI, thermal, power, wheel
-    encoder angles, and the streaming state of each rgba camera.
+    Covers: pose, GO/NOGO, IMU, OBC metrics & state, radio RSSI, thermal, power,
+    wheel encoder angles, and the streaming state of each rgba camera.
     """
 
     def __init__(
@@ -60,6 +60,10 @@ class HuskyTransmitter:
             },
         }
         self._transmit(self._parameters_conf["pose_of_base_link"], pose)
+
+    def transmit_go_nogo(self):
+        go_nogo_state = self._robot.subsystems.get_go_nogo_state().value
+        self._transmit(self._parameters_conf["go_nogo"], go_nogo_state)
 
     def transmit_imu_readings(self):
         imu_accelerometer, imu_gyroscope, orientation = self._robot.get_imu_readings()

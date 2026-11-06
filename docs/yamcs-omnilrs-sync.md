@@ -137,7 +137,7 @@ python scripts/check_yamcs_contract.py --robot pragyaan --controller pragyaan-co
 
 The unit tests (`test/unit/test_robot_camera_confs.py`, `test/unit/test_yamcs_naming.py`) also check, without a server, that every `cfg/robot` camera list parses, that the husky and pragyaan cameras have the resolution of each of their image kinds (`KIND_RESOLUTION` in `src/mission_specific/<robot>/tmtc/enums.py`, also checked by the camera handler at startup), that their `STREAMING_FIELDS` are valid MDB names, and that every `cfg/controller` yaml has `mdb_space_systems`, a boolean `images.clear_buckets_on_startup` if set, and unique image bucket names.
 
-CI generates the MDB from the OmniLRS commit under test before starting Yamcs: `artefacts.Dockerfile` runs `mdb/generate_mdb_{rover,lander,admin}.py` of yamcs-mission-control-pragyaan with `OMNILRS_ROOT=/workspace/omnilrs`. The sim then runs the same check at startup, and `test/ci_artefacts/test_yamcs_sanity*.py` checks that the startup "no data" image metadata arrived for every (camera, kind) of the robot yaml.
+CI generates the MDB from the OmniLRS commit under test before starting Yamcs: `artefacts.Dockerfile` runs `mdb/generate_mdb_{rover,lander,admin}.py` of yamcs-mission-control-pragyaan and `mdb/generate_mdb_rover.py` of yamcs-mission-control-husky with `OMNILRS_ROOT=/workspace/omnilrs`. The sim then runs the same check at startup, and `test/ci_artefacts/test_yamcs_sanity*.py` (Pragyaan) and `test/ci_artefacts/test_yamcs_husky_sanity.py` (Husky) check that the startup "no data" image metadata arrived for every (camera, kind) of the robot yaml. The Husky test also captures an image with every camera command and checks that its image metadata arrives.
 
 ## 6. Deleted
 

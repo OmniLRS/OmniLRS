@@ -60,6 +60,7 @@ robots_settings:
       # Note: Camera commands take a camera_name argument; its allowed values are checked against the robot cameras' types
       # e.g. (capture_depth -> depth cameras, the other camera commands -> rgba cameras).
       # List all commands here:
+      go_nogo: "/Rover/system/go_nogo_command" # the Husky starts in GO; NOGO stops it and blocks the drive commands
       drive_straight: "/Rover/motor/drive_straight"
       drive_turn: "/Rover/motor/drive_turn"
       camera_capture_high: "/Rover/camera/camera_capture_high"

@@ -8,7 +8,7 @@ from functools import partial
 from src.mission_specific.husky.tmtc.camera_handler import HuskyCameraHandler
 from src.mission_specific.husky.tmtc.enums import HuskyYamcsArguments
 from src.mission_specific.husky.tmtc.transmitter import HuskyTransmitter
-from src.subsystems.robot_enums import ObcState
+from src.subsystems.robot_enums import GoNogoState, ObcState
 from src.tmtc.intervals_handler import camera_streaming_interval
 
 
@@ -20,10 +20,10 @@ class HuskyCommander:
     are mapped to their commands in HuskyController.command_handlers().
 
     Husky-specific capabilities vs. Pragyaan:
-      * Differential-drive only (drive_straight / drive_turn).
+      * Differential-drive only (drive_straight / drive_turn), gated by GO/NOGO only. The Husky starts in GO.
       * Onboard cameras (robot yaml `camera` list): on-command and streaming RGB images per rgba camera, depth
         images per depth camera. Camera commands take a camera_name argument.
-      * No solar panel, no GO/NOGO gate, no camera power command, no streaming compression model.
+      * No solar panel, no power commands, no streaming compression model.
     """
 
     def __init__(
@@ -43,6 +43,21 @@ class HuskyCommander:
         self._drive_handler = drive_handler
         self._obc_handler = obc_handler
         self._intervals_handler = intervals_handler
+
+    # ------------------------------------------------------------------
+    # GO/NOGO
+    # ------------------------------------------------------------------
+
+    def handle_go_nogo(self, decision: str):
+        if decision not in [GoNogoState.GO.name, GoNogoState.NOGO.name]:
+            print("New decision for GO / NOGO is unknown:", decision)
+            return
+
+        decision = GoNogoState[decision]
+        self._robot.subsystems.set_go_nogo_state(decision)
+
+        if decision == GoNogoState.NOGO:
+            self._drive_handler.stop_robot()
 
     # ------------------------------------------------------------------
     # Drive commands

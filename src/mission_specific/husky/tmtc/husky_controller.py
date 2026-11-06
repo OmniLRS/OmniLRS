@@ -64,6 +64,7 @@ class HuskyController(YamcsTMTC):
     def command_handlers(self):
         # controller yaml `commands` key -> (handler, MDB argument names passed to it, in call order)
         return {
+            "go_nogo": (self._commander.handle_go_nogo, ["decision"]),
             "drive_straight": (self._commander.drive_straight, ["linear_velocity", "distance"]),
             "drive_turn": (self._commander.drive_turn, ["angular_velocity", "angle"]),
             "camera_capture_high": (self._commander.handle_high_res_capture, ["camera_name"]),
@@ -83,6 +84,13 @@ class HuskyController(YamcsTMTC):
             is_repeating=True,
             execute_immediately=True,
             function=self._transmitter.transmit_pose_of_base_link,
+        )
+        self._intervals_handler.add_new_interval(
+            name="GO_NOGO",
+            seconds=interval,
+            is_repeating=True,
+            execute_immediately=True,
+            function=self._transmitter.transmit_go_nogo,
         )
         self._intervals_handler.add_new_interval(
             name="camera streaming state",
