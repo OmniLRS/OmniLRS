@@ -129,6 +129,8 @@ class HuskyTransmitter:
 
     def transmit_wheels_joint_angles(self):
         angles = self._robot.get_wheels_joint_angles()
+        if not angles:  # articulation telemetry not ready yet (startup, restart): nothing measured to send
+            return
         self._transform_joint_angles(angles)
         self._transmit(self._parameters_conf["motor_encoder"], angles)
 

@@ -59,6 +59,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - ROS2 mode exits cleanly on SIGINT/SIGTERM (ROS 2 Jazzy shuts down the ROS context on these signals).
 - Yamcs mode with the LargeScale environment: terrain, rocks and colliders now update (EC.update()) as the  rover drives, terrain worker threads are joined on shutdown, and the simulation stops if a terrain worker dies.
 - Joint commands from Yamcs and Zenoh are no longer dropped, entirely or for some joints, when they arrive while PhysX is stepping: `ArticulationControl` queues them and `Robot.update_articulation_api()` writes them from the simulation loop.
+- Yamcs mode no longer sends an empty `/Rover/motor_encoder` before the wheel joints are measured (startup, timeline restart).
 - Stopping and replaying the timeline (e.g. from the GUI) runs the ROS2, Yamcs and Zenoh restart handling again (environment and robot reset). It was skipped because Isaac Sim's physics warm-up advanced the step counter it relied on.
 
 See also the [Roadmap and Milestones tracking](https://github.com/orgs/OmniLRS/projects/1)
