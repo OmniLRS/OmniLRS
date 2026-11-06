@@ -42,7 +42,10 @@ class TerrainControlMixin:
         """
 
         self.dem = None  # Digital Elevation Model
-        self.mask = None  # Mask for the terrain, used for the rocks placement and deformation
+        # Keep the three placement regions separate from the terrain heights.
+        self.background_mask = None  # Valid terrain, including crater interiors.
+        self.crater_mask = None  # Previous self.mask meaning: crater interiors excluded.
+        self.crater_ejecta_mask = None  # Regions for the additional ejecta rock population.
         self.T = TerrainManager(terrain_manager)
         self.RM = RockManager(**rocks_settings)
         self.TS = TerramechanicsSolver(
@@ -56,15 +59,27 @@ class TerrainControlMixin:
     # ==============================================================================
 
     def build_RM(self):
-        self.RM.build(self.dem, self.mask)
+        # Build creates the rock instancers before terrain is loaded; masks are
+        # still None here. Placement data is supplied later by switch_terrain().
+        self.RM.build(self.dem, self.get_rock_placement_mask(), self.crater_ejecta_mask)
+
+    def get_rock_placement_mask(self) -> np.ndarray | None:
+        """Select the placement region for ordinary (non-ejecta) rocks.
+
+        Preserve Lunalab's crater-exclusion policy by default. LunarYard overrides
+        this selection to use background_mask; the ejecta mask is passed separately.
+        """
+        return self.crater_mask
 
     def load_DEM(self) -> None:
         """
-        Loads the DEM and the mask from the TerrainManager.
+        Loads terrain heights and all three placement masks from the TerrainManager.
         """
 
         self.dem = self.T.getDEM()
-        self.mask = self.T.getMask()
+        self.background_mask = self.T.getBackgroundMask()
+        self.crater_mask = self.T.getCraterMask()
+        self.crater_ejecta_mask = self.T.getCraterEjectaMask()
 
     def get_terrain_height(self, position) -> float:
         """
@@ -89,7 +104,9 @@ class TerrainControlMixin:
         else:
             self.T.loadTerrainId(flag)
         self.load_DEM()
-        self.RM.updateImageData(self.dem, self.mask)
+        # Each environment chooses its ordinary-rock region without changing
+        # how the shared terrain-loading code forwards the separate ejecta mask.
+        self.RM.updateImageData(self.dem, self.get_rock_placement_mask(), self.crater_ejecta_mask)
         self.RM.randomizeInstancers(10)
 
     def enable_rocks(self, flag: bool = True) -> None:
@@ -139,7 +156,9 @@ class TerrainControlMixin:
             contact_forces,
         )
         self.load_DEM()
-        self.RM.updateImageData(self.dem, self.mask)
+        # Refresh the same three arguments as terrain switching. The original
+        # PR's deformation call omitted the required ejecta-mask argument.
+        self.RM.updateImageData(self.dem, self.get_rock_placement_mask(), self.crater_ejecta_mask)
 
     def apply_terramechanics(self) -> None:
         linear_velocities, angular_velocities = self.robotManager.robot_RG.get_velocities()

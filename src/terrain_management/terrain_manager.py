@@ -41,7 +41,11 @@ class TerrainManager:
 
         self._dems = {}
         self._DEM = None
-        self._mask = None
+        # Heights and placement regions have separate roles. The crater mask
+        # retains the old mask's validity/crater-exclusion meaning.
+        self._background_mask = None
+        self._crater_mask = None
+        self._crater_ejecta_mask = None
         self._material = None
 
         self._sim_width = int(cfg.sim_width / cfg.resolution)
@@ -121,9 +125,9 @@ class TerrainManager:
             mask = np.load(mask_path)
 
         self._DEM = np.zeros((self._sim_length, self._sim_width), dtype=np.float32)
-        self._mask = np.zeros((self._sim_length, self._sim_width), dtype=np.float32)
+        self._crater_mask = np.zeros((self._sim_length, self._sim_width), dtype=np.float32)
         self._DEM[: DEM.shape[0], : DEM.shape[1]] = DEM[: self._sim_length, : self._sim_width]
-        self._mask[: mask.shape[0], : mask.shape[1]] = mask[: self._sim_length, : self._sim_width]
+        self._crater_mask[: mask.shape[0], : mask.shape[1]] = mask[: self._sim_length, : self._sim_width]
 
     @staticmethod
     def gridIndex(x: int, y: int, stride: int) -> int:
@@ -266,7 +270,14 @@ class TerrainManager:
         Randomizes the terrain (update mesh, collider, semantic).
         """
 
-        self._DEM, self._mask, self._craters_data = self._G.randomize()
+        # Preserve the generator's order: heights, three placement masks, metadata.
+        (
+            self._DEM,
+            self._background_mask,
+            self._crater_mask,
+            self._crater_ejecta_mask,
+            self._craters_data,
+        ) = self._G.randomize()
         self.update(update_collider=True)
 
     def deformTerrain(
@@ -281,7 +292,12 @@ class TerrainManager:
             contact_forces (np.ndarray): the contact forces of the bodies.
         """
 
-        self._DEM, self._mask = self._G.deform(world_positions, world_orientations, contact_forces)
+        (
+            self._DEM,
+            self._background_mask,
+            self._crater_mask,
+            self._crater_ejecta_mask,
+        ) = self._G.deform(world_positions, world_orientations, contact_forces)
         self.update(update_collider=False)
 
     def loadTerrainByName(self, name: str) -> None:
@@ -294,9 +310,15 @@ class TerrainManager:
 
         self.loadDEMAndMask(name)
         if self._augmentation:
-            self._DEM, self._mask, self._craters_data = self._G.augment(self._DEM, self._mask)
+            (
+                self._DEM,
+                self._background_mask,
+                self._crater_mask,
+                self._crater_ejecta_mask,
+                self._craters_data,
+            ) = self._G.augment(self._DEM, self._background_mask, self._crater_mask, self._crater_ejecta_mask)
         else:
-            self._G.register_terrain(self._DEM, self._mask)
+            self._G.register_terrain(self._DEM, self._crater_mask)
         self.update(update_collider=True)
 
     def loadTerrainId(self, idx: int) -> None:
@@ -354,15 +376,17 @@ class TerrainManager:
         )
         return float(height) + self._mesh_pos[2]
 
-    def getMask(self):
-        """
-        Returns the mask of the terrain.
+    def getCraterMask(self):
+        """Return the validity/crater-exclusion mask used by Lunalab's ordinary rocks."""
+        return self._crater_mask
 
-        Returns:
-            np.ndarray: the mask of the terrain.
-        """
+    def getBackgroundMask(self):
+        """Return the generated mask allowing ordinary rocks inside craters as well."""
+        return self._background_mask
 
-        return self._mask
+    def getCraterEjectaMask(self):
+        """Return the generated regions for additional rocks around large craters."""
+        return self._crater_ejecta_mask
 
 
 if __name__ == "__main__":
