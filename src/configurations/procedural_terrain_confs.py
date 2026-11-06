@@ -63,8 +63,10 @@ class CraterDistributionConf:
         assert self.x_size > 0, "x_size must be greater than 0"
         assert self.y_size > 0, "y_size must be greater than 0"
         assert self.num_repeat >= 0, "num_repeat must be greater or equal to 0"
-        assert self.dist_exp < 0, "density distribution exponential term must be less than 0"
-        assert self.dist_coef > 0, "density distribution coefficient term must be greater than 0"
+        # The power-law model is not used when both radius and densities are provided.
+        if not self.radius or not self.densities:
+            assert self.dist_exp < 0, "density distribution exponential term must be less than 0"
+            assert self.dist_coef > 0, "density distribution coefficient term must be greater than 0"
 
 
 @dataclasses.dataclass
