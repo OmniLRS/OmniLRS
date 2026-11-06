@@ -107,10 +107,11 @@ class GeoClipmapManager:
         with wp.ScopedTimer("complete update loop", active=self.profiling):
             self._geo_clipmap.update_elevation(position)
             with wp.ScopedTimer("mesh update", active=self.profiling):
+                # The terrain material samples world XY; local UVs only define the normal-map tangent frame.
                 self.render_mesh(
                     self._geo_clipmap.points,
                     self._geo_clipmap.indices,
-                    self._geo_clipmap.uvs,
+                    self._geo_clipmap.points[:, :2],
                     update_topology=self.update_topology,
                 )
         self.move_mesh(mesh_position)
@@ -118,7 +119,7 @@ class GeoClipmapManager:
 
     def move_mesh(self, position: np.ndarray) -> None:
         """
-        Moves the mesh to the given position.
+        Moves the mesh to the given position, keeping its configured orientation and scale.
 
         Args:
             position (np.ndarray): position to move the mesh to (in meters).
@@ -127,7 +128,12 @@ class GeoClipmapManager:
         self._mesh_pos = position
         mesh = UsdGeom.Mesh.Get(self._stage, self._mesh_path)
         if mesh:
-            set_xform_ops(mesh, Gf.Vec3d(self._mesh_pos[0], self._mesh_pos[1], self._mesh_pos[2]))
+            set_xform_ops(
+                mesh,
+                Gf.Vec3d(self._mesh_pos[0], self._mesh_pos[1], self._mesh_pos[2]),
+                Gf.Quatd(self._mesh_rot[-1], (self._mesh_rot[0], self._mesh_rot[1], self._mesh_rot[2])),
+                Gf.Vec3d(self._mesh_scale[0], self._mesh_scale[1], self._mesh_scale[2]),
+            )
 
     def create_Xforms(self) -> None:
         """
@@ -155,8 +161,7 @@ class GeoClipmapManager:
         Args:
             points (np.ndarray): array of points to set as the mesh vertices.
             indices (np.ndarray): array of indices to set as the mesh indices.
-            uvs (np.ndarray): array of uvs to set as the mesh uvs.
-            colors (np.ndarray): array of colors to set as the mesh colors.
+            uvs (np.ndarray): mesh-local XY coordinates in meters, authored with topology.
             update_topology (bool): whether to update the mesh topology.
         """
 
@@ -176,15 +181,8 @@ class GeoClipmapManager:
             mesh.GetFaceVertexIndicesAttr().Set(idxs.ravel())
             mesh.GetFaceVertexCountsAttr().Set([3] * len(idxs))
             pv = UsdGeom.PrimvarsAPI(mesh.GetPrim()).CreatePrimvar("st", Sdf.ValueTypeNames.Float2Array)
-            pv.Set(points[:, :2])
+            pv.Set(uvs)
             pv.SetInterpolation("vertex")
-
-        set_xform_ops(
-            mesh,
-            Gf.Vec3d(self._mesh_pos[0], self._mesh_pos[1], self._mesh_pos[2]),
-            Gf.Quatd(self._mesh_rot[-1], (self._mesh_rot[0], self._mesh_rot[1], self._mesh_rot[2])),
-            Gf.Vec3d(self._mesh_scale[0], self._mesh_scale[1], self._mesh_scale[2]),
-        )
 
     def get_height_and_random_orientation(
         self,

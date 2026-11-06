@@ -29,3 +29,4 @@ results.txt
 test/venv/
 test/outputs/
 test/sim_startup.log
+benchmarks/outputs/

@@ -93,6 +93,10 @@ def startSim(cfg: dict):
     launch_config = renderer_cfg.__dict__.copy()
     tbn_frame_mode = launch_config.pop("tbn_frame_mode")
     simulation_app = SimulationApp_wait(launch_config)
+    from isaacsim.core.utils.extensions import enable_extension
+
+    # Registers Infinite PBR's MDL modules before any environment loads materials.
+    enable_extension("omni.replicator.core")
     set_tbn_frame_mode(tbn_frame_mode)
     set_lens_flares(cfg)
     set_motion_blur(cfg)
