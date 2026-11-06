@@ -240,7 +240,10 @@ class Yamcs_SimulationManager:
                     self.EC.update()
 
             if not self.EC.monitor_thread_is_alive():
-                logger.warning("Environment worker thread died. Stopping the simulation.")
+                if self.EC.monitor_caught_ctrl_c():
+                    logger.info("Ctrl-C: environment workers shut down. Stopping the simulation.")
+                else:
+                    logger.warning("Environment worker thread died. Stopping the simulation.")
                 break
 
             self.rate.sleep()
