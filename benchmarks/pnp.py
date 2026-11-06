@@ -4,9 +4,9 @@ A nadir reference image and depth map provide the 3D feature map. Query images
 are matched with SIFT, localized with RANSAC PnP, and scored against the camera poses.
 
 Run from the repository root (headless; no middleware or rover required):
-    pixi run --frozen -e default python benchmarks/pnp/benchmark.py --run baseline
+    pixi run --frozen -e default python benchmarks/pnp.py --run baseline
 Re-analyse saved renders without Isaac Sim:
-    pixi run --frozen -e default python benchmarks/pnp/benchmark.py --run baseline --analyze-only
+    pixi run --frozen -e default python benchmarks/pnp.py --run baseline --analyze-only
 """
 
 import argparse
@@ -17,8 +17,8 @@ from pathlib import Path
 
 import numpy as np
 
-REPO = Path(__file__).resolve().parents[2]
-OUTPUTS = Path(__file__).resolve().parent / "outputs"
+REPO = Path(__file__).resolve().parents[1]
+OUTPUTS = Path(__file__).resolve().parent / "outputs" / "pnp"
 
 SEED = 20261023
 CENTER = (20.0, 20.0)  # Terrain coordinates in metres.

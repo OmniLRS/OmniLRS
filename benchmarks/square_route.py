@@ -1,7 +1,7 @@
 """Check start-image recognition along a square route using Pragyaan's camera.
 
 Run from the repository root:
-    pixi run --frozen -e default python benchmarks/loop_closure/benchmark.py --run baseline
+    pixi run --frozen -e default python benchmarks/square_route.py --run baseline
 """
 
 import argparse
@@ -12,8 +12,8 @@ from pathlib import Path
 
 import numpy as np
 
-REPO = Path(__file__).resolve().parents[2]
-OUTPUTS = Path(__file__).resolve().parent / "outputs"
+REPO = Path(__file__).resolve().parents[1]
+OUTPUTS = Path(__file__).resolve().parent / "outputs" / "square_route"
 START = (18.0, 18.0)
 SIDE = 5.0
 STEP = 0.5

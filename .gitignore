@@ -29,5 +29,4 @@ results.txt
 test/venv/
 test/outputs/
 test/sim_startup.log
-benchmarks/pnp/outputs/
-benchmarks/loop_closure/outputs/
+benchmarks/outputs/
