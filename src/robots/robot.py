@@ -414,12 +414,12 @@ class Robot:
 
     def get_rgba_camera_view(self, camera_name: str, resolution: str) -> Optional[np.ndarray]:
         """Returns the RGBA image as an (H, W, 4) uint8 array, or None while the camera warms up."""
-        data, _ = self._camera_sensors[(camera_name, resolution)].get_data("rgba")
+        data, _ = self._camera_sensors[(camera_name, resolution)].get_data(self.CAMERA_ANNOTATORS["rgba"])
         return None if data is None else data.numpy()
 
     def get_depth_camera_view(self, camera_name: str, resolution: str) -> Optional[np.ndarray]:
         """Returns the depth image in meters as an (H, W) float32 array, or None while the camera warms up."""
-        data, _ = self._camera_sensors[(camera_name, resolution)].get_data("distance_to_image_plane")
+        data, _ = self._camera_sensors[(camera_name, resolution)].get_data(self.CAMERA_ANNOTATORS["depth"])
         return None if data is None else data.numpy()[..., 0]
 
     def get_imu_readings(self):
