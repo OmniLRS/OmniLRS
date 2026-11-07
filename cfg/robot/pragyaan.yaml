@@ -27,10 +27,31 @@ robots_settings:
       width: 1.6 # m
       length: 1.5
     turn_speed_coef: 19
-    camera:
-      prim_path: "/Robots/pragyaan/Body/body_main/depth_cam"
-      resolutions:
-        low: [640, 480]
-        high: [1440, 1080]
     imu_sensor_path: "/Robots/pragyaan/base_link/Imu_Sensor"
     solar_panel_joint: "solarJoint"  # finds it within the main robot articulation
+    # Define camera names and types here:
+    #   type: render products created per resolution. rgba -> streaming + oncommand commands, depth -> capture depth commands
+    #   Parsed and validated with the robot config in every mode (src/configurations/robot_camera_confs.py)
+    # Camera bucket and telemetry names are then automatically derived from this list:
+    #   - OmniLRS computes the names at startup with the src/tmtc/yamcs_naming.py module and checks them against the Yamcs server MDB and buckets
+    #   - in the yamcs-mission-control repository, generate_mdb_rover.py also reads this file and uses that module to build the Yamcs MDB
+    #     and the image buckets (yamcs.yaml)
+    camera:
+      - name: "cam_depth"
+        prim_path: "/Robots/pragyaan/Body/body_main/depth_cam"
+        type: [depth]
+        resolutions:
+          low: [640, 480]
+          high: [1440, 1080]
+      - name: "NavCam_left"
+        prim_path: "/Robots/pragyaan/Body/NavCam_left/NavCam_left"
+        type: [rgba]
+        resolutions:
+          low: [640, 480]
+          high: [1440, 1080]
+      - name: "NavCam_right"
+        prim_path: "/Robots/pragyaan/Body/NavCam_right/NavCam_right"
+        type: [rgba]
+        resolutions:
+          low: [640, 480]
+          high: [1440, 1080]

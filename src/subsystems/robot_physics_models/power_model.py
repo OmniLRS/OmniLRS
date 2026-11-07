@@ -397,7 +397,7 @@ def _plot_battery_profile(
     voltages: Sequence[float],
     solar_currents: Sequence[float],
     current_series: Mapping[str, Sequence[float]],
-    filename: str = "test/outputs/power_model_battery.png",
+    filename: str = "test/physics_models/outputs/power_model_battery.png",
 ) -> str:
     from matplotlib import pyplot as plt  # type: ignore[import]
 
@@ -436,7 +436,7 @@ def _plot_battery_profile(
 def main() -> None:
     import os
 
-    os.makedirs("test/outputs", exist_ok=True)
+    os.makedirs("test/physics_models/outputs", exist_ok=True)
     times, percentages, voltages, solar_currents, current_series = run_power_profile_test()
     output = _plot_battery_profile(times, percentages, voltages, solar_currents, current_series)
     print(f"Power model plot saved to {output}")

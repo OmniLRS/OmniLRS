@@ -28,6 +28,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Optional yaml config key `pose.height_above_terrain_override` for robots, static assets and monitoring cameras: when set, the (absolute) z of pose.position is overriden by the (absolute) terrain height at (x, y) plus this value. Works the same in Lunaryard, Lunalab and LargeScale.
 - `largescale_workshop` environment: the LargeScale counterpart of `lunaryard_40m_workshop` (lander, rock and monitoring camera), differing only in terrain.
+- Yamcs mode reads the TM/TC definitions (MDB) from the running Yamcs server and checks the robot and controller config against them and the server's storage buckets at startup: it stops if something it sends or handles is missing and warns about extras. `pixi run -e yamcs check-yamcs-contract` (`scripts/check_yamcs_contract.py`) runs the same check without Isaac Sim. See [docs/yamcs-omnilrs-sync.md](docs/yamcs-omnilrs-sync.md).
+- Pragyaan has three cameras: `NavCam_left` and `NavCam_right` (rgba) and `cam_depth` (depth).
+- Husky has three cameras: `cam_color`, `cam_left` and `cam_right` (rgba), `cam_left` also depth. In Zenoh mode each is published per resolution (`OmniLRS/husky/camera/<camera>/<resolution>`; previously only `cam_color`).
+- Pixi tasks `yamcs-husky` (Husky in Yamcs mode on `lunaryard_20m`, Yamcs instance `husky`) and `check-yamcs-contract-husky`.
+- Artefacts CI scenario `test_yamcs_husky_sanity` (`pixi run test-yamcs-husky`): the Husky in Yamcs mode against yamcs-mission-control-husky (telemetry, camera captures and streaming, driving, GO/NOGO). The CI image also builds the Husky Yamcs server and generates its MDB from the OmniLRS commit under test.
+- Unit tests run in CI on every push and pull request (`pixi run -e test-unit test-unit`). Tests are organized in `test/unit` (no Isaac Sim), `test/ci_artefacts` (sanity tests: the Artefacts CI scenarios) and `test/physics_models`; `check_yamcs_contract.py` moved to `scripts/`.
 - Zenoh simulation control keys `OmniLRS/sim/play`, `OmniLRS/sim/pause` and `OmniLRS/sim/stop` (any payload). A pause keeps the simulation state; a stop then play restarts from the initial state (environment and robot reset). `OmniLRS/sim/is_running` now also reports `is_playing`.
 
 ### Changed
@@ -35,17 +41,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - LargeScale static assets no longer implicitly add the terrain height to their z; set `height_above_terrain_override` instead.
 - LargeScale robot spawn uses the configured pose in both ROS2 and Yamcs modes (ROS2 previously forced `(0, 0)`); the `largescale*` configs set `height_above_terrain_override: 0.5` to keep the previous spawn height.
 - The Lunaryard workshop configs and `robot=pragyaan` now place the rover, lander, rock and monitoring camera relative to the terrain height.
+- Robot yaml `camera` is a list of cameras, each with `name`, `prim_path`, `type` (`rgba` and/or `depth`) and `resolutions`, validated when the robot config is loaded in every mode (`src/configurations/robot_camera_confs.py`). In Yamcs mode, each camera has its own buckets (`images_<camera>_<kind>`), metadata and streaming telemetry (`/Rover/camera/<camera>/<kind>/...`), streaming job and compression model; the camera commands take a `camera_name` argument. Names come from `src/tmtc/yamcs_naming.py`, which the Yamcs MDB generators also use.
+- Yamcs controller yaml: `mdb` (file list) is replaced by `mdb_space_systems`, `images.buckets` is keyed by role (`lander`, `monitoring`) and `images.clear_buckets_on_startup` is added (default true; with `false`, earlier images are kept and each bucket's numbering continues after its last image).
+- Yamcs images are uploaded through the Yamcs storage API instead of written to `/tmp`. The image buckets are generated into the Yamcs `yamcs.yaml` together with the MDB, with limits sized to keep every image of a mission; OmniLRS never deletes images except when clearing the buckets at startup (`images.clear_buckets_on_startup`).
+- The ROS2 Artefacts CI scenarios load the Husky robot yaml (`robot=husky`, with the ROS 2 Husky USD) instead of the robot settings of the environment yaml.
+- Husky in Yamcs mode starts in GO and sends `/Rover/go_nogo`; it handles `go_nogo_command`: NOGO stops it and blocks the drive commands until GO (previously it could always drive and sent no GO/NOGO state).
+- Husky Zenoh camera images are published at 5 Hz (`zenoh.camera.publish_period_s: 0.2`, previously 30 Hz), for each of its 6 camera streams.
 - Pragyaan `/Rover/solar_panel_state` follows the measured solar panel angle: it changes to DEPLOYED or STOWED once the panel is within 10° of that position, instead of when the command is received. The power model uses the same state.
 
 ### Removed
 
 - User-facing Docker image `omnilrs.docker/`; install with pixi instead (Docker is only used for CI). `spaceros_demo.docker/` is kept as an unmaintained demo.
+- `cfg/mdb/` (local MDB copies of Pragyaan and Husky), `scripts/fix_yamcs_tmp.sh` and the pixi `fix-tmp` task.
 
 ### Fixed
 
 - ROS2 mode exits cleanly on SIGINT/SIGTERM (ROS 2 Jazzy shuts down the ROS context on these signals).
 - Yamcs mode with the LargeScale environment: terrain, rocks and colliders now update (EC.update()) as the  rover drives, terrain worker threads are joined on shutdown, and the simulation stops if a terrain worker dies.
 - Joint commands from Yamcs and Zenoh are no longer dropped, entirely or for some joints, when they arrive while PhysX is stepping: `ArticulationControl` queues them and `Robot.update_articulation_api()` writes them from the simulation loop.
+- Yamcs mode no longer sends an empty `/Rover/motor_encoder` before the wheel joints are measured (startup, timeline restart).
 - Stopping and replaying the timeline (e.g. from the GUI) runs the ROS2, Yamcs and Zenoh restart handling again (environment and robot reset). It was skipped because Isaac Sim's physics warm-up advanced the step counter it relied on.
 
 See also the [Roadmap and Milestones tracking](https://github.com/orgs/OmniLRS/projects/1)

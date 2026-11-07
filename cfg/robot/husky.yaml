@@ -22,18 +22,39 @@ robots_settings:
     wheel_joints:
       left: ["front_left_wheel", "rear_left_wheel"]
       right: ["front_right_wheel", "rear_right_wheel"]
-    camera:
-      name: "cam_color"
-      prim_path: "/Robots/husky/d455/RSD455/Camera_OmniVision_OV9782_Color"
-      resolutions:
-        low: [320, 240]
-        high: [1280, 720]
     imu_sensor_path: "/Robots/husky/d455/RSD455/Imu_Sensor"
+    # Define camera names and types here:
+    #   type: render products created per resolution. rgba -> streaming + oncommand commands, depth -> capture depth commands
+    #   Parsed and validated with the robot config in every mode (src/configurations/robot_camera_confs.py)
+    #   In Zenoh mode, every rgba camera is published per resolution: OmniLRS/husky/camera/<camera>/<resolution>
+    # Camera bucket and telemetry names are then automatically derived from this list:
+    #   - OmniLRS computes the names at startup with the src/tmtc/yamcs_naming.py module and checks them against the Yamcs server MDB and buckets
+    #   - in the yamcs-mission-control repository, generate_mdb_rover.py also reads this file and uses that module to build the Yamcs MDB
+    #     and the image buckets (yamcs.yaml)
+    camera:
+      - name: "cam_color"
+        prim_path: "/Robots/husky/d455/RSD455/Camera_OmniVision_OV9782_Color"
+        type: [rgba]
+        resolutions:
+          low: [320, 240]
+          high: [1280, 720]
+      - name: "cam_left" # the D455 depth is aligned to its left imager
+        prim_path: "/Robots/husky/d455/RSD455/Camera_OmniVision_OV9782_Left"
+        type: [rgba, depth]
+        resolutions:
+          low: [320, 240]
+          high: [1280, 720]
+      - name: "cam_right"
+        prim_path: "/Robots/husky/d455/RSD455/Camera_OmniVision_OV9782_Right"
+        type: [rgba]
+        resolutions:
+          low: [320, 240]
+          high: [1280, 720]
     turn_speed_coef: 6.5
     zenoh:
       camera:
-        publish_period_s: 0.0333 # 30 hz
-        wire_format: "msgspec" # specify custom wire_format, not using default_wire_format in Zenoh.yaml  
+        publish_period_s: 0.2 # 5 hz
+        wire_format: "msgspec" # specify custom wire_format, not using default_wire_format in Zenoh.yaml
         is_logging: False
       imu:
         publish_period_s: 0.02

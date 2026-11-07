@@ -58,11 +58,11 @@ class Yamcs_SimulationManager:
         self.simulation_app = simulation_app
         self.timeline = omni.timeline.get_timeline_interface()
 
-        # Block here until the Yamcs server is reachable. This avoids the
+        # Block here until the Yamcs server is reachable and its instance is RUNNING (MDB loaded). This avoids the
         # ConnectionFailure crash users hit when launching the sim before the
         # Yamcs server is up. We do this before creating the simulation/scene so no
         # simulation state can drift while we wait.
-        self._wait_for_yamcs(cfg["mode"]["instance_conf"]["address"])
+        self._wait_for_yamcs(cfg["mode"]["instance_conf"]["address"], cfg["mode"]["instance_conf"]["instance"])
 
         self.sim = Simulation(
             physics_dt=cfg["environment"]["physics_dt"],
@@ -90,11 +90,11 @@ class Yamcs_SimulationManager:
         self.EC.add_robot_manager(self.RM)
         self._step_and_reset()
 
-    def _wait_for_yamcs(self, address: str, poll_interval: float = 1.0) -> None:
+    def _wait_for_yamcs(self, address: str, instance: str, poll_interval: float = 1.0) -> None:
         """
-        Block until the Yamcs server at ``address`` responds, polling every
-        ``poll_interval`` seconds. Pumps ``simulation_app.update()`` between
-        polls so the Isaac Sim window stays responsive while waiting.
+        Block until the Yamcs server at ``address`` responds and its ``instance`` is RUNNING
+        (the MDB is loaded when the instance starts), polling every ``poll_interval`` seconds.
+        Pumps ``simulation_app.update()`` between polls so the Isaac Sim window stays responsive while waiting.
         """
         # Silence urllib3's per-connection DEBUG spam during polling. The
         # main YamcsTMTC module also sets this, but it hasn't been imported yet.
@@ -105,20 +105,22 @@ class Yamcs_SimulationManager:
         announced_waiting = False
         while True:
             try:
-                probe_client.get_server_info()
-                print(f"[Yamcs] Server at {address} is reachable. Continuing startup.", flush=True)
-                return
-            except Exception as e:
-                if not announced_waiting:
+                state = next((i.state for i in probe_client.list_instances() if i.name == instance), "not defined")
+                if state == "RUNNING":
                     print(
-                        f"[Yamcs] Server at {address} is not reachable yet ({e.__class__.__name__}). "
-                        f"Waiting... Press Ctrl-C to abort.",
+                        f"[Yamcs] Instance {instance!r} is RUNNING. Server at {address} is reachable. Continuing startup.",
                         flush=True,
                     )
-                    announced_waiting = True
-                elif attempt % 10 == 0:
-                    # Re-announce every ~10 polls so the user knows we're still waiting.
-                    print(f"[Yamcs] Still waiting for server at {address}...", flush=True)
+                    return
+                reason = f"instance {instance!r} is {state}"
+            except Exception as e:
+                reason = f"server is not reachable yet ({e.__class__.__name__})"
+            if not announced_waiting:
+                print(f"[Yamcs] {address}: {reason}. Waiting... Press Ctrl-C to abort.", flush=True)
+                announced_waiting = True
+            elif attempt % 10 == 0:
+                # Re-announce every ~10 polls so the user knows we're still waiting.
+                print(f"[Yamcs] Still waiting for {address}: {reason}...", flush=True)
             attempt += 1
             # Keep the Isaac Sim window responsive while we wait.
             try:
@@ -156,8 +158,7 @@ class Yamcs_SimulationManager:
         else:
             raise Exception("Settings for '" + str(controller_name) + "' robot controller are not specified.")
 
-        self.TMTC.setup_command_callbacks(self.RM.RM_conf.yamcs_tmtc["commands"])
-        self.TMTC.start_streaming_data()
+        self.TMTC.start(self.RM.RM_conf.yamcs_tmtc["commands"])
 
     def _get_environment_controller(self, environment_name: str):
         self.EC = None
@@ -239,7 +240,10 @@ class Yamcs_SimulationManager:
                     self.EC.update()
 
             if not self.EC.monitor_thread_is_alive():
-                logger.warning("Environment worker thread died. Stopping the simulation.")
+                if self.EC.monitor_caught_ctrl_c():
+                    logger.info("Ctrl-C: environment workers shut down. Stopping the simulation.")
+                else:
+                    logger.warning("Environment worker thread died. Stopping the simulation.")
                 break
 
             self.rate.sleep()

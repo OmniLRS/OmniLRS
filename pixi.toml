@@ -94,11 +94,16 @@ ros2 = "python run.py mode=ROS2"
 # yamcs-specific deps, tasks in feature "yamcs"
 [feature.yamcs.pypi-dependencies]
 yamcs-client = "*"
+pyyaml = "*"
 
 [feature.yamcs.tasks]
 yamcs = "python run.py mode=Yamcs environment=lunaryard_40m_workshop robot=pragyaan controller=pragyaan-controller"
 yamcs-largescale = "python run.py mode=Yamcs environment=largescale_workshop robot=pragyaan controller=pragyaan-controller"
-fix-tmp = "bash scripts/fix_yamcs_tmp.sh"
+# Husky against the yamcs-mission-control-husky server (Yamcs instance "husky")
+yamcs-husky = "python run.py mode=Yamcs environment=lunaryard_20m robot=husky controller=husky-controller mode.instance_conf.instance=husky"
+# Check robot + controller config against the running Yamcs server MDB (no Isaac Sim needed)
+check-yamcs-contract = "python scripts/check_yamcs_contract.py --robot pragyaan --controller pragyaan-controller --instance workshop"
+check-yamcs-contract-husky = "python scripts/check_yamcs_contract.py --robot husky --controller husky-controller --instance husky"
 
 # zenoh-specific deps, tasks in feature "zenoh"
 [feature.zenoh.pypi-dependencies]
@@ -125,15 +130,35 @@ python = "3.12.*"
 [feature.test-sim.pypi-dependencies]
 pytest = "*"
 yamcs-client = "*"
+# Sanity tests read the robot yaml to compute the expected camera image buckets
+pyyaml = "*"
 # Zenoh client for test_zenoh_sanity; same version as the zenoh feature
 eclipse-zenoh = "==1.10.1"
 
 [feature.test-sim.tasks]
-test-ros2 = "pytest -v -s test/test_ros2_sanity.py"
-test-ros2-largescale = "pytest -v -s test/test_ros2_sanity_largescale.py"
-test-yamcs = "pytest -v -s test/test_yamcs_sanity.py"
-test-yamcs-largescale = "pytest -v -s test/test_yamcs_sanity_largescale.py"
-test-zenoh = "pytest -v -s test/test_zenoh_sanity.py"
+# Sanity tests: start Isaac Sim (and Yamcs / Zenoh clients); the Artefacts CI scenarios (artefacts.yaml)
+test-ros2 = "pytest -v -s test/ci_artefacts/test_ros2_sanity.py"
+test-ros2-largescale = "pytest -v -s test/ci_artefacts/test_ros2_sanity_largescale.py"
+test-yamcs = "pytest -v -s test/ci_artefacts/test_yamcs_sanity.py"
+test-yamcs-largescale = "pytest -v -s test/ci_artefacts/test_yamcs_sanity_largescale.py"
+test-yamcs-husky = "pytest -v -s test/ci_artefacts/test_yamcs_husky_sanity.py"
+test-zenoh = "pytest -v -s test/ci_artefacts/test_zenoh_sanity.py"
+
+# Unit tests (test/unit): no Isaac Sim, ROS 2 or server, so a small environment that CI installs quickly
+[feature.test-unit.dependencies]
+python = "3.12.*"
+
+[feature.test-unit.pypi-dependencies]
+pytest = "*"
+pyyaml = "*"
+# Image uploads (test_images_handler) and the SDG writers of src/labeling/rep_utils.py (test_labeling_writers)
+pillow = "*"
+numpy = "*"
+pandas = "*"
+opencv-python-headless = "*"
+
+[feature.test-unit.tasks]
+test-unit = "pytest -v test/unit"
 
 [environments]
 default = { features = ["core", "isaac"] }
@@ -142,4 +167,5 @@ ros2 = { features = ["core", "isaac", "ros2"] }
 zenoh = { features = ["core", "isaac", "zenoh"]}
 zenoh-client = { features = ["core", "zenoh", "zenoh-client"]}
 test-sim = { features = ["test-sim"] }
+test-unit = { features = ["test-unit"] }
 ci = { features = ["core", "isaac", "ros2", "yamcs", "zenoh"] }
