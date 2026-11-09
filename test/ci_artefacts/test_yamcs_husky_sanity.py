@@ -70,6 +70,7 @@ ENCODER_COUNTS = 1024  # per turn
 # per sample (under half a turn, so the signed change between samples is unambiguous).
 TURNING_COUNTS = 50  # minimum change per sample of a turning wheel
 STILL_COUNTS = 10  # maximum change per sample of a stopped wheel
+STOP_SETTLE_S = 2.0  # time for the rover to slow down after a stop command, before the wheels are checked
 IGNORED_WRITE_MARKER = "not allowed while simulation is running"
 
 
@@ -485,6 +486,7 @@ def test_wheels_drive_straight_then_stop(rover):
         _assert_wheels_turning(rover.encoder_deltas(), ALL_FORWARD)
     finally:
         _stop(rover)
+    time.sleep(STOP_SETTLE_S)
     _assert_wheels_still(rover.encoder_deltas())
 
 
@@ -504,6 +506,7 @@ def test_nogo_stops_and_blocks_driving(rover):
         _assert_wheels_turning(rover.encoder_deltas(), ALL_FORWARD)
         rover.command(GO_NOGO, decision="NOGO")
         rover.wait_for(GO_NOGO_STATE, "NOGO")
+        time.sleep(STOP_SETTLE_S)  # NOGO stops the rover
         _assert_wheels_still(rover.encoder_deltas())
         rover.command(DRIVE_STRAIGHT, linear_velocity=0.2, distance=4.0)
         _assert_wheels_still(rover.encoder_deltas())
