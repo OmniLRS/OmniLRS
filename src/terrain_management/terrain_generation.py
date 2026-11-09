@@ -204,7 +204,7 @@ class CraterGenerator:
         # Index of the profile
         if index == -1:
             if size > (15 / self._resolution):
-                low_ratio_ind = self._rng.integers(0, 1, 1)  # To pick between 5 and 13 for large craters
+                low_ratio_ind = self._rng.integers(0, 2, 1)  # To pick between 5 and 13 for large craters
                 if low_ratio_ind == 0:
                     index = 5
                 else:
