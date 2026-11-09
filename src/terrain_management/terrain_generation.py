@@ -689,16 +689,22 @@ class GenerateProceduralMoonYard:
         self, DEM: np.ndarray, background_mask: np.ndarray, crater_mask: np.ndarray, crater_ejecta_mask: np.ndarray
     ) -> np.ndarray:
         """
-        Generates a random terrain DEM with craters.
+        Adds craters to a loaded DEM while preserving its rock-placement exclusions.
 
         Returns:
-            tuple: random terrain DEM with craters, mask of the craters, and the data regarding the craters generation.
+            tuple: updated DEM, background mask, crater mask, ejecta mask, and crater metadata.
         """
+        # On entry, crater_mask is the loaded DEM's rock-placement mask (0 = excluded).
+        # It does not restrict where procedural craters are generated.
+        loaded_mask = crater_mask
         coords, radius = self.D.run()
         DEM, background_mask, crater_mask, crater_ejecta_mask, craters_data = self.G.generateCraters(
             DEM, coords, radius
         )
-        crater_mask = crater_mask * crater_mask
+        # Keep the loaded DEM's excluded cells out of all rock-placement masks.
+        background_mask = loaded_mask * background_mask
+        crater_mask = loaded_mask * crater_mask
+        crater_ejecta_mask = loaded_mask * crater_ejecta_mask
         self._dem_init = DEM
         self._dem_delta = np.zeros_like(DEM)
         self._crater_mask = crater_mask
