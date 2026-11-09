@@ -258,11 +258,12 @@ class CraterGenerator:
         Returns:
             np.ndarray: unpadded DEM with craters, and matching mask."""
 
-        # Creates a padded DEM and mask
+        # Temporary borders let crater patches extend beyond the final terrain bounds.
         DEM_padded = np.zeros((self._pad_size * 2 + DEM.shape[0], self._pad_size * 2 + DEM.shape[1]))
-        crater_mask_padded = np.ones_like(DEM_padded)
-        background_mask_padded = np.ones_like(DEM_padded)
-        crater_ejecta_mask_padded = np.zeros_like(DEM_padded)
+        # Binary masks use uint8; OpenCV drawing does not support bool arrays.
+        crater_mask_padded = np.ones_like(DEM_padded, dtype=np.uint8)
+        background_mask_padded = np.ones_like(DEM_padded, dtype=np.uint8)
+        crater_ejecta_mask_padded = np.zeros_like(DEM_padded, dtype=np.uint8)
         DEM_padded[self._pad_size : -self._pad_size, self._pad_size : -self._pad_size] = DEM
 
         # Creates a cache to store craters data
@@ -369,12 +370,12 @@ class CraterGenerator:
         crater_ejecta_mask_padded[-self._pad_size - 1 :, :] = 0
         crater_ejecta_mask_padded[:, -self._pad_size - 1 :] = 0
 
-        # Return - DEM, background_mask, crater_mask, crater_ejecta_mask, crater_data
+        # Copy the cropped data so the returned arrays do not retain the padding.
         return (
-            DEM_padded[self._pad_size : -self._pad_size, self._pad_size : -self._pad_size],
-            background_mask_padded[self._pad_size : -self._pad_size, self._pad_size : -self._pad_size],
-            crater_mask_padded[self._pad_size : -self._pad_size, self._pad_size : -self._pad_size],
-            crater_ejecta_mask_padded[self._pad_size : -self._pad_size, self._pad_size : -self._pad_size],
+            DEM_padded[self._pad_size : -self._pad_size, self._pad_size : -self._pad_size].copy(),
+            background_mask_padded[self._pad_size : -self._pad_size, self._pad_size : -self._pad_size].copy(),
+            crater_mask_padded[self._pad_size : -self._pad_size, self._pad_size : -self._pad_size].copy(),
+            crater_ejecta_mask_padded[self._pad_size : -self._pad_size, self._pad_size : -self._pad_size].copy(),
             craters_data,
         )
 
@@ -682,7 +683,8 @@ class GenerateProceduralMoonYard:
         self._background_mask = background_mask
         self._crater_mask = crater_mask
         self._crater_ejecta_mask = crater_ejecta_mask
-        self._num_pass = np.zeros_like(crater_mask)
+        # Per-cell deformation counts need integers wider than the binary masks' uint8.
+        self._num_pass = np.zeros_like(crater_mask, dtype=np.uint32)
         return DEM, background_mask, crater_mask, crater_ejecta_mask, craters_data
 
     def augment(
@@ -701,7 +703,8 @@ class GenerateProceduralMoonYard:
         DEM, background_mask, crater_mask, crater_ejecta_mask, craters_data = self.G.generateCraters(
             DEM, coords, radius
         )
-        # Keep the loaded DEM's excluded cells out of all rock-placement masks.
+        # Apply loaded exclusions/weights to every rock-placement mask.
+        # Keep the loader's floating-point dtype; generated masks contain only 0/1.
         background_mask = loaded_mask * background_mask
         crater_mask = loaded_mask * crater_mask
         crater_ejecta_mask = loaded_mask * crater_ejecta_mask
@@ -710,7 +713,7 @@ class GenerateProceduralMoonYard:
         self._crater_mask = crater_mask
         self._background_mask = background_mask
         self._crater_ejecta_mask = crater_ejecta_mask
-        self._num_pass = np.zeros_like(crater_mask)
+        self._num_pass = np.zeros_like(crater_mask, dtype=np.uint32)
         return DEM, background_mask, crater_mask, crater_ejecta_mask, craters_data
 
     def register_terrain(
@@ -726,7 +729,7 @@ class GenerateProceduralMoonYard:
         self._background_mask = mask.copy()
         # This loader provides no ejecta mask; clear any regions from the previous terrain.
         self._crater_ejecta_mask = np.zeros_like(mask)
-        self._num_pass = np.zeros_like(mask)
+        self._num_pass = np.zeros_like(mask, dtype=np.uint32)
         return DEM, self._background_mask, self._crater_mask, self._crater_ejecta_mask
 
     def deform(
