@@ -28,6 +28,7 @@ because the old import is broken) and the whole "others" group (section B).
 |---|---|
 | `src/environments_wrappers/{ros2,yamcs,zenoh,sdg}/simulation_manager_*.py` | `World(...)`, `world.step/reset/stop/is_playing/get_physics_dt/current_time_step_index` |
 | `src/environments_wrappers/sdg/simulation_manager_sdg.py` | `world.get_physics_context().set_solver_type("PGS")` |
+| `src/environments_wrappers/sdg/dataset/manager.py` (SDG dataset mode, #155) | `World(stage_units_in_meters=1.0)`, `world.get_physics_context().set_solver_type("PGS")`, `world.reset()`, `world.step(render=True)` |
 | `src/terrain_management/terrain_manager.py` (`__main__` test block) | `World(stage_units_in_meters=1.0)` |
 | `src/robots/robot.py` | `World` type hint, prim initialization tied to world reset |
 | `src/physics/physics_scene.py` | `PhysicsContext(...)`, `enable_ccd`, `set_broadphase_type`, `set_solver_type` |
@@ -127,3 +128,6 @@ APIs.
 
 Run the 4 canonical scenarios (`artefacts.yaml`): ROS2 lunalab, ROS2 largescale, Yamcs lunalab, Yamcs largescale. For
 camera or semantics changes, also run SDG and compare images / labels with the current output.
+
+If you change A1, also run one SDG dataset capture (`dataset=default`) on `lunaryard_20m4Dataset` and one on
+`largescale4Dataset`. No CI scenario covers the dataset manager.
