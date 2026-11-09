@@ -10,6 +10,7 @@ import omni
 import rclpy
 from isaacsim import SimulationApp
 from isaacsim.core.api.world import World
+from rclpy.executors import ExternalShutdownException
 from rclpy.executors import SingleThreadedExecutor as Executor
 
 from src.configurations.procedural_terrain_confs import TerrainManagerConf
@@ -23,6 +24,16 @@ from src.environments_wrappers.ros2.robot_manager_ros2 import ROS_RobotManager
 from src.physics.physics_scene import PhysicsSceneManager
 
 logger = logging.getLogger(__name__)
+
+
+def _spin(executor: Executor) -> None:
+    """Spins an executor until it, or the ROS context (e.g. on SIGINT/SIGTERM), is shut down."""
+    try:
+        executor.spin()
+    except ExternalShutdownException:
+        pass
+
+
 logging.basicConfig(format="%(asctime)s %(message)s", datefmt="%m/%d/%Y %I:%M:%S %p")
 
 
@@ -123,13 +134,13 @@ class ROS2_SimulationManager:
         )
         self.exec1 = Executor()
         self.exec1.add_node(self.ROSEnvironmentManager)
-        self.exec1_thread = Thread(target=self.exec1.spin, daemon=True, args=())
+        self.exec1_thread = Thread(target=_spin, daemon=True, args=(self.exec1,))
         self.exec1_thread.start()
         # Robot manager thread
         self.ROSRobotManager = ROS_RobotManager(cfg["environment"]["robots_settings"])
         self.exec2 = Executor()
         self.exec2.add_node(self.ROSRobotManager)
-        self.exec2_thread = Thread(target=self.exec2.spin, daemon=True, args=())
+        self.exec2_thread = Thread(target=_spin, daemon=True, args=(self.exec2,))
         self.exec2_thread.start()
 
         if self.ROSEnvironmentManager.get_wait_for_threads():
@@ -172,7 +183,8 @@ class ROS2_SimulationManager:
         """
 
         self.timeline.play()
-        while self.simulation_app.is_running():
+        # rclpy.ok() turns False when ROS handles SIGINT/SIGTERM (rclpy on Jazzy also handles SIGTERM).
+        while self.simulation_app.is_running() and rclpy.ok():
             self.rate.reset()
             self.world.step(render=True)
             if self.world.is_playing():

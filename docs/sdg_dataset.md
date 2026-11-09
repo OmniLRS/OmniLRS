@@ -2,7 +2,7 @@
 
 `mode=SDG` with a dataset preset (`dataset=default` or `dataset=moonseg`, from `cfg/dataset/`) renders segmentation datasets with a stereo (or mono) camera rig on procedural Lunaryard terrain or on real LOLA terrain (LargeScale), and `scripts/sdg_dataset/` turns the raw capture into training labels. The two halves are independent:
 
-- **Capture** (`python run.py mode=SDG dataset=default ...`) needs Isaac Sim 5.0 and a GPU. It writes a *shard*: RGB, semantic and instance masks, depth, normals, exact poses, and the terrain ground truth (DEM, craters, rocks).
+- **Capture** (`pixi run python run.py mode=SDG dataset=default ...`) needs Isaac Sim 6.2 and a GPU. It writes a *shard*: RGB, semantic and instance masks, depth, normals, exact poses, and the terrain ground truth (DEM, craters, rocks).
 - **Post-processing** (`scripts/sdg_dataset/*.py`) needs only `numpy scipy opencv-python pyyaml`. It reads any shard that follows the [output contract](#output-contract) and writes size classes, traversability, slope/crater masks and train/val splits. A shard from another simulator works as long as it follows the contract.
 
 Contents: [What it produces](#what-it-produces) - [A: capture only](#workflow-a-capture-only-needs-isaac-sim) - [B: post-processing only](#workflow-b-post-processing-only-no-isaac-sim) - [C: end to end](#workflow-c-end-to-end) - [Changing the site](#changing-the-site) - [Quality guards](#quality-guards) - [Reproducing the reference dataset](#reproducing) - [Known limitations](#known-limitations)
@@ -34,19 +34,19 @@ Label rules (from `build.py`):
 
 ## Workflow A: capture only (needs Isaac Sim)
 
-Run from the repository root with the Isaac Sim 5.0 Python (the same way you run `run.py` for any other mode).
+Run from the repository root. `pixi run` uses the pixi `default` environment, which installs Isaac Sim 6.2 (see the [README](../README.md#installation)).
 
 Lunaryard (procedural 20 m yard, one shard = 10 terrains x 25 frames = 250 frames by default):
 
 ```bash
-python run.py mode=SDG dataset=default environment=lunaryard_20m4Dataset \
+pixi run python run.py mode=SDG dataset=default environment=lunaryard_20m4Dataset \
     rendering.renderer.headless=True mode.dataset_settings.base_seed=0
 ```
 
 LargeScale (real LOLA DEM, default site Site20; one shard = 10 locations x 25 frames):
 
 ```bash
-python run.py mode=SDG dataset=default environment=largescale4Dataset \
+pixi run python run.py mode=SDG dataset=default environment=largescale4Dataset \
     rendering.renderer.headless=True mode.dataset_settings.base_seed=0
 ```
 
@@ -76,7 +76,7 @@ Camera set-up lives in `mode.generation_settings`: `camera_names` (one name = mo
 
 Hydra override examples: `mode.dataset_settings.num_terrains=50`, `mode.dataset_settings.rig.baseline_m=0.2`, `mode.dataset_settings.guards.mesh_probe.enabled=true`, `'mode.generation_settings.camera_resolutions=[[1640,1232],[1640,1232]]'`.
 
-Rendering: `rendering=ray_tracing` (RayTracedLighting) is the tested renderer. For path tracing set `mode.dataset_settings.guards.pt_runtime_switch=true` (boots ray tracing and switches the render mode at runtime, because selecting `rendering=path_tracing` at startup crashes headless on Isaac Sim 5.0 in the tested install). The frame record's `render` field is `pt` or `rt`.
+Rendering: on Isaac Sim 6.2, `rendering=ray_tracing` uses the `RealTimePathTracing` renderer. The capture was tested on Isaac Sim 5.0, where the same preset used `RayTracedLighting`. For path tracing, set `mode.dataset_settings.guards.pt_runtime_switch=true`. The run then starts with the real-time renderer and switches the render mode to path tracing at runtime. This guard exists because `rendering=path_tracing` at startup crashed headless on Isaac Sim 5.0 in the tested install. The 6.2 behavior is not known yet. The frame record's `render` field is `pt` (path tracing) or `rt` (real-time renderer).
 
 Progress is printed with the prefix `[sdg_dataset]`. If the run raises, the manifest is still written, with `partial: true` and an `error` string, containing only the frames recorded so far. The exit code 1 is guaranteed only when `exit_watchdog_s` is set (the watchdog force-exits with 1 after a failed run, 0 after a good one); without it the exit code is whatever Isaac Sim's shutdown returns, and the shutdown can hang. Set `exit_watchdog_s` (e.g. 180) for unattended or scripted runs.
 
@@ -239,7 +239,7 @@ OUT/
 # shared between shards and the terrain-seed split keeps train and val apart.
 POS=("[2800,-2200]" "[-3000,1500]" "[1000,4500]")    # bash array, 0-indexed
 for s in 0 1 2; do
-  python run.py mode=SDG dataset=default environment=largescale4Dataset rendering=ray_tracing \
+  pixi run python run.py mode=SDG dataset=default environment=largescale4Dataset rendering=ray_tracing \
       rendering.renderer.headless=True mode.dataset_settings.base_seed=$s \
       environment.seed=$((42 + s)) "environment.large_scale_terrain.starting_position=${POS[$s]}"
 done
@@ -296,10 +296,10 @@ A guard that cannot run (mesh_probe, dark_frame or auto_exposure without `rgb` a
 
 ## Reproducing stride-moon-seg-v1
 
-The stride-moon-seg-v1 dataset (LargeScale, LOLA Site20) was produced with the `dataset=moonseg` preset and these build settings. The dataset itself is not published from this repository.
+The stride-moon-seg-v1 dataset (LargeScale, LOLA Site20) was produced with the `dataset=moonseg` preset and these build settings. The dataset itself is not published from this repository. The reference dataset was rendered on Isaac Sim 5.0. Isaac Sim 6.2 renders with a newer RTX version, so a new capture can differ from it.
 
 ```bash
-python run.py mode=SDG dataset=moonseg environment=largescale4Dataset rendering=ray_tracing \
+pixi run python run.py mode=SDG dataset=moonseg environment=largescale4Dataset rendering=ray_tracing \
     rendering.renderer.headless=True mode.dataset_settings.base_seed=<seed>
 python scripts/sdg_dataset/build.py --shards <shards> --out <out> --wheel-clearance-m 0.05 --val-frac 0.15
 ```
@@ -319,6 +319,6 @@ Everything else is the default (baseline 0.12 m, hfov 90, `region_radius_m` 150)
 - **Clipmap coarseness beyond about 40 m.** LargeScale renders the terrain as a geometry clipmap whose texel size grows with distance, while rocks sit on the full-resolution DEM. At 20-40 m, small craters and rims are smoothed, so a rock on a rim can hover and one in a bowl can be buried. `flag_frames.py` finds these (it tests the mesh-versus-DEM error under each rock, within `--max-range` 15 m by default) and lists them in `rejected.txt`; exclude them at split time. Treat far-field masks (crater, slope) beyond about 20 m as approximate; `build.py` only records `far_frac` (share of pixels beyond 150 m) for filtering.
 - **Always-on LargeScale workarounds.** `DatasetLargeScale` refreshes the fine clipmap's DEM buffer after every block shift and re-samples the clipmap after each move (the stock update path leaves it stale, offsetting the mesh by metres), and it replaces the rock height sampler so rocks are placed with the same height query as the rig instead of the clipmap kernel. Both are correctness fixes, not options, and can be removed when the upstream `update_visual_mesh` is fixed.
 - **Placeholder rig numbers.** `rig.baseline_m` 0.12 and `rig.hfov_deg` 90 are generic defaults, not any specific camera: set them (or `rig.fx/fy/cx/cy`) and the resolution to match your camera. `sensor_default.json` is likewise a generic CMOS model until you run `sensor_calibrate.py`.
-- **Isaac Sim 5.0 only.** Capture is developed and tested on Isaac Sim 5.0; Isaac Sim 6 is not supported. Path tracing must go through `pt_runtime_switch`.
+- **Capture tested on Isaac Sim 5.0 only.** The capture code uses only APIs that Isaac Sim 6.2 still provides. The Isaac-free tests pass with the 6.2 packages (numpy 2.3.1, SciPy 1.17). No capture ran on Isaac Sim 6.2 yet. Isaac Sim 6.2 renders with a newer RTX version, so its images can differ from 5.0 captures. Use `pt_runtime_switch` for path tracing until a 6.2 run shows that `rendering=path_tracing` works at startup.
 - **Semantics.** The mode labels rocks per prim (labelled rock groups only); the 2-5 cm pebble layer stays an unlabelled point instancer and is mapped to ground with bit 32. Every rig camera renders at one resolution. Depth is 16-bit millimetres in the built dataset (saturates at 65.5 m).
 - **Terrain reproducibility.** Lunaryard terrain `k` is a pure function of `(base_seed, k)`. LargeScale locations are a function of `base_seed` and `k`, but the streamed procedural terrain also depends on the environment seeds noted in step 6 of "Changing the site".

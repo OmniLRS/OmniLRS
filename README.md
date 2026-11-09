@@ -42,20 +42,6 @@ OmniLRS is powered by NVIDIA Isaac Sim and NVIDIA Omniverse libraries to provide
 | **Lunaryard**            |  <div style="width:230px">A small scale procedually generated lunar environment. If lunar coordinates and a date is provided the position of the Earth and Sun are computed using ephemerides resulting in realistic lighting. This feature is also available in the large scale environments. This environment also support terrain deformation as the rover drives on it.</div>  | <img src="https://raw.githubusercontent.com/wiki/OmniLRS/OmniLRS/media/env_img/lunaryard_husky_ex1.png" width=520/> |
 | **LargeScale**           |  <div style="width:230px">Semi procedural lunar environment. It uses real DEM to reconstuct the coarse terrain, usually 5 meters per pixel and then uses procedural generation to augment it to 2.5 cm per pixel. The terrain itself can be generated at a even higher resolution to smooth out shadows. This very fine terrain allows to reconstruct fine terrain features increasing the engineering value of the sim. The whole of this is bundled inside Geometry clip maps, allowing to render very large scenes.</div> | <img src="https://raw.githubusercontent.com/wiki/OmniLRS/OmniLRS/media/env_img/large_scale.png" width=520/>
 
-### Dataset generation
-
-`mode=SDG` with a `dataset=` preset (`cfg/dataset/`) renders stereo (or mono) segmentation datasets with RGB,
-semantic and instance masks, depth, normals and exact poses on Lunaryard or on real LOLA terrain (LargeScale);
-`scripts/sdg_dataset/` turns the capture into training labels without Isaac Sim. Both halves can be used on their own. See [docs/sdg_dataset.md](docs/sdg_dataset.md),
-including how to move to another lunar site.
-
-```bash
-# capture only (Isaac Sim): one shard on the default LargeScale site
-python run.py mode=SDG dataset=default environment=largescale4Dataset rendering.renderer.headless=True mode.dataset_settings.base_seed=0
-# post-process only (numpy, scipy, opencv-python, pyyaml): validate, then build labels and splits
-python scripts/sdg_dataset/validate.py data/sdg_dataset/shard_00000 && python scripts/sdg_dataset/build.py --shards data/sdg_dataset/shard_00000 --out data/sdg_dataset_built
-# both: run the capture command, then the post-process command (several shards: docs/sdg_dataset.md, "Workflow C")
-```
 
 > [!IMPORTANT]
 > This readme showcases only basic information: for a more complete introduction to the simulation and its inner workings please [visit our wiki](https://github.com/OmniLRS/OmniLRS/wiki)!
@@ -84,9 +70,15 @@ Mission Operations Update:
 
 ## Installation
 
-Follow the instruction on the Wiki: we strongly recommend following the [docker installation](https://github.com/OmniLRS/OmniLRS/wiki/Installation#docker-installation) steps.
+OmniLRS runs on **Isaac Sim 6.2** (Python 3.12) and is installed with [pixi](https://pixi.sh):
 
-Then Follow the [Getting Started steps](https://github.com/OmniLRS/OmniLRS/wiki/getting_started) to run your first OmniLRS simulations!
+- Linux x86_64 with glibc ≥ 2.35 (Ubuntu 24.04 recommended; Ubuntu 22.04 is deprecated by Isaac Sim), an RTX GPU, and an NVIDIA driver ≥ 580 (Isaac Sim 6.2 is tested with 595.58).
+- Clone with submodules and LFS assets, then run e.g. `pixi run -e ros2 ros2` or `pixi run -e yamcs yamcs` (see the tasks in `pixi.toml`).
+- ROS 2 uses the **Jazzy** libraries bundled with Isaac Sim; external ROS 2 nodes should run Jazzy.
+
+The user-facing Docker image (`omnilrs.docker/`) was removed with the Isaac Sim 6.2 migration; Docker is only used for CI (`ci.docker/`). See [docs/migration_plan_6.2.md](docs/migration_plan_6.2.md) for the migration details.
+
+Then follow the [Getting Started steps](https://github.com/OmniLRS/OmniLRS/wiki/getting_started) to run your first OmniLRS simulations!
 
 ### ROS2 Integration
 
@@ -96,8 +88,9 @@ https://github.com/jnskkmhr/omnilrs_ros2_demo
 
 The simulation allows user to interact with the Scene through ROS topics. This allows for instance to reset or teleport a robot, or to change the intensity of a light! We provide a complete description of the interactions available with the sim from ROS on the Wiki [here](https://github.com/OmniLRS/OmniLRS/wiki/ros_topics).
 
-To use this simulation with SpaceROS, the ROS2 simulation docker must first be spinned up, and then in a second time, another container running SpaceROS must be launched to interact with the simulation.
+To use this simulation with SpaceROS, the ROS2 simulation must first be spun up, and then a container running SpaceROS must be launched to interact with the simulation.
 To illustrate this, we provide a simple teleop demonstration with the sim in ROS2 and SpaceROS sending velocity commands. Check the Wiki for a [step-by-step guide](https://github.com/OmniLRS/OmniLRS/wiki#run-with-spaceros) on how to run this demo.
+Note: `spaceros_demo.docker/` is an unmaintained demo; it targets Isaac Sim 5.0 / ROS 2 Humble and has not been migrated to Isaac Sim 6.2.
 
 ## Yamcs (Mission Control System) Integration
 See the separate git repository to run the Yamcs and Grafana demo
