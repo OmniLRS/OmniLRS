@@ -97,7 +97,7 @@ class CameraBridge:
             resolution = transport.keyexpr.split("/")[-1]
             frame = self.RM.robot.get_rgba_camera_view(resolution)
 
-            if frame.size != 0:
+            if frame is not None:
                 transport.publish_array(frame)
 
         return True

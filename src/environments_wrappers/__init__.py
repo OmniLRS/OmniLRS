@@ -2,21 +2,22 @@ __author__ = "Antoine Richard, Bach Nguyen"
 __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
 
-# Deprecated Isaac Sim extensions OmniLRS still uses. Since Isaac Sim 6.0 they ship under extsDeprecated
-# and are not guaranteed to be enabled by the default app.
-LEGACY_EXTENSIONS = (
-    "isaacsim.core.api",
-    "isaacsim.core.prims",
-    "isaacsim.core.utils",
-    "isaacsim.sensors.camera",
+# Isaac Sim extensions whose Python modules OmniLRS imports. Enabled explicitly so OmniLRS does not depend on the
+# default app enabling them (or on other extensions pulling them in).
+REQUIRED_EXTENSIONS = (
+    "isaacsim.core.experimental.prims",
+    "isaacsim.core.experimental.utils",
+    "isaacsim.core.simulation_manager",
+    "isaacsim.sensors.experimental.physics",
+    "isaacsim.sensors.experimental.rtx",
 )
 
 
-def _enable_legacy_extensions() -> None:
+def _enable_required_extensions() -> None:
     import omni.kit.app
 
     ext_manager = omni.kit.app.get_app().get_extension_manager()
-    for ext in LEGACY_EXTENSIONS:
+    for ext in REQUIRED_EXTENSIONS:
         if not ext_manager.is_extension_enabled(ext):
             ext_manager.set_extension_enabled_immediate(ext, True)
 
@@ -60,7 +61,7 @@ def startSim(cfg: dict):
     launch_config = renderer_cfg.__dict__.copy()
     tbn_frame_mode = launch_config.pop("tbn_frame_mode")
     simulation_app = SimulationApp_wait(launch_config)
-    _enable_legacy_extensions()
+    _enable_required_extensions()
     set_tbn_frame_mode(tbn_frame_mode)
     set_lens_flares(cfg)
     set_motion_blur(cfg)

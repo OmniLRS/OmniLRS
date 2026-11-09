@@ -5,7 +5,7 @@ __email__ = "ljburtz@jaops.com"
 from enum import StrEnum
 
 import numpy as np
-from isaacsim.sensors.camera import Camera
+from isaacsim.sensors.experimental.rtx import CameraSensor
 from PIL import Image
 
 from src.environments.monitoring_cameras_manager import MonitoringCamerasManager
@@ -72,11 +72,10 @@ class PragyaanCameraHandler:
         if lander_camera_conf is None:
             return
 
-        self._lander_cam = Camera(
-            lander_camera_conf["prim_path"],
-            resolution=(lander_camera_conf["resolution"][0], lander_camera_conf["resolution"][1]),
+        width, height = lander_camera_conf["resolution"]
+        self._lander_cam = CameraSensor(
+            lander_camera_conf["prim_path"], resolution=(height, width), annotators=["rgba"]
         )
-        self._lander_cam.initialize()
 
     def _initialize_monitoring_cam(self) -> None:
         # NOTE TODO implemented for one camera right now, in the future make for multiple idea: dict same as for cameras in MonCamManager,
@@ -89,6 +88,8 @@ class PragyaanCameraHandler:
 
     def _snap_camera_view_rgb(self, resolution: str) -> Image:
         frame = self._robot.get_rgba_camera_view(resolution)
+        if frame is None:  # camera still warming up
+            return None
         frame_uint8 = frame.astype(np.uint8)
         camera_view = Image.fromarray(frame_uint8, CameraViewType.RGBA.value)
 
@@ -96,6 +97,8 @@ class PragyaanCameraHandler:
 
     def _snap_camera_view_depth(self, resolution: str) -> Image:
         frame = self._robot.get_depth_camera_view(resolution)
+        if frame is None:  # camera still warming up
+            return None
         depth = np.nan_to_num(frame, nan=0.0, posinf=0.0, neginf=0.0)
 
         valid = depth > 0
@@ -115,8 +118,10 @@ class PragyaanCameraHandler:
         if self._lander_cam is None:
             return
 
-        frame = self._lander_cam.get_rgba()
-        frame_uint8 = frame.astype(np.uint8)
+        frame, _ = self._lander_cam.get_data("rgba")
+        if frame is None:  # camera still warming up
+            return None
+        frame_uint8 = frame.numpy().astype(np.uint8)
         camera_view = Image.fromarray(frame_uint8, CameraViewType.RGBA.value)
 
         return camera_view
@@ -125,14 +130,14 @@ class PragyaanCameraHandler:
         if self._monitoring_cam is None:
             return
 
-        frame = self._monitoring_cam.get_rgb()  # get_rgba()
+        frame, _ = self._monitoring_cam.get_data("rgb")
 
-        # NOTE interval tries to trigger it before initialization, and then breaks because programmatically created cameras
+        # NOTE interval tries to trigger it before initialization: programmatically created cameras
         # require more time to be initialized than the ones already existing inside the models
-        if len(frame) == 0:
+        if frame is None:
             return None
 
-        frame_uint8 = frame.astype(np.uint8)
+        frame_uint8 = frame.numpy().astype(np.uint8)
         camera_view = Image.fromarray(frame_uint8, CameraViewType.RGB.value)
 
         return camera_view
@@ -167,9 +172,14 @@ class PragyaanCameraHandler:
 
         if type == CameraViewType.DEPTH:
             camera_view: Image = self._snap_camera_view_depth(resolution)
+            if camera_view is None:
+                return
         elif type == CameraViewType.RGBA:
             camera_view: Image = self._snap_camera_view_rgb(resolution)
-            if bucket == self.BUCKET_STREAMING:  # remove this condition to compress every RGBA view
+            if camera_view is None:
+                return
+            # only streaming images are compressed
+            if bucket == self.BUCKET_STREAMING:
                 camera_view = self._compress(camera_view, bucket, resolution)
         else:
             print("in transmit_camera_view: unknown type:", type)
@@ -182,6 +192,8 @@ class PragyaanCameraHandler:
             return
 
         camera_view: Image = self._snap_lander_camera_view()
+        if camera_view is None:
+            return
         self._images_handler.save_image(camera_view, self.BUCKET_LANDER)
 
     def transmit_monitoring_camera_view(self):

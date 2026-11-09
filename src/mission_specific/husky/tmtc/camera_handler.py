@@ -40,11 +40,15 @@ class HuskyCameraHandler:
 
     def _snap_camera_view_rgb(self, resolution: str) -> Image:
         frame = self._robot.get_rgba_camera_view(resolution)
+        if frame is None:  # camera still warming up
+            return None
         frame_uint8 = frame.astype(np.uint8)
         return Image.fromarray(frame_uint8, CameraViewType.RGBA.value)
 
     def _snap_camera_view_depth(self, resolution: str) -> Image:
         frame = self._robot.get_depth_camera_view(resolution)
+        if frame is None:  # camera still warming up
+            return None
         depth = np.nan_to_num(frame, nan=0.0, posinf=0.0, neginf=0.0)
 
         valid = depth > 0
@@ -73,5 +77,7 @@ class HuskyCameraHandler:
             camera_view = self._snap_camera_view_rgb(resolution)
         else:
             print("HuskyCameraHandler.transmit_camera_view: unknown type:", type)
+            return
+        if camera_view is None:
             return
         self._images_handler.save_image(camera_view, bucket)

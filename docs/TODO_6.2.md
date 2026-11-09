@@ -1,98 +1,80 @@
-# Isaac Sim 6.2: deprecated APIs still used by OmniLRS
+# Isaac Sim 6.2: deprecated APIs in OmniLRS
 
-Follow-up to the 6.2 migration ([migration_plan_6.2.md](migration_plan_6.2.md)), which was done "compat-first": OmniLRS
-keeps using the APIs that Isaac Sim 6.0 deprecated. They ship under `isaacsim/extsDeprecated/` and are force-enabled at
-startup by `LEGACY_EXTENSIONS` in `src/environments_wrappers/__init__.py`:
-`isaacsim.core.api`, `isaacsim.core.prims`, `isaacsim.core.utils`, `isaacsim.sensors.camera`.
+Follow-up to the 6.2 migration ([migration_plan_6.2.md](migration_plan_6.2.md)), which was done "compat-first" on the
+APIs Isaac Sim 6.0 deprecated (`isaacsim.core.api`, `isaacsim.core.prims`, `isaacsim.core.utils`,
+`isaacsim.sensors.camera`, shipped under `isaacsim/extsDeprecated/`). Sources: 6.0 release notes and the 6.0 migration
+guide "Core API to Core Experimental API".
 
-They work in 6.2 (all 4 canonical scenarios pass), but NVIDIA has given no removal version. Sources: 6.0 release notes
-("Deprecated `isaacsim.core.api`, `isaacsim.core.prims`, and `isaacsim.core.utils`", "Deprecated
-`isaacsim.sensors.camera`") and the 6.0 migration guide "Core API to Core Experimental API".
+Status: OmniLRS no longer imports any deprecated Isaac Sim extension. Group B landed in #164, group A in #165. The
+replacements are the `*.experimental.*` modules and `isaacsim.core.simulation_manager`; their APIs may still change
+between releases, so check the release notes of each Isaac Sim upgrade for them.
+`src/environments_wrappers/__init__.py` (`REQUIRED_EXTENSIONS`) enables the extensions OmniLRS imports. The deprecated
+extensions still load at runtime because Isaac Sim's own default app does: `apps/isaacsim.exp.base.kit` enables
+`isaacsim.sensors.camera`, and default extensions such as `isaacsim.robot.wheeled_robots`, `isaacsim.sensors.physx`
+and `isaacsim.sensors.rtx` depend on `isaacsim.core.api`.
 
-Already migrated in 6.2: IMU (`isaacsim.sensors.physics` -> `isaacsim.sensors.experimental.physics.IMUSensor`, forced
-because the old import is broken) and the whole "others" group (section B).
+Earlier: IMU (`isaacsim.sensors.physics` -> `isaacsim.sensors.experimental.physics.IMUSensor`, forced because the old
+import is broken).
 
-## Recommendation
+Validation of each step: old vs new API side by side in one process (identical images, joint data, poses, velocities,
+contact forces, physics scene and loop settings), then the 4 canonical scenarios. Not covered: SDG and Zenoh modes,
+the deformable-terrain configs (terramechanics / deformation read the wheel-link data, see A4), husky in Yamcs mode.
 
-- Wait for NVIDIA to stabilize the replacements before rewriting World / Articulation / Camera. The replacements are
-  `*.experimental.*` modules, and their APIs may still change between releases. NVIDIA's own extensions are being
-  ported in that direction (6.0 release notes), so watch each release for promotion out of `experimental`.
-- Remove the matching entry from `LEGACY_EXTENSIONS` only after the last import of that extension is gone. All four
-  are still needed by group A.
+## A. World / Articulation / Camera (done, #165)
 
-## A. World / Articulation / Camera (large, behavior-sensitive)
+### A1. `World` and `PhysicsContext` -> `src/simulation.py`
 
-### A1. `World` (`isaacsim.core.api.world.World`) and `PhysicsContext`
+`Simulation` implements the lifecycle OmniLRS used from `World` on top of `SimulationManager`/`PhysxScene`, the stage
+utils and the timeline (the migration guide has no single replacement object). `step()` is one app update (Kit's loop in
+manual mode steps `rendering_dt`; physics substeps follow from `physics_dt`), `reset()` stops and plays the timeline,
+`current_time_step_index` counts physics steps since the last stop. The managers detect a stop/play from outside
+(e.g. the GUI) with `consume_restart()`, set on timeline stop: the step counter is never 0 when they check, because
+`SimulationManager` steps physics while warming up on play (`World` had the same issue). `cfg/physics` is applied by
+`Simulation.configure_physics_scene()` (ROS2 mode only, as before; `PhysicsSceneManager` removed). The physics scene
+attributes, time codes, loop and physics carb settings are identical to `World` for the ROS2 and Yamcs setups.
 
-| Where | Usage |
-|---|---|
-| `src/environments_wrappers/{ros2,yamcs,zenoh,sdg}/simulation_manager_*.py` | `World(...)`, `world.step/reset/stop/is_playing/get_physics_dt/current_time_step_index` |
-| `src/environments_wrappers/sdg/simulation_manager_sdg.py` | `world.get_physics_context().set_solver_type("PGS")` |
-| `src/environments_wrappers/sdg/dataset/manager.py` (SDG dataset mode, #155) | `World(stage_units_in_meters=1.0)`, `world.get_physics_context().set_solver_type("PGS")`, `world.reset()`, `world.step(render=True)` |
-| `src/terrain_management/terrain_manager.py` (`__main__` test block) | `World(stage_units_in_meters=1.0)` |
-| `src/robots/robot.py` | `World` type hint, prim initialization tied to world reset |
-| `src/physics/physics_scene.py` | `PhysicsContext(...)`, `enable_ccd`, `set_broadphase_type`, `set_solver_type` |
+The SDG dataset manager (`src/environments_wrappers/sdg/dataset/manager.py`, from #155) uses `Simulation` in the same
+way as the stock SDG manager.
 
-Replacement (no drop-in; per the migration guide "there is no single replacement object"):
+### A2. Articulation -> `isaacsim.core.experimental.prims.Articulation`
 
-- Stage: `isaacsim.core.experimental.utils.stage` (`create_new_stage`, `open_stage`, `set_stage_units`, ...).
-- Stepping, callbacks, physics settings: `isaacsim.core.simulation_manager.SimulationManager` (`step`, `get_physics_dt`,
-  `set_physics_dt`, `get_num_physics_steps`, `is_simulating`, `register_callback`, `set_solver_type`,
-  `set_broadphase_type`, `enable_ccd`, `add_physics_scene`, ...).
-- Rendering: `isaacsim.core.rendering_manager.RenderingManager.render()`.
-- Play/stop: `omni.timeline` or `isaacsim.core.experimental.utils.app` (`play`, `stop`, `is_playing`).
+`ArticulationControl` sets DOF position/velocity targets and efforts (NaN targets skipped, as `ArticulationController`
+did); `ArticulationTelemetry` reads DOF positions, velocities, projected joint forces (efforts) and link incoming joint
+wrenches. Both report ready only once the physics tensor view exists: without it the experimental setters write USD
+drive attributes instead. Robot root pose and teleport use `get/set_world_poses` and `set_velocities`.
+Joint commands are queued and written by `Robot.update_articulation_api()` in the simulation loop: Yamcs and Zenoh
+deliver them on their own threads, and PhysX ignores drive writes made while it is stepping (`World` had the same race).
 
-Risks: `World.reset()` currently initializes physics views for every registered prim; this must become explicit. The
-main loops depend on `current_time_step_index == 0` to detect first step after reset. SimulationManager runs only in
-multi-tick mode (`/rtx/hydra/supportMultiTickRate` must stay `true`).
+### A3. Camera -> `isaacsim.sensors.experimental.rtx.CameraSensor`
 
-### A2. Articulation (`isaacsim.core.prims.SingleArticulation`, `isaacsim.core.utils.types.ArticulationAction`)
+Used directly, with no OmniLRS wrapper: `get_data(annotator)` returns a warp array, or `None` while the camera warms
+up. Callers convert with `.numpy()` only where frames leave Isaac Sim (PIL for Yamcs, Zenoh, numpy depth processing),
+and skip the frame on `None`. Config resolutions stay `[width, height]`, like USD render products, Replicator, PIL and
+the SDG config; call sites unpack them explicitly into `CameraSensor`'s `(height, width)`. Robot cameras use one
+render product per resolution with the `rgba` and `distance_to_image_plane` annotators (was two render products); the
+monitoring camera uses the `rgb` annotator. The pragyaan `depth_cam` and the Vikram lander camera now author
+square-pixel apertures (vertical 15.7162 for 4:3), which the old `Camera` applied at runtime with a warning.
 
-| Where | Usage |
-|---|---|
-| `src/robots/articulation_control.py` | `SingleArticulation(...).initialize()`, `dof_names`, `apply_action(ArticulationAction(joint_positions / joint_velocities / joint_efforts, joint_indices))` |
-| `src/robots/articulation_telemetry.py` | `SingleArticulation`, `get_joint_positions/velocities`, `get_measured_joint_efforts/forces` |
-| `src/robots/robot.py` | `set_joint_velocities`, `set_joint_positions`, `initialize()` |
+### A4. Wheel-link rigid prims -> `isaacsim.core.experimental.prims.RigidPrim`
 
-Replacement: `isaacsim.core.experimental.prims.Articulation` (batched, array-first API):
-`dof_names`, `get_dof_indices`, `set_dof_position_targets`, `set_dof_velocity_targets`, `set_dof_efforts`,
-`get_dof_positions/velocities`, `get_dof_efforts`, `get_dof_projected_joint_forces`, `get_link_incoming_joint_force`,
-`set_dof_positions/velocities`, `switch_dof_control_mode`. `ArticulationAction` has no equivalent: call the setters
-directly.
+`RobotRigidGroup` wraps all target links in one batched `RigidPrim`, created on a stopped simulation (creating it while
+playing, before PhysX parsed the contact reporting, fails inside Isaac Sim). It keeps the side effects of the old
+`RigidPrim(track_contact_forces=True)`: contact report threshold 0, sleep threshold 0, scene stabilization disabled.
 
-Risks: values are batched (shape `(N, dofs)`), and the backend may return warp arrays instead of numpy. Measured
-efforts/forces semantics must be checked against the current telemetry (ROS / Yamcs tests read them). No
-`initialize()`; physics view creation follows `SimulationManager`.
+### Behavior changes and findings
 
-### A3. Camera (`isaacsim.sensors.camera.Camera`)
+- `CameraSensor` disables post anti-aliasing on render products below 300 px (RTX/DLSS can return mis-sized buffers
+  there): affects the 320x240 monitoring camera and the husky `low` resolution.
+- Found, not changed (pre-existing):
+  - Only ROS2 mode applies `cfg/physics`. Yamcs, Zenoh and SDG run with Isaac's defaults: Earth gravity (9.81),
+    TGS, MBP.
+  - `enable_stabilization: true` in `cfg/physics` has no effect: the wheel-link contact tracking disables
+    stabilization (previously inside `RigidPrim(track_contact_forces=True)`, now explicit in `RobotRigidGroup`).
+  - Husky camera resolutions are 320x240 (4:3) and 1280x720 (16:9) on one camera prim: square pixels are enforced per
+    sensor on the shared prim, so the last created sensor sets the vertical aperture for both.
+  - `RobotRigidGroup.get_world_poses()` sets `pose[i, :3, 3] = 1` instead of `pose[i, 3, 3] = 1` (unused).
 
-| Where | Usage |
-|---|---|
-| `src/robots/robot.py` | `Camera(...)`, `initialize()`, `add_distance_to_image_plane_to_frame()`, `get_rgba()`, `get_depth()` |
-| `src/mission_specific/pragyaan/tmtc/camera_handler.py` | `Camera(...)`, `initialize()`, `get_rgba()`, `get_rgb()` (Yamcs images) |
-| `src/environments/monitoring_cameras_manager.py` | `Camera(...)`, `initialize()` |
-
-Replacement: `isaacsim.sensors.experimental.rtx` (`RtxCamera` authoring + `CameraSensor` runtime with
-`get_data(annotator)`), or plain Replicator (`rep.create.render_product` + `AnnotatorRegistry`, already used in
-`src/labeling/auto_label.py`).
-
-Risks: the deprecated `Camera` adjusts `verticalAperture` to force square pixels (pragyaan camera: 1.529 -> 1.572, seen
-in CI logs); the replacement may not, which changes intrinsics and images. The deprecated extension also pulls in torch
-at runtime (blocks dropping torch from the CI image, see `ci.docker/TODO.md`).
-
-### A4. Wheel-link rigid prims (`isaacsim.core.prims.SingleRigidPrim`, `RigidPrim`)
-
-| Where | Usage |
-|---|---|
-| `src/robots/robot.py` (`RobotRigidGroup`) | `SingleRigidPrim` + `RigidPrim(track_contact_forces=True)` per target link: `get_world_pose`, `get_velocities`, `get_net_contact_forces`, `apply_forces_and_torques_at_pos` |
-
-Replacement: `isaacsim.core.experimental.prims.RigidPrim` (has all four methods, batched, warp outputs).
-
-Deferred from B: the prims are created in every scenario, but their data is only read by terrain deformation /
-terramechanics (`lunaryard_*_deformable`), which the 4 canonical scenarios do not cover. Physics view creation is tied
-to `World.reset()` (A1). Validate with a deformable scenario when migrating.
-
-## B. Others (done)
+## B. Others (done, #164)
 
 | Deprecated | Where | Now |
 |---|---|---|
@@ -124,10 +106,42 @@ Not affected: OmniLRS does not use the Euler helpers whose input order changed i
 (`euler_angles_to_quaternion` / `euler_angles_to_rotation_matrix` now expect XYZ), nor the removed residual-reporting
 APIs.
 
+## Others
+
+1. migrate omnilrs-ros2-demo to Isaac Sim 6.2 and Pixi instead of docker.
+
+
 ## Validation for any of the above
 
 Run the 4 canonical scenarios (`artefacts.yaml`): ROS2 lunalab, ROS2 largescale, Yamcs lunalab, Yamcs largescale. For
 camera or semantics changes, also run SDG and compare images / labels with the current output.
 
-If you change A1, also run one SDG dataset capture (`dataset=default`) on `lunaryard_20m4Dataset` and one on
-`largescale4Dataset`. No CI scenario covers the dataset manager.
+No CI scenario covers the SDG dataset manager. If you change `Simulation`, also run one SDG dataset capture
+(`dataset=default`) on `lunaryard_20m4Dataset` and one on `largescale4Dataset`.
+
+## Reference: physics scene setup (CPU PhysX)
+
+For future reference; not a TODO.
+
+- **Scene:** `Simulation` (`src/simulation.py`) creates a single `PhysicsScene` prim with `PhysxSceneAPI` at
+  `/physicsScene` (`PhysxScene(path)` + `SimulationManager.set_default_physics_scene`). It holds gravity, time step,
+  solver, broadphase, CCD, stabilization, GPU dynamics and GPU buffer settings for every rigid body and articulation.
+  Robot and asset USDs bring no scene of their own: references only include the default prim, and the stray
+  `/FlatGrid/PhysicsScene` in `nograph_pragyaan.usd` sits outside it.
+- **CPU pipeline:** GPU dynamics off, a CPU broadphase (MBP by default, SAP from `cfg/physics`), and
+  `/physics/suppressReadback = False`, so PhysX writes poses and velocities back to the stage after every step. This
+  matches Isaac Sim 5.0 (`World` defaulted to the CPU device and numpy backend) and `cfg/physics`
+  `use_gpu_pipeline: false`. The tensor APIs (`Articulation`, `RigidPrim`) also run on the CPU; their warp arrays live
+  on `cpu`.
+- **Why CPU:** one rover with a few dozen bodies plus a terrain mesh collider is fast on the CPU. The GPU pipeline pays
+  off with thousands of bodies or many parallel environments. Some code also reads simulated poses from USD, which
+  needs the readback: the base-link pose (`RobotRigidGroup.get_pose_of_base_link`, used by the Yamcs transmitters).
+- **How settings are layered:**
+  1. `Simulation._set_cpu_defaults()` reproduces what `PhysicsContext` set implicitly: MBP, GPU dynamics off,
+     gravity -9.81, stabilization off, CCD on, TGS, 60 steps/s.
+  2. `Simulation.configure_physics_scene()` applies `cfg/physics` on top. Only ROS2 mode does this, as before:
+     gravity -1.62, PGS, SAP, CCD, stabilization.
+  3. `RobotRigidGroup` turns stabilization off for wheel contact reporting.
+- **Moving to the GPU pipeline** would need `use_gpu_pipeline: true`, the `SimulationManager` device set to CUDA
+  (GPU broadphase, GPU dynamics), and reading simulated poses from physics views instead of USD (the base link).
+  Not hard, to be investigated separately together with overall performance improvements.
