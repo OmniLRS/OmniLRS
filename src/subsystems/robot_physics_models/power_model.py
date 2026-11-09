@@ -364,7 +364,12 @@ def run_power_profile_test(
 
         for _ in range(steps):
             # set inputs
-            model.set_inputs(sun_direction, rover_yaw_deg, solar_panel_state, is_in_motor_state)
+            model.set_inputs(
+                rover_yaw_deg=rover_yaw_deg,
+                is_in_motor_state=is_in_motor_state,
+                solar_panel_state=solar_panel_state,
+                sun_direction=sun_direction,
+            )
             # perform computation
             model.compute(dt)
             # get results

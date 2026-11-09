@@ -2,9 +2,9 @@
 
 | Folder | What | Run | Needs |
 |---|---|---|---|
-| `test/unit/` | Unit tests: robot camera config, Yamcs naming and startup check, camera argument check of the commands, image uploads, SDG writers, import rule (only Yamcs mode imports Yamcs code) | `pixi run -e test-unit test-unit` (or a bare `pytest`). CI: `.github/workflows/unit-tests.yaml`, on every push and pull request | No Isaac Sim, no server |
+| `test/unit/` | Unit tests: robot camera configuration, Yamcs naming and startup check, camera argument check of the commands, image uploads, SDG writers and dataset tools, import rule (only Yamcs mode imports Yamcs code) | `pixi run -e test-unit test-unit` (or a bare `pytest`). CI: `.github/workflows/unit-tests.yaml`, on every push and pull request | No Isaac Sim, no server |
 | `test/ci_artefacts/` | Sanity tests: start Isaac Sim (plus a Yamcs server, ROS 2 or Zenoh clients) and check the running sim | `pixi run test-ros2`, `test-ros2-largescale`, `test-yamcs`, `test-yamcs-largescale`, `test-yamcs-husky`, `test-zenoh`. CI: the Artefacts scenarios of `artefacts.yaml`, on push to main (below) | Isaac Sim and the pixi `test-sim` env; Yamcs: a `yamcs-mission-control-pragyaan` (`yamcs-mission-control-husky` for `test-yamcs-husky`) checkout next to this repository, or `YAMCS_MC_DIR` (`YAMCS_HUSKY_MC_DIR`) |
-| `test/physics_models/` | Inputs and Python requirements of the physics model scripts (below) | `python -m src.subsystems.robot_physics_models.<model>` | A venv with `test/physics_models/requirements.txt` |
+| `test/physics_models/` | Inputs of the physics model scripts (below) | `pixi run python -m src.subsystems.robot_physics_models.<model>` | The pixi `default` environment (the scripts do not start Isaac Sim) |
 
 ## Sanity test matrix
 
@@ -19,14 +19,11 @@ The Artefacts scenarios (`artefacts.yaml`), one `test/ci_artefacts` file each:
 | `test_yamcs_husky_sanity` | `lunaryard_20m` | husky | Yamcs |
 | `test_zenoh_sanity` | `lunaryard_20m` | husky | Zenoh |
 
-`scripts/check_yamcs_contract.py` (`pixi run -e yamcs check-yamcs-contract`) is a tool, not a test: it checks a robot and
-controller config against the MDB and buckets of a running Yamcs server.
-
 ## Unit tests
 
-They import OmniLRS as `src.*` from the repository root (`pythonpath` in `pyproject.toml`) and need only `pytest`,
-PyYAML (checks of the `cfg/robot` and `cfg/controller` yamls), Pillow (image uploads) and numpy, pandas and OpenCV (SDG
-writers): the pixi `test-unit` environment.
+They import OmniLRS as `src.*` from the repository root (`pythonpath` in `pyproject.toml`). They need only the pixi
+`test-unit` environment. It has `pytest`, PyYAML (`cfg/robot` and `cfg/controller` yamls), Pillow (image uploads),
+numpy, pandas and OpenCV (SDG writers), and SciPy (SDG dataset tests).
 
 ```bash
 pixi run -e test-unit test-unit
@@ -40,25 +37,18 @@ They exercise each model in isolation and produce diagnostic plots.
 
 ### Setup
 
-```bash
-# from the repository root (OmniLRS/)
-python3.11 -m venv test/physics_models/venv
-source test/physics_models/venv/bin/activate
-pip install -r test/physics_models/requirements.txt
-```
-
-> **Note:** Python 3.11+ is required (`StrEnum` support). The venv is
-> created with `python3.11` explicitly (isaacsim 5.0). Adjust as needed.
+The scripts need numpy, matplotlib, av and Pillow. The pixi `default` environment of the OmniLRS installation has them,
+so no other setup is necessary.
 
 ### Run
 
-All commands assume the venv is active and are executed from the repository root:
+Run the scripts from the repository root:
 
 ```bash
-python -m src.subsystems.robot_physics_models.radio_model
-python -m src.subsystems.robot_physics_models.thermal_model
-python -m src.subsystems.robot_physics_models.power_model
-python -m src.subsystems.robot_physics_models.camera_compression_model
+pixi run python -m src.subsystems.robot_physics_models.radio_model
+pixi run python -m src.subsystems.robot_physics_models.thermal_model
+pixi run python -m src.subsystems.robot_physics_models.power_model
+pixi run python -m src.subsystems.robot_physics_models.camera_compression_model
 ```
 
 Each script prints a message and saves its plots in `test/physics_models/outputs/`.

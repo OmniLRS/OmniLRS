@@ -151,11 +151,13 @@ python = "3.12.*"
 [feature.test-unit.pypi-dependencies]
 pytest = "*"
 pyyaml = "*"
-# Image uploads (test_images_handler) and the SDG writers of src/labeling/rep_utils.py (test_labeling_writers)
+# Image uploads (test_images_handler), the SDG writers of src/labeling/rep_utils.py (test_labeling_writers) and the
+# SDG dataset config, sampling and scripts/sdg_dataset tools (test_sdg_dataset_*)
 pillow = "*"
 numpy = "*"
 pandas = "*"
 opencv-python-headless = "*"
+scipy = "*"
 
 [feature.test-unit.tasks]
 test-unit = "pytest -v test/unit"
