@@ -40,6 +40,31 @@ Each query uses up to 400 SIFT features, a 0.75 ratio test and RANSAC PnP
 Outputs: `reference.png`, `reference_depth.npy`, `query_NN.png`, `manifest.json`
 and `results.json`.
 
+### Example: successful localization versus no pose
+
+Both captures use the same terrain, camera poses, lighting and protocol; only
+the material differs. Query 01 was selected to illustrate a success with Infinite
+and a failure with Regolith8k. Each picture shows the same query pose on the left
+and its reference map on the right (resized for display).
+
+**LunarRegolith8k**
+
+![Regolith8k query with candidate matches but no recovered pose](images/pnp_matches_8k.png)
+
+Only 8 candidate matches, fewer than the required 12 inliers: no pose is recovered.
+Colored lines show candidate descriptor matches, not accepted PnP inliers.
+
+**LunarRegolithInfinite**
+
+![Infinite query and reference with accepted PnP inliers](images/pnp_matches.png)
+
+17 accepted inliers from 38 candidate matches. Colored lines show only these
+inliers. Position error: 3.08 mm; rotation error: 0.059 degrees.
+
+These pictures illustrate one selected query, not all 24: the complete runs
+scored 4 correct / 0 wrong / 20 no pose
+with Regolith8k and 23 / 0 / 1 with Infinite.
+
 ## Square route: `square_route.py`
 
 Uses the optics and mounting pose of Pragyaan's `depth_cam` from the robot USD,
@@ -64,6 +89,12 @@ the start on the right, and every tenth inlier drawn.
 Outputs: `frame_NNN.png`, `false_match_NNN.png`, `manifest.json` and `results.json`.
 The main fields of `results.json` are `false_start_matches`,
 `final_return_recognized` and `per_frame`.
+
+![False start recognition with the repeating regolith texture](images/square_route_false_match.png)
+
+Example with `LunarRegolith8k`: the query on the left is 2 m from the starting
+view on the right, but the repeated texture passes the start-recognition checks.
+Colored lines show every tenth of the 512 RANSAC inliers.
 
 ## Comparing runs
 
