@@ -4,9 +4,11 @@ __email__ = "ljburtz@jaops.com"
 
 import math
 
+from src.configurations.robot_camera_confs import cameras_of_type
 from src.robots.robot import Robot
 from src.subsystems.device import CommonDevice, PowerState
-from src.tmtc.intervals_handler import IntervalName
+from src.tmtc import yamcs_naming
+from src.tmtc.intervals_handler import camera_streaming_interval
 
 
 class HuskyTransmitter:
@@ -16,8 +18,8 @@ class HuskyTransmitter:
     Collects telemetry data from the simulation and forwards it to Yamcs via
     the transmit_func callback provided by YamcsTMTC.
 
-    Covers: pose, IMU, OBC metrics & state, radio RSSI, thermal, power, wheel
-    encoder angles, and camera streaming state.
+    Covers: pose, GO/NOGO, IMU, OBC metrics & state, radio RSSI, thermal, power,
+    wheel encoder angles, and the streaming state of each rgba camera.
     """
 
     def __init__(
@@ -28,9 +30,11 @@ class HuskyTransmitter:
         robot_RG,
         robot_name: str,
         parameters_conf: dict,
+        camera_handler,
     ):
         self._transmit = transmit_func
         self._robot: Robot = robot
+        self._camera_handler = camera_handler
         self._intervals_handler = intervals_handler
         self._parameters_conf = parameters_conf
         self._robot_RG = robot_RG
@@ -56,6 +60,10 @@ class HuskyTransmitter:
             },
         }
         self._transmit(self._parameters_conf["pose_of_base_link"], pose)
+
+    def transmit_go_nogo(self):
+        go_nogo_state = self._robot.subsystems.get_go_nogo_state().value
+        self._transmit(self._parameters_conf["go_nogo"], go_nogo_state)
 
     def transmit_imu_readings(self):
         imu_accelerometer, imu_gyroscope, orientation = self._robot.get_imu_readings()
@@ -121,6 +129,8 @@ class HuskyTransmitter:
 
     def transmit_wheels_joint_angles(self):
         angles = self._robot.get_wheels_joint_angles()
+        if not angles:  # articulation telemetry not ready yet (startup, restart): nothing measured to send
+            return
         self._transform_joint_angles(angles)
         self._transmit(self._parameters_conf["motor_encoder"], angles)
 
@@ -129,7 +139,11 @@ class HuskyTransmitter:
             modulo = angles[i] % (2 * math.pi)
             angles[i] = int(modulo * (1024.0 / (2 * math.pi)))
 
+    # Per-camera streaming telemetry, under yamcs_naming.streaming_param(camera, field) with the fields of
+    # enums.STREAMING_FIELDS (state): keep them in step.
+
     def transmit_camera_streaming_state(self):
-        is_streaming = self._intervals_handler.does_exist(IntervalName.CAMERA_STREAMING.value)
-        state = PowerState.ON if is_streaming else PowerState.OFF
-        self._transmit(self._parameters_conf["camera_streaming_state"], state)
+        for camera_name in cameras_of_type(self._robot.cameras, "rgba"):
+            is_streaming = self._intervals_handler.does_exist(camera_streaming_interval(camera_name))
+            state = PowerState.ON if is_streaming else PowerState.OFF
+            self._transmit(yamcs_naming.streaming_param(camera_name, field="state"), state)

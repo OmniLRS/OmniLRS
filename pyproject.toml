@@ -18,13 +18,12 @@ dependencies = [
     "gdal",
     "omegaconf",
     "hydra-core",
-    "opencv-python",
     "av",
 ]
 
 [tool.ruff]
 line-length = 120
-target-version = "py311"
+target-version = "py312"
 # WorldBuilders is a vendored git submodule — don't lint/format third-party code.
 extend-exclude = ["WorldBuilders"]
 
@@ -39,3 +38,9 @@ known-third-party = ["WorldBuilders"]
 [build-system]
 requires = ["setuptools>=42", "wheel"]
 build-backend = "setuptools.build_meta"
+
+[tool.pytest.ini_options]
+# Tests import OmniLRS modules as `src.*` from the repository root
+pythonpath = ["."]
+# Bare `pytest` runs the unit tests only; the sanity tests (test/ci_artefacts) start Isaac Sim
+testpaths = ["test/unit"]

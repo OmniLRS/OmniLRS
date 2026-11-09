@@ -1,0 +1,41 @@
+{
+ "name": "generic-12bit-cmos (placeholder: calibrate with sensor_calibrate.py)",
+ "bit_depth": 12,
+ "black_level_dn": 64,
+ "full_well_e": 10000.0,
+ "gain_e_per_dn": 2.5,
+ "read_noise_e": 3.5,
+ "dark_current_e_per_s": 8.0,
+ "temp_ref_c": 20.0,
+ "temp_doubling_c": 6.5,
+ "prnu": 0.01,
+ "dsnu_e": 2.0,
+ "exposure_ref_s": 0.01,
+ "exposure_s_range": [
+  0.002,
+  0.04
+ ],
+ "exposure_ev_sigma": 0.5,
+ "temperature_c_range": [
+  -20.0,
+  40.0
+ ],
+ "vignetting": {
+  "k1": 0.35,
+  "k2": 0.15,
+  "center": [
+   0.5,
+   0.5
+  ]
+ },
+ "defocus_sigma_px_range": [
+  0.0,
+  1.2
+ ],
+ "motion_blur_px_range": [
+  0.0,
+  4.0
+ ],
+ "motion_blur_prob": 0.3,
+ "fixed_pattern_seed": 12345
+}

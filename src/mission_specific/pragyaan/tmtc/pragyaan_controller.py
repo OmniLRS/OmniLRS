@@ -5,6 +5,7 @@ __email__ = "ljburtz@jaops.com"
 
 from src.mission_specific.pragyaan.tmtc.camera_handler import PragyaanCameraHandler
 from src.mission_specific.pragyaan.tmtc.commander import PragyaanCommander
+from src.mission_specific.pragyaan.tmtc.enums import STREAMING_FIELDS
 from src.mission_specific.pragyaan.tmtc.payload_handler import PayloadHandler
 from src.mission_specific.pragyaan.tmtc.transmitter import PragyaanTransmitter
 from src.tmtc.yamcs_TMTC import YamcsTMTC
@@ -17,9 +18,9 @@ class PragyaanController(YamcsTMTC):
 
     Rover controller inherits YamcsTMTC to benefit from the pre-implemented helping handlers that come with the YamcsTMTC framework.
     Implements two mandatory funtions inherited from YamcsTMTC:
-        _setup_command_callbacks(commands_conf) - utilizes CommandsHandler to construct the mapping between high level Yamcs commands,
-                                                        and desired functionalities
-                                                - commands_conf are previously defined inside .yaml configuration file
+        command_handlers - maps each command of the controller yaml `commands` (by key) to its handler and the
+                           argument names the handler takes; YamcsTMTC registers them and checks them against the
+                           Yamcs server MDB at startup
         start_streaming_data - utilizes IntervalsHandler to setup and trigger update of rover's parameters in Yamcs
 
     The rest of the functions are implementations of specific desired behaviour of the Pragyaan rover.
@@ -28,6 +29,8 @@ class PragyaanController(YamcsTMTC):
 
     Besides utilizing handlers provided by YamcsTMTC, the controller implements its own specific handlers that adhere to rover's use case.
     """
+
+    CAMERA_STREAMING_FIELDS = STREAMING_FIELDS
 
     def __init__(self, yamcs_instance_conf, yamcs_conf, robot_name, robot_RG, robot):
         super().__init__(yamcs_instance_conf, yamcs_conf, robot_name, robot_RG, robot)
@@ -62,59 +65,33 @@ class PragyaanController(YamcsTMTC):
 
     "Performs mapping between yamcs commands and functions that affect the simulation and rover's state"
 
-    def setup_command_callbacks(self, commands_conf):
-        self._commands_handler.add_command(
-            commands_conf["drive_straight"], self._commander.drive_straight, args=["linear_velocity", "distance"]
-        )
-        self._commands_handler.add_command(
-            commands_conf["drive_turn"], self._commander.drive_turn, args=["angular_velocity", "angle"]
-        )
-        self._commands_handler.add_command(
-            commands_conf["camera_capture_high"], self._commander.handle_high_res_capture
-        )
-        self._commands_handler.add_command(
-            commands_conf["camera_streaming_on_off"], self._commander.set_activity_of_camera_streaming, args=["action"]
-        )
-        self._commands_handler.add_command(commands_conf["camera_capture_depth"], self._commander.handle_depth_capture)
-        self._commands_handler.add_command(
-            commands_conf["set_camera_streaming_params"],
-            self._commander.set_camera_streaming_params,
-            args=[
-                "bitrate",
-                "crf",
-                "keyframe_interval",
-                "max_payload_size",
-                "bandwidth_window_seconds",
-            ],
-        )
-        self._commands_handler.add_command(
-            commands_conf["power_electronics"],
-            self._commander.handle_electronics_on_off,
-            args=["subsystem_id", "power_state"],
-        )
-        self._commands_handler.add_command(
-            commands_conf["solar_panel"], self._commander.handle_solar_panel, args=["deployment"]
-        )
-        self._commands_handler.add_command(commands_conf["go_nogo"], self._commander.handle_go_nogo, args=["decision"])
-        self._commands_handler.add_command(commands_conf["capture_apxs"], self._commander.snap_apxs)
-        self._commands_handler.add_command(
-            commands_conf["admin_water_detection"], self._commander.set_is_near_water, args=["trigger_water_detection"]
-        )
-        self._commands_handler.add_command(commands_conf["admin_inject_fault"], self._commander.inject_fault)
-        self._commands_handler.add_command(
-            commands_conf["lander_camera_capture_high"], self._commander.handle_lander_camera_capture
-        )
-        self._commands_handler.add_command(
-            commands_conf["admin_battery_percentage"],
-            self._commander.handle_battery_perc_change,
-            args=["battery_percentage"],
-        )
+    def command_handlers(self):
+        # controller yaml `commands` key -> (handler, MDB argument names passed to it, in call order)
+        return {
+            "go_nogo": (self._commander.handle_go_nogo, ["decision"]),
+            "power_electronics": (self._commander.handle_electronics_on_off, ["subsystem_id", "power_state"]),
+            "solar_panel": (self._commander.handle_solar_panel, ["deployment"]),
+            "drive_straight": (self._commander.drive_straight, ["linear_velocity", "distance"]),
+            "drive_turn": (self._commander.drive_turn, ["angular_velocity", "angle"]),
+            "camera_capture_high": (self._commander.handle_high_res_capture, ["camera_name"]),
+            "camera_streaming_on_off": (self._commander.set_activity_of_camera_streaming, ["camera_name", "action"]),
+            "camera_capture_depth": (self._commander.handle_depth_capture, ["camera_name"]),
+            "set_camera_streaming_params": (
+                self._commander.set_camera_streaming_params,
+                ["camera_name", "bitrate", "crf", "keyframe_interval", "max_payload_size", "bandwidth_window_seconds"],
+            ),
+            "capture_apxs": (self._commander.snap_apxs, []),
+            "admin_battery_percentage": (self._commander.handle_battery_perc_change, ["battery_percentage"]),
+            "admin_water_detection": (self._commander.set_is_near_water, ["trigger_water_detection"]),
+            "admin_inject_fault": (self._commander.inject_fault, []),
+            "lander_camera_capture_high": (self._commander.handle_lander_camera_capture, []),
+        }
 
     "Creates intervals for automatic transmission of rover's parameters to yamcs"
 
     def start_streaming_data(self):
         self._payload_handler.snap_apxs()  # snaps initial blank apxs reading
-        self._images_handler.snap_no_data_images()
+        self._camera_handler.transmit_no_data_images()
         self._intervals_handler.add_new_interval(
             name="Pose of base link",
             seconds=self._intervals["robot_stats"],
@@ -192,7 +169,7 @@ class PragyaanController(YamcsTMTC):
             seconds=self._intervals["robot_stats"],
             is_repeating=True,
             execute_immediately=True,
-            function=self._transmitter.transmit_solar_panel_state,
+            function=self._update_and_transmit_solar_panel_state,
         )
         self._intervals_handler.add_new_interval(
             name="Monitoring camera stream",
@@ -209,3 +186,7 @@ class PragyaanController(YamcsTMTC):
             function=self._transmitter.transmit_wheels_joint_angles,
         )
         # here add further intervals and their functionalities
+
+    def _update_and_transmit_solar_panel_state(self):
+        self._commander.update_solar_panel_state()
+        self._transmitter.transmit_solar_panel_state()

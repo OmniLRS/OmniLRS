@@ -8,8 +8,8 @@ import warnings
 import numpy as np
 import omni
 import warp as wp
+from isaacsim.core.experimental.utils.semantics import add_labels
 from pxr import Sdf, UsdGeom
-from semantics.schema.editor import PrimSemanticData
 from WorldBuilders import pxr_utils
 
 from assets import get_assets_path
@@ -315,8 +315,7 @@ class TerrainManager:
         self.loadTerrainByName(name)
 
     def autoLabel(self):
-        prim_sd = PrimSemanticData(self._stage.GetPrimAtPath(self._mesh_path))
-        prim_sd.add_entry("class", "ground")
+        add_labels(self._stage.GetPrimAtPath(self._mesh_path), labels="ground", taxonomy="class")
 
     def getDEM(self):
         """
@@ -371,9 +370,9 @@ if __name__ == "__main__":
     from isaacsim import SimulationApp
 
     simulation_app = SimulationApp({"headless": False})
-    from isaacsim.core.api.world import World
+    from src.simulation import Simulation
 
-    world = World(stage_units_in_meters=1.0)
+    sim = Simulation(physics_dt=1.0 / 60.0, rendering_dt=1.0 / 60.0)
     T = TerrainManager()
 
     j = 0
@@ -382,4 +381,4 @@ if __name__ == "__main__":
         T.loadTerrainId(j)
         j += 1
         for i in range(20):
-            world.step(render=True)
+            sim.step()
