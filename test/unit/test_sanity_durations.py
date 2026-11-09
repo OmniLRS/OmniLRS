@@ -34,10 +34,32 @@ def test_on_artefacts_infra(environ, hostname, expected):
     assert sanity_durations.on_artefacts_infra(environ, hostname) is expected
 
 
-def test_isaac_ready_from_the_kit_app_ready_line():
-    log = "[21.5s] [ext: omni.kit.app] startup\n[22.364s] app ready\n[2026-11-09 05:34:07,629][src] - ready\n"
-    assert sanity_durations.isaac_ready_s(log) == 22.364
-    assert sanity_durations.isaac_ready_s("no kit output") is None
+def _isaac_ready_line(seconds: str, cache_state: str) -> str:
+    """The line logged by startSim (src/environments_wrappers/__init__.py)."""
+    return (
+        f"[2026-11-09 05:24:08,512][src.environments_wrappers][INFO] - Isaac Sim ready after {seconds}s since the "
+        f"Kit start (material library ready in 2.9s, material cache {cache_state}). OmniLRS startup begins."
+    )
+
+
+def test_isaac_ready_from_the_omnilrs_marker():
+    log = "[22.364s] app ready\n" + _isaac_ready_line("25.417", "found") + "\n[2026-11-09 05:34:07,629][src] - ready\n"
+    assert sanity_durations.isaac_ready_s(log) == 25.417
+    assert not sanity_durations.material_cache_missing(log)
+    assert sanity_durations.isaac_ready_s("[22.364s] app ready\n") is None
+
+
+def test_material_cache_missing_from_the_omnilrs_marker():
+    log = _isaac_ready_line("318.002", "missing, Kit rebuilds it") + "\n"
+    assert sanity_durations.isaac_ready_s(log) == 318.002
+    assert sanity_durations.material_cache_missing(log)
+    assert not sanity_durations.material_cache_missing("no marker")
+
+
+def test_startsim_logs_the_line_that_the_tests_parse():
+    source = (REPO_ROOT / "src" / "environments_wrappers" / "__init__.py").read_text()
+    assert '"Isaac Sim ready after %.3fs since the Kit start' in source
+    assert "material cache %s)" in source and '"missing, Kit rebuilds it"' in source
 
 
 def test_measure_splits_the_first_test_into_isaac_and_omnilrs():

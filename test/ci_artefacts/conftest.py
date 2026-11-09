@@ -53,7 +53,10 @@ def check_durations(request, record_testsuite_property):
             pytest.skip("other tests failed, so the durations are not compared")
         _isaac_s = sanity_durations.isaac_ready_s(sim_log)
         if _isaac_s is None:
-            pytest.fail("No `[<seconds>s] app ready` line of Kit in the sim log: cannot measure the Isaac Sim startup.")
+            pytest.fail(
+                "No `Isaac Sim ready after <seconds>s` line in the sim log (logged by startSim in "
+                "src/environments_wrappers/__init__.py): cannot measure the Isaac Sim startup."
+            )
         measured = _measured()
         for metric, seconds in measured.items():
             record_testsuite_property(metric, round(seconds, 1))
@@ -73,12 +76,17 @@ def check_durations(request, record_testsuite_property):
         flagged = sanity_durations.regressions(measured, reference, **baseline["tolerance"])
         if flagged:
             tolerance = baseline["tolerance"]
-            pytest.fail(
+            message = (
                 f"{scenario} is slower than its baseline (tolerance: more than x{tolerance['ratio']} "
                 f"and more than +{tolerance['min_increase_s']} s):\n  "
                 + "\n  ".join(flagged)
                 + f"\nIf the increase is expected, update {scenario} in {BASELINE_PATH}."
             )
+            if any(line.startswith("isaac_s ") for line in flagged):
+                message += "\n" + sanity_durations.ISAAC_SLOW_HINT
+                if sanity_durations.material_cache_missing(sim_log):
+                    message += "\nThis run says `material cache missing`."
+            pytest.fail(message)
 
     return check
 

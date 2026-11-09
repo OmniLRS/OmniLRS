@@ -18,8 +18,17 @@ import yaml
 BASELINE_FILE = Path(__file__).with_name("durations_baseline.yaml")
 METRICS = ("isaac_s", "omnilrs_s", "tests_s")  # checked against the baseline
 
-# Kit logs `[<seconds since Kit start>s] app ready` once Isaac Sim has started
-_APP_READY = re.compile(r"^\[(\d+(?:\.\d+)?)s\] app ready", re.M)
+# Logged by startSim (src/environments_wrappers/__init__.py) once Isaac Sim has finished its startup work, with the
+# time since the Kit start: `[<time>][src.environments_wrappers][INFO] - Isaac Sim ready after <seconds>s since the
+# Kit start (... material cache found|missing ...)`
+_ISAAC_READY = re.compile(r"Isaac Sim ready after (\d+(?:\.\d+)?)s(.*)$", re.M)
+
+# Failure hint when isaac_s is too long
+ISAAC_SLOW_HINT = (
+    "Hint: isaac_s ends at the `Isaac Sim ready after` line of the sim log. If that line says `material cache "
+    "missing`, Kit rebuilt its material cache (about 5 min): after an Isaac Sim upgrade, update "
+    "ci.docker/material_cache.json and its path in artefacts.Dockerfile (see ci.docker/README.md)."
+)
 
 # Hostname of the Artefacts remote runners: platform-<job uuid>-<scenario index> (from the junit files of the
 # reference job in durations_baseline.yaml). On that infra the Artefacts CLI also reads the AWS Batch job variables.
@@ -34,9 +43,15 @@ def on_artefacts_infra(environ=os.environ, hostname: str | None = None) -> bool:
 
 
 def isaac_ready_s(sim_log: str) -> float | None:
-    """Isaac Sim startup time from the `app ready` line of Kit in the sim log, None if the line is missing."""
-    match = _APP_READY.search(sim_log)
+    """Isaac Sim startup time from the `Isaac Sim ready after` line of the sim log, None if the line is missing."""
+    match = _ISAAC_READY.search(sim_log)
     return float(match.group(1)) if match else None
+
+
+def material_cache_missing(sim_log: str) -> bool:
+    """True if the `Isaac Sim ready after` line says that Kit rebuilt its material cache."""
+    match = _ISAAC_READY.search(sim_log)
+    return match is not None and "material cache missing" in match.group(2)
 
 
 def measure(test_durations: list[float], isaac_s: float | None = None) -> dict[str, float]:
@@ -44,7 +59,7 @@ def measure(test_durations: list[float], isaac_s: float | None = None) -> dict[s
 
     startup_s: the first test, which pays the session fixtures: the Yamcs server start (Yamcs scenarios) and the sim
                launch until its final startup marker.
-    isaac_s:   the Isaac Sim part of startup_s, from the `app ready` line of Kit (only if isaac_s is given).
+    isaac_s:   the Isaac Sim part of startup_s, from the `Isaac Sim ready after` line (only if isaac_s is given).
     omnilrs_s: the rest of startup_s: OmniLRS builds the scene, plus the launch before Kit starts (pixi, Python imports,
                Yamcs server).
     tests_s:   all later tests.

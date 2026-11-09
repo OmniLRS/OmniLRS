@@ -2,6 +2,10 @@ __author__ = "Antoine Richard, Bach Nguyen"
 __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 # Isaac Sim extensions whose Python modules OmniLRS imports. Enabled explicitly so OmniLRS does not depend on the
 # default app enabling them (or on other extensions pulling them in).
 REQUIRED_EXTENSIONS = (
@@ -20,6 +24,42 @@ def _enable_required_extensions() -> None:
     for ext in REQUIRED_EXTENSIONS:
         if not ext_manager.is_extension_enabled(ext):
             ext_manager.set_extension_enabled_immediate(ext, True)
+
+
+def _wait_for_isaac_sim(simulation_app) -> None:
+    """Finish the startup work of Isaac Sim before OmniLRS starts, then log `Isaac Sim ready after <seconds>s`.
+
+    After `app ready`, the Kit material library still loads its MDL list during the next app updates. If
+    ${cache}/material_cache.json is missing (first run of a new install, CI image), Kit rebuilds it in one blocking
+    update: about 5 min on the CI GPU. Waiting here keeps that Isaac Sim time out of the OmniLRS startup steps.
+    The sanity tests (test/ci_artefacts) read the seconds of that log line, which count from the Kit start.
+    """
+    import asyncio
+    import os
+    import time
+
+    import carb.tokens
+    import omni.kit.app
+
+    cache_file = carb.tokens.get_tokens_interface().resolve("${cache}/material_cache.json")
+    cache_state = "found" if os.path.isfile(cache_file) else "missing, Kit rebuilds it"
+    wait_start = time.monotonic()
+    try:
+        import omni.kit.material.library as material_library
+    except ImportError:
+        material_library = None
+    if material_library is not None:
+        # Returns once the MDL list is ready (or after 1000 app updates)
+        task = asyncio.ensure_future(material_library.get_mdl_list_async())
+        while not task.done():
+            simulation_app.update()
+    logger.info(
+        "Isaac Sim ready after %.3fs since the Kit start (material library ready in %.1fs, material cache %s). "
+        "OmniLRS startup begins.",
+        omni.kit.app.get_app().get_time_since_start_s(),
+        time.monotonic() - wait_start,
+        cache_state,
+    )
 
 
 def startSim(cfg: dict):
@@ -66,6 +106,7 @@ def startSim(cfg: dict):
     set_lens_flares(cfg)
     set_motion_blur(cfg)
     set_chromatic_aberrations(cfg)
+    _wait_for_isaac_sim(simulation_app)
 
     # NOTE mode is chosen by setting the value of "mode" property within "defaults" @cfg/config.yaml
     # it can also be overwritten through console, same as environment

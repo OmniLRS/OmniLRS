@@ -38,4 +38,10 @@ RUN cd /workspace/yamcs-mission-control-pragyaan \
 # Fast revalidation: no-op if manifests match the base image, fails on lockfile drift
 RUN pixi install --locked -e ci -e test-sim
 
+# Kit material library cache: without it, Isaac Sim rebuilds it at every startup (about 5 min per scenario).
+# The folder is the Kit ${cache}: kit/cache/Kit/<Kit version>/<Kit build hash>. Update it on an Isaac Sim upgrade
+# (ci.docker/README.md).
+RUN install -D -m 644 ci.docker/material_cache.json \
+    .pixi/envs/ci/lib/python3.12/site-packages/isaacsim/kit/cache/Kit/110.4/187cf21b/material_cache.json
+
 CMD artefacts run $ARTEFACTS_JOB_NAME
