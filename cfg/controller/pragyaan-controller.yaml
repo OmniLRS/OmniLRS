@@ -36,7 +36,7 @@ robots_settings:
       # OmniLRS does not create buckets: generate_mdb_rover.py (yamcs-mission-control repository) declares all of them
       # in the Yamcs yamcs.yaml, and the startup check aborts if one is missing.
       #   name: Yamcs storage bucket
-      #   path: MDB space system receiving number/name/url_* metadata
+      #   path: MDB space system receiving the number, name and url_* Yamcs parameters
       buckets:
         lander:
           name: images_lander

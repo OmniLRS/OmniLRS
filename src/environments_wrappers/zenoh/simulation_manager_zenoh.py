@@ -4,7 +4,7 @@ __email__ = "ljburtz@jaops.com"
 
 import logging
 
-import omni
+import omni.timeline
 from isaacsim import SimulationApp
 
 from src.configurations.procedural_terrain_confs import TerrainManagerConf

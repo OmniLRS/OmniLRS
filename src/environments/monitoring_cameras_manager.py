@@ -4,7 +4,7 @@ __email__ = "ljburtz@jaops.com"
 
 import os
 
-import omni
+import omni.usd
 from isaacsim.sensors.experimental.rtx import CameraSensor
 from pxr import Gf, UsdGeom
 

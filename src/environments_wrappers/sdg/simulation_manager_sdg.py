@@ -3,7 +3,7 @@ __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
 
 
-import omni
+import omni.timeline
 
 from src.environments_wrappers.sdg.lunalab_sdg import SDG_Lunalab
 from src.environments_wrappers.sdg.lunaryard_sdg import SDG_Lunaryard

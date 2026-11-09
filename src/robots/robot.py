@@ -9,7 +9,7 @@ from typing import Dict, List, Optional, Tuple
 import isaacsim.core.experimental.utils.prim as prim_utils
 import isaacsim.core.experimental.utils.xform as xform_utils
 import numpy as np
-import omni
+import omni.usd
 from isaacsim.core.experimental.prims import RigidPrim
 
 # from src.robots.subsystems_manager import RobotSubsystemsManager

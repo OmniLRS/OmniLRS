@@ -8,9 +8,9 @@ import string
 from typing import Dict, Tuple, Union
 
 import numpy as np
-import omni
 import omni.kit.actions.core
 import omni.replicator.core as rep
+import omni.usd
 from pxr import Usd, UsdGeom
 
 from src.configurations.auto_labeling_confs import AutoLabelingConf

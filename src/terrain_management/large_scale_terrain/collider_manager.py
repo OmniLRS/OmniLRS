@@ -7,7 +7,7 @@ from typing import List, Tuple
 
 import cv2
 import numpy as np
-import omni
+import omni.usd
 
 from src.terrain_management.large_scale_terrain.collider_builder import ColliderBuilder, ColliderBuilderConf
 from src.terrain_management.large_scale_terrain.utils import ScopedTimer

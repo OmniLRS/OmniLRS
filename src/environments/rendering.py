@@ -5,7 +5,6 @@ __email__ = "ljburtz@jaops.com"
 from typing import Tuple
 
 import carb.settings
-import omni
 
 from src.configurations.rendering_confs import ChromaticAberrationsConf, FlaresConf, MotionBlurConf
 
@@ -43,6 +42,8 @@ def enable_RTX_interactive(*kwargs) -> None:
     Args:
         data (int, optional): Not used. Defaults to 0.
     """
+
+    import omni.kit.actions.core
 
     action_registry = omni.kit.actions.core.get_action_registry()
     action = action_registry.get_action("omni.kit.viewport.actions", "set_renderer_rtx_pathtracing")
