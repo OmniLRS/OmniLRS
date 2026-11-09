@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
+REPO_ROOT = Path(__file__).resolve().parents[2]
 STARTUP_TIMEOUT = int(os.environ.get("OMNILRS_TEST_TIMEOUT", "600"))
 
 SIM_COMMAND = [
@@ -16,6 +16,10 @@ SIM_COMMAND = [
     "-e",
     "ci",
     "ros2",
+    # The Husky robot yaml (cfg/robot/husky.yaml) with the ROS 2 Husky USD: its action graphs publish the topics
+    # checked below (the robot yaml USD has no graphs, for the Zenoh and Yamcs modes).
+    "robot=husky",
+    "environment.robots_settings.parameters.usd_path=assets/USD_Assets/robots/ros2_husky_PhysX_vlp16.usd",
     "rendering.renderer.headless=True",
     # For some reason AWS EKS AMI's duplicate NVIDIA Vulkan ICDs, making one GPU enumerate
     # causing Isaac to think there are two gpus available and then die.
@@ -44,7 +48,7 @@ class SimProcess:
     def __init__(self):
         # Artefacts upload dir if available, otherwise a local test dir.
         upload_dir = os.environ.get("ARTEFACTS_SCENARIO_UPLOAD_DIR")
-        log_dir = Path(upload_dir) if upload_dir else REPO_ROOT / "test"
+        log_dir = Path(upload_dir) if upload_dir else Path(__file__).resolve().parent
         log_dir.mkdir(parents=True, exist_ok=True)
         self.log_path = log_dir / "sim_startup.log"
         self._log_file = open(self.log_path, "w")

@@ -10,7 +10,7 @@ from pathlib import Path
 import pytest
 import zenoh
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
+REPO_ROOT = Path(__file__).resolve().parents[2]
 STARTUP_TIMEOUT = int(os.environ.get("OMNILRS_TEST_TIMEOUT", "600"))
 TELEMETRY_TIMEOUT = int(os.environ.get("OMNILRS_TELEMETRY_TIMEOUT", "60"))
 JOINT_TIMEOUT = int(os.environ.get("OMNILRS_JOINT_TIMEOUT", "30"))
@@ -73,7 +73,7 @@ SETTLE_FRAMES = 5  # consecutive joint telemetry frames (10 Hz) that must match
 def _log_dir():
     # Artefacts upload dir if available, otherwise a local test dir.
     upload_dir = os.environ.get("ARTEFACTS_SCENARIO_UPLOAD_DIR")
-    log_dir = Path(upload_dir) if upload_dir else REPO_ROOT / "test"
+    log_dir = Path(upload_dir) if upload_dir else Path(__file__).resolve().parent
     log_dir.mkdir(parents=True, exist_ok=True)
     return log_dir
 

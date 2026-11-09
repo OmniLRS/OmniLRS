@@ -11,7 +11,7 @@ from src.mission_specific.husky.subsystems.husky_power_model import (
     HuskyPowerModel,
 )
 from src.subsystems.device import CommonDevice, Device, PowerState
-from src.subsystems.robot_enums import ObcState
+from src.subsystems.robot_enums import GoNogoState, ObcState
 from src.subsystems.robot_physics_models.obc_metrics_model import (
     ObcMetricsModel,
 )
@@ -37,6 +37,7 @@ class HuskySubsystemsHandler(RobotSubsystemsHandler):
             radio_model=radio_model,
             obc_metrics_model=obc_metrics_model,
             power_model=power_model,
+            go_nogo_state=GoNogoState.GO,  # the Husky starts ready to drive; a NOGO command stops it
         )
         self._setup_devices()
         self._setup_power_model()
