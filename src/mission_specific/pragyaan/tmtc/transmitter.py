@@ -4,10 +4,12 @@ __email__ = "ljburtz@jaops.com"
 
 import math
 
+from src.configurations.robot_camera_confs import cameras_of_type
 from src.robots.robot import Robot
 from src.subsystems.device import CommonDevice, PowerState
 from src.subsystems.robot_enums import SolarPanelState
-from src.tmtc.intervals_handler import IntervalName
+from src.tmtc import yamcs_naming
+from src.tmtc.intervals_handler import camera_streaming_interval
 
 
 class PragyaanTransmitter:
@@ -37,6 +39,8 @@ class PragyaanTransmitter:
 
     def transmit_wheels_joint_angles(self):
         angles = self._robot.get_wheels_joint_angles()
+        if not angles:  # articulation telemetry not ready yet (startup, restart): nothing measured to send
+            return
         self._transform_joint_angles(angles)
         self._transmit(self._parameters_conf["motor_encoder"], angles)
 
@@ -122,25 +126,30 @@ class PragyaanTransmitter:
         self._transmit(self._parameters_conf["imu_gyroscope"], imu_gyroscope)
         self._transmit(self._parameters_conf["imu_orientation"], orientation)
 
+    # Per-camera streaming telemetry, under yamcs_naming.streaming_param(camera, field) with the fields of
+    # enums.STREAMING_FIELDS (state, bandwidth, packets_sent, packets_lost, decode_errors): keep them in step.
+
     def transmit_camera_streaming_state(self):
-        is_camera_streaming = self._intervals_handler.does_exist(IntervalName.CAMERA_STREAMING.value)
-        state = PowerState.ON if is_camera_streaming else PowerState.OFF
-        self._transmit(self._parameters_conf["camera_streaming_state"], state)
+        for camera_name in cameras_of_type(self._robot.cameras, "rgba"):
+            is_camera_streaming = self._intervals_handler.does_exist(camera_streaming_interval(camera_name))
+            state = PowerState.ON if is_camera_streaming else PowerState.OFF
+            self._transmit(yamcs_naming.streaming_param(camera_name, field="state"), state)
 
     def transmit_camera_compression_info(self):
-        compression_status = self._camera_handler.get_compression_model_outputs()
-        if compression_status is None:
-            return
-        # The bandwidth is 0 until the first frame is encoded; skip it as it is below the Yamcs MDB minimum
-        bandwidth = compression_status["bandwidth"]
-        if bandwidth > 0:
-            self._transmit(self._parameters_conf["camera_bandwidth"], int(bandwidth))
-        # Packet counters roll over like hardware counters; the model keeps the full counts.
-        packets_sent = compression_status["packets_sent"] % self.PACKET_COUNTER_MODULO
-        packets_lost = compression_status["packets_lost"] % self.PACKET_COUNTER_MODULO
-        self._transmit(self._parameters_conf["camera_packets_sent"], packets_sent)
-        self._transmit(self._parameters_conf["camera_packets_lost"], packets_lost)
-        self._transmit(self._parameters_conf["camera_decode_errors"], compression_status["decode_errors"])
+        for camera_name in cameras_of_type(self._robot.cameras, "rgba"):
+            compression_status = self._camera_handler.get_compression_model_outputs(camera_name)
+            # 0 until the first frame is encoded
+            self._transmit(
+                yamcs_naming.streaming_param(camera_name, field="bandwidth"), int(compression_status["bandwidth"])
+            )
+            # Packet counters roll over like hardware counters; the model keeps the full counts.
+            packets_sent = compression_status["packets_sent"] % self.PACKET_COUNTER_MODULO
+            packets_lost = compression_status["packets_lost"] % self.PACKET_COUNTER_MODULO
+            self._transmit(yamcs_naming.streaming_param(camera_name, field="packets_sent"), packets_sent)
+            self._transmit(yamcs_naming.streaming_param(camera_name, field="packets_lost"), packets_lost)
+            self._transmit(
+                yamcs_naming.streaming_param(camera_name, field="decode_errors"), compression_status["decode_errors"]
+            )
 
     def transmit_go_nogo(self):
         go_nogo_state = self._robot.subsystems.get_go_nogo_state().value

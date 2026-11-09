@@ -595,8 +595,8 @@ class HighResDEMGen:
             self.sim_is_warm = True
             updated = True
             if not self.monitor_thread.thread.is_alive():
-                logger.warn("Simulation exited before being fully initialized. Trying to exit.")
-                logger.warn("You may need to kill the process manually. Or use Ctrl + \ to exit.")
+                logger.warning("Simulation exited before being fully initialized. Trying to exit.")
+                logger.warning("You may need to kill the process manually. Or use Ctrl + \\ to exit.")
                 sys.exit(0)
 
         # Map update if the block has changed

@@ -110,5 +110,5 @@ class RendererConf:
         assert self.tbn_frame_mode in [0, 1, 2, 3], "tbn_frame_mode must be between 0 and 3"
         assert self.renderer in [
             "PathTracing",
-            "RayTracedLighting",
-        ], "renderer must be PATH, PathTracing or RayTracedLighting"
+            "RealTimePathTracing",
+        ], "renderer must be PathTracing or RealTimePathTracing"

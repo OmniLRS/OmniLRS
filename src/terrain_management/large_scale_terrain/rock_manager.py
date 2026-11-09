@@ -11,8 +11,8 @@ from typing import List, Tuple
 
 import numpy as np
 import omni
+from isaacsim.core.experimental.utils.semantics import add_labels
 from pxr import Gf, Sdf, Usd, UsdGeom, Vt
-from semantics.schema.editor import PrimSemanticData
 
 from src.terrain_management.large_scale_terrain.pxr_utils import (
     add_collider,
@@ -102,8 +102,7 @@ class Instancer:
             logger.warn("Texture name not provided. Material will not be loaded.")
 
     def apply_semantic_label(self, prim_path: Usd.Prim):
-        prim_sd = PrimSemanticData(self.stage.GetPrimAtPath(prim_path))
-        prim_sd.add_entry("class", self.semantic_label)
+        add_labels(self.stage.GetPrimAtPath(prim_path), labels=self.semantic_label, taxonomy="class")
 
     def create_instancer(self):
         """
@@ -247,8 +246,7 @@ class CustomInstancer:
             logger.warn("Texture name not provided. Material will not be loaded.")
 
     def apply_semantic_label(self, prim_path: Usd.Prim):
-        prim_sd = PrimSemanticData(self.stage.GetPrimAtPath(prim_path))
-        prim_sd.add_entry("class", self.semantic_label)
+        add_labels(self.stage.GetPrimAtPath(prim_path), labels=self.semantic_label, taxonomy="class")
 
     def create_instancer(self):
         """
@@ -427,8 +425,7 @@ class ChangeBlock:
             logger.warn("Texture name not provided. Material will not be loaded.")
 
     def apply_semantic_label(self, prim_path: Usd.Prim):
-        prim_sd = PrimSemanticData(self.stage.GetPrimAtPath(prim_path))
-        prim_sd.add_entry("class", self.semantic_label)
+        add_labels(self.stage.GetPrimAtPath(prim_path), labels=self.semantic_label, taxonomy="class")
 
     def create_instancer(self):
         """
@@ -475,7 +472,7 @@ class ChangeBlock:
                 position_spec = prim_spec.GetAttributeAtPath(prim_path + ".xformOp:translate")
                 if position_spec is None:
                     position_spec = Sdf.AttributeSpec(prim_spec, "xformOp:translate", Sdf.ValueTypeNames.Float3)
-                position_spec.default = Gf.Vec3f(positions[i, 0], positions[i, 1], positions[i, 2])
+                position_spec.default = Gf.Vec3f(float(positions[i, 0]), float(positions[i, 1]), float(positions[i, 2]))
 
                 orient_spec = prim_spec.GetAttributeAtPath(prim_path + ".xformOp:orient")
                 if orient_spec is None:
@@ -487,7 +484,7 @@ class ChangeBlock:
                 scale_spec = prim_spec.GetAttributeAtPath(prim_path + ".xformOp:scale")
                 if scale_spec is None:
                     scale_spec = Sdf.AttributeSpec(prim_spec, "xformOp:scale", Sdf.ValueTypeNames.Float3)
-                scale_spec.default = Gf.Vec3f(scales[i, 0], scales[i, 1], scales[i, 2])
+                scale_spec.default = Gf.Vec3f(float(scales[i, 0]), float(scales[i, 1]), float(scales[i, 2]))
 
                 xform_order_spec = prim_spec.GetAttributeAtPath(prim_path + ".xformOpOrder")
                 if xform_order_spec is None:
