@@ -1,0 +1,41 @@
+# Durations (seconds) of the sanity tests on the Artefacts remote infra. Local runs do not use this file.
+# test_durations_within_baseline (the last test of each file, see conftest.py) fails if a metric is more than
+# `ratio` times its baseline AND more than `min_increase_s` above it.
+#   isaac_s:   Isaac Sim startup, from the `[<seconds>s] app ready` line of Kit in the sim log
+#   omnilrs_s: the rest of the first test: OmniLRS builds the scene until the final startup marker, plus the launch
+#              before Kit starts (pixi, Python imports, and the Yamcs server in the Yamcs scenarios)
+#   tests_s:   all later tests
+# If a change makes a scenario slower on purpose, update its values in the same PR.
+#
+# Values from job 2fbb5444-53be-4fa8-b5ec-0366e5d978f0 (2026-11-09, main at db50d58, Isaac Sim 6.2, all tests passed):
+# isaac_s from its sim logs; omnilrs_s = time of the first test in tests_junit.xml - isaac_s;
+# tests_s = suite time - time of the first test (this includes the sim shutdown, which the check does not measure).
+gpu: Tesla T4 # the infra GPU: a different GPU fails the check, because the baseline must then be measured again
+tolerance:
+  ratio: 1.2
+  min_increase_s: 20
+scenarios: # Artefacts scenario name (artefacts.yaml) = test file name
+  test_ros2_sanity:
+    isaac_s: 25
+    omnilrs_s: 373
+    tests_s: 4
+  test_ros2_sanity_largescale:
+    isaac_s: 26
+    omnilrs_s: 618
+    tests_s: 10
+  test_yamcs_husky_sanity:
+    isaac_s: 23
+    omnilrs_s: 344
+    tests_s: 83
+  test_yamcs_sanity:
+    isaac_s: 27
+    omnilrs_s: 470
+    tests_s: 121
+  test_yamcs_sanity_largescale:
+    isaac_s: 22
+    omnilrs_s: 531
+    tests_s: 9
+  test_zenoh_sanity:
+    isaac_s: 21
+    omnilrs_s: 341
+    tests_s: 16

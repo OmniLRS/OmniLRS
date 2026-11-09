@@ -191,3 +191,8 @@ def test_topic_tf(topics):
 def test_omnilrs_control_topics(topics):
     omnilrs = [t for t in topics if t.startswith("/OmniLRS/")]
     assert omnilrs, f"No /OmniLRS/* control topics advertised. Advertised: {topics}"
+
+
+def test_durations_within_baseline(check_durations, sim):
+    # Keep this test last: it compares the durations of this run with durations_baseline.yaml (Artefacts infra only).
+    check_durations(sim.log)

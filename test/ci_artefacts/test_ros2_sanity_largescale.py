@@ -228,3 +228,8 @@ def test_omnilrs_control_topics(topics):
 
 def test_largescale_sun_topics(topics):
     assert "/OmniLRS/Sun/Intensity" in topics, f"ROS_LargeScaleManager sun topics missing. Advertised: {topics}"
+
+
+def test_durations_within_baseline(check_durations, sim):
+    # Keep this test last: it compares the durations of this run with durations_baseline.yaml (Artefacts infra only).
+    check_durations(sim.log)

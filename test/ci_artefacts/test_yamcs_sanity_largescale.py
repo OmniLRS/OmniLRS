@@ -372,3 +372,8 @@ def test_telemetry_total_current_out_exists(telemetry):
 
 def test_telemetry_obc_state_exists(telemetry):
     assert telemetry.get("/Rover/obc_state") is not None
+
+
+def test_durations_within_baseline(check_durations, sim):
+    # Keep this test last: it compares the durations of this run with durations_baseline.yaml (Artefacts infra only).
+    check_durations(sim.log)
