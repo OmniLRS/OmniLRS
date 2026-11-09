@@ -369,8 +369,16 @@ class RockManager:
 
         if self.enable:
             self.image = image
-            for name, settings in self.settings.items():
-                self.mixers[name] = generateMixer(settings["requests"], image, mask, ejecta_mask)
+            has_ejecta = np.any(ejecta_mask)
+            for name in self.execution_order:
+                settings = self.settings[name]
+                uses_ejecta = any(request["layer"]["name"] == "Ejecta" for request in settings["requests"].values())
+                parent = settings.get("parent")
+                # An empty ejecta mask cannot be sampled. Its dependent groups have no parents either.
+                if (uses_ejecta and not has_ejecta) or (parent is not None and self.mixers[parent] is None):
+                    self.mixers[name] = None
+                else:
+                    self.mixers[name] = generateMixer(settings["requests"], image, mask, ejecta_mask)
 
     def createInstancers(self) -> None:
         """
@@ -423,9 +431,18 @@ class RockManager:
         if self.enable:
             parents = {}
             for name in self.execution_order:
+                if self.mixers[name] is None:
+                    # Also remove instances left by a previous terrain with ejecta.
+                    self.instancers[name].setInstanceParameter(
+                        position=np.empty((0, 3)), orientation=np.empty((0, 4)), scale=np.empty((0, 3))
+                    )
+                    continue
                 if name in self.children_nodes:
                     output = self.mixers[name].executeGraph(parents=parents[self.settings[name]["parent"]])
                 else:
+                    # False: estimate the number of rock clusters using the entire sampling area.
+                    # True: use only the fraction of that area where the mask allows placement.
+                    # Both options still place rocks only where the mask allows.
                     output = self.mixers[name].executeGraph(num, use_mask_area=False)
                 # Check if it the node is the parent of any other node.
                 if (name in self.dependency_graph.keys()) and (len(self.dependency_graph[name]) > 0):

@@ -707,14 +707,21 @@ class GenerateProceduralMoonYard:
         self._num_pass = np.zeros_like(crater_mask)
         return DEM, background_mask, crater_mask, crater_ejecta_mask, craters_data
 
-    def register_terrain(self, DEM: np.ndarray, mask: np.ndarray):
+    def register_terrain(
+        self, DEM: np.ndarray, mask: np.ndarray
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """
-        Register dem and mask to instance variables.
+        Register a loaded DEM and return its heights and three placement masks.
         """
         self._dem_init = DEM
         self._dem_delta = np.zeros_like(DEM)
         self._crater_mask = mask
+        # Ordinary rocks follow the placement mask loaded with this DEM.
+        self._background_mask = mask.copy()
+        # This loader provides no ejecta mask; clear any regions from the previous terrain.
+        self._crater_ejecta_mask = np.zeros_like(mask)
         self._num_pass = np.zeros_like(mask)
+        return DEM, self._background_mask, self._crater_mask, self._crater_ejecta_mask
 
     def deform(
         self, world_positions: np.ndarray, world_orientations: np.ndarray, contact_forces: np.ndarray

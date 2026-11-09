@@ -318,7 +318,13 @@ class TerrainManager:
                 self._craters_data,
             ) = self._G.augment(self._DEM, self._background_mask, self._crater_mask, self._crater_ejecta_mask)
         else:
-            self._G.register_terrain(self._DEM, self._crater_mask)
+            # Share the registered masks so loading and later deformation use the same terrain.
+            (
+                self._DEM,
+                self._background_mask,
+                self._crater_mask,
+                self._crater_ejecta_mask,
+            ) = self._G.register_terrain(self._DEM, self._crater_mask)
         self.update(update_collider=True)
 
     def loadTerrainId(self, idx: int) -> None:
