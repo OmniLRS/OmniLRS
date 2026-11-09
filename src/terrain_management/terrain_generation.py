@@ -501,6 +501,8 @@ class Distribute:
         """
         Automatically generate crater radii bin as ranges for the generation process. The bin width grows exponentially
         """
+        # TODO(OBS-02): Review fixed-width bins vs. the documented exponential growth.
+        # radius_step_factor is unused; keep the current behavior until reviewed.
         self._radius = []
         cur_radius = self._radius_range[0]
         while cur_radius < self._radius_range[1]:
@@ -509,14 +511,24 @@ class Distribute:
             cur_radius = next_radius
 
     def calcDensities(self) -> None:
-        """
-        Automatically calculate the density of a crater with radius range. Density evaluate at the center of the radii range. Density follows inverse exponential distribution
+        """Compute crater sampling densities for each radius interval, in craters per m^2.
+
+        The cumulative power law N(>=D) = dist_coef * D**dist_exp counts craters
+        with diameter >= D per km^2, with D in metres. For a radius interval
+        [r_min, r_max), its density is [N(>=2*r_min) - N(>=2*r_max)] / 1_000_000.
+        The Poisson sampler multiplies each interval's density by the terrain area
+        to get its expected crater count. Spatial rejection is applied afterwards.
+
+        Source: NASA VIPER (2023), slide 40:
+        https://ntrs.nasa.gov/api/citations/20230008874/downloads/2023-06-HBRC-VIPER.pdf#page=40
         """
         self._densities = []
         for radius_range in self._radius:
-            density_query = radius_range[0] + radius_range[1]  # Query distribution using average diameter of crater
-            cum_num_per_km2 = self._dist_coef * density_query**self._dist_exp  # NASA models fit to km2
-            self._densities.append(cum_num_per_km2 / 1000000)  # convert density from km2 to m2
+            min_diameter = 2 * radius_range[0]
+            max_diameter = 2 * radius_range[1]
+            # Expected number of craters per km^2 within this diameter interval
+            bin_num_per_km2 = self._dist_coef * (min_diameter**self._dist_exp - max_diameter**self._dist_exp)
+            self._densities.append(bin_num_per_km2 / 1_000_000)
 
     def run(self) -> Tuple[np.ndarray, np.ndarray]:
         """
