@@ -23,9 +23,9 @@ class ImagesHandler:
     Each image is encoded as PNG in memory and uploaded; then number, name and url_* are set under the bucket's
     metadata space system. A failed upload (e.g. a full bucket) is logged and skipped, so it never stops the interval
     or TC thread that saved the image.
+    At startup, the camera handlers upload the no-data image to their buckets (snap_no_data_camera_images,
+    snap_no_data_image), resized to the resolution of the bucket's images.
     """
-
-    NO_DATA_RESOLUTION = (640, 480)
 
     # NOTE
     # image_0 is no no_data image
@@ -42,6 +42,7 @@ class ImagesHandler:
         self._buckets = {}  # bucket name -> metadata space system
         self._counter = {}
         self._roles = {}  # role -> bucket name
+        self._cameras = cameras
         for _, _, bucket_name, path in yamcs_naming.camera_buckets(cameras):
             self._add_bucket(bucket_name, path)
         for role, bucket_conf in images_conf["buckets"].items():
@@ -90,15 +91,20 @@ class ImagesHandler:
         ]
         return max(numbers) + 1 if numbers else self.INIT_COUNT
 
-    def snap_no_data_images(self):
-        """Upload a placeholder image to every bucket."""
-        for bucket_name in self._buckets:
-            self._snap_no_data_image(bucket_name)
+    def snap_no_data_camera_images(self, kind_resolution):
+        """Upload the no-data image to every robot camera bucket, at the camera resolution of the bucket's kind
+        (kind_resolution: image kind -> robot yaml resolutions key, e.g. streaming -> low)."""
+        for cam in self._cameras:
+            for kind in yamcs_naming.camera_kinds(cam):
+                image = self._no_data_image(cam.resolutions[kind_resolution[kind]])
+                self.save_camera_image(image, camera_name=cam.name, kind=kind)
 
-    def _snap_no_data_image(self, bucket_name):
-        image_path = self._NO_DATA_IMAGE_PATH
-        img = Image.open(image_path).convert("RGB").resize((self.NO_DATA_RESOLUTION[0], self.NO_DATA_RESOLUTION[1]))
-        self._save(img, bucket_name)
+    def snap_no_data_image(self, role: str, resolution):
+        """Upload the no-data image to the bucket of that role, at resolution (width, height)."""
+        self.save_image(self._no_data_image(resolution), role=role)
+
+    def _no_data_image(self, resolution) -> Image.Image:
+        return Image.open(self._NO_DATA_IMAGE_PATH).convert("RGB").resize(tuple(resolution))
 
     def save_camera_image(self, image: Image.Image, camera_name: str, kind: str):
         """Image of a robot camera; kind is one of yamcs_naming.camera_kinds(camera)."""

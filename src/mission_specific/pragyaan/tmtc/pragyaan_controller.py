@@ -91,7 +91,7 @@ class PragyaanController(YamcsTMTC):
 
     def start_streaming_data(self):
         self._payload_handler.snap_apxs()  # snaps initial blank apxs reading
-        self._images_handler.snap_no_data_images()
+        self._camera_handler.transmit_no_data_images()
         self._intervals_handler.add_new_interval(
             name="Pose of base link",
             seconds=self._intervals["robot_stats"],

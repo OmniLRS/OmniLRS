@@ -16,7 +16,7 @@ robots_settings:
       neutron_count: 2
       camera_streaming: 1
     camera_compression: # defaults, one model instance per streaming (rgba) camera
-      bitrate: 150_000 # Target bits/s with Video Buffering Verifier (VBV) constraints
+      bitrate: 100_000 # Target bits/s with Video Buffering Verifier (VBV) constraints
       crf: null # Set 0-51 for quality-based mode; higher means lower quality, bitrate is ignored
       keyframe_interval: 10 # Keyframe interval in number of frames
       max_payload_size: 1200 # Maximum payload size in bytes

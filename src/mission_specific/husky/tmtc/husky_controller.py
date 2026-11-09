@@ -74,7 +74,7 @@ class HuskyController(YamcsTMTC):
 
     def start_streaming_data(self):
         """Schedule periodic telemetry intervals."""
-        self._images_handler.snap_no_data_images()
+        self._camera_handler.transmit_no_data_images()
 
         interval = self._intervals["robot_stats"]
 

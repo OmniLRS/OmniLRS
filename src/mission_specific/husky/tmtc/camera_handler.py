@@ -63,6 +63,10 @@ class HuskyCameraHandler:
     # Transmit helpers (called by commander / controller intervals)
     # ------------------------------------------------------------------
 
+    def transmit_no_data_images(self):
+        """Upload the no-data image to the rover camera buckets, each at the resolution of its images."""
+        self._images_handler.snap_no_data_camera_images(KIND_RESOLUTION)
+
     def transmit_camera_view(self, camera_name: str, kind: str):
         """Snap and upload one image of a rover camera; kind is streaming, oncommand (rgba) or depth (depth)."""
         if kind not in KIND_RESOLUTION:

@@ -16,7 +16,7 @@ ROBOT_YAMLS = sorted((REPO_ROOT / "cfg" / "robot").glob("*.yaml"))
 
 CAMERA_CONF = [
     {"name": "cam_depth", "prim_path": "/Robot/depth", "type": ["depth"], "resolutions": {"high": [1440, 1080]}},
-    {"name": "NavCam_left", "prim_path": "/Robot/left", "type": ["rgba"], "resolutions": {"low": [640, 480]}},
+    {"name": "NavCam_left", "prim_path": "/Robot/left", "type": ["rgba"], "resolutions": {"low": [320, 240]}},
     {"name": "both", "prim_path": "/Robot/both", "type": ["rgba", "depth"], "resolutions": {"low": [64, 48]}},
 ]
 
@@ -25,7 +25,7 @@ def test_parse_cameras_returns_robot_camera_confs():
     cameras = parse_cameras(CAMERA_CONF)
     assert [cam.name for cam in cameras] == ["cam_depth", "NavCam_left", "both"]
     assert cameras[1] == RobotCameraConf(
-        name="NavCam_left", prim_path="/Robot/left", type=("rgba",), resolutions={"low": (640, 480)}
+        name="NavCam_left", prim_path="/Robot/left", type=("rgba",), resolutions={"low": (320, 240)}
     )
 
 

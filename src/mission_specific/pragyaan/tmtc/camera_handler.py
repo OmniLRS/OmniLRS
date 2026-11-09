@@ -172,6 +172,15 @@ class PragyaanCameraHandler:
             return
         self._images_handler.save_camera_image(camera_view, camera_name=camera_name, kind=kind)
 
+    def transmit_no_data_images(self):
+        """Upload the no-data image to the rover camera, lander and monitoring buckets, each at the resolution of its
+        images."""
+        self._images_handler.snap_no_data_camera_images(KIND_RESOLUTION)
+        for role, sensor in (("lander", self._lander_cam), ("monitoring", self._monitoring_cam)):
+            if sensor is not None:
+                height, width = sensor.resolution
+                self._images_handler.snap_no_data_image(role, (width, height))
+
     def transmit_lander_camera_view(self):
         if self._lander_cam is None:
             return

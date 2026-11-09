@@ -13,7 +13,9 @@ from src.configurations.robot_camera_confs import parse_cameras  # noqa: E402
 from src.tmtc import yamcs_naming  # noqa: E402
 from src.tmtc.images_handler import ImagesHandler  # noqa: E402
 
-CAMERAS = parse_cameras([{"name": "NavCam_left", "prim_path": "/l", "type": ["rgba"], "resolutions": {"low": [4, 3]}}])
+CAMERAS = parse_cameras(
+    [{"name": "NavCam_left", "prim_path": "/l", "type": ["rgba"], "resolutions": {"low": [4, 3], "high": [8, 6]}}]
+)
 STREAMING = yamcs_naming.bucket_name("NavCam_left", "streaming")
 ONCOMMAND = yamcs_naming.bucket_name("NavCam_left", "oncommand")
 
@@ -27,6 +29,7 @@ class FakeStorage:
         self.buckets.update({name: list(objects) for name, objects in (existing or {}).items()})
         self.fail = fail
         self.page_size = page_size  # objects returned per listing, None = all
+        self.sizes = {}  # object name -> uploaded image (width, height)
 
     def list_objects(self, bucket_name):
         objects = self.buckets[bucket_name][: self.page_size]
@@ -40,6 +43,8 @@ class FakeStorage:
             raise RuntimeError("Maximum bucket size exceeded")
         assert content_type == "image/png"
         assert file_obj.read(8) == b"\x89PNG\r\n\x1a\n"
+        file_obj.seek(0)
+        self.sizes[object_name] = Image.open(file_obj).size
         self.buckets[bucket_name].append(object_name)
 
 
@@ -51,9 +56,9 @@ class FakeProcessor:
         self.values.update(values)
 
 
-def _handler(storage, clear=True):
+def _handler(storage, clear=True, no_data_image_path="unused.png"):
     images_conf = {
-        "no_data_image_path": "unused.png",
+        "no_data_image_path": str(no_data_image_path),
         "buckets": {"lander": {"name": "images_lander", "path": "/Lander/camera/images_oncommand"}},
     }
     if clear is not None:  # None: key left out (default true)
@@ -133,3 +138,17 @@ def test_upload_failure_is_logged_and_skipped(capsys):
     assert "images_lander failed" in capsys.readouterr().out
     assert processor.values == {}
     assert handler.image_count("lander") == 0
+
+
+def test_no_data_images_use_the_resolution_of_each_bucket(tmp_path):
+    no_data = tmp_path / "no_data.png"
+    Image.new("RGB", (10, 7)).save(no_data)
+    storage = FakeStorage()
+    handler, _ = _handler(storage, no_data_image_path=no_data)
+    handler.snap_no_data_camera_images({"streaming": "low", "oncommand": "high", "depth": "high"})
+    handler.snap_no_data_image("lander", (5, 2))
+    assert storage.sizes == {
+        f"{STREAMING}_0000.png": (4, 3),
+        f"{ONCOMMAND}_0000.png": (8, 6),
+        "images_lander_0000.png": (5, 2),
+    }

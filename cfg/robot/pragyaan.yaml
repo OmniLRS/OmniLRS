@@ -41,17 +41,17 @@ robots_settings:
         prim_path: "/Robots/pragyaan/Body/body_main/depth_cam"
         type: [depth]
         resolutions:
-          low: [640, 480]
+          low: [320, 240]
           high: [1440, 1080]
       - name: "NavCam_left"
         prim_path: "/Robots/pragyaan/Body/NavCam_left/NavCam_left"
         type: [rgba]
         resolutions:
-          low: [640, 480]
+          low: [320, 240]
           high: [1440, 1080]
       - name: "NavCam_right"
         prim_path: "/Robots/pragyaan/Body/NavCam_right/NavCam_right"
         type: [rgba]
         resolutions:
-          low: [640, 480]
+          low: [320, 240]
           high: [1440, 1080]
