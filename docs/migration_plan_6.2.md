@@ -306,13 +306,14 @@ Note: NVIDIA states these will be removed in a future major release. Version 7 i
 | ROS2 | **run** (canonical) | analysis | **run** (canonical) |
 | Yamcs | analysis | **run** (40m_workshop, canonical) | **run** (workshop, canonical) |
 | Zenoh | analysis | analysis | analysis |
-| SDG | analysis | analysis | n/a (verify config support) |
+| SDG | analysis | analysis (+ dataset mode, #155) | analysis (dataset mode only, `largescale4Dataset`, #155) |
 
 Also analyze: robots `husky`/`pragyaan`/`ex1`/`ssf` (+ controllers), static assets `ispace_ultra`/`ssf_rover_static`, renderers `ray_tracing`/`path_tracing`, `mission_specific/{husky,pragyaan}` subsystems/TMTC, `scripts/zenoh/*`, `terrain_manager.py __main__`.
 
 **Analysis results:**
 - **Saved OmniGraph node types** in all USD assets referenced by `cfg/` and `src/`: every type is `isaacsim.*` (no removed `omni.isaac.*` nodes), and all are still registered in 6.2. They come from `isaacsim.core.nodes`, `isaacsim.ros2.nodes` (still under the `isaacsim.ros2.bridge.*` type names), `isaacsim.robot.wheeled_robots.nodes`, `isaacsim.sensors.physics.nodes`, the deprecated `isaacsim.sensors.physx` (PhysX lidar, enabled by default; `/pointcloud` verified), and `omni.graph.scriptnode` (`ex1`). Only the husky TF graph is affected, and only by the deprecated `targetPrims` input (log spam, §4.1.2).
 - **SDG:** the Replicator 1.13.38 annotators (`rgb`, `distance_to_image_plane`, `semantic_segmentation`/`instance_segmentation` with `colorize`) and the info keys `idToLabels`/`idToSemantics` are unchanged. `test/test_labeling_writers.py` passes. Semantic labels are written via `UsdSemantics.LabelsAPI` (B5).
+- **SDG dataset mode** (`dataset=` presets, from #155): the code imports no removed symbol. It uses `Simulation` (group A, #165) instead of `World`, as the stock SDG manager does. The ruff numpy 2 rule (NPY201) passes. USD camera attributes and `Gf` values get Python floats (B15). The terrain methods that `DatasetLargeScale` wraps kept their signatures. Replicator 1.13.38 has the `normals` annotator (float32, H x W x 4), and the writer keeps xyz. All 4 preset and environment pairs instantiate. The 57 Isaac-free tests pass with numpy 2.3.1, SciPy 1.17 and OpenCV 4.14. Not run: a capture.
 - **Zenoh:** uses the same `World`/timeline/robot APIs as the tested modes. `eclipse-zenoh==1.10.1` resolves for py3.12.
 - **Deformable envs:** `deformation_engine.py` is pure numpy (no PhysX deformables).
 - **`path_tracing`:** `PathTracing` is still a valid renderer. 6.x applies the PT defaults only for keys missing from the config, and OmniLRS sets all of them.

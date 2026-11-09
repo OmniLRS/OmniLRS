@@ -33,6 +33,9 @@ manual mode steps `rendering_dt`; physics substeps follow from `physics_dt`), `r
 `Simulation.configure_physics_scene()` (ROS2 mode only, as before; `PhysicsSceneManager` removed). The physics scene
 attributes, time codes, loop and physics carb settings are identical to `World` for the ROS2 and Yamcs setups.
 
+The SDG dataset manager (`src/environments_wrappers/sdg/dataset/manager.py`, from #155) uses `Simulation` in the same
+way as the stock SDG manager.
+
 ### A2. Articulation -> `isaacsim.core.experimental.prims.Articulation`
 
 `ArticulationControl` sets DOF position/velocity targets and efforts (NaN targets skipped, as `ArticulationController`
@@ -112,6 +115,9 @@ APIs.
 
 Run the 4 canonical scenarios (`artefacts.yaml`): ROS2 lunalab, ROS2 largescale, Yamcs lunalab, Yamcs largescale. For
 camera or semantics changes, also run SDG and compare images / labels with the current output.
+
+No CI scenario covers the SDG dataset manager. If you change `Simulation`, also run one SDG dataset capture
+(`dataset=default`) on `lunaryard_20m4Dataset` and one on `largescale4Dataset`.
 
 ## Reference: physics scene setup (CPU PhysX)
 
