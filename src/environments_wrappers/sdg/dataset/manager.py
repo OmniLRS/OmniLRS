@@ -16,10 +16,10 @@ import time
 
 import numpy as np
 import omni
-from isaacsim.core.api.world import World
 
 from src.environments_wrappers.sdg.dataset import guards
 from src.labeling.auto_label import AutonomousLabeling
+from src.simulation import Simulation
 
 
 def save_rig_intrinsics(data_dir: str, intrinsics: dict, camera_names: list) -> None:
@@ -61,9 +61,9 @@ class SDGDataset_SimulationManager:
                     raise ValueError(f"guards.{name} needs the depth and rgb annotators on {self.cam}")
 
         self.timeline = omni.timeline.get_timeline_interface()
-        self.world = World(stage_units_in_meters=1.0)
-        self.world.get_physics_context().set_solver_type("PGS")
-        self.world.reset()
+        self.sim = Simulation(physics_dt=1.0 / 60.0, rendering_dt=1.0 / 60.0)
+        self.sim.physics_scene.set_solver_type("PGS")
+        self.sim.reset()
 
         env_cfg = dict(cfg["environment"])
         env_kwargs = dict(
@@ -87,7 +87,7 @@ class SDGDataset_SimulationManager:
             )
         self.LC.load()
         for _ in range(60):
-            self.world.step(render=True)
+            self.sim.step()
 
         self.gen.prim_path = self.LC.scene_name + "/" + self.gen.prim_path
         self.gen.data_dir = self.LC.out_dir
@@ -111,7 +111,7 @@ class SDGDataset_SimulationManager:
             cs.set("/rtx/pathtracing/totalSpp", 0)
             cs.set("/rtx/pathtracing/clampSpp", 0)
             for _ in range(3):
-                self.world.step(render=True)
+                self.sim.step()
             print(
                 f"[sdg_dataset] render mode switched at runtime: {cs.get('/rtx/rendermode')} "
                 f"spp={cs.get('/rtx/pathtracing/spp')}",
@@ -133,7 +133,7 @@ class SDGDataset_SimulationManager:
 
     def _settle(self) -> None:
         for _ in range(self.settle):
-            self.world.step(render=True)
+            self.sim.step()
 
     def run_simulation(self) -> None:
         # run.py never calls finish(): flush the manifest here, whether the loop ended or raised
