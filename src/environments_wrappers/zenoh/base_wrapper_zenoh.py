@@ -90,12 +90,13 @@ class Zenoh_BaseManager:
             mod[0](**mod[1])
         self.clear_modifications()
 
-    def pub_sim_is_running(self, is_running: bool) -> None:
+    def pub_sim_is_running(self, is_running: bool, is_playing: bool) -> None:
         """
-        Publish to Zenoh keyexpr to let subscribers know that the simulation is running
+        Publish to Zenoh keyexpr to let subscribers know that the simulation is running, and whether its timeline
+        is playing (False while paused or stopped)
         """
         if self.pubs_inited:
-            self.sim_running_pub.publish({"is_running": is_running})
+            self.sim_running_pub.publish({"is_running": is_running, "is_playing": is_playing})
 
     def close(self) -> None:
         for pub in self.publishers:

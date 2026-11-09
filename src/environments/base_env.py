@@ -67,6 +67,13 @@ class BaseEnv:
 
         return True
 
+    def monitor_caught_ctrl_c(self) -> bool:
+        """
+        Returns True if the background workers' monitor stopped them on Ctrl-C (a requested stop, not a dead worker).
+        """
+
+        return False
+
     def get_wait_for_threads(self) -> list:
         """
         Returns callables that join the environment's background threads on shutdown.

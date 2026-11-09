@@ -130,9 +130,9 @@ class GeoClipmapManager:
         if mesh:
             set_xform_ops(
                 mesh,
-                Gf.Vec3d(self._mesh_pos[0], self._mesh_pos[1], self._mesh_pos[2]),
-                Gf.Quatd(self._mesh_rot[-1], (self._mesh_rot[0], self._mesh_rot[1], self._mesh_rot[2])),
-                Gf.Vec3d(self._mesh_scale[0], self._mesh_scale[1], self._mesh_scale[2]),
+                Gf.Vec3d(*(float(v) for v in self._mesh_pos[:3])),
+                Gf.Quatd(float(self._mesh_rot[-1]), Gf.Vec3d(*(float(v) for v in self._mesh_rot[:3]))),
+                Gf.Vec3d(*(float(v) for v in self._mesh_scale[:3])),
             )
 
     def create_Xforms(self) -> None:

@@ -336,8 +336,8 @@ class CameraCompressionModel(RobotPhysicsModel):
 
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
-TEST_INPUT_DIR = REPO_ROOT / "test" / "inputs" / "camera_compression"
-TEST_OUTPUT_DIR = REPO_ROOT / "test" / "outputs" / "camera_compression"
+TEST_INPUT_DIR = REPO_ROOT / "test" / "physics_models" / "inputs" / "camera_compression"
+TEST_OUTPUT_DIR = REPO_ROOT / "test" / "physics_models" / "outputs" / "camera_compression"
 
 # Per-network-packet loss levels
 LOSS_LOW = 0.01

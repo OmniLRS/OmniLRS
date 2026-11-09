@@ -184,7 +184,9 @@ def run_single_sun_test(
 
 
 def _plot_temperature_profile(
-    times: Sequence[float], temps: Mapping[str, Sequence[float]], filename: str = "test/outputs/thermal_model_demo.png"
+    times: Sequence[float],
+    temps: Mapping[str, Sequence[float]],
+    filename: str = "test/physics_models/outputs/thermal_model_demo.png",
 ) -> str:
     """Plot node temperatures versus time; returns output filename."""
 
@@ -208,7 +210,7 @@ def _plot_temperature_profile(
 def main() -> None:
     import os
 
-    os.makedirs("test/outputs", exist_ok=True)
+    os.makedirs("test/physics_models/outputs", exist_ok=True)
     times, temps = run_single_sun_test(total_time=600.0, dt=1.0)
     output = _plot_temperature_profile(times, temps)
     print(f"Thermal model plot saved to {output}")

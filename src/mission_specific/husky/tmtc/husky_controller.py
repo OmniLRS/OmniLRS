@@ -4,6 +4,7 @@ __email__ = "ljburtz@jaops.com"
 
 
 from src.mission_specific.husky.tmtc.camera_handler import HuskyCameraHandler
+from src.mission_specific.husky.tmtc.enums import STREAMING_FIELDS
 from src.mission_specific.husky.tmtc.husky_commander import HuskyCommander
 from src.mission_specific.husky.tmtc.husky_drive_handler import HuskyDriveHandler
 from src.mission_specific.husky.tmtc.transmitter import HuskyTransmitter
@@ -17,9 +18,13 @@ class HuskyController(YamcsTMTC):
     Inherits YamcsTMTC and wires up Husky-specific handlers.
 
     Implements the two mandatory abstract methods:
-        setup_command_callbacks(commands_conf)  — maps Yamcs commands to HuskyCommander methods.
-        start_streaming_data()                  — schedules periodic telemetry transmissions.
+        command_handlers()      — maps each command of the controller yaml `commands` (by key) to its HuskyCommander
+                                  method and the argument names it takes; YamcsTMTC registers them and checks them
+                                  against the Yamcs server MDB at startup.
+        start_streaming_data()  — schedules periodic telemetry transmissions.
     """
+
+    CAMERA_STREAMING_FIELDS = STREAMING_FIELDS
 
     def __init__(
         self,
@@ -43,6 +48,7 @@ class HuskyController(YamcsTMTC):
             robot_RG,
             robot_name,
             yamcs_conf["parameters"],
+            self._camera_handler,
         )
 
         self._commander = HuskyCommander(
@@ -55,35 +61,20 @@ class HuskyController(YamcsTMTC):
             self._intervals_handler,
         )
 
-    def setup_command_callbacks(self, commands_conf):
-        """Register Yamcs command → HuskyCommander method mappings."""
-        self._commands_handler.add_command(
-            commands_conf["drive_straight"],
-            self._commander.drive_straight,
-            args=["linear_velocity", "distance"],
-        )
-        self._commands_handler.add_command(
-            commands_conf["drive_turn"],
-            self._commander.drive_turn,
-            args=["angular_velocity", "angle"],
-        )
-        self._commands_handler.add_command(
-            commands_conf["camera_capture_high"],
-            self._commander.handle_high_res_capture,
-        )
-        self._commands_handler.add_command(
-            commands_conf["camera_streaming_on_off"],
-            self._commander.set_activity_of_camera_streaming,
-            args=["action"],
-        )
-        self._commands_handler.add_command(
-            commands_conf["camera_capture_depth"],
-            self._commander.handle_depth_capture,
-        )
+    def command_handlers(self):
+        # controller yaml `commands` key -> (handler, MDB argument names passed to it, in call order)
+        return {
+            "go_nogo": (self._commander.handle_go_nogo, ["decision"]),
+            "drive_straight": (self._commander.drive_straight, ["linear_velocity", "distance"]),
+            "drive_turn": (self._commander.drive_turn, ["angular_velocity", "angle"]),
+            "camera_capture_high": (self._commander.handle_high_res_capture, ["camera_name"]),
+            "camera_streaming_on_off": (self._commander.set_activity_of_camera_streaming, ["camera_name", "action"]),
+            "camera_capture_depth": (self._commander.handle_depth_capture, ["camera_name"]),
+        }
 
     def start_streaming_data(self):
         """Schedule periodic telemetry intervals."""
-        self._images_handler.snap_no_data_images()
+        self._camera_handler.transmit_no_data_images()
 
         interval = self._intervals["robot_stats"]
 
@@ -93,6 +84,13 @@ class HuskyController(YamcsTMTC):
             is_repeating=True,
             execute_immediately=True,
             function=self._transmitter.transmit_pose_of_base_link,
+        )
+        self._intervals_handler.add_new_interval(
+            name="GO_NOGO",
+            seconds=interval,
+            is_repeating=True,
+            execute_immediately=True,
+            function=self._transmitter.transmit_go_nogo,
         )
         self._intervals_handler.add_new_interval(
             name="camera streaming state",

@@ -128,7 +128,10 @@ def render(output: Path, environment: str):
     if height is None or height <= 0:
         raise ValueError("Pragyaan needs a positive height_above_terrain_override.")
     camera_root = f"{settings['robots_settings']['robots_root']}/{robot['robot_name']}"
-    camera_path = robot["camera"]["prim_path"]
+    camera_config = next((camera for camera in robot["camera"] if camera["name"] == "cam_depth"), None)
+    if camera_config is None:
+        raise ValueError("Pragyaan camera config must include cam_depth.")
+    camera_path = camera_config["prim_path"]
     if not camera_path.startswith(camera_root + "/"):
         raise ValueError("Configured camera path is not inside the rover.")
     config = instantiateConfigs(resolved)
@@ -140,26 +143,27 @@ def render(output: Path, environment: str):
     app = SimulationApp(launch)
 
     import carb
-    from isaacsim.core.utils.extensions import enable_extension
 
-    enable_extension("omni.replicator.core")
+    from src.environments_wrappers import _enable_required_extensions
+
+    _enable_required_extensions()
     import omni.replicator.core as rep
-    from isaacsim.core.api import World
     from PIL import Image
     from pxr import Gf, Usd, UsdGeom
 
     from src.configurations.simulator_mode_enum import SimulatorMode
     from src.environments.lunaryard import LunaryardController
     from src.environments.rendering import set_tbn_frame_mode
+    from src.simulation import Simulation
 
     set_tbn_frame_mode(tbn)
     carb.settings.get_settings().set("/rtx/post/histogram/enabled", False)
-    World(stage_units_in_meters=1.0)
+    sim = Simulation(physics_dt=settings["physics_dt"], rendering_dt=settings["rendering_dt"])
     env = LunaryardController(mode=SimulatorMode.YAMCS, **config["environment"])
     env.load()
     camera, mount = copy_camera(env.stage, REPO / robot["usd_path"], camera_path[len(camera_root) :])
     transform = camera.AddTransformOp()
-    resolution = robot["camera"]["resolutions"]["low"]
+    resolution = [640, 480]
     product = rep.create.render_product(str(camera.GetPath()), tuple(resolution))
     rgb = rep.AnnotatorRegistry.get_annotator("rgb")
     rgb.attach(product)
@@ -199,6 +203,7 @@ def render(output: Path, environment: str):
         )
     (output / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
     rep.orchestrator.stop()
+    sim.stop()
     return app
 
 

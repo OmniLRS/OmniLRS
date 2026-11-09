@@ -9,7 +9,7 @@ from typing import Union
 import omni
 import rclpy
 from isaacsim import SimulationApp
-from isaacsim.core.api.world import World
+from rclpy.executors import ExternalShutdownException
 from rclpy.executors import SingleThreadedExecutor as Executor
 
 from src.configurations.procedural_terrain_confs import TerrainManagerConf
@@ -20,9 +20,19 @@ from src.environments_wrappers.ros2.largescale_ros2 import ROS_LargeScaleManager
 from src.environments_wrappers.ros2.lunalab_ros2 import ROS_LunalabManager
 from src.environments_wrappers.ros2.lunaryard_ros2 import ROS_LunaryardManager
 from src.environments_wrappers.ros2.robot_manager_ros2 import ROS_RobotManager
-from src.physics.physics_scene import PhysicsSceneManager
+from src.simulation import Simulation
 
 logger = logging.getLogger(__name__)
+
+
+def _spin(executor: Executor) -> None:
+    """Spins an executor until it, or the ROS context (e.g. on SIGINT/SIGTERM), is shut down."""
+    try:
+        executor.spin()
+    except ExternalShutdownException:
+        pass
+
+
 logging.basicConfig(format="%(asctime)s %(message)s", datefmt="%m/%d/%Y %I:%M:%S %p")
 
 
@@ -99,18 +109,17 @@ class ROS2_SimulationManager:
         self.simulation_app = simulation_app
         # Setups the physics and acquires the different interfaces to talk with Isaac
         self.timeline = omni.timeline.get_timeline_interface()
-        self.world = World(
-            stage_units_in_meters=1.0,
+        self.sim = Simulation(
             physics_dt=cfg["environment"]["physics_dt"],
             rendering_dt=cfg["environment"]["rendering_dt"],
+            physics_scene=cfg["physics"]["physics_scene"],
         )
 
         set_moon_env_name(cfg["environment"]["name"])
 
-        PhysicsSceneManager(cfg["physics"]["physics_scene"])
         for i in range(100):
-            self.world.step(render=True)
-        self.world.reset()
+            self.sim.step()
+        self.sim.reset()
 
         if cfg["environment"]["enforce_realtime"]:
             self.rate = Rate(dt=cfg["environment"]["physics_dt"])
@@ -123,13 +132,13 @@ class ROS2_SimulationManager:
         )
         self.exec1 = Executor()
         self.exec1.add_node(self.ROSEnvironmentManager)
-        self.exec1_thread = Thread(target=self.exec1.spin, daemon=True, args=())
+        self.exec1_thread = Thread(target=_spin, daemon=True, args=(self.exec1,))
         self.exec1_thread.start()
         # Robot manager thread
         self.ROSRobotManager = ROS_RobotManager(cfg["environment"]["robots_settings"])
         self.exec2 = Executor()
         self.exec2.add_node(self.ROSRobotManager)
-        self.exec2_thread = Thread(target=self.exec2.spin, daemon=True, args=())
+        self.exec2_thread = Thread(target=_spin, daemon=True, args=(self.exec2,))
         self.exec2_thread.start()
 
         if self.ROSEnvironmentManager.get_wait_for_threads():
@@ -148,7 +157,7 @@ class ROS2_SimulationManager:
 
         # Preload the assets
         self.ROSRobotManager.RM.preload_robot(
-            self.world, get_height_func=self.ROSEnvironmentManager.EC.get_terrain_height
+            self.sim, get_height_func=self.ROSEnvironmentManager.EC.get_terrain_height
         )
         self.ROSEnvironmentManager.EC.add_robot_manager(self.ROSRobotManager.RM)
         if (
@@ -163,8 +172,8 @@ class ROS2_SimulationManager:
             )
 
         for i in range(100):
-            self.world.step(render=True)
-        self.world.reset()
+            self.sim.step()
+        self.sim.reset()
 
     def run_simulation(self) -> None:
         """
@@ -172,14 +181,16 @@ class ROS2_SimulationManager:
         """
 
         self.timeline.play()
-        while self.simulation_app.is_running():
+        # rclpy.ok() turns False when ROS handles SIGINT/SIGTERM (rclpy on Jazzy also handles SIGTERM).
+        while self.simulation_app.is_running() and rclpy.ok():
             self.rate.reset()
-            self.world.step(render=True)
-            if self.world.is_playing():
+            self.sim.step()
+            if self.sim.is_playing():
                 did_reset = False
 
-                if self.world.current_time_step_index == 0:
-                    self.world.reset()
+                if self.sim.consume_restart():
+                    logger.info("Timeline restarted: resetting the environment and robot")
+                    self.sim.reset()
                     did_reset = True
 
                     if self.ROSRobotManager.RM.robot is not None:
@@ -196,7 +207,7 @@ class ROS2_SimulationManager:
                     # Apply modifications to the lab only once the simulation step is finished.
                     # This is extremely important as modifying the stage during a simulation step
                     # will lead to a crash.
-                    self.ROSEnvironmentManager.periodic_update(dt=self.world.get_physics_dt())
+                    self.ROSEnvironmentManager.periodic_update(dt=self.sim.get_physics_dt())
 
                     self.ROSEnvironmentManager.apply_modifications()
 
@@ -210,7 +221,7 @@ class ROS2_SimulationManager:
                     self.ROSRobotManager.apply_modifications()
 
                     if self.enable_deformation:
-                        if self.world.current_time_step_index >= (self.deform_delay * self.world.get_physics_dt()):
+                        if self.sim.current_time_step_index >= (self.deform_delay * self.sim.get_physics_dt()):
                             self.ROSEnvironmentManager.EC.deform_terrain()
                         # self.ROSLabManager.EC.applyTerramechanics()
             if not self.ROSEnvironmentManager.monitor_thread_is_alive():
@@ -228,5 +239,5 @@ class ROS2_SimulationManager:
                 break
 
             self.rate.sleep()
-        self.world.stop()
+        self.sim.stop()
         self.timeline.stop()

@@ -2,13 +2,16 @@ __author__ = "Aleksa Stanivuk"
 __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
 
-from src.mission_specific.pragyaan.tmtc.camera_handler import CameraViewType, PragyaanCameraHandler
-from src.mission_specific.pragyaan.tmtc.enums import PragyaanCameraResolution, PragyaanYamcsArguments
+from functools import partial
+
+from src.configurations.robot_camera_confs import cameras_of_type
+from src.mission_specific.pragyaan.tmtc.camera_handler import PragyaanCameraHandler
+from src.mission_specific.pragyaan.tmtc.enums import PragyaanYamcsArguments
 from src.mission_specific.pragyaan.tmtc.payload_handler import PayloadHandler
 from src.mission_specific.pragyaan.tmtc.transmitter import PragyaanTransmitter
 from src.subsystems.device import CommonDevice, HealthState, PowerState
 from src.subsystems.robot_enums import GoNogoState, ObcState, SolarPanelState
-from src.tmtc.intervals_handler import IntervalName
+from src.tmtc.intervals_handler import IntervalName, camera_streaming_interval
 
 
 class PragyaanCommander:
@@ -17,7 +20,7 @@ class PragyaanCommander:
     Functions as a reference implementation for the implementation of other rover commanders.
 
     Commander contains methods specific to the Pragyaan rover.
-    Functions implemented here are called by PragyaanController, and are mapped inside setup_command_callbacks function.
+    Functions implemented here are mapped to their commands in PragyaanController.command_handlers().
 
     This class encodes the logic behind the execution of the received commands specific to the Pragyaan rover.
         For example, in case of receiving command for high res camera capture, the commander checks if the camera is powered on, and only then executes the command by calling the appropriate function in the camera handler.
@@ -26,6 +29,8 @@ class PragyaanCommander:
     # TODO for v4: find the optimal place to store the angle values (potentially will refactor robot)
     SOLAR_PANEL_ANGLE_DEPLOYED = 0
     SOLAR_PANEL_ANGLE_STOWED = -80
+    # The solar panel state changes only once the measured angle is this close (deg) to the deployed or stowed angle.
+    SOLAR_PANEL_ANGLE_TOLERANCE = 10
 
     def __init__(
         self,
@@ -61,33 +66,45 @@ class PragyaanCommander:
     def handle_lander_camera_capture(self):
         self._camera_handler.transmit_lander_camera_view()
 
-    def handle_high_res_capture(self):
+    # Camera commands: YamcsTMTC only calls them with a camera_name of the command's camera type
+    # (commands_handler.check_camera_argument)
+
+    def handle_high_res_capture(self, camera_name: str):
         if self._robot.subsystems.get_device_power_state(CommonDevice.CAMERA) == PowerState.ON:
-            self._camera_handler.transmit_camera_view(
-                PragyaanCameraHandler.BUCKET_ONCOMMAND, PragyaanCameraResolution.HIGH.value, CameraViewType.RGBA
-            )
+            self._camera_handler.transmit_camera_view(camera_name, kind="oncommand")
             self._obc_handler.set_obc_state(ObcState.CAMERA, 10)
 
-    def handle_depth_capture(self):
+    def handle_depth_capture(self, camera_name: str):
         if self._robot.subsystems.get_device_power_state(CommonDevice.CAMERA) == PowerState.ON:
-            self._camera_handler.transmit_camera_view(
-                PragyaanCameraHandler.BUCKET_DEPTH, PragyaanCameraResolution.HIGH.value, CameraViewType.DEPTH
-            )
+            self._camera_handler.transmit_camera_view(camera_name, kind="depth")
             self._obc_handler.set_obc_state(ObcState.CAMERA, 10)
 
     def handle_solar_panel(self, command: str):
         if self._robot.subsystems.get_go_nogo_state() == GoNogoState.NOGO:
             return
 
+        # Only the angle is commanded; update_solar_panel_state() reports the state once the panel gets there.
         if command == PragyaanYamcsArguments.DEPLOY.value:
-            self._robot.subsystems.set_solar_panel_state(SolarPanelState.DEPLOYED)
             self._robot.set_solar_panel_angle(self.SOLAR_PANEL_ANGLE_DEPLOYED)
         elif command == PragyaanYamcsArguments.STOW.value:
-            self._robot.subsystems.set_solar_panel_state(SolarPanelState.STOWED)
             self._robot.set_solar_panel_angle(self.SOLAR_PANEL_ANGLE_STOWED)
         else:
             print("Command for solar panel is unknown:", command)
             return
+
+    def update_solar_panel_state(self):
+        """
+        Set the solar panel state from the measured joint angle: DEPLOYED or STOWED once the panel is within
+        SOLAR_PANEL_ANGLE_TOLERANCE of that angle. In between (panel moving or blocked) the previous state is kept.
+        """
+        angle = self._robot.get_solar_panel_angle()
+        if angle is None:
+            return
+
+        if abs(angle - self.SOLAR_PANEL_ANGLE_DEPLOYED) <= self.SOLAR_PANEL_ANGLE_TOLERANCE:
+            self._robot.subsystems.set_solar_panel_state(SolarPanelState.DEPLOYED)
+        elif abs(angle - self.SOLAR_PANEL_ANGLE_STOWED) <= self.SOLAR_PANEL_ANGLE_TOLERANCE:
+            self._robot.subsystems.set_solar_panel_state(SolarPanelState.STOWED)
 
     def handle_electronics_on_off(self, electronics: str, new_state: PowerState):
         if new_state not in [PowerState.ON.value, PowerState.OFF.value]:
@@ -98,9 +115,9 @@ class PragyaanCommander:
         self._robot.subsystems.set_device_power_state(electronics, new_state)
 
         if electronics == CommonDevice.CAMERA:
-            self.set_activity_of_camera_streaming(
-                "START"
-            ) if new_state == PowerState.ON else self.set_activity_of_camera_streaming("STOP")
+            action = PragyaanYamcsArguments.START if new_state == PowerState.ON else PragyaanYamcsArguments.STOP
+            for camera_name in cameras_of_type(self._robot.cameras, "rgba"):
+                self.set_activity_of_camera_streaming(camera_name, action.value)
         elif electronics == CommonDevice.NEUTRON_SPECTROMETER:
             self.set_activity_of_neutron_streaming(new_state)
             pass
@@ -126,24 +143,25 @@ class PragyaanCommander:
         if decision == GoNogoState.NOGO:
             self._drive_handler.stop_robot()
 
-    def set_activity_of_camera_streaming(self, action: str):
+    def set_activity_of_camera_streaming(self, camera_name: str, action: str):
+        interval_name = camera_streaming_interval(camera_name)
         if action == PragyaanYamcsArguments.STOP.value:
-            self._intervals_handler.remove_interval(IntervalName.CAMERA_STREAMING.value)
+            self._intervals_handler.remove_interval(interval_name)
         elif action == PragyaanYamcsArguments.START.value:
-            if not self._intervals_handler.does_exist(IntervalName.CAMERA_STREAMING.value):
+            if not self._intervals_handler.does_exist(interval_name):
                 self._intervals_handler.add_new_interval(
-                    name=IntervalName.CAMERA_STREAMING.value,
+                    name=interval_name,
                     seconds=self._intervals["camera_streaming"],
                     is_repeating=True,
                     execute_immediately=False,
-                    function=self._camera_handler.transmit_camera_view,
-                    f_args=(PragyaanCameraHandler.BUCKET_STREAMING, PragyaanCameraResolution.LOW.value),
+                    function=partial(self._camera_handler.transmit_camera_view, camera_name, kind="streaming"),
                 )
         else:
             print("Unknown action:", action)
 
     def set_camera_streaming_params(
         self,
+        camera_name: str,
         bitrate: int,
         crf: int,
         keyframe_interval: int,
@@ -153,6 +171,7 @@ class PragyaanCommander:
         # MDB arguments can not be null, so crf = -1 stands for None (bitrate mode)
         try:
             self._camera_handler.set_streaming_compression_params(
+                camera_name,
                 bitrate=bitrate,
                 keyframe_interval=keyframe_interval,
                 crf=None if crf < 0 else crf,

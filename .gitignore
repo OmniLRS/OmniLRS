@@ -30,3 +30,6 @@ test/venv/
 test/outputs/
 test/sim_startup.log
 benchmarks/outputs/
+test/physics_models/venv/
+test/physics_models/outputs/
+test/ci_artefacts/*.log

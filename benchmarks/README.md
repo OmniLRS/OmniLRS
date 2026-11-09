@@ -68,7 +68,9 @@ with Regolith8k and 23 / 0 / 1 with Infinite.
 ## Square route: `square_route.py`
 
 Uses the optics and mounting pose of Pragyaan's `depth_cam` from the robot USD,
-at 640 x 480 pixels. The camera moves around a 5 x 5 m square starting at
+selected as `cam_depth` in the robot camera list. The benchmark keeps a fixed
+640 x 480 resolution, independently of the robot's streaming resolutions.
+The camera moves around a 5 x 5 m square starting at
 `(18, 18)` m: 0.5 m steps along each side, and 15-degree left turns in place at
 each corner. The 65th image has the same pose as the first. Only the camera is
 rendered: there is no rover body, wheel physics or terrain tilt.

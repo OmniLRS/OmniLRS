@@ -98,26 +98,29 @@ def render(output: Path, environment: str):
     tbn = launch_config.pop("tbn_frame_mode")
     app = SimulationApp(launch_config)
 
-    from isaacsim.core.utils.extensions import enable_extension
+    from src.environments_wrappers import _enable_required_extensions
 
-    enable_extension("omni.replicator.core")
+    _enable_required_extensions()
 
     import carb
     import omni.replicator.core as rep
-    from isaacsim.core.api import World
     from PIL import Image
     from pxr import Gf, Usd, UsdGeom
 
     from src.configurations.simulator_mode_enum import SimulatorMode
     from src.environments.lunaryard import LunaryardController
     from src.environments.rendering import set_tbn_frame_mode
+    from src.simulation import Simulation
     from src.terrain_management.large_scale_terrain.pxr_utils import set_xform_ops
 
     set_tbn_frame_mode(tbn)
     # Keep exposure fixed across the reference and queries.
     carb.settings.get_settings().set("/rtx/post/histogram/enabled", False)
 
-    World(stage_units_in_meters=1.0)
+    sim = Simulation(
+        physics_dt=resolved_cfg["environment"]["physics_dt"],
+        rendering_dt=resolved_cfg["environment"]["rendering_dt"],
+    )
     env = LunaryardController(mode=SimulatorMode.YAMCS, **cfg["environment"])
     env.load()
     stage = env.stage
@@ -136,9 +139,11 @@ def render(output: Path, environment: str):
 
     def place(cam, xy, height, ypr):
         # USD cameras look along local -Z with +Y up; identity rotation is nadir.
-        pos = Gf.Vec3d(xy[0], xy[1], float(env.get_terrain_height(xy)) + height)
+        pos = Gf.Vec3d(float(xy[0]), float(xy[1]), float(env.get_terrain_height(xy)) + height)
         q = Rotation.from_matrix(euler_zyx(*ypr)).as_quat()
-        set_xform_ops(cam.GetPrim(), pos, Gf.Quatd(q[3], Gf.Vec3d(*q[:3])), Gf.Vec3d(1, 1, 1))
+        set_xform_ops(
+            cam.GetPrim(), pos, Gf.Quatd(float(q[3]), Gf.Vec3d(*(float(v) for v in q[:3]))), Gf.Vec3d(1, 1, 1)
+        )
 
     def world_pose(cam):
         """Camera-to-world pose in the OpenCV convention (x right, y down, z forward)."""
@@ -193,6 +198,7 @@ def render(output: Path, environment: str):
 
     (output / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
     rep.orchestrator.stop()
+    sim.stop()
     return app
 
 
