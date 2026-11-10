@@ -37,7 +37,7 @@ It is based on `public.ecr.aws/artefacts/ros2:jazzy-harmonic-nvidia` (Ubuntu 24.
 git lfs pull && git submodule update --init
 # The largescale tests need the Site20 DEM, which is not tracked in git (assets/Terrains/SouthPole is gitignored):
 # get it by copying assets/Terrains/SouthPole/Site20_final_adj_5mpp_surf from a dev tree (or re-download from s3)
-docker build -t public.ecr.aws/jaops/jaops-omnilrs:omni-ci-0.5.0 -f ci.docker/ci.Dockerfile .
+docker build -t public.ecr.aws/jaops/jaops-omnilrs:omni-ci-0.5.1 -f ci.docker/ci.Dockerfile .
 aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws
-docker push public.ecr.aws/jaops/jaops-omnilrs:omni-ci-0.5.0
+docker push public.ecr.aws/jaops/jaops-omnilrs:omni-ci-0.5.1
 ```
