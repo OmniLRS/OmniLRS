@@ -1,3 +1,297 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:20d01595ca45d5e6875acbf9b0c070dfc59e6943e8dfaa2a5ed95af9fc57a654
-size 13031
+/***************************************************************************************************
+ * Copyright 2023 NVIDIA Corporation. All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ *  * Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ *  * Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ *  * Neither the name of NVIDIA CORPORATION nor the names of its
+ *    contributors may be used to endorse or promote products derived
+ *    from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS ``AS IS'' AND ANY
+ * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE COPYRIGHT OWNER OR
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
+ * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ **************************************************************************************************/
+
+mdl 1.8;
+
+import ::df::*;
+import ::state::*;
+import ::math::*;
+import ::base::*;
+import ::tex::*;
+import ::anno::*;
+import ::scene::*;
+import ::replicator_definitions::*;
+
+import ::nvidia::core_definitions::file_texture;
+import ::nvidia::core_definitions::normalmap_texture;
+
+
+// Adapted from omni.replicator.core 1.12.16 Infinite PBR: textures are sampled
+// from world XY in metres instead of UV 0. UV 0 still defines the normal-map tangent frame.
+export material InfinitePBRWorldMaterial(
+
+    //  Albdeo  //
+
+//diffuse_texture
+    uniform texture_2d diffuse_texture = texture_2d() [[
+		anno::display_name("Albedo Map"),
+		anno::description("This is the albedo base color"),
+		anno::in_group("Albedo")
+    ]],
+
+//diffuse_color_constant
+	color diffuse_color_constant = color(0.2) [[
+		anno::display_name("Albedo Color"),
+		anno::description("This is the albedo base color"),
+		anno::in_group("Albedo")
+	]],
+//diffuse_tint
+	color diffuse_tint = color(1.0) [[
+		anno::display_name("Color Tint"),
+		anno::description("When enabled, this color value is multiplied over the final albedo color"),
+		anno::in_group("Albedo")
+	]],
+	
+	//  Reflecitivity //
+//reflectionroughness_texture
+    uniform texture_2d reflectionroughness_texture = texture_2d() [[
+		anno::display_name("Roughness Map"),
+		anno::description("Higher roughness values lead to more blurry reflections"),
+		anno::in_group("Reflectivity")
+    ]],
+//reflection_roughness_constant
+	float reflection_roughness_constant = float(0.0) [[
+		anno::display_name("Roughness Amount"),
+		anno::description("Higher roughness values lead to more blurry reflections"),
+		anno::in_group("Reflectivity")
+	]],
+//metallic_texture
+    uniform texture_2d metallic_texture = texture_2d() [[
+		anno::display_name("Metallic Map"),
+		anno::description("Indicates a dielectric or metallic reflection"),
+		anno::in_group("Reflectivity")
+    ]],
+//metallic_constant
+	float metallic_constant = float(0.0) [[
+		anno::display_name("Metallic Amount"),
+		anno::description("Bias towards pure specular reflection"),
+		anno::in_group("Reflectivity"),
+		anno::hard_range(float(0.0), float(1.0))
+	]],	
+//  Geometry Opacity  //
+//enable_opacity
+    uniform bool enable_opacity = false [[
+		anno::display_name("Enable Opacity"),
+		anno::description("Enables the use of opacity from the alpha channel of the Diffuse Texture"),
+		anno::in_group("Opacity")
+	]],
+//depth_texture
+    uniform texture_2d depth_texture = texture_2d() [[
+		anno::display_name("Depth Map"),
+		anno::description("Determines how Hex Tile boundaries get blended"),
+		anno::in_group("Opacity")
+    ]],
+//normalmap_texture
+    uniform texture_2d normalmap_texture = texture_2d() [[
+        anno::display_name("Normal Map"),
+        anno::in_group("Geometry"),
+        anno::usage("normal")
+    ]],
+//opacity_threshold
+	float hextile_texturescale = float(5.0)
+	[[
+		anno::display_name("Hex Tile Texture Scale"),
+		anno::description(""),
+		anno::in_group("Infinite Tile")
+	]],
+	float hextile_hardness = float(6.0)
+	[[
+		anno::display_name("Hex Tile Blend Hardness"),
+		anno::description(""),
+		anno::in_group("Infinite Tile")
+	]],
+	float hextile_scale = float(0.5)
+	[[
+		anno::display_name("Hex Tile Scale"),
+		anno::description(""),
+		anno::in_group("Infinite Tile")
+	]],
+	float2 hextile_scalelimits = float2(0.75, 1.25)
+	[[
+		anno::display_name("Hex Tile Scale Limits"),
+		anno::description(""),
+		anno::in_group("Infinite Tile")
+	]],
+	float2 hextile_rotlimits = float2(0.0, 2 * math::PI)
+	[[
+		anno::display_name("Hex Tile Rotation Limits"),
+		anno::description(""),
+		anno::in_group("Infinite Tile")
+	]]
+)
+
+[[
+	anno::display_name("Infinite PBR World XY Material"),
+    anno::in_group("Replicator"),
+	anno::author("Paul Callender"),
+	anno::contributor("Chris Perrella")
+]]
+
+= let {
+
+    // Calculate the projection UVs from world XY.
+    float3 world_position = state::transform_point(
+        state::coordinate_internal, state::coordinate_world, state::position());
+    float2 uv = float2(world_position.x, world_position.y)
+        * state::meters_per_scene_unit() * hextile_texturescale;
+	replicator_definitions::hextile_sample hexstruct = replicator_definitions::hextile(uv, hextile_scale, hextile_hardness, hextile_rotlimits, hextile_scalelimits);
+
+	// ############### Get Depth Blend
+	float ht0_depth = tex::lookup_float(depth_texture, hexstruct.uv_0, tex::wrap_repeat, tex::wrap_repeat, float2(0.0, 1.0), float2(0.0, 1.0), 0.0);
+	float ht1_depth = tex::lookup_float(depth_texture, hexstruct.uv_1, tex::wrap_repeat, tex::wrap_repeat, float2(0.0, 1.0), float2(0.0, 1.0), 0.0);
+	float ht2_depth = tex::lookup_float(depth_texture, hexstruct.uv_2, tex::wrap_repeat, tex::wrap_repeat, float2(0.0, 1.0), float2(0.0, 1.0), 0.0);
+
+	// Save the weights from the alpha of the diffuse
+	float3 alpha = float3(hexstruct.w_0, hexstruct.w_1, hexstruct.w_2) * (float3(ht0_depth, ht1_depth, ht2_depth) + 0.1);
+	float3 alphapow = math::pow(alpha, 10.0);
+	float alphasum = alphapow.x + alphapow.y + alphapow.z;
+	float3 alphapow2 = alphapow / alphasum;
+
+	// ############### Get Diffuse
+	float4 ht0_diffuse = tex::lookup_float4(diffuse_texture, hexstruct.uv_0, tex::wrap_repeat, tex::wrap_repeat, float2(0.0, 1.0), float2(0.0, 1.0), 0.0);
+	float4 ht1_diffuse = tex::lookup_float4(diffuse_texture, hexstruct.uv_1, tex::wrap_repeat, tex::wrap_repeat, float2(0.0, 1.0), float2(0.0, 1.0), 0.0);
+	float4 ht2_diffuse = tex::lookup_float4(diffuse_texture, hexstruct.uv_2, tex::wrap_repeat, tex::wrap_repeat, float2(0.0, 1.0), float2(0.0, 1.0), 0.0);
+
+
+
+	float4 blended_diff = (alphapow2.x * ht0_diffuse) + (alphapow2.y * ht1_diffuse) + (alphapow2.z * ht2_diffuse);
+	color diff_color = color(blended_diff.x, blended_diff.y, blended_diff.z);
+    color base_color = tex::texture_isvalid(diffuse_texture) ? diff_color * diffuse_tint : diffuse_color_constant * diffuse_tint;
+
+    // ############### Calculate the correct normals
+    float3 ht0_texnormal = tex::lookup_float3(normalmap_texture, hexstruct.uv_0, tex::wrap_repeat, tex::wrap_repeat, float2(0.0, 1.0), float2(0.0, 1.0), 0.0);
+	float3 ht1_texnormal = tex::lookup_float3(normalmap_texture, hexstruct.uv_1, tex::wrap_repeat, tex::wrap_repeat, float2(0.0, 1.0), float2(0.0, 1.0), 0.0);
+	float3 ht2_texnormal = tex::lookup_float3(normalmap_texture, hexstruct.uv_2, tex::wrap_repeat, tex::wrap_repeat, float2(0.0, 1.0), float2(0.0, 1.0), 0.0);
+
+	// raw normal texture to normal
+	float3 ht0_normal = replicator_definitions::raw_to_normal(ht0_texnormal);
+	float3 ht1_normal = replicator_definitions::raw_to_normal(ht1_texnormal);
+	float3 ht2_normal = replicator_definitions::raw_to_normal(ht2_texnormal);
+
+	// Rotate normal back
+	float ht0_rot = math::PI*2 - hexstruct.r_0;
+	float ht1_rot = math::PI*2 - hexstruct.r_1;
+	float ht2_rot = math::PI*2 - hexstruct.r_2;
+
+	float3 ht0_newnormal = replicator_definitions::rotate_normal(ht0_normal, ht0_rot);
+	float3 ht1_newnormal = replicator_definitions::rotate_normal(ht1_normal, ht1_rot);
+	float3 ht2_newnormal = replicator_definitions::rotate_normal(ht2_normal, ht2_rot);
+
+	// Bring normal back to raw
+	float3 ht0_rawnormal = replicator_definitions::normal_to_raw(ht0_newnormal);
+	float3 ht1_rawnormal = replicator_definitions::normal_to_raw(ht1_newnormal);
+	float3 ht2_rawnormal = replicator_definitions::normal_to_raw(ht2_newnormal);
+
+	// Calculate correct normals for the surface with tangent, bitangent and normals
+
+	// Blend the normals together
+	float3 blended_normals = (alphapow2.x * ht0_rawnormal) + (alphapow2.y * ht1_rawnormal) + (alphapow2.z * ht2_rawnormal);
+	float3 final_normal = tex::texture_isvalid(normalmap_texture) ? replicator_definitions::tbn(blended_normals) : state::normal();
+
+    // ############### Roughness Map
+	float ht0_roughness = tex::lookup_float(reflectionroughness_texture, hexstruct.uv_0, tex::wrap_repeat, tex::wrap_repeat, float2(0.0, 1.0), float2(0.0, 1.0), 0.0);
+	float ht1_roughness = tex::lookup_float(reflectionroughness_texture, hexstruct.uv_1, tex::wrap_repeat, tex::wrap_repeat, float2(0.0, 1.0), float2(0.0, 1.0), 0.0);
+	float ht2_roughness = tex::lookup_float(reflectionroughness_texture, hexstruct.uv_2, tex::wrap_repeat, tex::wrap_repeat, float2(0.0, 1.0), float2(0.0, 1.0), 0.0);
+
+	float blended_roughness = (alphapow2.x * ht0_roughness) + (alphapow2.y * ht1_roughness) + (alphapow2.z * ht2_roughness);
+    float roughness_pixel = tex::texture_isvalid(reflectionroughness_texture) ? blended_roughness : reflection_roughness_constant;
+
+    // Get the Metal Map
+	float ht0_metal = tex::lookup_float(metallic_texture, hexstruct.uv_0, tex::wrap_repeat, tex::wrap_repeat, float2(0.0, 1.0), float2(0.0, 1.0), 0.0);
+	float ht1_metal = tex::lookup_float(metallic_texture, hexstruct.uv_1, tex::wrap_repeat, tex::wrap_repeat, float2(0.0, 1.0), float2(0.0, 1.0), 0.0);
+	float ht2_metal = tex::lookup_float(metallic_texture, hexstruct.uv_2, tex::wrap_repeat, tex::wrap_repeat, float2(0.0, 1.0), float2(0.0, 1.0), 0.0);
+
+	float blended_metal = (alphapow2.x * ht0_metal) + (alphapow2.y * ht1_metal) + (alphapow2.z * ht2_metal);
+    float metal_pixel = tex::texture_isvalid(metallic_texture) ? blended_metal : metallic_constant;
+
+    bsdf diffuse_bsdf = df::weighted_layer(
+		weight: 1.0,
+		layer:  df::diffuse_reflection_bsdf(
+			        tint:       base_color,
+			        roughness:  float(0.0)
+                ),
+		base:   bsdf(),
+		normal: final_normal
+	);
+
+	//  Glossy Reflection Bsdf  //
+
+	bsdf ggx_smith_bsdf = df::microfacet_ggx_smith_bsdf(
+		roughness_u:    roughness_pixel,
+		roughness_v:    roughness_pixel,
+		tint:           color(1.0),
+		mode:           df::scatter_reflect
+	);
+	
+	bsdf custom_curve_layer_bsdf = df::custom_curve_layer(
+		normal_reflectivity:  0.08,		
+		grazing_reflectivity: 1.0,
+		exponent:	          5.0,
+		weight:	              0.5,
+		layer:                ggx_smith_bsdf,
+		base:	              diffuse_bsdf,
+		normal:               final_normal
+	);
+	
+	bsdf directional_factor_bsdf = df::tint(base_color, ggx_smith_bsdf);
+	
+	//  Clear Coat  // 
+
+	bsdf omni_PBR_bsdf = df::weighted_layer(
+        weight:     metal_pixel,
+        layer:	    directional_factor_bsdf,
+		base:	    custom_curve_layer_bsdf,
+		normal:     final_normal
+	);
+	
+    //bsdf final_bsdf = enable_coat ? omni_PBR_coated_bsdf : omni_PBR_bsdf;
+    //bsdf final_bsdf = enable_coat ? omni_PBR_coated_bsdf : omni_PBR_bsdf;
+                                    
+    color emission_value = color(0.0); //enable_emission ? emission_color * color(emission_intensity) : color(0.0);
+
+    float cutout_opacity = enable_opacity ? (tex::texture_isvalid(diffuse_texture) ? blended_diff.w : 1.0) : 1.0;
+ 
+    material_emission emission = material_emission(
+                                    df::diffuse_edf(),
+                                    intensity: emission_value 
+                                    );
+
+    material_surface surface =  material_surface(
+		                            scattering: omni_PBR_bsdf,
+		                            emission:   emission
+		                            );
+
+    material_geometry geometry = material_geometry(
+                                    normal: state::normal(),
+                                    cutout_opacity: cutout_opacity
+                                    );
+
+} in material(
+    surface:  surface,
+    geometry: geometry
+);

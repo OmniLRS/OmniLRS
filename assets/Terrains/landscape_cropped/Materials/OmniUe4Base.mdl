@@ -1,3 +1,224 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:0d175f24abf3ae9db81a48e3f4d20fc9bdbfe46a67ec6fc15372cf8577b310f0
-size 9280
+/***************************************************************************************************
+ * Copyright 2020 NVIDIA Corporation. All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ *  * Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ *  * Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ *  * Neither the name of NVIDIA CORPORATION nor the names of its
+ *    contributors may be used to endorse or promote products derived
+ *    from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS ``AS IS'' AND ANY
+ * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE COPYRIGHT OWNER OR
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
+ * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ **************************************************************************************************/
+ 
+//* 1.0.0 - first version
+//* 1.0.1 - merge unlit template
+//* 1.0.2 - Fix EDF in the back side: the EDF contained in surface is only used for the front side and not for the back side
+//* 1.0.3 - UE4 normal mapping: Geometry normal shouldn't be changed
+//* 1.0.4 - using absolute import paths when importing standard modules
+
+mdl 1.3;
+
+import ::df::*;
+import ::state::*;
+import ::math::*;
+import ::tex::*;
+import ::anno::*;
+
+float emissive_multiplier()
+[[
+    anno::description("the multiplier to convert UE4 emissive to raw data"),
+    anno::noinline()
+]]
+{
+    return 20.0f * 128.0f;
+}
+
+float3 tangent_space_normal(
+    float3 normal = float3(0.0,0.0,1.0),
+    float3 tangent_u = state::texture_tangent_u(0),
+    float3 tangent_v = state::texture_tangent_v(0)
+)
+[[
+    anno::description("Interprets the vector in tangent space"),
+    anno::noinline()
+]]
+{
+    return math::normalize(
+        tangent_u * normal.x - /* flip_tangent_v */
+        tangent_v * normal.y +
+        state::normal() * (normal.z));
+}
+
+float3 world_space_normal(
+    float3 normal = float3(0.0,0.0,1.0),
+    float3 tangent_u = state::texture_tangent_u(0),
+    float3 tangent_v = state::texture_tangent_v(0)
+)
+[[
+    anno::description("Interprets the vector in world space"),
+    anno::noinline()
+]]
+{
+    return tangent_space_normal(
+        math::normalize(
+        normal.x * float3(tangent_u.x, tangent_v.x, state::normal().x) -
+        normal.y * float3(tangent_u.y, tangent_v.y, state::normal().y) +
+        normal.z * float3(tangent_u.z, tangent_v.z, state::normal().z)),
+        tangent_u,
+        tangent_v
+    );
+}
+
+export material OmniUe4Base(
+   float3 base_color = float3(0.0, 0.0, 0.0),
+   float metallic = 0.0,
+   float roughness = 0.5,
+   float specular = 0.5,
+   float3 normal = float3(0.0,0.0,1.0),
+   float clearcoat_weight = 0.0,
+   float clearcoat_roughness = 0.0,
+   float3 clearcoat_normal = float3(0.0,0.0,1.0),
+   uniform bool enable_opacity = true,
+   float opacity = 1.0,
+   float3 emissive_color = float3(0.0, 0.0, 0.0),
+   float3 displacement = float3(0.0),
+   uniform bool is_tangent_space_normal = true,
+   uniform bool two_sided = false,
+   uniform bool is_unlit = false
+)
+[[
+	anno::display_name("Omni UE4 Base"),
+	anno::description("Omni UE4 Base, supports UE4 default lit and clearcoat shading model"),
+	anno::version( 1, 0, 0),
+	anno::author("NVIDIA CORPORATION"), 
+	anno::key_words(string[]("omni", "UE4", "omniverse", "lit", "clearcoat", "generic"))
+]]
+ = let {     
+   color final_base_color = math::saturate(base_color);
+   float final_metallic = math::saturate(metallic);
+   float final_roughness = math::saturate(roughness);
+   float final_specular = math::saturate(specular);
+   color final_emissive_color = math::max(emissive_color, 0.0f) * emissive_multiplier(); /*factor for converting ue4 emissive to raw value*/
+   float final_clearcoat_weight = math::saturate(clearcoat_weight);
+   float final_clearcoat_roughness = math::saturate(clearcoat_roughness);
+   float3 final_normal = math::normalize(normal);
+   float3 final_clearcoat_normal = math::normalize(clearcoat_normal);
+
+   // - compute final roughness by squaring the "roughness" parameter
+   float alpha = final_roughness * final_roughness;
+   // reduce the reflectivity at grazing angles to avoid "dark edges" for high roughness due to the layering
+   float grazing_refl = math::max((1.0 - final_roughness), 0.0);
+
+	float3 the_normal =  is_unlit ? state::normal() : 
+							(is_tangent_space_normal ? 
+                            tangent_space_normal(
+                                            normal:         final_normal,
+                                            tangent_u:      state::texture_tangent_u(0),
+                                            tangent_v:      state::texture_tangent_v(0)
+                            ) : world_space_normal(
+                                            normal:         final_normal,
+                                            tangent_u:      state::texture_tangent_u(0),
+                                            tangent_v:      state::texture_tangent_v(0)
+                            ));
+
+   // for the dielectric component we layer the glossy component on top of the diffuse one,
+   // the glossy layer has no color tint
+       
+   bsdf dielectric_component = df::custom_curve_layer(
+       weight: final_specular,
+       normal_reflectivity: 0.08,
+       grazing_reflectivity: grazing_refl,
+       layer: df::microfacet_ggx_smith_bsdf(roughness_u: alpha),
+       base: df::diffuse_reflection_bsdf(tint: final_base_color),
+       normal: the_normal);
+
+   // the metallic component doesn't have a diffuse component, it's only glossy
+   // base_color is applied to tint it
+   bsdf metallic_component = df::microfacet_ggx_smith_bsdf(tint: final_base_color, roughness_u: alpha);
+
+   // final BSDF is a linear blend between dielectric and metallic component
+   bsdf dielectric_metal_mix =
+       df::normalized_mix(
+           components:
+               df::bsdf_component[](
+                   df::bsdf_component(
+                       component: metallic_component,
+                       weight: final_metallic),
+                   df::bsdf_component(
+                       component: dielectric_component,
+                       weight: 1.0-final_metallic)
+               )
+       );
+
+   // clearcoat layer
+   float clearcoat_grazing_refl = math::max((1.0 - final_clearcoat_roughness), 0.0);
+   float clearcoat_alpha = final_clearcoat_roughness * final_clearcoat_roughness;
+
+   float3 the_clearcoat_normal = is_tangent_space_normal ? tangent_space_normal(
+                                            normal:         final_clearcoat_normal,
+                                            tangent_u:      state::texture_tangent_u(0),
+                                            tangent_v:      state::texture_tangent_v(0)
+                            ) : world_space_normal(
+                                            normal:         final_clearcoat_normal,
+                                            tangent_u:      state::texture_tangent_u(0),
+                                            tangent_v:      state::texture_tangent_v(0)
+                            );
+
+
+   bsdf clearcoat =
+       df::custom_curve_layer(
+           base: df::weighted_layer(
+               layer: dielectric_metal_mix,
+               weight: 1.0,
+               normal: final_clearcoat_weight == 0.0 ? state::normal() : the_normal
+           ),
+           layer: df::microfacet_ggx_smith_bsdf(
+               roughness_u: clearcoat_alpha,
+               tint: color(1.0)
+           ),
+           normal_reflectivity: 0.04,
+           grazing_reflectivity: clearcoat_grazing_refl,
+           normal: the_clearcoat_normal,
+           weight: final_clearcoat_weight
+       );
+   bsdf surface = is_unlit ? bsdf() : clearcoat;
+} 
+in material(
+   thin_walled: two_sided, // Graphene?
+   surface: material_surface(
+       scattering: surface,
+       emission:
+            material_emission (
+                emission:  df::diffuse_edf (),
+                intensity: final_emissive_color
+                )
+       ),
+   backface: material_surface(
+       emission:
+            material_emission (
+                emission:  df::diffuse_edf (),
+                intensity: final_emissive_color
+                )
+       ),
+   geometry: material_geometry(
+       displacement: displacement,
+       normal: final_clearcoat_weight == 0.0 ? the_normal : state::normal(),
+       cutout_opacity: enable_opacity ? opacity : 1.0
+   )
+);

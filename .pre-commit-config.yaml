@@ -27,3 +27,16 @@ repos:
       - id: ruff-check
         types_or: [python, pyi]
         args: [--fix]
+  - repo: local
+    hooks:
+      # .mdl files are plain text and git stores them directly, not in git lfs.
+      # The hook reads the staged content (git grep --cached), not the file on disk:
+      # after a merge of an older branch, the file on disk is correct but git can still store an lfs pointer.
+      - id: no-lfs-pointer-mdl
+        name: no git lfs pointer in .mdl files
+        language: system
+        pass_filenames: false
+        always_run: true
+        entry: >-
+          bash -c 'if git grep --cached -l -E "^version https?://[^[:space:]]+$" -- "*.mdl"; then
+          echo "git stores the files above as git lfs pointers. Fix: git add --renormalize . and commit."; exit 1; fi'

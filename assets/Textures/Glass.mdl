@@ -1,3 +1,36 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:ad396e210ad3b79f699b30830cedcdb8af8ca799120049d912c56bf58b49b4de
-size 1063
+mdl 1.6;
+
+import ::state::normal;
+using ::OmniGlass import OmniGlass;
+import ::base::mono_mode;
+import ::tex::gamma_mode;
+
+export material Tinted_Glass_R98(*)
+ = OmniGlass(
+    absorption_coeff: color(1.f, 1.f, 1.f),
+    use_glass_color_texture: false,
+    glass_color: color(1.f, 1.f, 1.f),
+    glass_color_texture: texture_2d(),
+    frosting_roughness: 0.f,
+    glass_ior: 1.51999998f,
+    thin_walled: true,
+    depth: 0.00100000005f,
+    roughness_texture_influence: 1.f,
+    roughness_texture: texture_2d(),
+    reflection_color_texture: texture_2d(),
+    reflection_color: color(1.f, 1.f, 1.f),
+    normal_map_texture: texture_2d(),
+    normal_map_strength: 1.f,
+    flip_tangent_u: false,
+    flip_tangent_v: true,
+    enable_opacity: false,
+    cutout_opacity: 1.f,
+    cutout_opacity_texture: texture_2d(),
+    cutout_opacity_mono_source: base::mono_alpha,
+    opacity_threshold: 0.f,
+    project_uvw: false,
+    world_or_object: false,
+    uv_space_index: 0,
+    texture_translate: float2(0.f),
+    texture_rotate: 0.f,
+    texture_scale: float2(1.f));
