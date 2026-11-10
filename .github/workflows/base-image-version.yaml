@@ -1,12 +1,15 @@
 name: Base image version
 
-# The CI base image (ci.docker/ci.Dockerfile) contains assets/, and the app image
-# (artefacts.Dockerfile) ignores assets/. So a PR that changes assets/ must also
-# build and push a new base image, and raise the FROM tag in artefacts.Dockerfile.
+# The CI base image (ci.docker/ci.Dockerfile) contains assets/ and the pixi environments.
+# The app image (artefacts.Dockerfile) ignores assets/. So a PR that changes assets/ or
+# pixi.lock must also build and push a new base image, and raise the FROM tag in
+# artefacts.Dockerfile. pixi.toml is not checked: every dependency change also changes
+# pixi.lock (see pixi-lock.yaml), and a task change does not need a new base image.
 on:
   pull_request:
     paths:
       - assets/**
+      - pixi.lock
       - artefacts.Dockerfile
       - .github/workflows/base-image-version.yaml
 
@@ -21,10 +24,10 @@ jobs:
         with:
           fetch-depth: 2 # HEAD is the PR merge commit and HEAD^1 is the base branch
 
-      - name: Check that the base image tag is higher when assets/ changes
+      - name: Check that the base image tag is higher when assets/ or pixi.lock changes
         run: |
-          if git diff --quiet HEAD^1 HEAD -- assets/; then
-            echo "This PR does not change assets/."
+          if git diff --quiet HEAD^1 HEAD -- assets/ pixi.lock; then
+            echo "This PR does not change assets/ or pixi.lock."
             exit 0
           fi
           tag() { awk '/^FROM / && !done {n=split($2, a, ":"); print a[n]; done=1}'; }
@@ -32,6 +35,6 @@ jobs:
           new=$(tag < artefacts.Dockerfile)
           echo "Base image tag: $old -> $new"
           if [ "$old" = "$new" ] || [ "$(printf '%s\n%s\n' "$old" "$new" | sort -V | tail -1)" != "$new" ]; then
-            echo "::error file=artefacts.Dockerfile::This PR changes assets/, so it needs a new base image. Build and push the base image with a higher tag (see ci.docker/README.md), then put that tag in the FROM line of artefacts.Dockerfile."
+            echo "::error file=artefacts.Dockerfile::This PR changes assets/ or pixi.lock, so it needs a new base image. Build and push the base image with a higher tag (see ci.docker/README.md), then put that tag in the FROM line of artefacts.Dockerfile."
             exit 1
           fi

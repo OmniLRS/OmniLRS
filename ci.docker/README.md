@@ -29,7 +29,7 @@ docker run --gpus all --rm omnilrs pixi run test-ros2 # or test-yamcs
 
 If you wish to build the base image (`ci.Dockerfile`) yourself, note that assets (git lfs) and git submodules must already be available on the machine you are building on.
 
-The base image bakes in the pixi environments (Isaac Sim 6.2, Python 3.12) and the assets (`.artefactsignore` excludes `assets/` from the app image). Rebuild and push a new tag whenever `pixi.toml`/`pixi.lock` or anything under `assets/` changes, then update the `FROM` tag in `artefacts.Dockerfile`. If a PR changes `assets/` and does not raise this tag, the `Base image version` PR check (`.github/workflows/base-image-version.yaml`) fails.
+The base image bakes in the pixi environments (Isaac Sim 6.2, Python 3.12) and the assets (`.artefactsignore` excludes `assets/` from the app image). Rebuild and push a new tag whenever `pixi.lock` or anything under `assets/` changes, then update the `FROM` tag in `artefacts.Dockerfile`. A `pixi.toml` change that only edits tasks does not need a new base image. If a PR changes `assets/` or `pixi.lock` and does not raise this tag, the `Base image version` PR check (`.github/workflows/base-image-version.yaml`) fails.
 
 It is based on `public.ecr.aws/artefacts/ros2:jazzy-harmonic-nvidia` (Ubuntu 24.04, ROS 2 Jazzy). Isaac Sim uses its bundled Jazzy libraries; the system ROS 2 CLI (`/opt/ros/jazzy`) is only used by the tests to check the published topics. Running it needs an NVIDIA driver >= 580.
 
