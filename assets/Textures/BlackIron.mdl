@@ -1,3 +1,52 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:b406705d7b0bec8cb9cbeb0813dd20bbfb5d08d31f84ddcddbc1429bcfaed1ec
-size 1807
+mdl 1.6;
+
+using ::OmniPBR import OmniPBR;
+import ::state::normal;
+import ::base::mono_mode;
+import ::tex::gamma_mode;
+
+export material Iron(*)
+ = OmniPBR(
+    diffuse_color_constant: color(0.200000003f, 0.200000003f, 0.200000003f),
+    diffuse_texture: texture_2d("./BlackIron/BlackIron_Iron_BaseColor.png", ::tex::gamma_srgb),
+    albedo_desaturation: 0.f,
+    albedo_add: 0.f,
+    albedo_brightness: 1.f,
+    diffuse_tint: color(1.f, 1.f, 1.f),
+    reflection_roughness_constant: 0.5f,
+    reflection_roughness_texture_influence: 1.f,
+    reflectionroughness_texture: texture_2d(),
+    metallic_constant: 0.5f,
+    metallic_texture_influence: 1.f,
+    metallic_texture: texture_2d(),
+    specular_level: 0.5f,
+    enable_ORM_texture: true,
+    ORM_texture: texture_2d("./BlackIron/BlackIron_Iron_ORM.png", ::tex::gamma_linear),
+    ao_to_diffuse: 0.f,
+    ao_texture: texture_2d(),
+    enable_emission: false,
+    emissive_color: color(1.f, 0.100000001f, 0.100000001f),
+    emissive_color_texture: texture_2d(),
+    emissive_mask_texture: texture_2d(),
+    emissive_intensity: 40.f,
+    enable_opacity: false,
+    opacity_texture: texture_2d(),
+    opacity_constant: 1.f,
+    enable_opacity_texture: false,
+    opacity_mode: base::mono_average,
+    opacity_threshold: 0.f,
+    bump_factor: 1.f,
+    normalmap_texture: texture_2d("./BlackIron/BlackIron_Iron_N.png", ::tex::gamma_linear),
+    detail_bump_factor: 0.300000012f,
+    detail_normalmap_texture: texture_2d(),
+    flip_tangent_u: false,
+    flip_tangent_v: true,
+    project_uvw: false,
+    world_or_object: false,
+    uv_space_index: 0,
+    texture_translate: float2(0.f),
+    texture_rotate: 0.f,
+    texture_scale: float2(2.f),
+    detail_texture_translate: float2(0.f),
+    detail_texture_rotate: 0.f,
+    detail_texture_scale: float2(1.f));
