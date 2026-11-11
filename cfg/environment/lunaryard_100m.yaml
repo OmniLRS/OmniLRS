@@ -438,6 +438,9 @@ terrain_manager:
       x_size: ${....lunaryard_settings.lab_length}
       y_size: ${....lunaryard_settings.lab_width}
       # Distribution based on survey data from Highlands AVG survey
+      # TODO(OBS-03): These coefficients match "Highlands", not "Highlands AVG"; review the intended fit.
+      # Source: NASA VIPER (2023), slide 40:
+      # https://ntrs.nasa.gov/api/citations/20230008874/downloads/2023-06-HBRC-VIPER.pdf#page=40
       densities: []
       radius: []
       radius_range: [0.5, 20]
@@ -488,7 +491,7 @@ terrain_manager:
 
   root_path: /Lunaryard
   # Match the material scope created by LunaryardController.build_scene().
-  texture_path: /Lunaryard/Looks/LunarRegolith8k
+  texture_path: /Lunaryard/Looks/LunarRegolithInfinite
   dems_path: Terrains/Lunaryard
   mesh_position: [0, 0, 0]
   mesh_orientation: [0, 0, 0, 1] # Quaternion x,y,z,w
@@ -514,8 +517,9 @@ robots_settings:
       right: ["front_right_wheel", "rear_right_wheel"]
     # Match the current cfg/robot/husky.yaml camera settings for this asset.
     camera:
-      name: "cam_color"
-      prim_path: "/Robots/husky/d455/RSD455/Camera_OmniVision_OV9782_Color"
-      resolutions:
-        low: [320, 240]
-        high: [1280, 720]
+      - name: "cam_color"
+        prim_path: "/Robots/husky/d455/RSD455/Camera_OmniVision_OV9782_Color"
+        type: [rgba]
+        resolutions:
+          low: [320, 240]
+          high: [1280, 720]
