@@ -1,3 +1,583 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:615e985fb77d6cf690426c8f40196d1237068dd96fa1914f2f1c225cdb1fd0ba
-size 29973
+mdl 1.6;
+
+import ::math::*;
+import ::state::*;
+import ::tex::*;
+import ::anno::*;
+import ::scene::*;
+using OmniUe4Function import *;
+using OmniUe4Base import *;
+
+export annotation sampler_color();
+export annotation sampler_normal();
+export annotation sampler_grayscale();
+export annotation sampler_alpha();
+export annotation sampler_masks();
+export annotation sampler_distancefield();
+export annotation dither_masked_off();
+export annotation world_space_normal();
+
+export material MI_Landscape0(
+	float Soil_01_NearTiling = 1.0
+	[[
+		anno::display_name("Soil_01 - Near Tiling"),
+		anno::ui_order(32),
+		anno::in_group("Soil_01")
+	]],
+	uniform texture_2d Soil_01_Normal = texture_2d("./Textures/T_Soil_01_N.png",::tex::gamma_linear)
+	[[
+		anno::display_name("Soil_01 - Normal"),
+		anno::ui_order(32),
+		anno::in_group("Soil_01"),
+		sampler_color()
+	]],
+	float Soil_01_BlendContrast = 14.0
+	[[
+		anno::display_name("Soil_01 - Blend Contrast"),
+		anno::ui_order(32),
+		anno::in_group("Soil_01")
+	]],
+	float Soil_01_BlendAmount = 4096.0
+	[[
+		anno::display_name("Soil_01 - Blend Amount"),
+		anno::ui_order(32),
+		anno::in_group("Soil_01")
+	]],
+	uniform texture_2d WeightmapLayer_01 = texture_2d("./Textures/WeightMapNullTexture.png",::tex::gamma_linear)
+	[[
+		anno::hidden(),
+		sampler_masks()
+	]],
+	float Soil_02_NearTiling = 1.0
+	[[
+		anno::display_name("Soil_02 - Near Tiling"),
+		anno::ui_order(32),
+		anno::in_group("Soil_02")
+	]],
+	uniform texture_2d Soil_02_Normal = texture_2d("./Textures/T_Soil_02_N.png",::tex::gamma_linear)
+	[[
+		anno::display_name("Soil_02 - Normal"),
+		anno::ui_order(32),
+		anno::in_group("Soil_02"),
+		sampler_color()
+	]],
+	float Soil_02_BlendContrast = 14.0
+	[[
+		anno::display_name("Soil_02 - Blend Contrast"),
+		anno::ui_order(32),
+		anno::in_group("Soil_02")
+	]],
+	float Soil_02_BlendAmount = 4096.0
+	[[
+		anno::display_name("Soil_02 - Blend Amount"),
+		anno::ui_order(32),
+		anno::in_group("Soil_02")
+	]],
+	float Soil_03_NearTiling = 1.0
+	[[
+		anno::display_name("Soil_03 - Near Tiling"),
+		anno::ui_order(32),
+		anno::in_group("Soil_03")
+	]],
+	uniform texture_2d Soil_03_Normal = texture_2d("./Textures/T_Soil_03_N.png",::tex::gamma_linear)
+	[[
+		anno::display_name("Soil_03 - Normal"),
+		anno::ui_order(32),
+		anno::in_group("Soil_03"),
+		sampler_color()
+	]],
+	float Soil_03_BlendContrast = 14.0
+	[[
+		anno::display_name("Soil_03 - Blend Contrast"),
+		anno::ui_order(32),
+		anno::in_group("Soil_03")
+	]],
+	float Soil_03_BlendAmount = 4096.0
+	[[
+		anno::display_name("Soil_03 - Blend Amount"),
+		anno::ui_order(32),
+		anno::in_group("Soil_03")
+	]],
+	float Soil_01_FarTiling = 1.0
+	[[
+		anno::display_name("Soil_01 - Far Tiling"),
+		anno::ui_order(32),
+		anno::in_group("Soil_01")
+	]],
+	float Fade_Distance = 2048.0
+	[[
+		anno::display_name("Fade_Distance"),
+		anno::ui_order(32),
+		anno::in_group("Fade")
+	]],
+	float Fade_Falloff = 2048.0
+	[[
+		anno::display_name("Fade_Falloff"),
+		anno::ui_order(32),
+		anno::in_group("Fade")
+	]],
+	float4 Soil_01_Normal_vp = float4(1.0,1.0,1.0,1.0)
+	[[
+		anno::display_name("Soil_01 - Normal"),
+		anno::ui_order(32),
+		anno::in_group("Soil_01")
+	]],
+	float Soil_02_FarTiling = 1.0
+	[[
+		anno::display_name("Soil_02 - Far Tiling"),
+		anno::ui_order(32),
+		anno::in_group("Soil_02")
+	]],
+	float4 Soil_02_Normal_vp = float4(1.0,1.0,1.0,1.0)
+	[[
+		anno::display_name("Soil_02 - Normal"),
+		anno::ui_order(32),
+		anno::in_group("Soil_02")
+	]],
+	float DetailBlendingTiling = 1.0
+	[[
+		anno::display_name("Detail Blending Tiling"),
+		anno::ui_order(32),
+		anno::in_group("Splat Map")
+	]],
+	float Soil_03_FarTiling = 1.0
+	[[
+		anno::display_name("Soil_03 - Far Tiling"),
+		anno::ui_order(32),
+		anno::in_group("Soil_03")
+	]],
+	float4 Soil_03_Normal_vp = float4(1.0,1.0,1.0,1.0)
+	[[
+		anno::display_name("Soil_03 - Normal"),
+		anno::ui_order(32),
+		anno::in_group("Soil_03")
+	]],
+	float World_Normal_FarTiling = 0.0
+	[[
+		anno::display_name("World_Normal - Far Tiling"),
+		anno::ui_order(1),
+		anno::in_group("World_Normal")
+	]],
+	uniform texture_2d World_Normal_FarNormal = texture_2d("./Textures/T_Default_Normal.png",::tex::gamma_linear)
+	[[
+		anno::display_name("World_Normal - Far Normal"),
+		anno::ui_order(3),
+		anno::in_group("World_Normal"),
+		sampler_normal()
+	]],
+	float4 World_Normal_FarIntensity = float4(1.0,1.0,1.0,1.0)
+	[[
+		anno::display_name("World_Normal - Far Intensity"),
+		anno::ui_order(2),
+		anno::in_group("World_Normal")
+	]],
+	float World_Normal_NearTiling = 0.0
+	[[
+		anno::display_name("World_Normal - Near Tiling"),
+		anno::ui_order(5),
+		anno::in_group("World_Normal")
+	]],
+	uniform texture_2d World_Normal_NearNormal = texture_2d("./Textures/T_Default_Normal.png",::tex::gamma_linear)
+	[[
+		anno::display_name("World_Normal - Near Normal"),
+		anno::ui_order(7),
+		anno::in_group("World_Normal"),
+		sampler_normal()
+	]],
+	float4 World_Normal_NearIntensity = float4(1.0,1.0,1.0,1.0)
+	[[
+		anno::display_name("World_Normal - Near Intensity"),
+		anno::ui_order(6),
+		anno::in_group("World_Normal")
+	]],
+	uniform texture_2d Soil_01_Albedo = texture_2d("./Textures/T_Soil_01_A.png",::tex::gamma_srgb)
+	[[
+		anno::display_name("Soil_01 - Albedo"),
+		anno::ui_order(32),
+		anno::in_group("Soil_01"),
+		sampler_color()
+	]],
+	float4 Soil_01_Color1 = float4(1.0,1.0,1.0,1.0)
+	[[
+		anno::display_name("Soil_01 - Color 1"),
+		anno::ui_order(32),
+		anno::in_group("Soil_01")
+	]],
+	float4 Soil_02_Color = float4(0.99,0.99,0.99,1.0)
+	[[
+		anno::display_name("Soil_02 - Color"),
+		anno::ui_order(32),
+		anno::in_group("Soil_02")
+	]],
+	uniform texture_2d Soil_02_Albedo = texture_2d("./Textures/T_Soil_02_A.png",::tex::gamma_srgb)
+	[[
+		anno::display_name("Soil_02 - Albedo"),
+		anno::ui_order(32),
+		anno::in_group("Soil_02"),
+		sampler_color()
+	]],
+	float4 Soil_03_Color = float4(0.99,0.99,0.99,1.0)
+	[[
+		anno::display_name("Soil_03 - Color"),
+		anno::ui_order(32),
+		anno::in_group("Soil_03")
+	]],
+	uniform texture_2d Soil_03_Albedo = texture_2d("./Textures/T_Soil_03_A.png",::tex::gamma_srgb)
+	[[
+		anno::display_name("Soil_03 - Albedo"),
+		anno::ui_order(32),
+		anno::in_group("Soil_03"),
+		sampler_color()
+	]],
+	float Colorizer_01_Desaturate_01 = 0.0
+	[[
+		anno::display_name("Colorizer_01 - Desaturate_01"),
+		anno::ui_order(32),
+		anno::in_group("Colorizer_01")
+	]],
+	float4 Colorizer_01_Color_01 = float4(1.0,1.0,1.0,1.0)
+	[[
+		anno::display_name("Colorizer_01 - Color_01"),
+		anno::ui_order(32),
+		anno::in_group("Colorizer_01")
+	]],
+	float Colorizer_01_Scale_01 = 100.0
+	[[
+		anno::display_name("Colorizer_01 - Scale_01"),
+		anno::ui_order(32),
+		anno::in_group("Colorizer_01")
+	]],
+	uniform texture_2d Colorizer_01_Mask_01 = texture_2d("./Textures/T_Default_RGBA.png",::tex::gamma_linear)
+	[[
+		anno::display_name("Colorizer_01 - Mask_01"),
+		anno::ui_order(32),
+		anno::in_group("Colorizer_01"),
+		sampler_masks()
+	]],
+	float4 Colorizer_01_Channel_01 = float4(1.0,0.0,0.0,0.0)
+	[[
+		anno::display_name("Colorizer_01 - Channel_01"),
+		anno::ui_order(32),
+		anno::in_group("Colorizer_01")
+	]],
+	float Colorizer_01_Contrast_01 = 1.0
+	[[
+		anno::display_name("Colorizer_01 - Contrast_01"),
+		anno::ui_order(32),
+		anno::in_group("Colorizer_01")
+	]],
+	float Colorizer_01_Amount_01 = 1.0
+	[[
+		anno::display_name("Colorizer_01 - Amount_01"),
+		anno::ui_order(32),
+		anno::in_group("Colorizer_01")
+	]],
+	float Colorizer_01_Desaturate_02 = 0.0
+	[[
+		anno::display_name("Colorizer_01 - Desaturate_02"),
+		anno::ui_order(32),
+		anno::in_group("Colorizer_01")
+	]],
+	float4 Colorizer_01_Color_02 = float4(1.0,1.0,1.0,1.0)
+	[[
+		anno::display_name("Colorizer_01 - Color_02"),
+		anno::ui_order(32),
+		anno::in_group("Colorizer_01")
+	]],
+	float Colorizer_01_Scale_02 = 100.0
+	[[
+		anno::display_name("Colorizer_01 - Scale_02"),
+		anno::ui_order(32),
+		anno::in_group("Colorizer_01")
+	]],
+	uniform texture_2d Colorizer_01_Mask_02 = texture_2d("./Textures/T_Default_RGBA.png",::tex::gamma_linear)
+	[[
+		anno::display_name("Colorizer_01 - Mask_02"),
+		anno::ui_order(32),
+		anno::in_group("Colorizer_01"),
+		sampler_masks()
+	]],
+	float4 Colorizer_01_Channel_02 = float4(1.0,0.0,0.0,0.0)
+	[[
+		anno::display_name("Colorizer_01 - Channel_02"),
+		anno::ui_order(32),
+		anno::in_group("Colorizer_01")
+	]],
+	float Colorizer_01_Contrast_02 = 1.0
+	[[
+		anno::display_name("Colorizer_01 - Contrast_02"),
+		anno::ui_order(32),
+		anno::in_group("Colorizer_01")
+	]],
+	float Colorizer_01_Amount_02 = 1.0
+	[[
+		anno::display_name("Colorizer_01 - Amount_02"),
+		anno::ui_order(32),
+		anno::in_group("Colorizer_01")
+	]],
+	float Soil_01_Shadow = 1.0
+	[[
+		anno::display_name("Soil_01 - Shadow"),
+		anno::ui_order(32),
+		anno::in_group("Soil_03")
+	]],
+	int MaxTexCoordIndex = 3
+	[[
+		anno::hidden()
+	]],
+	float Soil_03_Shadow = 1.0
+	[[
+		anno::display_name("Soil_03 - Shadow"),
+		anno::ui_order(32),
+		anno::in_group("Soil_03")
+	]],
+	uniform bool ShadowReplaceState = false
+	[[
+		anno::hidden()
+	]],
+	float RocksSlope = 0.0
+	[[
+		anno::display_name("Rocks Slope"),
+		anno::ui_order(32)
+	]])
+ = 
+	let {
+	float Local164 = math::dot(float2(state::texture_coordinate(math::min(0,MaxTexCoordIndex)).x,1.0-state::texture_coordinate(math::min(0,MaxTexCoordIndex)).y), float2(0.0,1.0));
+	float Local165 = math::dot(float2(state::texture_coordinate(math::min(0,MaxTexCoordIndex)).x,1.0-state::texture_coordinate(math::min(0,MaxTexCoordIndex)).y), float2(1.0,0.0));
+	float2 Local166 = (1.0 * float2(Local165,Local164));
+	float2 Local167 = (Local166 + float2(0.0,0.0));
+	float2 Local168 = (Local167 * DetailBlendingTiling);
+	float4 Local169 = tex::lookup_float4(texture_2d("./Textures/T_Mask_01.png",::tex::gamma_linear),float2(Local168.x,1.0-Local168.y),tex::wrap_repeat,tex::wrap_repeat);
+	float3 Local170 = (1.0 - float3(Local169.x,Local169.y,Local169.z));
+	float3 Local171 = (Local170 * 2.0);
+	float3 Local180 = (float3(Local169.x,Local169.y,Local169.z) * 2.0);
+	float2 Local186 = (float2((::convert_to_left_hand(state::transform_point(state::coordinate_internal,state::coordinate_world,state::position()), true)*state::meters_per_scene_unit()*100.0).x,(::convert_to_left_hand(state::transform_point(state::coordinate_internal,state::coordinate_world,state::position()), true)*state::meters_per_scene_unit()*100.0).y) / Soil_03_NearTiling);
+	float4 Local187 = tex::lookup_float4(Soil_03_Normal,float2(Local186.x,1.0-Local186.y),tex::wrap_repeat,tex::wrap_repeat);
+	float Local188 = math::pow(math::max(Local187.w,float(0.000001)),Soil_03_BlendContrast);
+	float Local189 = (Local188 * Soil_03_BlendAmount);
+	float Local190 = math::min(math::max(Local189,0.0),1.0);
+	float Local191 = (1.0 - Local190);
+	float3 Local192 = (Local171 * Local191);
+	float3 Local193 = (1.0 - Local192);
+	float3 Local194 = (Local180 * Local190);
+	float Local195 = ((float3(Local169.x,Local169.y,Local169.z).x >= 0.5) ? Local193.x : Local194.x);
+	float Local196 = ((float3(Local169.x,Local169.y,Local169.z).y >= 0.5) ? Local193.y : Local194.y);
+	float Local197 = ((float3(Local169.x,Local169.y,Local169.z).z >= 0.5) ? Local193.z : Local194.z);
+	float3 Local198 = math::min(math::max(float3(float2(Local195,Local196).x,float2(Local195,Local196).y,Local197),float3(0.0,0.0,0.0)),float3(1.0,1.0,1.0));
+	float Local199 = math::lerp(Soil_01_Shadow,Soil_03_Shadow,Local198.x);
+	float Local200 = (Local199 * -1.0);
+	float3 Local201 = (Local200 * ::landscape_normal_world_space(true));
+	float3 Local202 = (ShadowReplaceState ? (Local201) : (float3(0.0,0.0,0.0)));
+	float3 Local203 = (float3(0.0,0.0,0.0) + Local202);
+
+	float3 WorldPositionOffset_mdl = Local203;
+	float2 CustomizedUV0_mdl = float2(state::texture_coordinate(math::min(0,MaxTexCoordIndex)).x,1.0-state::texture_coordinate(math::min(0,MaxTexCoordIndex)).y);
+	float2 CustomizedUV1_mdl = float2(state::texture_coordinate(math::min(1,MaxTexCoordIndex)).x,1.0-state::texture_coordinate(math::min(1,MaxTexCoordIndex)).y);
+
+	float2 Local0 = (float2((::convert_to_left_hand(state::transform_point(state::coordinate_internal,state::coordinate_world,state::position()), true)*state::meters_per_scene_unit()*100.0).x,(::convert_to_left_hand(state::transform_point(state::coordinate_internal,state::coordinate_world,state::position()), true)*state::meters_per_scene_unit()*100.0).y) / Soil_01_NearTiling);
+	float4 Local1 = tex::lookup_float4(Soil_01_Normal,float2(Local0.x,1.0-Local0.y),tex::wrap_repeat,tex::wrap_repeat);
+	float Local2 = math::pow(math::max(Local1.w,float(0.000001)),Soil_01_BlendContrast);
+	float Local3 = (Local2 * Soil_01_BlendAmount);
+	float Local4 = math::min(math::max(Local3,0.0),1.0);
+	float Local5 = (1.0 - Local4);
+	float4 Local6 = tex::lookup_float4(WeightmapLayer_01,float2(CustomizedUV1_mdl.x,1.0-CustomizedUV1_mdl.y),tex::wrap_repeat,tex::wrap_repeat);
+	float Local7 = math::dot(Local6, float4(1.0,0.0,0.0,0.0));
+	float Local8 = math::lerp(-1.0,1.0,Local7);
+	float Local9 = (Local8 + Local5);
+	float Local10 = math::min(math::max(Local9,0.0001),1.0);
+	float Local11 = (0.0 + Local10);
+	float2 Local12 = (float2((::convert_to_left_hand(state::transform_point(state::coordinate_internal,state::coordinate_world,state::position()), true)*state::meters_per_scene_unit()*100.0).x,(::convert_to_left_hand(state::transform_point(state::coordinate_internal,state::coordinate_world,state::position()), true)*state::meters_per_scene_unit()*100.0).y) / Soil_02_NearTiling);
+	float4 Local13 = tex::lookup_float4(Soil_02_Normal,float2(Local12.x,1.0-Local12.y),tex::wrap_repeat,tex::wrap_repeat);
+	float Local14 = math::pow(math::max(Local13.w,float(0.000001)),Soil_02_BlendContrast);
+	float Local15 = (Local14 * Soil_02_BlendAmount);
+	float Local16 = math::min(math::max(Local15,0.0),1.0);
+	float2 Local17 = (float2((::convert_to_left_hand(state::transform_point(state::coordinate_internal,state::coordinate_world,state::position()), true)*state::meters_per_scene_unit()*100.0).x,(::convert_to_left_hand(state::transform_point(state::coordinate_internal,state::coordinate_world,state::position()), true)*state::meters_per_scene_unit()*100.0).y) / Soil_03_NearTiling);
+	float4 Local18 = tex::lookup_float4(Soil_03_Normal,float2(Local17.x,1.0-Local17.y),tex::wrap_repeat,tex::wrap_repeat);
+	float Local19 = math::pow(math::max(Local18.w,float(0.000001)),Soil_03_BlendContrast);
+	float Local20 = (Local19 * Soil_03_BlendAmount);
+	float Local21 = math::min(math::max(Local20,0.0),1.0);
+	float Local22 = (1.0 / Local11);
+	float2 Local23 = (float2((::convert_to_left_hand(state::transform_point(state::coordinate_internal,state::coordinate_world,state::position()), true)*state::meters_per_scene_unit()*100.0).x,(::convert_to_left_hand(state::transform_point(state::coordinate_internal,state::coordinate_world,state::position()), true)*state::meters_per_scene_unit()*100.0).y) / Soil_01_FarTiling);
+	float4 Local24 = tex::lookup_float4(Soil_01_Normal,float2(Local23.x,1.0-Local23.y),tex::wrap_repeat,tex::wrap_repeat);
+	float Local25 = (::pixel_depth() - Fade_Distance);
+	float Local26 = (Local25 / Fade_Falloff);
+	float Local27 = math::min(math::max(Local26,0.0),1.0);
+	float3 Local28 = math::lerp(float3(Local1.x,Local1.y,Local1.z),float3(Local24.x,Local24.y,Local24.z),Local27);
+	float2 Local29 = (-0.5 + float2(Local28.x,Local28.y));
+	float2 Local30 = (Local29 * 2.0);
+	float Local31 = math::dot(Local30, Local30);
+	float Local32 = (1.0 - Local31);
+	float Local33 = math::saturate(Local32);
+	float Local34 = math::sqrt(Local33);
+	float Local35 = math::dot(float3(Local30.x,Local30.y,Local34), float3(Local30.x,Local30.y,Local34));
+	float3 Local36 = math::normalize(float3(Local30.x,Local30.y,Local34));
+	float4 Local37 = ((math::abs(Local35 - 0.000001) > 0.00001) ? (Local35 >= 0.000001 ? float4(Local36.x,Local36.y,Local36.z,0.0) : float4(float3(Local30.x,Local30.y,0.0).x,float3(Local30.x,Local30.y,0.0).y,float3(Local30.x,Local30.y,0.0).z,1.0)) : float4(float3(Local30.x,Local30.y,0.0).x,float3(Local30.x,Local30.y,0.0).y,float3(Local30.x,Local30.y,0.0).z,1.0));
+	float3 Local38 = (float3(Local37.x,Local37.y,Local37.z) * float3(Soil_01_Normal_vp.x,Soil_01_Normal_vp.y,Soil_01_Normal_vp.z));
+	float2 Local39 = (float2((::convert_to_left_hand(state::transform_point(state::coordinate_internal,state::coordinate_world,state::position()), true)*state::meters_per_scene_unit()*100.0).x,(::convert_to_left_hand(state::transform_point(state::coordinate_internal,state::coordinate_world,state::position()), true)*state::meters_per_scene_unit()*100.0).y) / Soil_02_FarTiling);
+	float4 Local40 = tex::lookup_float4(Soil_02_Normal,float2(Local39.x,1.0-Local39.y),tex::wrap_repeat,tex::wrap_repeat);
+	float3 Local41 = math::lerp(float3(Local13.x,Local13.y,Local13.z),float3(Local40.x,Local40.y,Local40.z),Local27);
+	float2 Local42 = (-0.5 + float2(Local41.x,Local41.y));
+	float2 Local43 = (Local42 * 2.0);
+	float Local44 = math::dot(Local43, Local43);
+	float Local45 = (1.0 - Local44);
+	float Local46 = math::saturate(Local45);
+	float Local47 = math::sqrt(Local46);
+	float Local48 = math::dot(float3(Local43.x,Local43.y,Local47), float3(Local43.x,Local43.y,Local47));
+	float3 Local49 = math::normalize(float3(Local43.x,Local43.y,Local47));
+	float4 Local50 = ((math::abs(Local48 - 0.000001) > 0.00001) ? (Local48 >= 0.000001 ? float4(Local49.x,Local49.y,Local49.z,0.0) : float4(float3(Local43.x,Local43.y,0.0).x,float3(Local43.x,Local43.y,0.0).y,float3(Local43.x,Local43.y,0.0).z,1.0)) : float4(float3(Local43.x,Local43.y,0.0).x,float3(Local43.x,Local43.y,0.0).y,float3(Local43.x,Local43.y,0.0).z,1.0));
+	float3 Local51 = (float3(Local50.x,Local50.y,Local50.z) * float3(Soil_02_Normal_vp.x,Soil_02_Normal_vp.y,Soil_02_Normal_vp.z));
+	float Local52 = math::dot(CustomizedUV0_mdl, float2(0.0,1.0));
+	float Local53 = math::dot(CustomizedUV0_mdl, float2(1.0,0.0));
+	float2 Local54 = (1.0 * float2(Local53,Local52));
+	float2 Local55 = (Local54 + float2(0.0,0.0));
+	float2 Local56 = (Local55 * DetailBlendingTiling);
+	float4 Local57 = tex::lookup_float4(texture_2d("./Textures/T_Mask_01.png",::tex::gamma_linear),float2(Local56.x,1.0-Local56.y),tex::wrap_repeat,tex::wrap_repeat);
+	float3 Local58 = (1.0 - float3(Local57.x,Local57.y,Local57.z));
+	float3 Local59 = (Local58 * 2.0);
+	float Local60 = (1.0 - Local16);
+	float3 Local61 = (Local59 * Local60);
+	float3 Local62 = (1.0 - Local61);
+	float3 Local63 = (float3(Local57.x,Local57.y,Local57.z) * 2.0);
+	float3 Local64 = (Local63 * Local16);
+	float Local65 = ((float3(Local57.x,Local57.y,Local57.z).x >= 0.5) ? Local62.x : Local64.x);
+	float Local66 = ((float3(Local57.x,Local57.y,Local57.z).y >= 0.5) ? Local62.y : Local64.y);
+	float Local67 = ((float3(Local57.x,Local57.y,Local57.z).z >= 0.5) ? Local62.z : Local64.z);
+	float3 Local68 = math::min(math::max(float3(float2(Local65,Local66).x,float2(Local65,Local66).y,Local67),float3(0.0,0.0,0.0)),float3(1.0,1.0,1.0));
+	float3 Local69 = math::lerp(Local38,Local51,Local68.y);
+	float2 Local70 = (float2((::convert_to_left_hand(state::transform_point(state::coordinate_internal,state::coordinate_world,state::position()), true)*state::meters_per_scene_unit()*100.0).x,(::convert_to_left_hand(state::transform_point(state::coordinate_internal,state::coordinate_world,state::position()), true)*state::meters_per_scene_unit()*100.0).y) / Soil_03_FarTiling);
+	float4 Local71 = tex::lookup_float4(Soil_03_Normal,float2(Local70.x,1.0-Local70.y),tex::wrap_repeat,tex::wrap_repeat);
+	float3 Local72 = math::lerp(float3(Local18.x,Local18.y,Local18.z),float3(Local71.x,Local71.y,Local71.z),Local27);
+	float2 Local73 = (-0.5 + float2(Local72.x,Local72.y));
+	float2 Local74 = (Local73 * 2.0);
+	float Local75 = math::dot(Local74, Local74);
+	float Local76 = (1.0 - Local75);
+	float Local77 = math::saturate(Local76);
+	float Local78 = math::sqrt(Local77);
+	float Local79 = math::dot(float3(Local74.x,Local74.y,Local78), float3(Local74.x,Local74.y,Local78));
+	float3 Local80 = math::normalize(float3(Local74.x,Local74.y,Local78));
+	float4 Local81 = ((math::abs(Local79 - 0.000001) > 0.00001) ? (Local79 >= 0.000001 ? float4(Local80.x,Local80.y,Local80.z,0.0) : float4(float3(Local74.x,Local74.y,0.0).x,float3(Local74.x,Local74.y,0.0).y,float3(Local74.x,Local74.y,0.0).z,1.0)) : float4(float3(Local74.x,Local74.y,0.0).x,float3(Local74.x,Local74.y,0.0).y,float3(Local74.x,Local74.y,0.0).z,1.0));
+	float3 Local82 = (float3(Local81.x,Local81.y,Local81.z) * float3(Soil_03_Normal_vp.x,Soil_03_Normal_vp.y,Soil_03_Normal_vp.z));
+	float Local83 = (1.0 - Local21);
+	float3 Local84 = (Local59 * Local83);
+	float3 Local85 = (1.0 - Local84);
+	float3 Local86 = (Local63 * Local21);
+	float Local87 = ((float3(Local57.x,Local57.y,Local57.z).x >= 0.5) ? Local85.x : Local86.x);
+	float Local88 = ((float3(Local57.x,Local57.y,Local57.z).y >= 0.5) ? Local85.y : Local86.y);
+	float Local89 = ((float3(Local57.x,Local57.y,Local57.z).z >= 0.5) ? Local85.z : Local86.z);
+	float3 Local90 = math::min(math::max(float3(float2(Local87,Local88).x,float2(Local87,Local88).y,Local89),float3(0.0,0.0,0.0)),float3(1.0,1.0,1.0));
+	float3 Local91 = math::lerp(Local69,Local82,Local90.x);
+	float Local92 = (Local22 * Local10);
+	float3 Local93 = (Local91 * Local92);
+	float3 Local94 = (0.0 + Local93);
+	float3 Local95 = (Local94 * float3(0.25,0.25,1.0));
+	float3 Local96 = math::lerp(Local94,Local95,Local27);
+	float Local97 = (Local96.z + 1.0);
+	float2 Local98 = (float2((::convert_to_left_hand(state::transform_point(state::coordinate_internal,state::coordinate_world,state::position()), true)*state::meters_per_scene_unit()*100.0).x,(::convert_to_left_hand(state::transform_point(state::coordinate_internal,state::coordinate_world,state::position()), true)*state::meters_per_scene_unit()*100.0).y) / World_Normal_FarTiling);
+	float4 Local99 = ::unpack_normal_map(tex::lookup_float4(World_Normal_FarNormal,float2(Local98.x,1.0-Local98.y),tex::wrap_repeat,tex::wrap_repeat));
+	float3 Local100 = (float3(Local99.x,Local99.y,Local99.z) * float3(World_Normal_FarIntensity.x,World_Normal_FarIntensity.y,World_Normal_FarIntensity.z));
+	float2 Local101 = (float2(Local100.x,Local100.y) * -1.0);
+	float Local102 = math::dot(float3(float2(Local96.x,Local96.y).x,float2(Local96.x,Local96.y).y,Local97), float3(Local101.x,Local101.y,Local100.z));
+	float3 Local103 = (float3(float2(Local96.x,Local96.y).x,float2(Local96.x,Local96.y).y,Local97) * Local102);
+	float3 Local104 = (Local97 * float3(Local101.x,Local101.y,Local100.z));
+	float3 Local105 = (Local103 - Local104);
+	float Local106 = (::pixel_depth() - 1024.0);
+	float Local107 = (Local106 / 4096.0);
+	float Local108 = math::min(math::max(Local107,0.0),1.0);
+	float3 Local109 = math::lerp(Local96,Local105,Local108);
+	float Local110 = (Local109.z + 1.0);
+	float2 Local111 = (float2((::convert_to_left_hand(state::transform_point(state::coordinate_internal,state::coordinate_world,state::position()), true)*state::meters_per_scene_unit()*100.0).x,(::convert_to_left_hand(state::transform_point(state::coordinate_internal,state::coordinate_world,state::position()), true)*state::meters_per_scene_unit()*100.0).y) / World_Normal_NearTiling);
+	float4 Local112 = ::unpack_normal_map(tex::lookup_float4(World_Normal_NearNormal,float2(Local111.x,1.0-Local111.y),tex::wrap_repeat,tex::wrap_repeat));
+	float3 Local113 = (float3(Local112.x,Local112.y,Local112.z) * float3(World_Normal_NearIntensity.x,World_Normal_NearIntensity.y,World_Normal_NearIntensity.z));
+	float2 Local114 = (float2(Local113.x,Local113.y) * -1.0);
+	float Local115 = math::dot(float3(float2(Local109.x,Local109.y).x,float2(Local109.x,Local109.y).y,Local110), float3(Local114.x,Local114.y,Local113.z));
+	float3 Local116 = (float3(float2(Local109.x,Local109.y).x,float2(Local109.x,Local109.y).y,Local110) * Local115);
+	float3 Local117 = (Local110 * float3(Local114.x,Local114.y,Local113.z));
+	float3 Local118 = (Local116 - Local117);
+	float Local119 = (1.0 - Local108);
+	float3 Local120 = math::lerp(Local109,Local118,Local119);
+
+	float3 Normal_mdl = Local120;
+
+	float4 Local121 = tex::lookup_float4(Soil_01_Albedo,float2(Local0.x,1.0-Local0.y),tex::wrap_repeat,tex::wrap_repeat);
+	float4 Local122 = tex::lookup_float4(Soil_01_Albedo,float2(Local23.x,1.0-Local23.y),tex::wrap_repeat,tex::wrap_repeat);
+	float3 Local123 = math::lerp(float3(Local121.x,Local121.y,Local121.z),float3(Local122.x,Local122.y,Local122.z),Local27);
+	float3 Local124 = (Local123 * float3(Soil_01_Color1.x,Soil_01_Color1.y,Soil_01_Color1.z));
+	float4 Local125 = tex::lookup_float4(Soil_02_Albedo,float2(Local12.x,1.0-Local12.y),tex::wrap_repeat,tex::wrap_repeat);
+	float4 Local126 = tex::lookup_float4(Soil_02_Albedo,float2(Local39.x,1.0-Local39.y),tex::wrap_repeat,tex::wrap_repeat);
+	float3 Local127 = math::lerp(float3(Local125.x,Local125.y,Local125.z),float3(Local126.x,Local126.y,Local126.z),Local27);
+	float3 Local128 = (float3(Soil_02_Color.x,Soil_02_Color.y,Soil_02_Color.z) * Local127);
+	float3 Local129 = math::lerp(Local124,Local128,Local68.y);
+	float4 Local130 = tex::lookup_float4(Soil_03_Albedo,float2(Local17.x,1.0-Local17.y),tex::wrap_repeat,tex::wrap_repeat);
+	float4 Local131 = tex::lookup_float4(Soil_03_Albedo,float2(Local70.x,1.0-Local70.y),tex::wrap_repeat,tex::wrap_repeat);
+	float3 Local132 = math::lerp(float3(Local130.x,Local130.y,Local130.z),float3(Local131.x,Local131.y,Local131.z),Local27);
+	float3 Local133 = (float3(Soil_03_Color.x,Soil_03_Color.y,Soil_03_Color.z) * Local132);
+	float3 Local134 = math::lerp(Local129,Local133,Local90.x);
+	float3 Local135 = (Local134 * Local92);
+	float3 Local136 = (0.0 + Local135);
+	float Local137 = math::dot(Local136, float3(0.3,0.59,0.11));
+	float3 Local138 = math::lerp(Local136,float3(Local137,Local137,Local137),Colorizer_01_Desaturate_01);
+	float3 Local139 = (Local138 * float3(Colorizer_01_Color_01.x,Colorizer_01_Color_01.y,Colorizer_01_Color_01.z));
+	float2 Local140 = (float2((::convert_to_left_hand(state::transform_point(state::coordinate_internal,state::coordinate_world,state::position()), true)*state::meters_per_scene_unit()*100.0).x,(::convert_to_left_hand(state::transform_point(state::coordinate_internal,state::coordinate_world,state::position()), true)*state::meters_per_scene_unit()*100.0).y) / Colorizer_01_Scale_01);
+	float4 Local141 = tex::lookup_float4(Colorizer_01_Mask_01,float2(Local140.x,1.0-Local140.y),tex::wrap_repeat,tex::wrap_repeat);
+	float Local142 = math::dot(Local141, Colorizer_01_Channel_01);
+	float Local143 = math::pow(math::max(Local142,float(0.000001)),Colorizer_01_Contrast_01);
+	float Local144 = (Local143 * Colorizer_01_Amount_01);
+	float Local145 = math::saturate(Local144);
+	float3 Local146 = math::lerp(Local136,Local139,Local145);
+	float3 Local147 = math::lerp(Local136,float3(Local137,Local137,Local137),Colorizer_01_Desaturate_02);
+	float3 Local148 = (Local147 * float3(Colorizer_01_Color_02.x,Colorizer_01_Color_02.y,Colorizer_01_Color_02.z));
+	float2 Local149 = (float2((::convert_to_left_hand(state::transform_point(state::coordinate_internal,state::coordinate_world,state::position()), true)*state::meters_per_scene_unit()*100.0).x,(::convert_to_left_hand(state::transform_point(state::coordinate_internal,state::coordinate_world,state::position()), true)*state::meters_per_scene_unit()*100.0).y) / Colorizer_01_Scale_02);
+	float4 Local150 = tex::lookup_float4(Colorizer_01_Mask_02,float2(Local149.x,1.0-Local149.y),tex::wrap_repeat,tex::wrap_repeat);
+	float Local151 = math::dot(Local150, Colorizer_01_Channel_02);
+	float Local152 = math::pow(math::max(Local151,float(0.000001)),Colorizer_01_Contrast_02);
+	float Local153 = (Local152 * Colorizer_01_Amount_02);
+	float Local154 = math::saturate(Local153);
+	float3 Local155 = math::lerp(Local146,Local148,Local154);
+	float3 Local156 = math::min(math::max(Local155,float3(0.0,0.0,0.0)),float3(1.0,1.0,1.0));
+	float Local157 = (0.5 * Local28.z);
+	float Local158 = (0.5 * Local41.z);
+	float Local159 = math::lerp(Local157,Local158,Local68.y);
+	float Local160 = (0.5 * Local72.z);
+	float Local161 = math::lerp(Local159,Local160,Local90.x);
+	float Local162 = (Local161 * Local92);
+	float Local163 = (0.0 + Local162);
+
+	float3 EmissiveColor_mdl = float3(0.0,0.0,0.0);
+	float OpacityMask_mdl = 1.0;
+	float3 BaseColor_mdl = Local156;
+	float Metallic_mdl = 0.0;
+	float Specular_mdl = Local163;
+	float Roughness_mdl = 1.0;
+	float SurfaceThickness_mdl = 0.01;
+	float Displacement_mdl = 0.0;
+
+	float Local222 = math::dot(CustomizedUV0_mdl, float2(0.0,1.0));
+	float Local223 = math::dot(CustomizedUV0_mdl, float2(1.0,0.0));
+	float2 Local224 = (0.000123 * float2(Local223,Local222));
+	float2 Local225 = (Local224 + float2(0.0,0.0));
+	float4 Local226 = tex::lookup_float4(texture_2d("./Textures/T_SplatMap.png",::tex::gamma_linear),float2(Local225.x,1.0-Local225.y),tex::wrap_repeat,tex::wrap_repeat);
+	float Local227 = (Local226.x - Local226.z);
+	float3 Local228 = math::normalize(float3(0.0,0.0,1.0));
+	float Local229 = math::dot(::landscape_normal_world_space(true), Local228);
+	float Local230 = (Local229 * 0.5);
+	float Local231 = (Local230 + 0.5);
+	float Local232 = (Local231 * -20.0);
+	float Local233 = (-20.0 * 0.5);
+	float Local234 = (RocksSlope - Local233);
+	float Local235 = (Local232 + Local234);
+	float Local236 = math::min(math::max(Local235,0.0),1.0);
+	float Local237 = (Local227 - Local236);
+
+	float GetGrassWeight0_mdl = Local237;
+
+	} in
+		::OmniUe4Base(
+			base_color: BaseColor_mdl,
+			metallic: Metallic_mdl,
+			roughness: Roughness_mdl,
+			specular: Specular_mdl,
+			normal: Normal_mdl,
+			opacity: OpacityMask_mdl,
+			emissive_color: EmissiveColor_mdl,
+			displacement: WorldPositionOffset_mdl,
+			two_sided: false);

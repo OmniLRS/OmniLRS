@@ -17,6 +17,11 @@ class IntervalName(Enum):
     NEUTRON_COUNT = "neutron_count"
 
 
+def camera_streaming_interval(camera_name: str) -> str:
+    """Name of the streaming interval of one camera (each streaming camera has its own)."""
+    return f"{IntervalName.CAMERA_STREAMING.value}_{camera_name}"
+
+
 class IntervalsHandler:
     def __init__(self):
         self._intervals = {}

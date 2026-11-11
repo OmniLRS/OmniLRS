@@ -86,6 +86,10 @@ class LargeScaleController(BaseEnv, StellarEngineEnvMixin):
     def monitor_thread_is_alive(self) -> None:
         return self.LSTM.map_manager.hr_dem_gen.monitor_thread.thread.is_alive()
 
+    def monitor_caught_ctrl_c(self) -> bool:
+        # The terrain ThreadMonitor handles SIGINT itself: it shuts the workers down, then its thread exits.
+        return self.LSTM.map_manager.hr_dem_gen.monitor_thread.ctrl_c
+
     def get_wait_for_threads(self) -> None:
         return [self.LSTM.map_manager.hr_dem_gen.monitor_thread.thread.join]
 

@@ -1,0 +1,21 @@
+mdl 1.8;
+
+// Samples world XY, so the pattern stays fixed when LargeScale clipmaps recenter.
+// Helper modules are provided by omni.replicator.core.
+import .::infinite_pbr_world::InfinitePBRWorldMaterial;
+import ::math::PI;
+import ::tex::gamma_mode;
+
+export material LunarRegolithInfiniteWorld(*)
+ = infinite_pbr_world::InfinitePBRWorldMaterial(
+    diffuse_texture: texture_2d("./LunarRegolith8k/LunarRegolith8k_diff.png", ::tex::gamma_default, ""),
+    normalmap_texture: texture_2d("./LunarRegolith8k/LunarRegolith8k_nor_gl.png", ::tex::gamma_linear, ""),
+    reflectionroughness_texture: texture_2d("./LunarRegolith8k/LunarRegolith8k_rough.png", ::tex::gamma_default, ""),
+    diffuse_tint: color(1.0),
+    metallic_constant: 0.0,
+    // One source tile spans about 2 m.
+    hextile_texturescale: 0.5,
+    hextile_scale: 0.5,
+    hextile_hardness: 6.0,
+    hextile_rotlimits: float2(0.0, 2.0 * math::PI),
+    hextile_scalelimits: float2(0.75, 1.25));

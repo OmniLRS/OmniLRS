@@ -7,7 +7,7 @@ import yaml
 
 from src.configurations.dataset_confs import DEFAULTS, DatasetConf
 
-REPO = Path(__file__).resolve().parents[1]
+REPO = Path(__file__).resolve().parents[2]
 
 
 def test_defaults_load():

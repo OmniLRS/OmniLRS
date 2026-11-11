@@ -6,6 +6,8 @@ import os
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional
 
+from src.configurations.robot_camera_confs import RobotCameraConf, parse_cameras
+
 
 @dataclass
 class Pose:
@@ -24,7 +26,7 @@ class RobotParameters:
     wheel_joints: Dict = field(default_factory=dict)
     base_link: str = field(default_factory=str)
     pos_relative_to_prim: str = field(default_factory=str)
-    camera: Dict = field(default_factory=dict)
+    camera: List[RobotCameraConf] = field(default_factory=list)  # robot yaml list, parsed by parse_cameras
     imu_sensor_path: str = field(default_factory=str)
     dimensions: dict = field(default_factory=dict)
     turn_speed_coef: float = 1
@@ -34,6 +36,7 @@ class RobotParameters:
     def __post_init__(self):
         self.usd_path = os.path.join(os.getcwd(), self.usd_path)
         self.pose = Pose(**self.pose)
+        self.camera = parse_cameras(self.camera)
 
 
 @dataclass

@@ -6,8 +6,12 @@ import time
 from pathlib import Path
 
 import pytest
+import yaml
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
+from src.configurations.robot_camera_confs import parse_cameras
+from src.tmtc import yamcs_naming
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
 # LargeScale cold start on CI (fresh container: crater/DEM generation, uncached mesh backbone,
 # robot loading) takes well over 10 minutes. Keep within the Artefacts job timeout (defined in artefacts.yaml).
 STARTUP_TIMEOUT = int(os.environ.get("OMNILRS_TEST_TIMEOUT", "1200"))
@@ -37,6 +41,9 @@ SIM_COMMAND = [
     "rendering.renderer.active_gpu=0",
 ]
 
+# Robot of the sim task (robot=pragyaan); its yaml camera list defines the camera image buckets.
+ROBOT = "pragyaan"
+
 # The last startup message to appear; once seen, startup is complete.
 FINAL_MARKER = "ArticulationTelemetry initialized"
 
@@ -53,7 +60,7 @@ FATAL_MARKERS = [
 def _log_dir():
     # Artefacts upload dir if available, otherwise a local test dir.
     upload_dir = os.environ.get("ARTEFACTS_SCENARIO_UPLOAD_DIR")
-    log_dir = Path(upload_dir) if upload_dir else REPO_ROOT / "test"
+    log_dir = Path(upload_dir) if upload_dir else Path(__file__).resolve().parent
     log_dir.mkdir(parents=True, exist_ok=True)
     return log_dir
 
@@ -248,6 +255,14 @@ def telemetry(sim, subscription):
     return FreshTelemetry(names, sub, TELEMETRY_TIMEOUT)
 
 
+@pytest.fixture(scope="session")
+def camera_image_meta_paths():
+    """Image metadata space system of every (camera, kind) of the robot yaml, named by src/tmtc/yamcs_naming.py."""
+    with open(REPO_ROOT / "cfg" / "robot" / f"{ROBOT}.yaml") as f:
+        cameras = yaml.safe_load(f)["robots_settings"]["parameters"]["camera"]
+    return [path for *_, path in yamcs_naming.camera_buckets(parse_cameras(cameras))]
+
+
 """
 Start up test markers.
 """
@@ -312,6 +327,13 @@ def test_telemetry_battery_voltage_exists(telemetry):
 
 def test_telemetry_camera_exists(telemetry):
     assert telemetry.with_prefix("/Rover/camera/")
+
+
+def test_telemetry_image_metadata_for_every_camera_and_kind(telemetry, camera_image_meta_paths):
+    # OmniLRS uploads a "no data" image to every bucket at startup, which sets <meta path>/number etc.
+    assert camera_image_meta_paths, f"No camera image buckets computed for robot {ROBOT!r}"
+    missing = [path for path in camera_image_meta_paths if telemetry.get(f"{path}/number") is None]
+    assert not missing, f"No image metadata from this sim run for {missing}"
 
 
 def test_telemetry_go_nogo_is_nogo(telemetry):
