@@ -258,6 +258,12 @@ class RockManager:
 
         for name, settings in rocks_settings.items():
             self.settings[name] = settings
+        # Groups placed with the separate ejecta mask instead of the ordinary-rock mask.
+        self.ejecta_groups = {
+            name
+            for name, settings in self.settings.items()
+            if any(request["layer"]["name"] == "Ejecta" for request in settings["requests"].values())
+        }
 
         self.enable = enable
         if self.enable:
@@ -372,10 +378,10 @@ class RockManager:
             has_ejecta = np.any(ejecta_mask)
             for name in self.execution_order:
                 settings = self.settings[name]
-                uses_ejecta = any(request["layer"]["name"] == "Ejecta" for request in settings["requests"].values())
                 parent = settings.get("parent")
                 # An empty ejecta mask cannot be sampled. Its dependent groups have no parents either.
-                if (uses_ejecta and not has_ejecta) or (parent is not None and self.mixers[parent] is None):
+                no_ejecta = name in self.ejecta_groups and not has_ejecta
+                if no_ejecta or (parent is not None and self.mixers[parent] is None):
                     self.mixers[name] = None
                 else:
                     self.mixers[name] = generateMixer(settings["requests"], image, mask, ejecta_mask)
@@ -421,6 +427,39 @@ class RockManager:
                     seed=settings["seed"],
                 )
 
+    def executeMixer(self, name: str, num: int, parents: dict) -> Union[dict, None]:
+        """
+        Runs the mixer of one group of rocks.
+
+        Args:
+            name (str): The name of the group.
+            num (int): The number of instances to generate.
+            parents (dict): The parent coordinates collected from the groups already executed.
+
+        Returns:
+            Union[dict, None]: The sampled attributes, or None when the group has no rocks to place.
+        """
+
+        if self.mixers[name] is None:
+            return None
+        try:
+            if name in self.children_nodes:
+                parent = self.settings[name]["parent"]
+                if parent not in parents:
+                    return None
+                return self.mixers[name].executeGraph(parents=parents[parent])
+            # Ordinary rocks estimate their number of clusters from the entire sampling area.
+            # Ejecta rocks use only the area of the ejecta mask: its size changes with the
+            # generated craters, so lambda_parent is a density per m^2 of ejecta region.
+            # In both cases, rocks are placed only where the mask allows.
+            return self.mixers[name].executeGraph(num, use_mask_area=name in self.ejecta_groups)
+        except ValueError as error:
+            # Sparse groups can draw zero rocks. WorldBuilders then fails when sampling
+            # their heights, as it cannot stack an empty list of points.
+            if "need at least one array to stack" not in str(error):
+                raise
+            return None
+
     def randomizeInstancers(self, num: int) -> None:
         """
         Runs the mixers, collects the randomized parameters, and sets them to the instancers.
@@ -431,19 +470,13 @@ class RockManager:
         if self.enable:
             parents = {}
             for name in self.execution_order:
-                if self.mixers[name] is None:
-                    # Also remove instances left by a previous terrain with ejecta.
+                output = self.executeMixer(name, num, parents)
+                if output is None:
+                    # Also remove instances left by a previous terrain.
                     self.instancers[name].setInstanceParameter(
                         position=np.empty((0, 3)), orientation=np.empty((0, 4)), scale=np.empty((0, 3))
                     )
                     continue
-                if name in self.children_nodes:
-                    output = self.mixers[name].executeGraph(parents=parents[self.settings[name]["parent"]])
-                else:
-                    # False: estimate the number of rock clusters using the entire sampling area.
-                    # True: use only the fraction of that area where the mask allows placement.
-                    # Both options still place rocks only where the mask allows.
-                    output = self.mixers[name].executeGraph(num, use_mask_area=False)
                 # Check if it the node is the parent of any other node.
                 if (name in self.dependency_graph.keys()) and (len(self.dependency_graph[name]) > 0):
                     # If so collects parent data from the mixer.

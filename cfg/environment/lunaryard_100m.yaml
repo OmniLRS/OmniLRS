@@ -232,6 +232,13 @@ rocks_settings:
             randomization_space: 1
             seed: ${.......seed}
 
+    # Ejecta groups: lambda_parent is a density per m^2 of the ejecta mask, not of the whole terrain,
+    # so the number of ejecta rocks scales with the area around large craters.
+    # Provisional values from the Surveyor VII rock distribution on Tycho's ejecta, N(>=D) ~ 0.030 * D^-1.81
+    # rocks/m^2 (D in m, read from NASA VIPER (2023), slide 40), using nominal diameters of 0.16-0.32 m,
+    # 0.32-0.81 m and 0.81-2.43 m (median apollo_rocks size, ~0.08 m, times each group's scale).
+    # This is a reference from a much larger crater; ordinary rocks are also placed on the ejecta.
+    # https://ntrs.nasa.gov/api/citations/20230008874/downloads/2023-06-HBRC-VIPER.pdf#page=40
     ejecta_small_rocks:
       seed: ${....seed}
       collections: ["apollo_rocks"] # Where to get the rock models from.
@@ -249,7 +256,7 @@ rocks_settings:
           sampler:
             name: ThomasCluster
             randomization_space: 2
-            lambda_parent: 0.13
+            lambda_parent: 0.6
             lambda_daughter: 1
             sigma: 1
             seed: ${....seed}
@@ -312,7 +319,7 @@ rocks_settings:
           sampler:
             name: ThomasCluster
             randomization_space: 2
-            lambda_parent: 0.01
+            lambda_parent: 0.2
             lambda_daughter: 1
             sigma: 1
             seed: 15
@@ -375,7 +382,7 @@ rocks_settings:
           sampler:
             name: ThomasCluster
             randomization_space: 2
-            lambda_parent: 0.0006
+            lambda_parent: 0.04
             lambda_daughter: 1
             sigma: 1
             seed: 16
