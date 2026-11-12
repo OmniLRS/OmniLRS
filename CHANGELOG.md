@@ -52,6 +52,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Pragyaan `/Rover/solar_panel_state` follows the measured solar panel angle: it changes to DEPLOYED or STOWED once the panel is within 10° of that position, instead of when the command is received. The power model uses the same state.
 
 - Pragyaan asset `nograph_pragyaan.usd` is one flattened layer in the REP-103 frame (x forward, y left, z up), built by `scripts/assets/rebuild_pragyaan.py`. No Xform, rigid body or camera has a scale. The mesh transforms are baked into the points. Each rigid body has its origin on its joint. base_link has its runtime pose, so its IMU no longer turns 120° on the first physics step. Prim paths are unchanged. The spawn `orientation` in `cfg/robot/pragyaan.yaml` is now `[0.70711, 0., 0., 0.70711]` for the same world pose. If you set a custom Pragyaan orientation, set it again.
+- Pragyaan has its real size: 0.913 m long, 0.943 m wide and 0.366 m high without the solar panel (published 0.917 × 0.750 × 0.397 m). The Blender model was 1.9 times too large. The spawn height in `cfg/robot/pragyaan.yaml` is 0.42 m.
 - Pragyaan left and right rockers, bogies and wheels are symmetric about the plane of base_link. The pivots and axles moved by 6 mm or less, and the left meshes are the mirrored right meshes.
 
 ### Removed

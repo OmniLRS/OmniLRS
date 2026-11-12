@@ -34,13 +34,27 @@ Steps:
      bogie meshes is y = 0 (base_link stays at the root origin, on the plane). Each pair of pivots and axles gets the
      average of the two sides, mirrored. Each wheel mesh moves with its axle. Each left mesh is replaced by the
      mirrored right mesh.
+  4. Real size. The Blender model is about two times too large (1.74 m long, published 0.917 m). Every point and
+     position is scaled by SCALE about the root origin (D1: one factor, which matches the published length). The masses
+     do not change and PhysX computes the inertia from the smaller colliders. The cooked collision data that the source
+     stores (physxCookedData, a cache in the old mesh coordinates) is removed, so PhysX cooks the new meshes.
 """
 
 import sys
 from pathlib import Path
 
 import numpy as np
-from pxr import Gf, Sdf, Usd, UsdGeom, UsdPhysics, UsdShade, Vt
+from pxr import Gf, Sdf, Usd, UsdGeom, UsdPhysics, UsdShade
+from usd_bake import (
+    apply_material_binding_api,
+    bake_mesh,
+    remove_cooked_data,
+    rigid,
+    rotation_of,
+    set_local_transform,
+    translation,
+    world_points,
+)
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 ASSET_DIR = REPO_ROOT / "assets" / "USD_Assets" / "robots" / "pragyaan"
@@ -48,6 +62,10 @@ SOURCE = ASSET_DIR / "nograph_pragyaan_source.usd"
 OUTPUT = ASSET_DIR / "nograph_pragyaan.usd"
 ROOT = "/Pragyaan"
 UNUSED_ROOT_PRIMS = ["/FlatGrid", "/Render"]
+
+# Step 4: uniform scale about the root origin (D1 in docs/todo_pragyaan_physics.md): published length 0.917 m / model
+# length 1.74 m.
+SCALE = 0.527
 
 TOTAL_MASS_KG = 26.0
 # kg per rigid body, relative to ROOT. Split agreed in docs/todo_pragyaan_physics.md (D2).
@@ -126,27 +144,6 @@ def joint_prims(stage: Usd.Stage) -> list:
     return [p for p in Usd.PrimRange(stage.GetPrimAtPath(ROOT)) if p.IsA(UsdPhysics.Joint)]
 
 
-def rigid(matrix: Gf.Matrix4d) -> Gf.Matrix4d:
-    """The rotation and translation of `matrix`, without its scale (and without its mirror, if any)."""
-    transform = Gf.Transform(matrix)
-    out = Gf.Matrix4d(1.0)
-    out.SetRotateOnly(transform.GetRotation())
-    out.SetTranslateOnly(transform.GetTranslation())
-    return out
-
-
-def translation(position: Gf.Vec3d) -> Gf.Matrix4d:
-    out = Gf.Matrix4d(1.0)
-    out.SetTranslateOnly(position)
-    return out
-
-
-def rotation_of(matrix: Gf.Matrix4d) -> Gf.Matrix4d:
-    out = rigid(matrix)
-    out.SetTranslateOnly(Gf.Vec3d(0.0))
-    return out
-
-
 def joint_frame(stage: Usd.Stage, xforms: UsdGeom.XformCache, joint: UsdPhysics.Joint, side: int) -> Gf.Matrix4d:
     """World matrix of the joint frame, seen from body0 (side 0) or body1 (side 1), as PhysX builds it."""
     body = (joint.GetBody0Rel() if side == 0 else joint.GetBody1Rel()).GetTargets()[0]
@@ -159,75 +156,6 @@ def joint_frame(stage: Usd.Stage, xforms: UsdGeom.XformCache, joint: UsdPhysics.
     # The local position is in the body frame, with the body scale (PhysX scales it).
     frame.SetTranslateOnly(body_world.Transform(Gf.Vec3d(position)))
     return frame
-
-
-def set_local_transform(prim: Usd.Prim, local: Gf.Matrix4d | None) -> None:
-    """Replaces the xform ops of `prim` by a translate and an orient op, or by no op when `local` is None."""
-    for attr in prim.GetAttributes():
-        if attr.GetName().startswith("xformOp:") or attr.GetName() == "xformOpOrder":
-            prim.RemoveProperty(attr.GetName())
-    if local is None:
-        return
-    xformable = UsdGeom.Xformable(prim)
-    transform = Gf.Transform(local)
-    xformable.AddTranslateOp(UsdGeom.XformOp.PrecisionDouble).Set(transform.GetTranslation())
-    xformable.AddOrientOp(UsdGeom.XformOp.PrecisionDouble).Set(transform.GetRotation().GetQuat())
-
-
-def bake_mesh(mesh: UsdGeom.Mesh, to_parent: Gf.Matrix4d) -> bool:
-    """Bakes the matrix `to_parent` into the points and normals of `mesh`. Returns True if the mesh was mirrored."""
-    matrix = np.array(to_parent)
-    linear, offset = matrix[:3, :3], matrix[3, :3]
-    points = np.array(mesh.GetPointsAttr().Get(), dtype=np.float64)
-    mesh.GetPointsAttr().Set(Vt.Vec3fArray.FromNumpy((points @ linear + offset).astype(np.float32)))
-    normal_matrix = np.linalg.inv(linear).T
-
-    def transform_normals(values):
-        normals = np.array(values, dtype=np.float64) @ normal_matrix
-        normals /= np.maximum(np.linalg.norm(normals, axis=1, keepdims=True), 1e-12)
-        return Vt.Vec3fArray.FromNumpy(normals.astype(np.float32))
-
-    normals_attr = mesh.GetNormalsAttr()
-    if normals_attr.HasAuthoredValue():
-        normals_attr.Set(transform_normals(normals_attr.Get()))
-    primvars = UsdGeom.PrimvarsAPI(mesh.GetPrim())
-    if primvars.HasPrimvar("normals"):
-        primvar = primvars.GetPrimvar("normals")
-        primvar.Set(transform_normals(primvar.Get()))
-
-    mirrored = np.linalg.det(linear) < 0
-    if mirrored:
-        # A mirror turns the faces inside out: reverse the vertex order of each face (keeping its first vertex), and
-        # the face-varying values in the same way.
-        counts = np.array(mesh.GetFaceVertexCountsAttr().Get())
-        order = []
-        start = 0
-        for count in counts:
-            order += [start] + list(range(start + count - 1, start, -1))
-            start += count
-        order = np.array(order)
-        indices = np.array(mesh.GetFaceVertexIndicesAttr().Get())
-        mesh.GetFaceVertexIndicesAttr().Set(Vt.IntArray.FromNumpy(indices[order].astype(np.int32)))
-        if normals_attr.HasAuthoredValue() and mesh.GetNormalsInterpolation() == UsdGeom.Tokens.faceVarying:
-            values = np.array(normals_attr.Get())
-            normals_attr.Set(Vt.Vec3fArray.FromNumpy(values[order].astype(np.float32)))
-        for primvar in primvars.GetPrimvars():
-            if primvar.GetInterpolation() != UsdGeom.Tokens.faceVarying:
-                continue
-            if primvar.IsIndexed():
-                primvar.SetIndices(Vt.IntArray.FromNumpy(np.array(primvar.GetIndices())[order].astype(np.int32)))
-            else:
-                values = primvar.Get()
-                primvar.Set(type(values)([values[int(i)] for i in order]))
-    mesh.GetExtentAttr().Set(UsdGeom.Mesh.ComputeExtent(mesh.GetPointsAttr().Get()))
-    return mirrored
-
-
-def world_points(xforms: UsdGeom.XformCache, prim: Usd.Prim, extra: Gf.Matrix4d | None = None) -> np.ndarray:
-    """Points of a mesh in the world (then times `extra`), as an (N, 3) array."""
-    matrix = xforms.GetLocalToWorldTransform(prim)
-    matrix = np.array(matrix if extra is None else matrix * extra)
-    return np.array(UsdGeom.Mesh(prim).GetPointsAttr().Get(), dtype=np.float64) @ matrix[:3, :3] + matrix[3, :3]
 
 
 def subtree_meshes(stage: Usd.Stage, rel: str) -> list:
@@ -304,6 +232,8 @@ def clean_frames(source: Usd.Stage, stage: Usd.Stage) -> dict:
     print(
         f"Plane of symmetry at y = {plane_y * 1000:+.2f} mm from base_link: the rover moves by {-plane_y * 1000:+.2f} mm"
     )
+    # Step 4: real size.
+    to_new = to_new * Gf.Matrix4d(1.0).SetScale(SCALE)
 
     # Joint frames in the new asset frame, from body0 (the side of each joint that PhysX did not move at startup).
     source_frames = {}
@@ -416,13 +346,6 @@ def bind_unbound_meshes(stage: Usd.Stage) -> None:
         UsdShade.MaterialBindingAPI.Apply(prim).Bind(material)
 
 
-def apply_material_binding_api(stage: Usd.Stage) -> None:
-    for prim in stage.Traverse():
-        has_binding = any(r.GetName().startswith("material:binding") for r in prim.GetRelationships())
-        if has_binding and not prim.HasAPI(UsdShade.MaterialBindingAPI):
-            UsdShade.MaterialBindingAPI.Apply(prim)
-
-
 # Checks of the result against the source.
 
 
@@ -503,6 +426,11 @@ def check(output: Usd.Stage, source: Usd.Stage, result: dict) -> None:
             if x * sign_x <= 0 or y * (1 if side == "left" else -1) <= 0:
                 failures.append(f"Wheel_{position}_{side} at ({x:.2f}, {y:.2f}): not in REP-103 order")
     for prim in output.Traverse():
+        if any(a.GetName().startswith("physxCookedData") for a in prim.GetAttributes()):
+            failures.append(f"{prim.GetPath()}: cooked collision data left")
+        old = source.GetPrimAtPath(prim.GetPath())
+        if old and old.HasAPI(UsdPhysics.CollisionAPI) != prim.HasAPI(UsdPhysics.CollisionAPI):
+            failures.append(f"{prim.GetPath()}: collision API differs from the source")
         if prim.IsA(UsdGeom.Mesh) and not UsdShade.MaterialBindingAPI(prim).ComputeBoundMaterial()[0]:
             failures.append(f"{prim.GetPath()}: no bound material")
     if output.GetRootLayer().externalReferences:
@@ -531,6 +459,7 @@ def main() -> None:
     result = clean_frames(source, stage)
     bind_unbound_meshes(stage)
     apply_material_binding_api(stage)
+    print(f"Removed the cooked collision data of {remove_cooked_data(stage)} meshes")
     UsdPhysics.SetStageKilogramsPerUnit(stage, 1.0)
     layer.Export(str(OUTPUT))
 

@@ -6,10 +6,10 @@ robots_settings:
     robot_name: pragyaan
     usd_path: assets/USD_Assets/robots/pragyaan/nograph_pragyaan.usd
     pose:
-      position: [26., 16.6, 0.8] # Lunaryard, LargeScale
+      position: [26., 16.6, 0.42] # Lunaryard, LargeScale
       # position: [5.0, 5.0, 0.1] # Lunalab
       orientation: [0.70711, 0., 0., 0.70711] # w, x, y, z. The asset is REP-103 (x forward, z up): yaw 90 deg, facing +y
-      height_above_terrain_override: 0.8 # optional, replaces position z with terrain height at (x, y) + this value
+      height_above_terrain_override: 0.42 # optional, replaces position z with terrain height at (x, y) + this value. base_link is 0.25 m above the ground at rest
     base_link: "base_link" # core link used to determine the position of the robot
     pos_relative_to_prim: "/StaticAssets/lander"  # if no lander in environment, rover position will be reported in world frame and a warning will be printed at initialization
     target_links: [
