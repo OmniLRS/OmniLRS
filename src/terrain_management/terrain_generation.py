@@ -507,13 +507,18 @@ class Distribute:
             next_radius = cur_radius + self._radius_step
             self._radius.append([cur_radius, next_radius])
             cur_radius = next_radius
+        # Largest craters first, as in the presets with explicit lists: a crater is rejected when its centre
+        # falls inside an earlier one, so small craters must not block the large ones.
+        self._radius.reverse()
 
     def calcDensities(self) -> None:
         """Compute crater sampling densities for each radius interval, in craters per m^2.
 
         The cumulative power law N(>=D) = dist_coef * D**dist_exp counts craters
-        with diameter >= D per km^2, with D in metres. For a radius interval
-        [r_min, r_max), its density is [N(>=2*r_min) - N(>=2*r_max)] / 1_000_000.
+        with rim-to-rim diameter >= D per km^2, with D in metres. The crater
+        profiles place the rim at about half of the sampled radius, so a crater
+        sampled with radius r has a rim diameter of about r. For a radius
+        interval [r_min, r_max), the density is [N(>=r_min) - N(>=r_max)] / 1_000_000.
         The Poisson sampler multiplies each interval's density by the terrain area
         to get its expected crater count. Spatial rejection is applied afterwards.
 
@@ -522,8 +527,9 @@ class Distribute:
         """
         self._densities = []
         for radius_range in self._radius:
-            min_diameter = 2 * radius_range[0]
-            max_diameter = 2 * radius_range[1]
+            # Rim diameter of the generated craters, as described above.
+            min_diameter = radius_range[0]
+            max_diameter = radius_range[1]
             # Expected number of craters per km^2 within this diameter interval
             bin_num_per_km2 = self._dist_coef * (min_diameter**self._dist_exp - max_diameter**self._dist_exp)
             self._densities.append(bin_num_per_km2 / 1_000_000)
