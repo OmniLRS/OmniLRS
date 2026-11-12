@@ -34,20 +34,17 @@ def _enable_required_extensions() -> None:
 def _wait_for_isaac_sim(simulation_app) -> None:
     """Finish the startup work of Isaac Sim before OmniLRS starts, then log `Isaac Sim ready after <seconds>s`.
 
-    After `app ready`, the Kit material library still loads its MDL list during the next app updates. If
-    ${cache}/material_cache.json is missing (first run of a new install, CI image), Kit rebuilds it in one blocking
-    update: about 5 min on the CI GPU. Waiting here keeps that Isaac Sim time out of the OmniLRS startup steps.
-    The sanity tests (test/ci_artefacts) read the seconds of that log line, which count from the Kit start.
+    After `app ready`, the Kit material library still loads its MDL list during the next app updates. Waiting here
+    keeps that Isaac Sim work out of the OmniLRS startup steps. The RTX ray tracing pipelines compile on the first
+    rendered frame, which can come before or after this line (about 5 min on the CI GPU without a warm cache, see
+    docs/todo_performance.md). The sanity tests (test/ci_artefacts) read the seconds of this line, which count from
+    the Kit start, and the RTX compile from the Kit log.
     """
     import asyncio
-    import os
     import time
 
-    import carb.tokens
     import omni.kit.app
 
-    cache_file = carb.tokens.get_tokens_interface().resolve("${cache}/material_cache.json")
-    cache_state = "found" if os.path.isfile(cache_file) else "missing, Kit rebuilds it"
     wait_start = time.monotonic()
     try:
         import omni.kit.material.library as material_library
@@ -59,11 +56,9 @@ def _wait_for_isaac_sim(simulation_app) -> None:
         while not task.done():
             simulation_app.update()
     logger.info(
-        "Isaac Sim ready after %.3fs since the Kit start (material library ready in %.1fs, material cache %s). "
-        "OmniLRS startup begins.",
+        "Isaac Sim ready after %.3fs since the Kit start (material library ready in %.1fs). OmniLRS startup begins.",
         omni.kit.app.get_app().get_time_since_start_s(),
         time.monotonic() - wait_start,
-        cache_state,
     )
 
 

@@ -34,42 +34,95 @@ def test_on_artefacts_infra(environ, hostname, expected):
     assert sanity_durations.on_artefacts_infra(environ, hostname) is expected
 
 
-def _isaac_ready_line(seconds: str, cache_state: str) -> str:
-    """The line logged by startSim (src/environments_wrappers/__init__.py)."""
-    return (
-        f"[2026-11-09 05:24:08,512][src.environments_wrappers][INFO] - Isaac Sim ready after {seconds}s since the "
-        f"Kit start (material library ready in 2.9s, material cache {cache_state}). OmniLRS startup begins."
-    )
+ISAAC_READY_LINE = (
+    "[2026-11-09 05:24:08,512][src.environments_wrappers][INFO] - Isaac Sim ready after 25.417s since the Kit start "
+    "(material library ready in 2.9s). OmniLRS startup begins."
+)
+KIT_LOG_LINE = (
+    "2026-11-12T06:01:28Z [Info] [carb] Logging to file: "
+    "/workspace/omnilrs/.pixi/envs/ci/lib/python3.12/site-packages/isaacsim/kit/logs/Kit/Isaac-Sim Python/6.2/"
+    "kit_20261112_060128.log"
+)
+
+
+def _kit_line(ms: int, message: str) -> str:
+    return f"2026-11-12T06:01:58Z [{ms:,}ms] [Info] {message}"
+
+
+def _rtpso(ms: int, seconds: int) -> str:
+    return _kit_line(ms, f"[omni.rtx] *** Waiting for RtPso async group async compilation: {seconds} seconds so far")
 
 
 def test_isaac_ready_from_the_omnilrs_marker():
-    log = "[22.364s] app ready\n" + _isaac_ready_line("25.417", "found") + "\n[2026-11-09 05:34:07,629][src] - ready\n"
+    log = "[22.364s] app ready\n" + ISAAC_READY_LINE + "\n[2026-11-09 05:34:07,629][src] - ready\n"
     assert sanity_durations.isaac_ready_s(log) == 25.417
-    assert not sanity_durations.material_cache_missing(log)
     assert sanity_durations.isaac_ready_s("[22.364s] app ready\n") is None
 
 
-def test_material_cache_missing_from_the_omnilrs_marker():
-    log = _isaac_ready_line("318.002", "missing, Kit rebuilds it") + "\n"
-    assert sanity_durations.isaac_ready_s(log) == 318.002
-    assert sanity_durations.material_cache_missing(log)
-    assert not sanity_durations.material_cache_missing("no marker")
+def test_kit_log_path_from_the_sim_log():
+    path = sanity_durations.kit_log_path("Starting kit application\n" + KIT_LOG_LINE + "\nnext line\n")
+    assert str(path).endswith("Isaac-Sim Python/6.2/kit_20261112_060128.log")
+    assert sanity_durations.kit_log_path("no Kit log line") is None
 
 
 def test_startsim_logs_the_line_that_the_tests_parse():
     source = (REPO_ROOT / "src" / "environments_wrappers" / "__init__.py").read_text()
     assert '"Isaac Sim ready after %.3fs since the Kit start' in source
-    assert "material cache %s)" in source and '"missing, Kit rebuilds it"' in source
 
 
-def test_measure_splits_the_first_test_into_isaac_and_omnilrs():
+def test_rtx_compile_window_from_the_rtpso_lines():
+    # As in the Kit log of a CI container run: other threads log during the compile, the main thread logs after it
+    kit_log = "\n".join(
+        [
+            _kit_line(24_290, "[carb] Initializing plugin: rtx.spg.fabric"),
+            _rtpso(29_300, 5),
+            _kit_line(31_000, "[omni.ext.plugin] another thread"),
+            _rtpso(34_300, 10),
+            _rtpso(154_305, 130),
+            "[ext: omni.foo-1.0.0] registered",  # no Kit time: ignored
+            _kit_line(155_600, "[omni.usd] Encountered USD Warnings"),
+        ]
+    )
+    assert sanity_durations.rtx_compile_windows(kit_log) == [(24.3, 155.6)]
+
+
+def test_rtx_compile_windows_split_when_the_count_starts_again_and_end_at_most_5_s_later():
+    kit_log = "\n".join([_rtpso(10_000, 5), _rtpso(15_000, 10), _rtpso(40_000, 5), _kit_line(60_000, "late line")])
+    assert sanity_durations.rtx_compile_windows(kit_log) == [(5.0, 20.0), (35.0, 45.0)]
+    assert sanity_durations.rtx_compile_windows(_kit_line(1_000, "no compile")) == []
+
+
+@pytest.mark.parametrize(
+    "windows, isaac_s",
+    [
+        ([], 25.0),  # no compile (warm cache)
+        ([(24.0, 155.0)], 155.0),  # compile after the ready line: Isaac Sim time
+        ([(10.0, 20.0)], 25.0),  # compile before the ready line: already in it
+        ([(20.0, 30.0)], 30.0),  # only the part after the ready line is added
+    ],
+)
+def test_measure_counts_the_rtx_compile_after_the_ready_line_as_isaac_time(windows, isaac_s):
+    metrics = sanity_durations.measure([400.0, 1.0, 2.5, 0.5], isaac_ready_s=25.0, rtx_windows=windows)
+    assert metrics["isaac_s"] == isaac_s
+    assert metrics["omnilrs_s"] == 400.0 - isaac_s
+    assert metrics["rtx_compile_s"] == sum(end - start for start, end in windows)
+    assert metrics["isaac_ready_s"] == 25.0 and metrics["tests_s"] == 4.0
+
+
+def test_measure_without_the_ready_line_reports_only_startup_and_tests():
     assert sanity_durations.measure([400.0, 1.0, 2.5, 0.5]) == {"startup_s": 400.0, "tests_s": 4.0}
-    assert sanity_durations.measure([400.0, 1.0, 2.5, 0.5], isaac_s=25.0) == {
-        "startup_s": 400.0,
-        "isaac_s": 25.0,
-        "omnilrs_s": 375.0,
-        "tests_s": 4.0,
-    }
+
+
+def test_copy_kit_logs_copies_the_kit_log_named_in_each_sim_log(tmp_path):
+    kit_dir = tmp_path / "kit"
+    kit_dir.mkdir()
+    (kit_dir / "kit_1.log").write_text("kit log")
+    upload = tmp_path / "upload"
+    upload.mkdir()
+    (upload / "sim_startup.log").write_text(f"[Info] [carb] Logging to file: {kit_dir / 'kit_1.log'}\nmore\n")
+    (upload / "sim_startup_other.log").write_text("no Kit log line\n")
+    assert sanity_durations.copy_kit_logs(upload) == [upload / "kit_1.log"]
+    assert (upload / "kit_1.log").read_text() == "kit log"
 
 
 BASELINE = {"isaac_s": 25, "omnilrs_s": 400, "tests_s": 10}

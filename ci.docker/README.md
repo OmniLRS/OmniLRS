@@ -25,26 +25,6 @@ artefacts run-remote test-startup # Run in the cloud on the artefacts platform
 docker run --gpus all --rm omnilrs pixi run -e test-sim test-ros2 # or test-yamcs
 ```
 
-## Kit material cache
-
-At startup, the Kit material library reads `material_cache.json` from the Kit cache folder. If the file is missing, Kit rebuilds it. This takes about 5 min on the CI GPU, in every scenario. The CI images never run Isaac Sim during the build, so they have no cache. To fix this, `artefacts.Dockerfile` copies `ci.docker/material_cache.json` into the `ci` pixi env:
-
-```
-.pixi/envs/ci/lib/python3.12/site-packages/isaacsim/kit/cache/Kit/110.4/187cf21b/material_cache.json
-```
-
-The file has only `${kit}` paths, so it works on any machine. `startSim` (`src/environments_wrappers/__init__.py`) waits for the material library and logs `Isaac Sim ready after <seconds>s since the Kit start (... material cache found|missing ...)`. The sanity tests use this line to measure `isaac_s`.
-
-### TODO on an Isaac Sim upgrade
-
-The cache matches one Isaac Sim version and one Kit build in two places. The top-level key of the file is `<app name>-<app version>.v<cache version>`, for example `Isaac-Sim Python-6.2.0.v1.5`. The folder in `artefacts.Dockerfile` is `<Kit version>/<Kit build hash>`, for example `110.4/187cf21b`. After an upgrade, the copy goes to a folder that Kit does not read, or Kit rejects the key. Kit then rebuilds the cache, and the CI startup is about 5 min slower again. `test_durations_within_baseline` flags `isaac_s` with a hint, and the sim log says `material cache missing`.
-
-1. On a machine with a GPU, run the upgraded sim once in the `ci` env, for example `pixi run -e ci python run.py`.
-2. In the Kit log of that run, find the line `Material cache saved to <path>/kit/cache/Kit/<Kit version>/<Kit build hash>/material_cache.json`.
-3. Copy that file to `ci.docker/material_cache.json`.
-4. Update the `<Kit version>/<Kit build hash>` folder in `artefacts.Dockerfile`.
-5. Make sure that the file has no absolute paths (`grep /home ci.docker/material_cache.json` finds nothing).
-
 ## Notes for Building the Base Image
 
 Before you build the base image (`ci.Dockerfile`) yourself, get the assets (git lfs) and the git submodules.

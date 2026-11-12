@@ -1,8 +1,6 @@
 .pixi
 .git
 *.docker
-# Kit material cache, installed by artefacts.Dockerfile (see ci.docker/README.md)
-!ci.docker/material_cache.json
 docs
 
 # Ignore hidden thumbnail/cache files that can have restrictive permissions.
