@@ -22,7 +22,7 @@ artefacts run-remote test-startup # Run in the cloud on the artefacts platform
 
 2. With Pytest override the command from the command line
 ```
-docker run --gpus all --rm omnilrs pixi run test-ros2 # or test-yamcs
+docker run --gpus all --rm omnilrs pixi run -e test-sim test-ros2 # or test-yamcs
 ```
 
 ## Kit material cache
