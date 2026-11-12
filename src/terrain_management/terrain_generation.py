@@ -73,10 +73,6 @@ class CraterGenerator:
         with open(self._profiles_path, "rb") as handle:
             self._profiles = pickle.load(handle)
 
-        # Quick part to see spline profile
-        # for ii in range(len(self._profiles)):
-        #    print(self._profiles[ii](0))
-
     def sat_gaussian(self, x: np.ndarray, mu1: float, mu2: float, std: float) -> np.ndarray:
         """
         Saturates a gaussian function to its maximum between mu1 and mu2 with a standard deviation of std.
@@ -159,6 +155,7 @@ class CraterGenerator:
 
         Returns:
             np.ndarray: crater DEM."""
+
         crater = self._profiles[crater_data.crater_profile_id](2 * distance / crater_data.size)
         return crater
 
@@ -276,7 +273,6 @@ class CraterGenerator:
         # Adds the craters to the DEM
         if len(craters_data) == 0:
             for crater_ind in sorted_ind:
-                # for coord, rad in zip(coords, radius):
                 coord = coords[crater_ind]
                 rad = radius[crater_ind]
                 rad = int(rad * 2 / self._resolution)
@@ -287,6 +283,7 @@ class CraterGenerator:
                 coord = (coord_s - crater_data.size / 2 + self._pad_size).astype(np.int64)
 
                 # Add logic to apply smaller crater last. For each smaller crater, super position them then smooth the internal of crater to remove artifacts
+                # TODO: the smoothing described above (from PR #45) is not implemented; craters are only superposed.
                 DEM_padded[
                     coord[0] : coord[0] + crater_data.size,
                     coord[1] : coord[1] + crater_data.size,
@@ -502,8 +499,8 @@ class Distribute:
         """
         Automatically generate crater radii bin as ranges for the generation process. The bin width grows exponentially
         """
-        # TODO(OBS-02): Review fixed-width bins vs. the documented exponential growth.
-        # radius_step_factor is unused; keep the current behavior until reviewed.
+        # TODO: bins currently have a fixed width (radius_step), so the exponential growth described above and
+        # radius_step_factor are not implemented. The last bin may also extend beyond radius_range[1].
         self._radius = []
         cur_radius = self._radius_range[0]
         while cur_radius < self._radius_range[1]:
@@ -549,10 +546,7 @@ class Distribute:
                 print("Empty density list set. Generating density list")
                 self.calcDensities()
 
-        if not len(self._radius) == len(self._densities):
-            raise ("Density and radii list must have equal lengths")
-
-        # Gnerate crater
+        # Generate craters
         prev_coords = None
         for d, r_minmax in zip(self._densities, self._radius):
             new_coords, new_radius = self.simulateHCPoissonProcess(d, r_minmax, prev_coords)

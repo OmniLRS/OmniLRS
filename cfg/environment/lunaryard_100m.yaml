@@ -438,7 +438,7 @@ terrain_manager:
       x_size: ${....lunaryard_settings.lab_length}
       y_size: ${....lunaryard_settings.lab_width}
       # Distribution based on survey data from Highlands AVG survey
-      # TODO(OBS-03): These coefficients match "Highlands", not "Highlands AVG"; review the intended fit.
+      # TODO: these coefficients match the "Highlands" fit, not "Highlands AVG"; review which fit is intended.
       # Source: NASA VIPER (2023), slide 40:
       # https://ntrs.nasa.gov/api/citations/20230008874/downloads/2023-06-HBRC-VIPER.pdf#page=40
       densities: []

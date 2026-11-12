@@ -64,7 +64,9 @@ class CraterDistributionConf:
         assert self.y_size > 0, "y_size must be greater than 0"
         assert self.num_repeat >= 0, "num_repeat must be greater or equal to 0"
         # The power-law model is not used when both radius and densities are provided.
-        if not self.radius or not self.densities:
+        if self.radius and self.densities:
+            assert len(self.densities) == len(self.radius), "densities and radius must have the same length"
+        else:
             assert self.dist_exp < 0, "density distribution exponential term must be less than 0"
             assert self.dist_coef > 0, "density distribution coefficient term must be greater than 0"
 
