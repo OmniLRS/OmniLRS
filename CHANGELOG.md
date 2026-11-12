@@ -48,6 +48,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Husky in Yamcs mode starts in GO and sends `/Rover/go_nogo`; it handles `go_nogo_command`: NOGO stops it and blocks the drive commands until GO (previously it could always drive and sent no GO/NOGO state).
 - Husky Zenoh camera images are published at 5 Hz (`zenoh.camera.publish_period_s: 0.2`, previously 30 Hz), for each of its 6 camera streams.
 - The Zenoh stream settings (publish periods, wire formats, logging) moved from the robot yaml (`robots_settings.parameters.zenoh`) to the controller yaml (`robots_settings.zenoh` in `cfg/controller/husky-controller.yaml`). Zenoh mode needs `controller=husky-controller`, which the `zenoh_*` pixi tasks now pass.
+- The environment yamls no longer include a default robot (`robots_settings` keeps only `robots_root`). The ROS2, Yamcs and Zenoh modes need `robot=<name>`, and they stop before Isaac Sim starts if it is missing. In ROS2 mode, the Husky also needs its ROS 2 USD: `robot=husky environment.robots_settings.parameters.usd_path=assets/USD_Assets/robots/ros2_husky_PhysX_vlp16.usd`. In every environment, the Husky and the EX1 spawn at (5, 5), 0.5 m above the terrain.
 - Pragyaan `/Rover/solar_panel_state` follows the measured solar panel angle: it changes to DEPLOYED or STOWED once the panel is within 10° of that position, instead of when the command is received. The power model uses the same state.
 
 ### Removed

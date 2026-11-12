@@ -8,9 +8,9 @@ robots_settings:
     # usd_path: assets/USD_Assets/robots/ros2_husky_PhysX_vlp16_mono_depth_imu.usd
     usd_path: assets/USD_Assets/robots/nograph_husky.usd
     pose:
-        # position: [26., 16.6, 0.8] # Lunaryard, LargeScale
-        position: [5.0, 5.0, 0.1] # Lunalab
-        orientation: [0.70711, 0., 0., 0.70711]
+      position: [5.0, 5.0, 0.5] # the same x, y in every environment
+      orientation: [0.70711, 0., 0., 0.70711]
+      height_above_terrain_override: 0.5 # replaces position z with terrain height at (x, y) + this value
     base_link: "base_link" # core link used to determine the position of the robot
     domain_id: 0
     target_links: ["front_left_wheel_link", "front_right_wheel_link", "rear_left_wheel_link", "rear_right_wheel_link"]

@@ -6,6 +6,11 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+# Modes that spawn a robot from robots_settings.parameters (set by the robot yaml: robot=<name>)
+MODES_WITH_ROBOT = ("ROS2", "Yamcs", "Zenoh")
+# Husky USD with the ROS 2 action graphs (cfg/robot/husky.yaml uses a USD without graphs)
+ROS2_HUSKY_USD = "assets/USD_Assets/robots/ros2_husky_PhysX_vlp16.usd"
+
 # Isaac Sim extensions whose Python modules OmniLRS imports. Enabled explicitly so OmniLRS does not depend on the
 # default app enabling them (or on other extensions pulling them in).
 REQUIRED_EXTENSIONS = (
@@ -62,7 +67,25 @@ def _wait_for_isaac_sim(simulation_app) -> None:
     )
 
 
+def _require_robot(cfg: dict) -> None:
+    """Stop before Isaac Sim starts if a mode that spawns a robot has none: the environment yamls have no robot."""
+    mode = cfg["mode"]["name"]
+    if mode not in MODES_WITH_ROBOT:
+        return
+    if (cfg["environment"].get("robots_settings") or {}).get("parameters"):
+        return
+    hint = (
+        " The Husky needs its ROS 2 USD in this mode: robot=husky "
+        f"environment.robots_settings.parameters.usd_path={ROS2_HUSKY_USD}"
+        if mode == "ROS2"
+        else ""
+    )
+    raise ValueError(f"mode={mode} needs a robot: pass robot=<name> (a file in cfg/robot), e.g. robot=husky.{hint}")
+
+
 def startSim(cfg: dict):
+    _require_robot(cfg)
+
     from isaacsim import SimulationApp
 
     from src.environments.rendering import (

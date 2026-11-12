@@ -89,7 +89,10 @@ ROS_DISTRO = "jazzy"
 RMW_IMPLEMENTATION = "rmw_fastrtps_cpp"
 
 [feature.ros2.tasks]
-ros2 = "python run.py mode=ROS2"
+# Note: you need to always pass the robot explicitly:
+# pixi run ros2 robot=ex1
+# pixi run ros2 robot=husky environment.robots_settings.parameters.usd_path=assets/USD_Assets/robots/ros2_husky_PhysX_vlp16.usd
+ros2 = "python run.py mode=ROS2 environment=lunalab"
 
 # yamcs-specific deps, tasks in feature "yamcs"
 [feature.yamcs.pypi-dependencies]

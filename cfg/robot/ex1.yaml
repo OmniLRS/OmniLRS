@@ -7,7 +7,8 @@ robots_settings:
     robot_name: ex1
     usd_path: assets/USD_Assets/robots/ex1/ex1_spheres.usd
     pose:
-      position: [5.0, 5.0, 0.5]
+      position: [5.0, 5.0, 0.5] # the same x, y in every environment
       orientation: [1, 0, 0, 0]
+      height_above_terrain_override: 0.5 # replaces position z with terrain height at (x, y) + this value
     base_link: "base_link" # core link used to determine the position of the robot
     target_links: ["left_front_wheel_link", "left_rear_wheel_link", "right_front_wheel_link", "right_rear_wheel_link"]
