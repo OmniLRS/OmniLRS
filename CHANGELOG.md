@@ -34,6 +34,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Pixi tasks `yamcs-husky` (Husky in Yamcs mode on `lunaryard_20m`, Yamcs instance `husky`) and `check-yamcs-contract-husky`.
 - Artefacts CI scenario `test_yamcs_husky_sanity` (`pixi run test-yamcs-husky`): the Husky in Yamcs mode against yamcs-mission-control-husky (telemetry, camera captures and streaming, driving, GO/NOGO). The CI image also builds the Husky Yamcs server and generates its MDB from the OmniLRS commit under test.
 - Unit tests run in CI on every push and pull request (`pixi run -e test-unit test-unit`). Tests are organized in `test/unit` (no Isaac Sim), `test/ci_artefacts` (sanity tests: the Artefacts CI scenarios) and `test/physics_models`; `check_yamcs_contract.py` moved to `scripts/`.
+- `scripts/assets/rebuild_pragyaan.py` writes `nograph_pragyaan.usd` from `nograph_pragyaan_source.usd`, the asset as exported from Blender, and applies the Pragyaan physics fixes. The plan and the audit are in [docs/todo_pragyaan_physics.md](docs/todo_pragyaan_physics.md).
+- Yamcs sanity test `test_integrated_solar_panel_drive_turn_imu`. It deploys the solar panel, drives 2 m, turns 90° and stows the panel. It compares the distance, heading, turn angle, gyroscope rate and IMU orientation with the ground truth pose. It prints every measurement before it fails.
 - Zenoh simulation control keys `OmniLRS/sim/play`, `OmniLRS/sim/pause` and `OmniLRS/sim/stop` (any payload). A pause keeps the simulation state; a stop then play restarts from the initial state (environment and robot reset). `OmniLRS/sim/is_running` now also reports `is_playing`.
 
 ### Changed
@@ -56,6 +58,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Pragyaan weighs 26 kg. Before, it weighed 675 kg, because the asset had no masses and PhysX used its default density on the collider volumes. Each rigid body now has a mass, and PhysX computes the inertia from its colliders. `base_link` has no collider, so it gets an explicit inertia. This removes the "invalid inertia tensor ... negative mass" warning.
 - ROS2 mode exits cleanly on SIGINT/SIGTERM (ROS 2 Jazzy shuts down the ROS context on these signals).
 - Yamcs mode with the LargeScale environment: terrain, rocks and colliders now update (EC.update()) as the  rover drives, terrain worker threads are joined on shutdown, and the simulation stops if a terrain worker dies.
 - Joint commands from Yamcs and Zenoh are no longer dropped, entirely or for some joints, when they arrive while PhysX is stepping: `ArticulationControl` queues them and `Robot.update_articulation_api()` writes them from the simulation loop.
