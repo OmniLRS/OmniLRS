@@ -1,3 +1,4 @@
+import math
 import os
 import signal
 import socket
@@ -220,15 +221,51 @@ class Rover:
         pytest.fail(f"No new {name} value within {timeout} s")
 
     def wait_for(self, name, expected, timeout=JOINT_TIMEOUT):
+        value = self.poll_for(name, expected, timeout)
+        if value != expected:
+            pytest.fail(f"{name} is {value!r}, expected {expected!r} within {timeout} s")
+
+    def poll_for(self, name, expected, timeout=JOINT_TIMEOUT):
+        """`expected` as soon as `name` has this value, otherwise the last value of `name` after `timeout` s."""
         deadline = time.monotonic() + timeout
         value = None
         while time.monotonic() < deadline:
             pval = self._subscription.value_cache.get(name)
             value = None if pval is None else pval.eng_value
             if value == expected:
-                return
+                return value
             time.sleep(0.5)
-        pytest.fail(f"{name} is {value!r}, expected {expected!r} within {timeout} s")
+        return value
+
+    def record_until_still(self, names, min_samples, timeout=None):
+        """
+        Every new value of `names` and of the wheel encoder, as {name: [(generation_time, value), ...]}, until the
+        wheels stop. Looks for still wheels only after `min_samples` encoder samples (one per second of sim time).
+        """
+        timeout = MOTION_TIMEOUT_S if timeout is None else timeout
+        names = list(dict.fromkeys([*names, ENCODER]))
+        last = {}
+        for name in names:
+            pval = self._subscription.value_cache.get(name)
+            last[name] = None if pval is None else pval.generation_time
+        samples = {name: [] for name in names}
+        half = ENCODER_COUNTS // 2
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline:
+            for name in names:
+                pval = self._subscription.value_cache.get(name)
+                if pval is None or pval.eng_value is None:
+                    continue
+                if last[name] is None or pval.generation_time > last[name]:
+                    last[name] = pval.generation_time
+                    samples[name].append((pval.generation_time, pval.eng_value))
+            encoder = samples[ENCODER]
+            if len(encoder) > max(min_samples, 1):
+                (_, prev), (_, cur) = encoder[-2], encoder[-1]
+                if all(abs((c - p + half) % ENCODER_COUNTS - half) <= STILL_COUNTS for p, c in zip(prev, cur)):
+                    return samples
+            time.sleep(0.05)
+        pytest.fail(f"Wheels still turning {timeout} s after the command ({len(samples[ENCODER])} encoder samples)")
 
     def encoder_deltas(self, samples=2):
         """
@@ -483,6 +520,185 @@ def test_solar_panel_deploy_and_stow(rover):
     rover.wait_for(SOLAR_PANEL_STATE, "DEPLOYED")
     rover.command(SOLAR_PANEL, deployment="STOW")
     rover.wait_for(SOLAR_PANEL_STATE, "STOWED")
+
+
+"""
+Integrated test: solar panel, drive and turn commands, checked against the ground truth pose and the IMU.
+"""
+
+POSE = "/Rover/pose_ground_truth"  # base_link position relative to the lander, world orientation {w, x, y, z}
+IMU_ORIENTATION = "/Rover/imu_orientation"  # roll, pitch, yaw in deg
+IMU_GYROSCOPE = "/Rover/imu_gyroscope"  # gx, gy, gz in deg/s (MDB units)
+
+STRAIGHT_SPEED = 0.2  # m/s
+STRAIGHT_DISTANCE = 2.0  # m
+TURN_RATE = 8.0  # deg/s; positive turns left (counterclockwise seen from above, REP-103)
+TURN_ANGLE = 90.0  # deg
+DISTANCE_TOLERANCE = 0.10  # fraction of the commanded distance
+DIRECTION_TOLERANCE_DEG = 5.0  # travel direction against the start heading
+STRAIGHT_YAW_TOLERANCE_DEG = 3.0  # heading change during the straight drive
+TURN_ANGLE_TOLERANCE_DEG = 5.0
+TURN_RATE_TOLERANCE = 0.20  # fraction of the commanded rate
+TURN_MAX_SHIFT_M = 0.2  # position change during a turn in place
+IMU_TOLERANCE_DEG = 2.0  # IMU roll, pitch and yaw against the ground truth pose
+PAIR_MAX_DT_S = 0.1  # IMU and pose samples sent closer in time than this are compared
+RAMP_SAMPLES = 2  # gyroscope samples skipped at the start and at the end of a turn
+MOTION_TIMEOUT_S = 180
+
+
+def _wrap_deg(angle):
+    return (angle + 180.0) % 360.0 - 180.0
+
+
+def _rpy_deg(orientation):
+    """Roll, pitch and yaw in deg of a {w, x, y, z} quaternion: yaw about z, then pitch about y, then roll about x."""
+    w, x, y, z = (orientation[k] for k in ("w", "x", "y", "z"))
+    roll = math.atan2(2 * (w * x + y * z), 1 - 2 * (x * x + y * y))
+    pitch = math.asin(max(-1.0, min(1.0, 2 * (w * y - z * x))))
+    yaw = math.atan2(2 * (w * z + x * y), 1 - 2 * (y * y + z * z))
+    return tuple(math.degrees(angle) for angle in (roll, pitch, yaw))
+
+
+def _yaw_deg(pose):
+    return _rpy_deg(pose["orientation"])[2]
+
+
+def _shift(start, end):
+    """Horizontal displacement (dx, dy) in m between two poses."""
+    return end["position"]["x"] - start["position"]["x"], end["position"]["y"] - start["position"]["y"]
+
+
+def _imu_errors(pose, imu):
+    """IMU roll, pitch and yaw minus the roll, pitch and yaw of the ground truth pose, in deg."""
+    roll, pitch, yaw = _rpy_deg(pose["orientation"])
+    return _wrap_deg(imu["roll"] - roll), _wrap_deg(imu["pitch"] - pitch), _wrap_deg(imu["yaw"] - yaw)
+
+
+def _paired(samples):
+    """(pose, imu) pairs of recorded samples sent within PAIR_MAX_DT_S of each other."""
+    poses = samples[POSE]
+    pairs = []
+    for t_imu, imu in samples[IMU_ORIENTATION]:
+        if not poses:
+            break
+        t_pose, pose = min(poses, key=lambda sample: abs((sample[0] - t_imu).total_seconds()))
+        if abs((t_pose - t_imu).total_seconds()) <= PAIR_MAX_DT_S:
+            pairs.append((pose, imu))
+    return pairs
+
+
+class _Checks:
+    """Collects the failed checks, so that one run prints every measurement before the test fails."""
+
+    def __init__(self):
+        self.failures = []
+
+    def expect(self, ok, message):
+        print(f"  {'ok  ' if ok else 'FAIL'}  {message}")
+        if not ok:
+            self.failures.append(message)
+
+    def imu_at_rest(self, pose, imu, where):
+        errors = _imu_errors(pose, imu)
+        self.expect(
+            all(abs(e) <= IMU_TOLERANCE_DEG for e in errors),
+            f"IMU {where}: roll/pitch/yaw {imu['roll']:.1f}/{imu['pitch']:.1f}/{imu['yaw']:.1f} deg, "
+            f"pose {'/'.join(f'{a:.1f}' for a in _rpy_deg(pose['orientation']))} deg "
+            f"(error {'/'.join(f'{e:.1f}' for e in errors)}, max {IMU_TOLERANCE_DEG})",
+        )
+
+    def imu_in_motion(self, samples, where):
+        pairs = _paired(samples)
+        self.expect(
+            len(pairs) >= 3,
+            f"IMU {where}: {len(pairs)} IMU samples sent with a pose sample "
+            f"({len(samples[IMU_ORIENTATION])} IMU, {len(samples[POSE])} pose samples)",
+        )
+        if pairs:
+            worst = [max(abs(_imu_errors(pose, imu)[i]) for pose, imu in pairs) for i in range(3)]
+            self.expect(
+                all(e <= IMU_TOLERANCE_DEG for e in worst),
+                f"IMU {where}: largest roll/pitch/yaw error {'/'.join(f'{e:.1f}' for e in worst)} deg "
+                f"(max {IMU_TOLERANCE_DEG})",
+            )
+
+
+def test_integrated_solar_panel_drive_turn_imu(rover):
+    """Deploys the solar panel, drives straight, turns in place and stows the panel, against the pose and the IMU."""
+    checks = _Checks()
+    print("\nIntegrated test:")
+
+    rover.wait_for(SOLAR_PANEL_STATE, "STOWED")
+    rover.command(SOLAR_PANEL, deployment="DEPLOY")
+    state = rover.poll_for(SOLAR_PANEL_STATE, "DEPLOYED")
+    checks.expect(state == "DEPLOYED", f"solar panel after DEPLOY: {state}")
+
+    start = rover.next_value(POSE)
+    checks.imu_at_rest(start, rover.next_value(IMU_ORIENTATION), "at rest before the drive")
+
+    # Straight drive.
+    try:
+        rover.command(DRIVE_STRAIGHT, linear_velocity=STRAIGHT_SPEED, distance=STRAIGHT_DISTANCE)
+        straight = rover.record_until_still(
+            [POSE, IMU_ORIENTATION], min_samples=int(STRAIGHT_DISTANCE / STRAIGHT_SPEED) - 2
+        )
+    finally:
+        _stop(rover)
+    time.sleep(STOP_SETTLE_S)
+    after_straight = rover.next_value(POSE)
+    dx, dy = _shift(start, after_straight)
+    distance = math.hypot(dx, dy)
+    direction_error = _wrap_deg(math.degrees(math.atan2(dy, dx)) - _yaw_deg(start))
+    yaw_change = _wrap_deg(_yaw_deg(after_straight) - _yaw_deg(start))
+    checks.expect(
+        abs(distance - STRAIGHT_DISTANCE) <= DISTANCE_TOLERANCE * STRAIGHT_DISTANCE,
+        f"straight drive distance {distance:.3f} m, commanded {STRAIGHT_DISTANCE} m "
+        f"(max error {DISTANCE_TOLERANCE:.0%}, {len(straight[ENCODER])} s)",
+    )
+    checks.expect(
+        abs(direction_error) <= DIRECTION_TOLERANCE_DEG,
+        f"straight drive direction {direction_error:.1f} deg from the start heading (max {DIRECTION_TOLERANCE_DEG})",
+    )
+    checks.expect(
+        abs(yaw_change) <= STRAIGHT_YAW_TOLERANCE_DEG,
+        f"straight drive heading change {yaw_change:.1f} deg (max {STRAIGHT_YAW_TOLERANCE_DEG})",
+    )
+    checks.imu_in_motion(straight, "during the straight drive")
+    checks.imu_at_rest(after_straight, rover.next_value(IMU_ORIENTATION), "at rest after the straight drive")
+
+    # Turn in place.
+    try:
+        rover.command(DRIVE_TURN, angular_velocity=TURN_RATE, angle=TURN_ANGLE)
+        turn = rover.record_until_still(
+            [POSE, IMU_ORIENTATION, IMU_GYROSCOPE], min_samples=int(TURN_ANGLE / TURN_RATE) - 2
+        )
+    finally:
+        _stop(rover)
+    time.sleep(STOP_SETTLE_S)
+    after_turn = rover.next_value(POSE)
+    turn_angle = _wrap_deg(_yaw_deg(after_turn) - _yaw_deg(after_straight))
+    turn_shift = math.hypot(*_shift(after_straight, after_turn))
+    checks.expect(
+        abs(turn_angle - TURN_ANGLE) <= TURN_ANGLE_TOLERANCE_DEG,
+        f"turn angle {turn_angle:.1f} deg, commanded {TURN_ANGLE} deg to the left "
+        f"(max error {TURN_ANGLE_TOLERANCE_DEG}, {len(turn[ENCODER])} s)",
+    )
+    checks.expect(turn_shift <= TURN_MAX_SHIFT_M, f"turn position change {turn_shift:.3f} m (max {TURN_MAX_SHIFT_M})")
+    rates = sorted(gyro["gz"] for _, gyro in turn[IMU_GYROSCOPE][RAMP_SAMPLES:-RAMP_SAMPLES])
+    rate = rates[len(rates) // 2] if rates else float("nan")
+    checks.expect(
+        abs(rate - TURN_RATE) <= TURN_RATE_TOLERANCE * TURN_RATE,
+        f"gyroscope yaw rate (median gz) {rate:.3f} deg/s, commanded {TURN_RATE} deg/s "
+        f"(max error {TURN_RATE_TOLERANCE:.0%}, {len(rates)} samples)",
+    )
+    checks.imu_in_motion(turn, "during the turn")
+    checks.imu_at_rest(after_turn, rover.next_value(IMU_ORIENTATION), "at rest after the turn")
+
+    rover.command(SOLAR_PANEL, deployment="STOW")
+    state = rover.poll_for(SOLAR_PANEL_STATE, "STOWED")
+    checks.expect(state == "STOWED", f"solar panel after STOW: {state}")
+
+    assert not checks.failures, "Integrated test failures:\n" + "\n".join(checks.failures)
 
 
 def test_no_ignored_joint_writes(sim):
