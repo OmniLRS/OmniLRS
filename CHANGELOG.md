@@ -52,6 +52,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Pragyaan `/Rover/solar_panel_state` follows the measured solar panel angle: it changes to DEPLOYED or STOWED once the panel is within 10° of that position, instead of when the command is received. The power model uses the same state.
 
 - Pragyaan asset `nograph_pragyaan.usd` is one flattened layer in the REP-103 frame (x forward, y left, z up), built by `scripts/assets/rebuild_pragyaan.py`. No Xform, rigid body or camera has a scale. The mesh transforms are baked into the points. Each rigid body has its origin on its joint. base_link has its runtime pose, so its IMU no longer turns 120° on the first physics step. Prim paths are unchanged. The spawn `orientation` in `cfg/robot/pragyaan.yaml` is now `[0.70711, 0., 0., 0.70711]` for the same world pose. If you set a custom Pragyaan orientation, set it again.
+- Pragyaan left and right rockers, bogies and wheels are symmetric about the plane of base_link. The pivots and axles moved by 6 mm or less, and the left meshes are the mirrored right meshes.
 
 ### Removed
 
@@ -62,6 +63,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Pragyaan weighs 26 kg. Before, it weighed 675 kg, because the asset had no masses and PhysX used its default density on the collider volumes. Each rigid body now has a mass, and PhysX computes the inertia from its colliders. `base_link` has no collider, so it gets an explicit inertia. This removes the "invalid inertia tensor ... negative mass" warning.
+- Pragyaan rocker, bogie and motor meshes render with their materials. Their bindings pointed outside the asset, so they had no material.
 - ROS2 mode exits cleanly on SIGINT/SIGTERM (ROS 2 Jazzy shuts down the ROS context on these signals).
 - Yamcs mode with the LargeScale environment: terrain, rocks and colliders now update (EC.update()) as the  rover drives, terrain worker threads are joined on shutdown, and the simulation stops if a terrain worker dies.
 - Joint commands from Yamcs and Zenoh are no longer dropped, entirely or for some joints, when they arrive while PhysX is stepping: `ArticulationControl` queues them and `Robot.update_articulation_api()` writes them from the simulation loop.

@@ -26,7 +26,14 @@ Steps:
        the Body rigid body as body0 (was the body_top collider mesh);
      - base_link at the pose that PhysX gave it at runtime (REP-103), so the FixedJoint has identity frames. The old
        FixedJoint had a 120 deg rotation that PhysX applied to base_link and its IMU on the first physics step;
-     - MaterialBindingAPI on each prim with a material binding.
+     - MaterialBindingAPI on each prim with a material binding. The rocker, bogie and motor meshes, whose bindings
+       pointed outside the asset, get the silver_metal and black materials of the asset.
+  3. Left/right symmetry about the plane y = 0 of the root frame. In the source, the rocker and bogie meshes are mirror
+     copies about the plane y = +5 mm, the pivots and axles differ by up to 15 mm between the two sides, the wheels
+     have different spin angles and the motors are rotated copies. The rover moves so that the plane of the rocker and
+     bogie meshes is y = 0 (base_link stays at the root origin, on the plane). Each pair of pivots and axles gets the
+     average of the two sides, mirrored. Each wheel mesh moves with its axle. Each left mesh is replaced by the
+     mirrored right mesh.
 """
 
 import sys
@@ -66,6 +73,23 @@ BASE_LINK_INERTIA_KGM2 = 1e-6
 # row vectors (p' = p * M), so row i is the image of the old axis i: x -> y, y -> z, z -> x.
 OLD_ROOT_TO_REP103 = Gf.Matrix4d(0, 1, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 1)
 FIXED_JOINT = f"{ROOT}/base_link/FixedJoint"
+# Step 3: left body -> right body of each pair, relative to ROOT. The meshes of the wheels move with their axle. The
+# rocker and bogie meshes (without the motors, which are rotated copies) define the plane of symmetry.
+SYMMETRIC_PAIRS = {
+    "rocker_bogie/rocker_left": "rocker_bogie/rocker_right",
+    "rocker_bogie/bogie_left": "rocker_bogie/bogie_right",
+    "Mobility/Wheel_front_left": "Mobility/Wheel_front_right",
+    "Mobility/Wheel_middle_left": "Mobility/Wheel_middle_right",
+    "Mobility/Wheel_back_left": "Mobility/Wheel_back_right",
+}
+MESHES_FOLLOW_AXLE = ("Mobility/Wheel_",)
+PLANE_PARTS = ("rocker_bogie/rocker_left", "rocker_bogie/bogie_left")
+PLANE_EXCLUDED_MESHES = ("motor_black",)
+# Materials of the asset for the rocker_bogie meshes without a bound material (step 2), by mesh name ("*": others).
+UNBOUND_MESH_MATERIALS = {"motor_black": "black", "*": "silver_metal"}
+MIRROR_Y = Gf.Matrix4d(1, 0, 0, 0, 0, -1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1)
+MAX_SYMMETRY_MOVE_M = 0.015  # largest move that step 3 may apply to a joint or a mesh
+MAX_SYMMETRY_TURN_DEG = 0.5  # largest angle between the joint axes of a pair
 # Tolerances of the checks against the source.
 POINT_TOLERANCE_M = 1e-5
 ANGLE_TOLERANCE_DEG = 1e-3
@@ -199,31 +223,109 @@ def bake_mesh(mesh: UsdGeom.Mesh, to_parent: Gf.Matrix4d) -> bool:
     return mirrored
 
 
+def world_points(xforms: UsdGeom.XformCache, prim: Usd.Prim, extra: Gf.Matrix4d | None = None) -> np.ndarray:
+    """Points of a mesh in the world (then times `extra`), as an (N, 3) array."""
+    matrix = xforms.GetLocalToWorldTransform(prim)
+    matrix = np.array(matrix if extra is None else matrix * extra)
+    return np.array(UsdGeom.Mesh(prim).GetPointsAttr().Get(), dtype=np.float64) @ matrix[:3, :3] + matrix[3, :3]
+
+
+def subtree_meshes(stage: Usd.Stage, rel: str) -> list:
+    return [p for p in Usd.PrimRange(stage.GetPrimAtPath(f"{ROOT}/{rel}")) if p.IsA(UsdGeom.Mesh)]
+
+
+def rigid_body_of(prim: Usd.Prim) -> Usd.Prim | None:
+    while prim and prim.GetPath() != Sdf.Path.absoluteRootPath:
+        if prim.HasAPI(UsdPhysics.RigidBodyAPI):
+            return prim
+        prim = prim.GetParent()
+    return None
+
+
+def symmetry_plane_y(source: Usd.Stage, xforms: UsdGeom.XformCache, to_new: Gf.Matrix4d) -> float:
+    """y (in the frame of `to_new`) of the plane about which the rocker and bogie meshes are mirror copies."""
+    mids = []
+    for left in PLANE_PARTS:
+        sides = []
+        for rel in (left, SYMMETRIC_PAIRS[left]):
+            meshes = [m for m in subtree_meshes(source, rel) if m.GetName() not in PLANE_EXCLUDED_MESHES]
+            sides.append(np.vstack([world_points(xforms, m, to_new) for m in meshes])[:, 1].mean())
+        mids.append((sides[0] + sides[1]) / 2)
+    return float(np.mean(mids))
+
+
+def symmetric_frames(source: Usd.Stage, frames: dict, origin_joint: dict) -> tuple[dict, dict]:
+    """
+    The joint frames with each left/right pair of pivots or axles at the average of the two sides, mirrored, and with
+    the rotation of the right side. The frames of a pair can differ by a rotation about the joint axis (the old wheel
+    spin angles): this only sets where the joint angle starts, and both local frames of each joint come from the same
+    world frame, so the rest pose stays at angle 0. Also returns the move of each paired rigid body (path -> move).
+    """
+    frames = dict(frames)
+    moves = {}
+    flip = np.array([1.0, -1.0, 1.0])
+    for left, right in SYMMETRIC_PAIRS.items():
+        left_joint, right_joint = origin_joint[Sdf.Path(f"{ROOT}/{left}")], origin_joint[Sdf.Path(f"{ROOT}/{right}")]
+        left_frame, right_frame = frames[left_joint], frames[right_joint]
+        axis_name = source.GetPrimAtPath(right_joint).GetAttribute("physics:axis").Get()
+        axis = Gf.Vec3d(*(1.0 if axis_name == name else 0.0 for name in "XYZ"))
+        left_axis, right_axis = left_frame.TransformDir(axis), right_frame.TransformDir(axis)
+        turned = np.degrees(np.arccos(np.clip(Gf.Dot(left_axis.GetNormalized(), right_axis.GetNormalized()), -1, 1)))
+        if turned > MAX_SYMMETRY_TURN_DEG:
+            sys.exit(f"{left} and {right}: joint axes turned {turned:.2f} deg from each other")
+        left_position = np.array(left_frame.ExtractTranslation())
+        right_position = np.array(right_frame.ExtractTranslation())
+        average = (right_position + left_position * flip) / 2
+        for rel, joint, old, new in (
+            (left, left_joint, left_position, average * flip),
+            (right, right_joint, right_position, average),
+        ):
+            frame = Gf.Matrix4d(right_frame)
+            frame.SetTranslateOnly(Gf.Vec3d(*map(float, new)))
+            frames[joint] = frame
+            moves[f"{ROOT}/{rel}"] = new - old
+            if np.linalg.norm(new - old) > MAX_SYMMETRY_MOVE_M:
+                sys.exit(f"{rel}: symmetry moves its joint by {np.linalg.norm(new - old) * 1000:.1f} mm")
+    return frames, moves
+
+
 def clean_frames(source: Usd.Stage, stage: Usd.Stage) -> dict:
     """
-    Step 2 on `stage` (a flattened copy of `source`). Returns the old-to-new world matrix and the new world matrix of
-    each Xformable prim, for the checks.
+    Steps 2 and 3 on `stage` (a flattened copy of `source`). Returns what the checks need: the old-to-new world matrix,
+    the joint frames, the mesh moves and the mirrored mesh pairs.
     """
     xforms = UsdGeom.XformCache()
     old_world = {p.GetPath(): xforms.GetLocalToWorldTransform(p) for p in source.Traverse() if p.IsA(UsdGeom.Xformable)}
     # Old asset world -> new asset frame: undo the old root transform, then turn to REP-103.
     to_new = old_world[Sdf.Path(ROOT)].GetInverse() * OLD_ROOT_TO_REP103
+    # Step 3: move the rover so that its plane of symmetry is y = 0.
+    plane_y = symmetry_plane_y(source, xforms, to_new)
+    to_new = to_new * translation(Gf.Vec3d(0.0, -plane_y, 0.0))
+    print(
+        f"Plane of symmetry at y = {plane_y * 1000:+.2f} mm from base_link: the rover moves by {-plane_y * 1000:+.2f} mm"
+    )
 
     # Joint frames in the new asset frame, from body0 (the side of each joint that PhysX did not move at startup).
-    frames = {}
+    source_frames = {}
     for prim in joint_prims(source):
-        frames[prim.GetPath()] = joint_frame(source, xforms, UsdPhysics.Joint(prim), 0) * to_new
+        source_frames[prim.GetPath()] = rigid(joint_frame(source, xforms, UsdPhysics.Joint(prim), 0) * to_new)
     # Each rigid body that is body1 of a revolute joint gets its origin on that joint.
     origin_joint = {}
     for prim in joint_prims(source):
         if prim.IsA(UsdPhysics.RevoluteJoint):
             origin_joint[UsdPhysics.Joint(prim).GetBody1Rel().GetTargets()[0]] = prim.GetPath()
+    frames, moves = symmetric_frames(source, source_frames, origin_joint)
+    print(
+        "Symmetry moves of the pivots and axles: "
+        + ", ".join(f"{Sdf.Path(p).name} {np.linalg.norm(m) * 1000:.1f} mm" for p, m in moves.items())
+    )
 
     base_link = Sdf.Path(f"{ROOT}/base_link")
-    # Groups of rigid bodies (Mobility, rocker_bogie) get the root frame, so the rigid body transforms read directly
-    # in REP-103.
+    # Groups of rigid bodies (root, Mobility, rocker_bogie) get the root frame, so the rigid body transforms read
+    # directly in REP-103.
     groups = {p.GetPath().GetParentPath() for p in rigid_body_prims(stage)}
     new_world = {}
+    mesh_moves = {}
     mirrored = []
     for prim in Usd.PrimRange(stage.GetPrimAtPath(ROOT)):
         if not prim.IsA(UsdGeom.Xformable):
@@ -231,19 +333,25 @@ def clean_frames(source: Usd.Stage, stage: Usd.Stage) -> dict:
         path = prim.GetPath()
         parent_new = new_world.get(path.GetParentPath(), Gf.Matrix4d(1.0))
         target = old_world[path] * to_new
-        if path == Sdf.Path(ROOT) or path == base_link:
-            # base_link: the REP-103 pose that PhysX gave it at runtime, at its old origin.
-            world = translation(target.ExtractTranslation())
-        elif path in groups:
+        if path in groups:
             world = Gf.Matrix4d(1.0)
         elif path.GetParentPath() == base_link:
             # The IMU keeps its pose relative to base_link (it moved with base_link at runtime).
             world = (old_world[path] * old_world[base_link].GetInverse()) * parent_new
         elif prim.HasAPI(UsdPhysics.RigidBodyAPI):
-            origin = frames[origin_joint[path]].ExtractTranslation() if path in origin_joint else None
-            world = translation(origin if origin is not None else target.ExtractTranslation())
+            # Body and base_link (the REP-103 pose that PhysX gave it at runtime) at the root origin, the other rigid
+            # bodies on their joint.
+            world = (
+                translation(frames[origin_joint[path]].ExtractTranslation())
+                if path in origin_joint
+                else Gf.Matrix4d(1.0)
+            )
         elif prim.IsA(UsdGeom.Mesh):
             world = parent_new
+            body = rigid_body_of(source.GetPrimAtPath(path)).GetPath().pathString
+            if any(body.startswith(f"{ROOT}/{rel}") for rel in MESHES_FOLLOW_AXLE):
+                mesh_moves[path] = moves[body]
+                target = target * translation(Gf.Vec3d(*map(float, moves[body])))
             if bake_mesh(UsdGeom.Mesh(prim), target * parent_new.GetInverse()):
                 mirrored.append(path.pathString)
         else:
@@ -251,6 +359,27 @@ def clean_frames(source: Usd.Stage, stage: Usd.Stage) -> dict:
         new_world[path] = world
         local = world * parent_new.GetInverse()
         set_local_transform(prim, None if prim.IsA(UsdGeom.Mesh) or local == Gf.Matrix4d(1.0) else local)
+    print(f"Baked {len(mirrored)} mirrored meshes: {', '.join(Sdf.Path(p).name for p in mirrored)}")
+
+    # Step 3: each left mesh becomes the mirrored right mesh (same faces, normals and texture coordinates).
+    new_x = UsdGeom.XformCache()
+    mirror_pairs = {}
+    for left, right in SYMMETRIC_PAIRS.items():
+        rights = subtree_meshes(stage, right)
+        for left_mesh in subtree_meshes(stage, left):
+            count = len(left_mesh.GetAttribute("points").Get())
+            centroid = world_points(new_x, left_mesh).mean(0) * np.array([1.0, -1.0, 1.0])
+            candidates = [m for m in rights if len(m.GetAttribute("points").Get()) == count]
+            match = min(candidates, key=lambda m: np.linalg.norm(world_points(new_x, m).mean(0) - centroid))
+            mirror_pairs[left_mesh.GetPath()] = match.GetPath()
+    if len(set(mirror_pairs.values())) != len(mirror_pairs):
+        sys.exit(f"Left meshes do not pair one to one with right meshes: {mirror_pairs}")
+    layer = stage.GetRootLayer()
+    for left_path, right_path in mirror_pairs.items():
+        to_left = new_world[right_path.GetParentPath()] * MIRROR_Y * new_world[left_path.GetParentPath()].GetInverse()
+        Sdf.CopySpec(layer, right_path, layer, left_path)
+        bake_mesh(UsdGeom.Mesh(stage.GetPrimAtPath(left_path)), to_left)
+    print(f"Replaced {len(mirror_pairs)} left meshes by their mirrored right mesh")
 
     for prim in joint_prims(stage):
         joint = UsdPhysics.Joint(prim)
@@ -263,8 +392,28 @@ def clean_frames(source: Usd.Stage, stage: Usd.Stage) -> dict:
             position = Gf.Vec3f(local.ExtractTranslation())
             (joint.GetLocalPos0Attr() if side == 0 else joint.GetLocalPos1Attr()).Set(position)
             (joint.GetLocalRot0Attr() if side == 0 else joint.GetLocalRot1Attr()).Set(quat)
-    print(f"Baked {len(mirrored)} mirrored meshes: {', '.join(Sdf.Path(p).name for p in mirrored)}")
-    return {"to_new": to_new, "frames": frames}
+    return {
+        "to_new": to_new,
+        "frames": frames,
+        "joint_moves": moves,
+        "mesh_moves": mesh_moves,
+        "mirror_pairs": mirror_pairs,
+        "origin_joint": origin_joint,
+    }
+
+
+def bind_unbound_meshes(stage: Usd.Stage) -> None:
+    """
+    The rocker, bogie and motor meshes bound materials of the Blender scene (/World/chandrayaan_3_rover/Looks/silver_metal,
+    silver_metal_002 and /scene/Materials/black), outside the referenced files, so USD ignored the bindings and they
+    rendered without material. They get the materials of the asset with the same name (silver_metal_002 -> silver_metal).
+    """
+    for prim in Usd.PrimRange(stage.GetPrimAtPath(f"{ROOT}/rocker_bogie")):
+        if not prim.IsA(UsdGeom.Mesh) or UsdShade.MaterialBindingAPI(prim).ComputeBoundMaterial()[0]:
+            continue
+        name = UNBOUND_MESH_MATERIALS.get(prim.GetName(), UNBOUND_MESH_MATERIALS["*"])
+        material = UsdShade.Material(stage.GetPrimAtPath(f"{ROOT}/Looks/{name}"))
+        UsdShade.MaterialBindingAPI.Apply(prim).Bind(material)
 
 
 def apply_material_binding_api(stage: Usd.Stage) -> None:
@@ -277,13 +426,15 @@ def apply_material_binding_api(stage: Usd.Stage) -> None:
 # Checks of the result against the source.
 
 
-def check(output: Usd.Stage, source: Usd.Stage, to_new: Gf.Matrix4d, frames: dict) -> None:
+def check(output: Usd.Stage, source: Usd.Stage, result: dict) -> None:
+    to_new, frames = result["to_new"], result["frames"]
+    mirror_pairs, mesh_moves = result["mirror_pairs"], result["mesh_moves"]
     failures = []
     new_x, old_x = UsdGeom.XformCache(), UsdGeom.XformCache()
+    flip = np.array([1.0, -1.0, 1.0])
 
-    def world_points(stage, xforms, prim, extra):
-        matrix = np.array(xforms.GetLocalToWorldTransform(prim) * extra)
-        return np.array(UsdGeom.Mesh(prim).GetPointsAttr().Get(), dtype=np.float64) @ matrix[:3, :3] + matrix[3, :3]
+    def differ(moved, turned, max_move=POINT_TOLERANCE_M):
+        return moved > max_move or min(turned, 360 - turned) > ANGLE_TOLERANCE_DEG
 
     worst = 0.0
     for prim in Usd.PrimRange(output.GetPrimAtPath(ROOT)):
@@ -292,33 +443,56 @@ def check(output: Usd.Stage, source: Usd.Stage, to_new: Gf.Matrix4d, frames: dic
             scale = Gf.Transform(new_x.GetLocalToWorldTransform(prim)).GetScale()
             if any(abs(s - 1.0) > 1e-6 for s in scale):
                 failures.append(f"{prim.GetPath()}: world scale {tuple(scale)}")
-        if prim.IsA(UsdGeom.Mesh):
-            error = np.abs(
-                world_points(output, new_x, prim, Gf.Matrix4d(1.0)) - world_points(source, old_x, old, to_new)
-            )
-            worst = max(worst, float(error.max()))
+        if prim.IsA(UsdGeom.Mesh) and prim.GetPath() not in mirror_pairs:
+            expected = world_points(old_x, old, to_new) + mesh_moves.get(prim.GetPath(), np.zeros(3))
+            worst = max(worst, float(np.abs(world_points(new_x, prim) - expected).max()))
         if prim.GetTypeName() == "Camera":
             new_pose = new_x.GetLocalToWorldTransform(prim)
             old_pose = rigid(old_x.GetLocalToWorldTransform(old) * to_new)
             moved = (new_pose.ExtractTranslation() - old_pose.ExtractTranslation()).GetLength()
             turned = (new_pose.ExtractRotation() * old_pose.ExtractRotation().GetInverse()).GetAngle()
-            if moved > POINT_TOLERANCE_M or min(turned, 360 - turned) > ANGLE_TOLERANCE_DEG:
+            if differ(moved, turned):
                 failures.append(f"{prim.GetPath()}: camera moved {moved:.2e} m, turned {turned:.2e} deg")
     if worst > POINT_TOLERANCE_M:
         failures.append(f"mesh points moved up to {worst:.2e} m")
+    asymmetry, left_moves = 0.0, []
+    for left, right in mirror_pairs.items():
+        left_points = world_points(new_x, output.GetPrimAtPath(left))
+        asymmetry = max(
+            asymmetry, float(np.abs(left_points - world_points(new_x, output.GetPrimAtPath(right)) * flip).max())
+        )
+        old_centroid = world_points(old_x, source.GetPrimAtPath(left), to_new).mean(0)
+        left_moves.append(float(np.linalg.norm(left_points.mean(0) - old_centroid)))
+    if asymmetry > POINT_TOLERANCE_M:
+        failures.append(f"left meshes differ from the mirrored right meshes by up to {asymmetry:.2e} m")
+    if max(left_moves) > MAX_SYMMETRY_MOVE_M:
+        failures.append(f"a left mesh centroid moved by {max(left_moves) * 1000:.1f} mm")
     for prim in joint_prims(output):
         joint = UsdPhysics.Joint(prim)
         frame0, frame1 = joint_frame(output, new_x, joint, 0), joint_frame(output, new_x, joint, 1)
         moved = (frame0.ExtractTranslation() - frame1.ExtractTranslation()).GetLength()
         turned = (frame0.ExtractRotation() * frame1.ExtractRotation().GetInverse()).GetAngle()
-        if moved > POINT_TOLERANCE_M or min(turned, 360 - turned) > ANGLE_TOLERANCE_DEG:
+        if differ(moved, turned):
             failures.append(f"{prim.GetPath()}: joint frames differ by {moved:.2e} m and {turned:.2e} deg")
         if prim.GetPath() != Sdf.Path(FIXED_JOINT):
             expected = frames[prim.GetPath()]
             moved = (frame0.ExtractTranslation() - expected.ExtractTranslation()).GetLength()
             turned = (frame0.ExtractRotation() * expected.ExtractRotation().GetInverse()).GetAngle()
-            if moved > POINT_TOLERANCE_M or min(turned, 360 - turned) > ANGLE_TOLERANCE_DEG:
+            if differ(moved, turned):
                 failures.append(f"{prim.GetPath()}: joint moved {moved:.2e} m, turned {turned:.2e} deg in the world")
+    origin_joint = result["origin_joint"]
+    for left, right in SYMMETRIC_PAIRS.items():
+        left_frame = joint_frame(
+            output, new_x, UsdPhysics.Joint(output.GetPrimAtPath(origin_joint[Sdf.Path(f"{ROOT}/{left}")])), 0
+        )
+        right_frame = joint_frame(
+            output, new_x, UsdPhysics.Joint(output.GetPrimAtPath(origin_joint[Sdf.Path(f"{ROOT}/{right}")])), 0
+        )
+        gap = np.abs(
+            np.array(left_frame.ExtractTranslation()) - np.array(right_frame.ExtractTranslation()) * flip
+        ).max()
+        if gap > POINT_TOLERANCE_M:
+            failures.append(f"{left} and {right}: joints not mirrored ({gap:.2e} m)")
     for rel, mass in MASSES_KG.items():
         if UsdPhysics.MassAPI(output.GetPrimAtPath(f"{ROOT}/{rel}")).GetMassAttr().Get() != np.float32(mass):
             failures.append(f"{rel}: mass differs from MASSES_KG")
@@ -328,16 +502,23 @@ def check(output: Usd.Stage, source: Usd.Stage, to_new: Gf.Matrix4d, frames: dic
             x, y, _ = wheel.ExtractTranslation()
             if x * sign_x <= 0 or y * (1 if side == "left" else -1) <= 0:
                 failures.append(f"Wheel_{position}_{side} at ({x:.2f}, {y:.2f}): not in REP-103 order")
+    for prim in output.Traverse():
+        if prim.IsA(UsdGeom.Mesh) and not UsdShade.MaterialBindingAPI(prim).ComputeBoundMaterial()[0]:
+            failures.append(f"{prim.GetPath()}: no bound material")
     if output.GetRootLayer().externalReferences:
         failures.append(f"composition arcs to other files: {sorted(output.GetRootLayer().externalReferences)}")
     for prim in output.Traverse():
         texture = prim.GetAttribute("inputs:file")
         if texture and texture.HasAuthoredValue() and not texture.Get().resolvedPath:
             failures.append(f"{prim.GetPath()}: texture {texture.Get().path} does not resolve")
-    print(f"Mesh points match the source within {worst:.1e} m")
+    print(f"Unpaired meshes match the source within {worst:.1e} m")
+    print(
+        f"Left meshes match the mirrored right meshes within {asymmetry:.1e} m, centroids moved up to "
+        f"{max(left_moves) * 1000:.1f} mm"
+    )
     if failures:
         sys.exit("Checks failed:\n  " + "\n  ".join(failures))
-    print("Checks passed: unit scales, meshes, cameras, joints, masses, wheel layout, textures")
+    print("Checks passed: unit scales, meshes, symmetry, cameras, joints, masses, wheel layout, materials, textures")
 
 
 def main() -> None:
@@ -348,6 +529,7 @@ def main() -> None:
         stage.RemovePrim(path)
     apply_masses(stage)
     result = clean_frames(source, stage)
+    bind_unbound_meshes(stage)
     apply_material_binding_api(stage)
     UsdPhysics.SetStageKilogramsPerUnit(stage, 1.0)
     layer.Export(str(OUTPUT))
@@ -359,7 +541,7 @@ def main() -> None:
         total += mass
         print(f"  {prim.GetPath().pathString:40s} {mass:6.2f} kg")
     print(f"Wrote {OUTPUT.relative_to(REPO_ROOT)}: total mass {total:.2f} kg")
-    check(output, source, result["to_new"], result["frames"])
+    check(output, source, result)
 
 
 if __name__ == "__main__":

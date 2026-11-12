@@ -1,6 +1,6 @@
 # TODO: Pragyaan physics, scale and frames
 
-Branch `fix/pragyan_physics`, from `main` at `916b0dc`. Audit date: 2026-11-12. Status: Phase 1 committed. Phase 2 done (not committed). Phase 3 is next.
+Branch `fix/pragyan_physics`, from `main` at `916b0dc`. Audit date: 2026-11-12. Status: Phases 1, 2 and 2b committed. Phase 3 is in progress.
 
 ## How the audit worked
 
@@ -12,20 +12,20 @@ The standard run (`pixi run -e yamcs yamcs`) loads the robot only after it conne
 
 Each run is `pixi run -e test-sim test-yamcs` on 2026-11-12 (about 3 min). The scenario starts the Yamcs server and the simulator. The values come from `test_integrated_solar_panel_drive_turn_imu` (Phase 7) and from the Kit log.
 
-| Measurement | Baseline (source asset) | After Phase 1 | After Phase 2, run 1 | After Phase 2, run 2 | Target |
-| --- | --- | --- | --- | --- | --- |
-| Sanity tests | 22 passed, 1 failed | 22 passed, 1 failed | 22 passed, 1 failed | 22 passed, 1 failed | all pass |
-| Inertia warnings in the Kit log | 2 | 0 | 0 | 0 | 0 |
-| PhysX total mass (probe) | 675.5 kg | 26.0 kg | 26.0 kg | 26.0 kg | 26 kg |
-| Solar panel deploy and stow | ok | ok | ok | ok | ok |
-| Straight drive distance, command 2.0 m | 3.186 m | 2.927 m | 2.851 m | 2.898 m | 2.0 m ± 10 % |
-| Straight drive direction error | -0.4° | -0.1° | -0.2° | 0.0° | 5° or less |
-| Heading change in the straight drive | 0.1° | 0.2° | 0.3° | 0.2° | 3° or less |
-| Turn angle, command 90° to the left | 102.9° | 111.0° | 125.6° | 104.8° | 90° ± 5° |
-| Position change in the turn | 0.946 m | 0.757 m | 0.566 m | 0.877 m | 0.2 m or less |
-| Gyroscope gz, command 8°/s | 0.136 (rad/s, 7.8°/s) | 0.129 (rad/s, 7.4°/s) | 0.182 (rad/s, 10.4°/s) | 0.168 (rad/s, 9.6°/s) | 8°/s ± 20 % |
-| Largest IMU yaw error | 0.4° | 0.4° | 0.5° | 0.5° | 2° or less |
-| Largest IMU roll or pitch error | 3.6° | 3.4° | 4.2° | 4.2° | 2° or less |
+| Measurement | Baseline (source asset) | After Phase 1 | After Phase 2, run 1 | After Phase 2, run 2 | After symmetry | Target |
+| --- | --- | --- | --- | --- | --- | --- |
+| Sanity tests | 22 passed, 1 failed | 22 passed, 1 failed | 22 passed, 1 failed | 22 passed, 1 failed | 22 passed, 1 failed | all pass |
+| Inertia warnings in the Kit log | 2 | 0 | 0 | 0 | 0 | 0 |
+| PhysX total mass (probe) | 675.5 kg | 26.0 kg | 26.0 kg | 26.0 kg | 26.0 kg | 26 kg |
+| Solar panel deploy and stow | ok | ok | ok | ok | ok | ok |
+| Straight drive distance, command 2.0 m | 3.186 m | 2.927 m | 2.851 m | 2.898 m | 2.878 m | 2.0 m ± 10 % |
+| Straight drive direction error | -0.4° | -0.1° | -0.2° | 0.0° | -0.4° | 5° or less |
+| Heading change in the straight drive | 0.1° | 0.2° | 0.3° | 0.2° | 0.0° | 3° or less |
+| Turn angle, command 90° to the left | 102.9° | 111.0° | 125.6° | 104.8° | 97.2° | 90° ± 5° |
+| Position change in the turn | 0.946 m | 0.757 m | 0.566 m | 0.877 m | 0.781 m | 0.2 m or less |
+| Gyroscope gz, command 8°/s | 0.136 (rad/s, 7.8°/s) | 0.129 (rad/s, 7.4°/s) | 0.182 (rad/s, 10.4°/s) | 0.168 (rad/s, 9.6°/s) | 0.132 (rad/s, 7.6°/s) | 8°/s ± 20 % |
+| Largest IMU yaw error | 0.4° | 0.4° | 0.5° | 0.5° | 0.4° | 2° or less |
+| Largest IMU roll or pitch error | 3.6° | 3.4° | 4.2° | 4.2° | 3.1° | 2° or less |
 
 The remaining failures have known causes: the drive factors (finding 21), the IMU conversion (finding 25) and the gyroscope unit (finding 26). The two Phase 2 runs differ by 21° in the turn angle, with the same asset. The turn is sensitive to the start state (finding 27).
 
@@ -101,7 +101,8 @@ The remaining failures have known causes: the drive factors (finding 21), the IM
 25. The IMU orientation equals the base_link orientation, but `get_imu_readings` in `src/robots/robot.py` converts it wrongly. `transform_orientation_from_xyzw_into_xyz` uses scipy `as_euler("zyx")`, which gives rotations about the world axes. The code then negates roll and pitch. Yaw is correct. When the rover does not face along the X axis, roll and pitch are wrong. The baseline telemetry equals this calculation to 0.01°. The fix is the intrinsic order `as_euler("ZYX")` (yaw, pitch, roll about the rover axes), without the negation.
 26. `/Rover/imu_gyroscope` sends rad/s (the Isaac Sim IMU unit), but the MDB declares deg/s. The baseline turn sent gz = 0.136, which is 7.8°/s for a command of 8°/s.
 27. The turn result changes from run to run: 104.8° and 125.6° with the same asset. The drive timer uses simulated time, so the turn duration is the same. The earlier joint tests leave the rover at a slightly different place on the uneven terrain, and skid-steer contacts amplify this.
-28. The model is not symmetric. Left and right parts differ by up to 2.6 cm. For example, the rocker pivots are at y = +0.524 m and y = -0.512 m in the Phase 2 frame, before the scale.
+28. Fixed in Phase 2b. The model is not symmetric. Left and right parts differ by up to 2.6 cm. For example, the rocker pivots are at y = +0.524 m and y = -0.512 m in the Phase 2 frame, before the scale.
+29. Fixed in Phase 2b. The rocker, bogie and motor meshes bound materials of the Blender scene, outside the referenced files (`/World/chandrayaan_3_rover/Looks/...`, `/scene/Materials/black`). USD ignored these bindings, so the 10 meshes rendered without material.
 
 ## Decisions for review
 
@@ -158,11 +159,26 @@ This phase can ship alone. It removes the warning and gives a 26 kg rover.
 - [x] Camera images against Phase 1: mean RGBA difference of 1 to 3 out of 255, median depth difference of 0.2 % or less. The differences come from a 2 cm difference in the settle position.
 - [x] Run the Yamcs sanity scenario two times. Results are in the table above.
 
+### Phase 2b: left/right symmetry, same size
+
+`scripts/assets/rebuild_pragyaan.py` does this phase in step 3.
+
+- [x] Find the plane of symmetry. The rocker and bogie meshes are exact mirror copies about y = +5.15 mm (base_link at y = 0). The chassis is centered on this plane within 0.3 mm.
+- [x] Move the rover by -5.15 mm in y, so that the plane is y = 0. base_link stays at the root origin, on the plane.
+- [x] Give each pair of pivots and axles the average of the two sides, mirrored. The moves are 4.6 mm (rockers), 5.9 mm (bogies) and 2.0 to 2.4 mm (wheels). The largest move across the joint axis was the rocker pivot height (8.2 mm difference between the sides).
+- [x] Move each wheel mesh with its axle.
+- [x] Replace each left mesh by the mirrored right mesh (8 meshes). This also makes the motors and the wheel spin angles symmetric. The left meshes moved by 2.5 mm or less.
+- [x] Use the joint frame of the right side for both sides. The frames of a pair differed only by a rotation about the axle (the old wheel spin angles), which sets where the joint angle starts.
+- [x] Bind the 10 rocker, bogie and motor meshes to the `silver_metal` and `black` materials of the asset (finding 29).
+- [x] Script checks. The left meshes are the mirrored right meshes within 2.4e-8 m, the paired joints are mirrored, and each mesh has a material.
+- [x] Probe on flat ground: same masses and settle height. The rockers settle at 0.00° (before: ±0.05°).
+- [x] Run the Yamcs sanity scenario. Results are in the table above.
+
 ### Phase 3: scale
 
 - [ ] Apply the factor 0.527 (D1) to the mesh points, body positions, joint positions and camera positions.
 - [ ] Author the masses again (mass only). PhysX then computes the inertia from the new colliders.
-- [ ] Decide whether to make the left and right parts symmetric (finding 28).
+- [x] Make the left and right rockers, bogies and wheels symmetric (finding 28). Done before the scale, see Phase 2b.
 - [ ] In a separate commit, scale the Vikram lander to the published 2.0 × 2.0 × 1.166 m (D3).
 - [ ] Convert the lander stage to Z-up.
 - [ ] Keep the lander camera pose and intrinsics consistent with the new lander size.
