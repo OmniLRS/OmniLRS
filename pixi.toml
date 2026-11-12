@@ -112,9 +112,9 @@ asyncio_for_robotics = "==1.5.0"
 msgspec = "*"
 
 [feature.zenoh.tasks]
-zenoh_lunaryard = "python run.py mode=Zenoh environment=lunaryard_20m robot=husky"
-zenoh_lab = "python run.py mode=Zenoh environment=lunalab robot=husky"
-zenoh_largescale = "python run.py mode=Zenoh environment=largescale robot=husky"
+zenoh_lunaryard = "python run.py mode=Zenoh environment=lunaryard_20m robot=husky controller=husky-controller"
+zenoh_lab = "python run.py mode=Zenoh environment=lunalab robot=husky controller=husky-controller"
+zenoh_largescale = "python run.py mode=Zenoh environment=largescale robot=husky controller=husky-controller"
 
 [feature.zenoh-client.pypi-dependencies]
 # GUI OpenCV for cv2.imshow; the Isaac environments use the headless build shipped with Isaac Sim

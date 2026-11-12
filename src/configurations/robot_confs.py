@@ -31,7 +31,6 @@ class RobotParameters:
     dimensions: dict = field(default_factory=dict)
     turn_speed_coef: float = 1
     solar_panel_joint: str = field(default_factory=str)
-    zenoh: Dict = field(default_factory=dict)
 
     def __post_init__(self):
         self.usd_path = os.path.join(os.getcwd(), self.usd_path)
@@ -47,6 +46,7 @@ class RobotManagerConf:
         default_factory=dict
     )  # TODO for v4: separate yamcs_tmtc and robot_controller into separate dataclass (and don't merge with environment configs)
     robot_controller: str = field(default_factory=str)
+    zenoh: Dict = field(default_factory=dict)  # controller yaml stream settings, used if mode=Zenoh
 
     def __post_init__(self):
         if self.parameters:

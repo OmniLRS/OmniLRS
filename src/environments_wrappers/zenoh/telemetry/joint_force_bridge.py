@@ -18,33 +18,34 @@ class JointForceBridge:
     def __init__(
         self,
         robot_cfg: dict,
-        zenoh_cfg: dict,
+        mode_cfg: dict,
+        streams_cfg: dict,
         RM: RobotManager,
         robot_root_prim: str,
     ):
         self.robot_cfg = robot_cfg
-        self.zenoh_cfg = zenoh_cfg
+        self.mode_cfg = mode_cfg
         self.RM = RM
         self.robot_name = self.robot_cfg["robot_name"]
         self.robot_root_prim = robot_root_prim
 
-        self.publish_period_s = self.robot_cfg["zenoh"]["joint_telemetry"]["publish_period_s"]
+        self.publish_period_s = streams_cfg["joint_telemetry"]["publish_period_s"]
 
         self.log = logger.info
-        self.init_retry_s = self.robot_cfg["zenoh"]["joint_telemetry"]["init_retry_s"]
-        self.not_ready_log_period_s = self.robot_cfg["zenoh"]["joint_telemetry"]["not_ready_log_period_s"]
+        self.init_retry_s = streams_cfg["joint_telemetry"]["init_retry_s"]
+        self.not_ready_log_period_s = streams_cfg["joint_telemetry"]["not_ready_log_period_s"]
 
-        self.keep_history = self.robot_cfg["zenoh"]["joint_telemetry"]["keep_history"]
-        self.history_len = self.robot_cfg["zenoh"]["joint_telemetry"]["history_len"]
+        self.keep_history = streams_cfg["joint_telemetry"]["keep_history"]
+        self.history_len = streams_cfg["joint_telemetry"]["history_len"]
 
-        self.wire_format = self.robot_cfg["zenoh"]["joint_telemetry"].get(
+        self.wire_format = streams_cfg["joint_telemetry"].get(
             "wire_format",
-            self.zenoh_cfg["default_wire_format"],
+            self.mode_cfg["default_wire_format"],
         )
 
-        self.is_logging = self.robot_cfg["zenoh"]["joint_telemetry"]["is_logging"]
+        self.is_logging = streams_cfg["joint_telemetry"]["is_logging"]
 
-        self.log_every_n = self.zenoh_cfg["pub_log_every_n"]
+        self.log_every_n = self.mode_cfg["pub_log_every_n"]
 
         self._inited = False
         self._t_last_publish = 0.0
@@ -70,7 +71,7 @@ class JointForceBridge:
     def make_transports(self) -> None:
         spec = {
             "type": "zenoh",
-            "keyexpr": self.zenoh_cfg["keyexprs"]["joint_telemetry"].format(robot_name=self.robot_name),
+            "keyexpr": self.mode_cfg["keyexprs"]["joint_telemetry"].format(robot_name=self.robot_name),
             "wire_format": self.wire_format,
             "is_logging": self.is_logging,
             "log_every_n": self.log_every_n,

@@ -11,7 +11,7 @@ class Zenoh_BaseManager:
     def __init__(
         self,
         environment_cfg: dict = None,
-        zenoh_cfg: dict = None,
+        mode_cfg: dict = None,
         **kwargs,
     ) -> None:
         """
@@ -30,10 +30,10 @@ class Zenoh_BaseManager:
         self.publishers: List[ZenohPubTransport] = []
 
         self.sim_running_pub = ZenohPubTransport(
-            keyexpr=zenoh_cfg["keyexprs"]["is_sim_running"],
+            keyexpr=mode_cfg["keyexprs"]["is_sim_running"],
             wire_format="json",
             is_logging=True,
-            log_every_n=zenoh_cfg["pub_log_every_n"],
+            log_every_n=mode_cfg["pub_log_every_n"],
         )
         self.publishers.append(self.sim_running_pub)
 

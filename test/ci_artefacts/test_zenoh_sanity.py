@@ -31,7 +31,7 @@ SIM_COMMAND = [
     "rendering.renderer.multi_gpu=false",
     "rendering.renderer.active_gpu=0",
     # Log every joint command received (checked by test_mixed_command).
-    "environment.robots_settings.parameters.zenoh.joint_commands.is_logging=true",
+    "environment.robots_settings.zenoh.joint_commands.is_logging=true",
     "mode.sub_log_every_n=1",
 ]
 

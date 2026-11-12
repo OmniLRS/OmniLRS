@@ -12,22 +12,22 @@ logger = logging.getLogger(__name__)
 
 
 class IMUBridge:
-    def __init__(self, robot_cfg: dict, zenoh_cfg: dict, RM: RobotManager):
+    def __init__(self, robot_cfg: dict, mode_cfg: dict, streams_cfg: dict, RM: RobotManager):
         self.robot_cfg = robot_cfg
-        self.zenoh_cfg = zenoh_cfg
+        self.mode_cfg = mode_cfg
 
         self.robot_name = self.robot_cfg["robot_name"]
 
-        self.publish_period_s = self.robot_cfg["zenoh"]["imu"]["publish_period_s"]
+        self.publish_period_s = streams_cfg["imu"]["publish_period_s"]
 
-        self.wire_format = self.robot_cfg["zenoh"]["imu"].get(
+        self.wire_format = streams_cfg["imu"].get(
             "wire_format",
-            self.zenoh_cfg["default_wire_format"],
+            self.mode_cfg["default_wire_format"],
         )
 
-        self.is_logging = self.robot_cfg["zenoh"]["imu"]["is_logging"]
+        self.is_logging = streams_cfg["imu"]["is_logging"]
 
-        self.log_every_n = self.zenoh_cfg["pub_log_every_n"]
+        self.log_every_n = self.mode_cfg["pub_log_every_n"]
 
         self.RM = RM
 
@@ -42,7 +42,7 @@ class IMUBridge:
     def make_transports(self):
         spec = {
             "type": "zenoh",
-            "keyexpr": self.zenoh_cfg["keyexprs"]["imu"].format(robot_name=self.robot_name),
+            "keyexpr": self.mode_cfg["keyexprs"]["imu"].format(robot_name=self.robot_name),
             "wire_format": self.wire_format,
             "is_logging": self.is_logging,
             "log_every_n": self.log_every_n,
