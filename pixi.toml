@@ -170,4 +170,9 @@ zenoh = { features = ["core", "isaac", "zenoh"]}
 zenoh-client = { features = ["core", "zenoh", "zenoh-client"]}
 test-sim = { features = ["test-sim"] }
 test-unit = { features = ["test-unit"] }
-ci = { features = ["core", "isaac", "ros2", "yamcs", "zenoh"] }
+ci = { features = ["core", "isaac", "ros2", "yamcs", "zenoh"], solve-group = "ci" }
+# For the IDE type checker (Pylance/pyright) only; no task or CI job uses it. One env that imports everything the code
+# and tests import, solved with `ci` so the shared packages have the same versions. Add new features here as well, or
+# their imports stay unresolved in the IDE. test-unit is left out: its opencv-python-headless would clash with the
+# Isaac Sim OpenCV build, and test-sim + ci already cover its imports.
+dev = { features = ["core", "isaac", "ros2", "yamcs", "zenoh", "test-sim"], solve-group = "ci" }
