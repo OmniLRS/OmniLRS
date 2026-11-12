@@ -234,11 +234,14 @@ rocks_settings:
 
     # Ejecta groups: lambda_parent is a density per m^2 of the ejecta mask, not of the whole terrain,
     # so the number of ejecta rocks scales with the area around large craters.
-    # Provisional values from the Surveyor VII rock distribution on Tycho's ejecta, N(>=D) ~ 0.030 * D^-1.81
-    # rocks/m^2 (D in m, read from NASA VIPER (2023), slide 40), using nominal diameters of 0.16-0.32 m,
-    # 0.32-0.81 m and 0.81-2.43 m (median apollo_rocks size, ~0.08 m, times each group's scale).
-    # This is a reference from a much larger crater; ordinary rocks are also placed on the ejecta.
-    # https://ntrs.nasa.gov/api/citations/20230008874/downloads/2023-06-HBRC-VIPER.pdf#page=40
+    # Provisional calibration from the rock distributions of NASA's VIPER simulator, N(>=D) in rocks/m^2, D in m:
+    # area average 0.0014 * D^-2.482 ("crater + inter-crater") and background 0.0001 * D^-1.755 ("inter-crater").
+    # Ejecta density = (average - (1 - f) * background) / f, where f ~ 0.22 is the fraction of the terrain
+    # covered by ejecta with this preset's crater distribution, used as a proxy for the surveyed terrain.
+    # This assumes the ordinary rocks follow that background; here they are denser, so the total is above the average.
+    # Nominal diameters: 0.16-0.32, 0.32-0.81 and 0.81-2.43 m
+    # (median apollo_rocks size, ~0.08 m, times each group's scale).
+    # https://ntrs.nasa.gov/api/citations/20210010712/downloads/VIPER%20RSIM%20VRT.pdf (slide 8)
     ejecta_small_rocks:
       seed: ${....seed}
       collections: ["apollo_rocks"] # Where to get the rock models from.
@@ -256,7 +259,7 @@ rocks_settings:
           sampler:
             name: ThomasCluster
             randomization_space: 2
-            lambda_parent: 0.6
+            lambda_parent: 0.47
             lambda_daughter: 1
             sigma: 1
             seed: ${....seed}
@@ -319,7 +322,7 @@ rocks_settings:
           sampler:
             name: ThomasCluster
             randomization_space: 2
-            lambda_parent: 0.2
+            lambda_parent: 0.091
             lambda_daughter: 1
             sigma: 1
             seed: 15
@@ -382,7 +385,7 @@ rocks_settings:
           sampler:
             name: ThomasCluster
             randomization_space: 2
-            lambda_parent: 0.04
+            lambda_parent: 0.01
             lambda_daughter: 1
             sigma: 1
             seed: 16
