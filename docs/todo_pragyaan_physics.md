@@ -1,6 +1,6 @@
 # TODO: Pragyaan physics, scale and frames
 
-Branch `fix/pragyan_physics`, from `main` at `916b0dc`. Audit date: 2026-11-12. Status: Phases 1, 2 and 2b committed. Phase 3 is in progress.
+Branch `fix/pragyan_physics`, from `main` at `916b0dc`. Audit date: 2026-11-12. Status: Phases 1, 2 and 2b committed. Phase 3 done (not committed). Phase 4 is next.
 
 ## How the audit worked
 
@@ -12,22 +12,22 @@ The standard run (`pixi run -e yamcs yamcs`) loads the robot only after it conne
 
 Each run is `pixi run -e test-sim test-yamcs` on 2026-11-12 (about 3 min). The scenario starts the Yamcs server and the simulator. The values come from `test_integrated_solar_panel_drive_turn_imu` (Phase 7) and from the Kit log.
 
-| Measurement | Baseline (source asset) | After Phase 1 | After Phase 2, run 1 | After Phase 2, run 2 | After symmetry | Target |
-| --- | --- | --- | --- | --- | --- | --- |
-| Sanity tests | 22 passed, 1 failed | 22 passed, 1 failed | 22 passed, 1 failed | 22 passed, 1 failed | 22 passed, 1 failed | all pass |
-| Inertia warnings in the Kit log | 2 | 0 | 0 | 0 | 0 | 0 |
-| PhysX total mass (probe) | 675.5 kg | 26.0 kg | 26.0 kg | 26.0 kg | 26.0 kg | 26 kg |
-| Solar panel deploy and stow | ok | ok | ok | ok | ok | ok |
-| Straight drive distance, command 2.0 m | 3.186 m | 2.927 m | 2.851 m | 2.898 m | 2.878 m | 2.0 m ± 10 % |
-| Straight drive direction error | -0.4° | -0.1° | -0.2° | 0.0° | -0.4° | 5° or less |
-| Heading change in the straight drive | 0.1° | 0.2° | 0.3° | 0.2° | 0.0° | 3° or less |
-| Turn angle, command 90° to the left | 102.9° | 111.0° | 125.6° | 104.8° | 97.2° | 90° ± 5° |
-| Position change in the turn | 0.946 m | 0.757 m | 0.566 m | 0.877 m | 0.781 m | 0.2 m or less |
-| Gyroscope gz, command 8°/s | 0.136 (rad/s, 7.8°/s) | 0.129 (rad/s, 7.4°/s) | 0.182 (rad/s, 10.4°/s) | 0.168 (rad/s, 9.6°/s) | 0.132 (rad/s, 7.6°/s) | 8°/s ± 20 % |
-| Largest IMU yaw error | 0.4° | 0.4° | 0.5° | 0.5° | 0.4° | 2° or less |
-| Largest IMU roll or pitch error | 3.6° | 3.4° | 4.2° | 4.2° | 3.1° | 2° or less |
+| Measurement | Baseline (source asset) | After Phase 1 | After Phase 2, run 1 | After Phase 2, run 2 | After symmetry | After Phase 3 | Target |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Sanity tests | 22 passed, 1 failed | 22 passed, 1 failed | 22 passed, 1 failed | 22 passed, 1 failed | 22 passed, 1 failed | 22 passed, 1 failed | all pass |
+| Inertia warnings in the Kit log | 2 | 0 | 0 | 0 | 0 | 0 | 0 |
+| PhysX total mass (probe) | 675.5 kg | 26.0 kg | 26.0 kg | 26.0 kg | 26.0 kg | 26.0 kg | 26 kg |
+| Solar panel deploy and stow | ok | ok | ok | ok | ok | ok | ok |
+| Straight drive distance, command 2.0 m | 3.186 m | 2.927 m | 2.851 m | 2.898 m | 2.878 m | 1.465 m | 2.0 m ± 10 % |
+| Straight drive direction error | -0.4° | -0.1° | -0.2° | 0.0° | -0.4° | -0.1° | 5° or less |
+| Heading change in the straight drive | 0.1° | 0.2° | 0.3° | 0.2° | 0.0° | 0.2° | 3° or less |
+| Turn angle, command 90° to the left | 102.9° | 111.0° | 125.6° | 104.8° | 97.2° | 96.5° | 90° ± 5° |
+| Position change in the turn | 0.946 m | 0.757 m | 0.566 m | 0.877 m | 0.781 m | 0.472 m | 0.2 m or less |
+| Gyroscope gz, command 8°/s | 0.136 (rad/s, 7.8°/s) | 0.129 (rad/s, 7.4°/s) | 0.182 (rad/s, 10.4°/s) | 0.168 (rad/s, 9.6°/s) | 0.132 (rad/s, 7.6°/s) | 0.175 (rad/s, 10.0°/s) | 8°/s ± 20 % |
+| Largest IMU yaw error | 0.4° | 0.4° | 0.5° | 0.5° | 0.4° | 0.3° | 2° or less |
+| Largest IMU roll or pitch error | 3.6° | 3.4° | 4.2° | 4.2° | 3.1° | 6.1° | 2° or less |
 
-The remaining failures have known causes: the drive factors (finding 21), the IMU conversion (finding 25) and the gyroscope unit (finding 26). The two Phase 2 runs differ by 21° in the turn angle, with the same asset. The turn is sensitive to the start state (finding 27).
+The remaining failures have known causes: the drive factors (finding 21), the IMU conversion (finding 25) and the gyroscope unit (finding 26). The two Phase 2 runs differ by 21° in the turn angle, with the same asset. The turn is sensitive to the start state (finding 27). After Phase 3, the straight drive is short because the wheels slip about 24 %: the wheel speed (2 rad/s × 0.097 m) gives 1.94 m in 10 s.
 
 ## Findings
 
@@ -56,7 +56,7 @@ The remaining failures have known causes: the drive factors (finding 21), the IM
 
 ### Scale
 
-5. The rover is about two times larger than the published size. The ratio is different on each axis, so one uniform factor cannot match all three published values.
+5. Fixed in Phase 3. The rover is about two times larger than the published size. The ratio is different on each axis, so one uniform factor cannot match all three published values.
 
    | Dimension | Model (m) | Published (m) | Ratio |
    | --- | --- | --- | --- |
@@ -66,7 +66,7 @@ The remaining failures have known causes: the drive factors (finding 21), the IM
 
    Other model values: wheel diameter 0.369 m, wheel width 0.165 m, track width 1.67 m (wheel centers), wheelbase 1.36 m, chassis 1.40 × 1.08 × 0.39 m.
 
-6. The Vikram lander (`assets/USD_Assets/common/lander/Vikram/Vikram.usd`) is also too large. Its bounding box is 4.4 × 3.7 × 3.5 m. The published size is 2.0 × 2.0 × 1.166 m. Its stage is Y-up.
+6. Fixed in Phase 3, with a factor of 0.85 (see Phase 3). The Vikram lander (`assets/USD_Assets/common/lander/Vikram/Vikram.usd`) is also too large. Its bounding box is 4.4 × 3.7 × 3.5 m. The published size is 2.0 × 2.0 × 1.166 m. Its stage is Y-up.
 7. The Blender export left many scales in the hierarchy:
    - 27 of 39 meshes have a world scale that is not 1, from 0.005 to 1.86.
    - 5 meshes have a negative (mirrored) scale.
@@ -103,6 +103,7 @@ The remaining failures have known causes: the drive factors (finding 21), the IM
 27. The turn result changes from run to run: 104.8° and 125.6° with the same asset. The drive timer uses simulated time, so the turn duration is the same. The earlier joint tests leave the rover at a slightly different place on the uneven terrain, and skid-steer contacts amplify this.
 28. Fixed in Phase 2b. The model is not symmetric. Left and right parts differ by up to 2.6 cm. For example, the rocker pivots are at y = +0.524 m and y = -0.512 m in the Phase 2 frame, before the scale.
 29. Fixed in Phase 2b. The rocker, bogie and motor meshes bound materials of the Blender scene, outside the referenced files (`/World/chandrayaan_3_rover/Looks/...`, `/scene/Materials/black`). USD ignored these bindings, so the 10 meshes rendered without material.
+30. The static asset loader (`_apply_pose` in `src/environments/static_assets_manager.py`) reads the orientation as x, y, z, w. The environment files say w/x/y/z, and the robot loader reads w, x, y, z. The old lander value [0.5, 0.5, 0.5, 0.5] reads the same in both orders, so this did not matter until Phase 3.
 
 ## Decisions for review
 
@@ -110,7 +111,7 @@ Decided on 2026-11-12.
 
 - [x] D1. Reference size: one uniform factor of 0.527, which matches the published length of 0.917 m. The rover becomes 0.917 m long, 0.94 m wide and 0.37 m high.
 - [x] D2. Mass split: the proposed split in the table, 26.0 kg in total.
-- [x] D3. Lander: scale Vikram in this branch, in a separate commit.
+- [x] D3. Lander: scale Vikram in this branch, in a separate commit. The factor is 0.85 (main body to the published size), not 0.527 (see Phase 3).
 - [x] D4. base_link origin: keep it near the chassis center, as today. Only the scale changes it.
 - [x] D5. Method: a Python rebuild script that reads a source copy of the current USD.
 - [x] D6. Unused files: delete `pragyaan.usd`. Keep `chandrayaan_3_rover.usdz` as the original model.
@@ -176,12 +177,20 @@ This phase can ship alone. It removes the warning and gives a 26 kg rover.
 
 ### Phase 3: scale
 
-- [ ] Apply the factor 0.527 (D1) to the mesh points, body positions, joint positions and camera positions.
-- [ ] Author the masses again (mass only). PhysX then computes the inertia from the new colliders.
+`scripts/assets/rebuild_pragyaan.py` step 4 scales the rover. `scripts/assets/rebuild_vikram.py` rebuilds the lander. The helpers that both scripts use are in `scripts/assets/usd_bake.py`.
+
+- [x] Apply the factor 0.527 (D1) to the rover mesh points, body positions, joint positions and camera positions, about the root origin (base_link). The rover is now 0.913 m long, 0.943 m wide and 0.366 m high without the solar panel. The wheels are 0.194 m in diameter, the track width is 0.882 m and the wheelbase is 0.718 m.
+- [x] Keep the masses (mass only). PhysX computes the inertia from the smaller colliders: the principal inertias are 0.278 (0.527²) times the Phase 2 values.
+- [x] Remove the cooked collision data that the source stored (`physxCookedData`, 33 meshes). It was a cache in the old mesh coordinates.
 - [x] Make the left and right rockers, bogies and wheels symmetric (finding 28). Done before the scale, see Phase 2b.
-- [ ] In a separate commit, scale the Vikram lander to the published 2.0 × 2.0 × 1.166 m (D3).
-- [ ] Convert the lander stage to Z-up.
-- [ ] Keep the lander camera pose and intrinsics consistent with the new lander size.
+- [x] Set the Pragyaan spawn height to 0.42 m (0.8 m × 0.527). base_link settles 0.252 m above flat ground.
+- [x] Keep `dimensions` and `turn_speed_coef` in `cfg/robot/pragyaan.yaml` until Phase 4. The turn rate of the wheels depends on the ratio of wheel radius to track width, which the scale does not change.
+- [x] Scale the Vikram lander to the published size (D3), in a separate step. The 4.4 m bounding box of the audit (finding 6) includes the legs and the ramp. The main body (foil box) was 2.35 × 2.40 m and 1.34 m high, because the source already had a 0.5 scale on `/Vikram/Lander`. The factor is 0.85, not 0.527. The main body is now 2.00 × 2.04 m and 1.13 m high (published 2.0 × 2.0 × 1.166 m).
+- [x] Keep `Vikram_source.usd` as the unchanged input. `Vikram.usd` is one flattened layer, Z-up, with each mesh transform baked into its points. `/Render` and `/GroundPlane` are removed.
+- [x] Set the lander orientation in the three workshop environments to `[0., 0., 0.70711, 0.70711]` (x, y, z, w) for the same world pose. Set the lander height to 0.18 m, so that the footpads keep their 4 cm clearance.
+- [x] Keep the lander camera intrinsics. The camera moves with the scale (0.85 about the placement origin) and keeps its view direction. A headless render of the lander camera shows the same view, with the depth median 0.87 times the source value.
+- [x] Run the probe: base_link settles at 0.252 m, the wheel axles at 0.097 m, and the masses are 26.0 kg.
+- [x] Run the Yamcs sanity scenario. Results are in the table above.
 
 ### Phase 4: code and configuration
 
@@ -191,7 +200,8 @@ This phase can ship alone. It removes the warning and gives a 26 kg rover.
 - [ ] Add `wheel_radius` and `track_width` to `src/configurations/robot_confs.py`, `cfg/robot/pragyaan.yaml` and `cfg/robot/husky.yaml`.
 - [ ] If no other code uses `dimensions` and `turn_speed_coef`, remove them.
 - [ ] In `cfg/robot/pragyaan.yaml`, set the spawn height, the spawn orientation for the new root frame, and a spawn point near the lander.
-- [ ] Update the lander pose and height in the environment files (D3).
+- [x] Update the lander pose and height in the environment files (D3). Done in Phase 3.
+- [ ] Use one quaternion order in the static asset loader, the robot loader and the environment files (finding 30).
 - [ ] In `get_imu_readings`, convert the IMU orientation with the intrinsic order `as_euler("ZYX")` and remove the roll and pitch negation (finding 25).
 - [ ] Convert the gyroscope values from rad/s to deg/s before the transmitter sends them, as the MDB declares (finding 26).
 - [ ] Find the other users of `transform_orientation_from_xyzw_into_xyz` before any change to it.
