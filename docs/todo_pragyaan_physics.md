@@ -1,6 +1,6 @@
 # TODO: Pragyaan physics, scale and frames
 
-Branch `fix/pragyan_physics`, from `main` at `916b0dc`. Audit date: 2026-11-12. Status: baseline recorded, Phase 1 done (not committed). Phase 2 is next.
+Branch `fix/pragyan_physics`, from `main` at `916b0dc`. Audit date: 2026-11-12. Status: Phase 1 committed. Phase 2 done (not committed). Phase 3 is next.
 
 ## How the audit worked
 
@@ -12,22 +12,22 @@ The standard run (`pixi run -e yamcs yamcs`) loads the robot only after it conne
 
 Each run is `pixi run -e test-sim test-yamcs` on 2026-11-12 (about 3 min). The scenario starts the Yamcs server and the simulator. The values come from `test_integrated_solar_panel_drive_turn_imu` (Phase 7) and from the Kit log.
 
-| Measurement | Baseline (source asset) | After Phase 1 | Target |
-| --- | --- | --- | --- |
-| Sanity tests | 22 passed, 1 failed | 22 passed, 1 failed | all pass |
-| Inertia warnings in the Kit log | 2 | 0 | 0 |
-| PhysX total mass (probe) | 675.5 kg | 26.0 kg | 26 kg |
-| Solar panel deploy and stow | ok | ok | ok |
-| Straight drive distance, command 2.0 m | 3.186 m | 2.927 m | 2.0 m ± 10 % |
-| Straight drive direction error | -0.4° | -0.1° | 5° or less |
-| Heading change in the straight drive | 0.1° | 0.2° | 3° or less |
-| Turn angle, command 90° to the left | 102.9° | 111.0° | 90° ± 5° |
-| Position change in the turn | 0.946 m | 0.757 m | 0.2 m or less |
-| Gyroscope gz, command 8°/s | 0.136 (rad/s, 7.8°/s) | 0.129 (rad/s, 7.4°/s) | 8°/s ± 20 % |
-| Largest IMU yaw error | 0.4° | 0.4° | 2° or less |
-| Largest IMU roll or pitch error | 3.6° | 3.4° | 2° or less |
+| Measurement | Baseline (source asset) | After Phase 1 | After Phase 2, run 1 | After Phase 2, run 2 | Target |
+| --- | --- | --- | --- | --- | --- |
+| Sanity tests | 22 passed, 1 failed | 22 passed, 1 failed | 22 passed, 1 failed | 22 passed, 1 failed | all pass |
+| Inertia warnings in the Kit log | 2 | 0 | 0 | 0 | 0 |
+| PhysX total mass (probe) | 675.5 kg | 26.0 kg | 26.0 kg | 26.0 kg | 26 kg |
+| Solar panel deploy and stow | ok | ok | ok | ok | ok |
+| Straight drive distance, command 2.0 m | 3.186 m | 2.927 m | 2.851 m | 2.898 m | 2.0 m ± 10 % |
+| Straight drive direction error | -0.4° | -0.1° | -0.2° | 0.0° | 5° or less |
+| Heading change in the straight drive | 0.1° | 0.2° | 0.3° | 0.2° | 3° or less |
+| Turn angle, command 90° to the left | 102.9° | 111.0° | 125.6° | 104.8° | 90° ± 5° |
+| Position change in the turn | 0.946 m | 0.757 m | 0.566 m | 0.877 m | 0.2 m or less |
+| Gyroscope gz, command 8°/s | 0.136 (rad/s, 7.8°/s) | 0.129 (rad/s, 7.4°/s) | 0.182 (rad/s, 10.4°/s) | 0.168 (rad/s, 9.6°/s) | 8°/s ± 20 % |
+| Largest IMU yaw error | 0.4° | 0.4° | 0.5° | 0.5° | 2° or less |
+| Largest IMU roll or pitch error | 3.6° | 3.4° | 4.2° | 4.2° | 2° or less |
 
-The remaining failures have known causes: the drive factors (finding 21), the IMU conversion (finding 25) and the gyroscope unit (finding 26).
+The remaining failures have known causes: the drive factors (finding 21), the IMU conversion (finding 25) and the gyroscope unit (finding 26). The two Phase 2 runs differ by 21° in the turn angle, with the same asset. The turn is sensitive to the start state (finding 27).
 
 ## Findings
 
@@ -100,6 +100,8 @@ The remaining failures have known causes: the drive factors (finding 21), the IM
 24. `test/ci_artefacts/test_yamcs_sanity.py` asserts the sign of each wheel encoder change: all forward for `drive_straight`, left backward and right forward for `drive_turn`.
 25. The IMU orientation equals the base_link orientation, but `get_imu_readings` in `src/robots/robot.py` converts it wrongly. `transform_orientation_from_xyzw_into_xyz` uses scipy `as_euler("zyx")`, which gives rotations about the world axes. The code then negates roll and pitch. Yaw is correct. When the rover does not face along the X axis, roll and pitch are wrong. The baseline telemetry equals this calculation to 0.01°. The fix is the intrinsic order `as_euler("ZYX")` (yaw, pitch, roll about the rover axes), without the negation.
 26. `/Rover/imu_gyroscope` sends rad/s (the Isaac Sim IMU unit), but the MDB declares deg/s. The baseline turn sent gz = 0.136, which is 7.8°/s for a command of 8°/s.
+27. The turn result changes from run to run: 104.8° and 125.6° with the same asset. The drive timer uses simulated time, so the turn duration is the same. The earlier joint tests leave the rover at a slightly different place on the uneven terrain, and skid-steer contacts amplify this.
+28. The model is not symmetric. Left and right parts differ by up to 2.6 cm. For example, the rocker pivots are at y = +0.524 m and y = -0.512 m in the Phase 2 frame, before the scale.
 
 ## Decisions for review
 
@@ -128,31 +130,39 @@ This phase can ship alone. It removes the warning and gives a 26 kg rover.
 
 ### Phase 2: clean structure, same size
 
-- [ ] Flatten `rocker_bogie.usd` and `motor_black.usd` into the output file. Keep the two sub-files, because the source copy references them.
-- [ ] Remove `/FlatGrid`.
-- [ ] Set the root frame to REP-103: x forward, y left, z up. Keep the origin near the chassis center (D4).
-- [ ] Delete `pragyaan.usd` (D6).
-- [ ] Give each rigid body a scale of 1. Bake the scales into the mesh points below it.
-- [ ] Remove the negative scales. Reverse the face order of each mesh that had a mirror, so that its normals stay outward.
-- [ ] Put the rocker and bogie origins on their pivot axis.
-- [ ] Put each wheel origin on its axle center, with a spin angle of 0.
-- [ ] Calculate each joint `localPos0`, `localPos1`, `localRot0` and `localRot1` again from the new body frames.
-- [ ] Keep the joint axis directions, so that a positive wheel velocity still drives forward on both sides.
-- [ ] Author the base_link pose that PhysX gives it now. The `FixedJoint` rotation then becomes the identity.
-- [ ] Give the cameras and the IMU a world scale of 1. Keep their world pose, focal length and aperture.
-- [ ] Set `body0` of the rocker joints to `Body`.
-- [ ] Apply `MaterialBindingAPI` to the solar panel meshes. This removes the material binding warnings.
-- [ ] Keep each prim path and name that the configuration uses:
+`scripts/assets/rebuild_pragyaan.py` does this phase in step 2, and checks the result against the source at the end of each run.
+
+- [x] Flatten `rocker_bogie.usd` and `motor_black.usd` into the output file. Keep the two sub-files, because the source copy references them.
+- [x] Remove `/FlatGrid` and `/Render`. Kit UI flags (`no_delete`, `hide_in_stage_window`) are lost in the flattening.
+- [x] Set the root frame to REP-103: x forward, y left, z up. Keep the origin near the chassis center (D4).
+- [x] Set the Pragyaan spawn `orientation` in `cfg/robot/pragyaan.yaml` to `[0.70711, 0., 0., 0.70711]` (w, x, y, z). The rover keeps the same world pose.
+- [x] Delete `pragyaan.usd` (D6). Keep `chandrayaan_3_rover.usdz`: the textures come from it (`./chandrayaan_3_rover.usdz[0/...]`).
+- [x] Give each Xform, rigid body and camera a scale of 1. Bake each mesh transform into its points and normals, so that each mesh has an identity transform.
+- [x] Remove the negative scales. The 5 mirrored meshes (3 left wheels, `Cube_077`, `Cube_080`) get a reversed face order, also for their face-varying normals and texture coordinates.
+- [x] Align the groups `Mobility` and `rocker_bogie` and each rigid body with the root frame.
+- [x] Put the rocker and bogie origins on their pivot axis.
+- [x] Put each wheel origin on its axle center, with a spin angle of 0.
+- [x] Calculate each joint `localPos0`, `localPos1`, `localRot0` and `localRot1` again from the new body frames.
+- [x] Keep the joint axis directions. All wheel axes point to +y (left), so a positive wheel velocity still drives forward.
+- [x] Author the base_link pose that PhysX gives it now. The `FixedJoint` frames are now the identity.
+- [x] Give the cameras and the IMU a world scale of 1. Keep their world pose, focal length and aperture.
+- [x] Set `body0` of the rocker joints to `Body`.
+- [x] Apply `MaterialBindingAPI` to each prim with a material binding. This removes the material binding warnings.
+- [x] Keep each prim path and name that the configuration uses:
   - `base_link` and `base_link/Imu_Sensor`
   - `Body/body_main/depth_cam`, `Body/NavCam_left/NavCam_left`, `Body/NavCam_right/NavCam_right`
   - `Mobility/Wheel_*` (target links)
   - joints `wheel_fl`, `wheel_ml`, `wheel_bl`, `wheel_fr`, `wheel_mr`, `wheel_br` and `solarJoint`
-- [ ] Run the probe. Make sure that the masses and the world rest pose did not change, and that no joint turns a body at start.
+- [x] Script checks. The mesh points are within 6e-8 m of the source, and the camera poses did not change. The two frames of each joint are equal, and the joint world poses did not change. The masses, the wheel layout and the texture paths are correct.
+- [x] Probe against Phase 1 on flat ground: same masses, same principal inertias (within 0.3 %), same settle height (0.4794 m against 0.4795 m), base_link in REP-103 from the start.
+- [x] Camera images against Phase 1: mean RGBA difference of 1 to 3 out of 255, median depth difference of 0.2 % or less. The differences come from a 2 cm difference in the settle position.
+- [x] Run the Yamcs sanity scenario two times. Results are in the table above.
 
 ### Phase 3: scale
 
 - [ ] Apply the factor 0.527 (D1) to the mesh points, body positions, joint positions and camera positions.
 - [ ] Author the masses again (mass only). PhysX then computes the inertia from the new colliders.
+- [ ] Decide whether to make the left and right parts symmetric (finding 28).
 - [ ] In a separate commit, scale the Vikram lander to the published 2.0 × 2.0 × 1.166 m (D3).
 - [ ] Convert the lander stage to Z-up.
 - [ ] Keep the lander camera pose and intrinsics consistent with the new lander size.
@@ -222,6 +232,7 @@ The test computes roll, pitch and yaw from the pose quaternion in the intrinsic 
 - [x] Print each measurement to the test log. Fail at the end with the list of failed checks.
 - [x] Record the baseline on the source asset.
 - [ ] After Phases 2 to 5, make sure that the test passes.
+- [ ] After Phases 4 and 5, run the scenario 3 times and record the spread of the turn angle. Set the turn tolerance from this spread (finding 27).
 - [ ] Ask before each run. The scenario takes about 3 min.
 
 ### Phase 8: documentation
