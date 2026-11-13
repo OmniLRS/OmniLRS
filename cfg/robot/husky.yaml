@@ -15,9 +15,10 @@ robots_settings:
     domain_id: 0
     target_links: ["front_left_wheel_link", "front_right_wheel_link", "rear_left_wheel_link", "rear_right_wheel_link"]
 
-    dimensions:
-      width: 1.6 # m
-      length: 1.5
+    drive: # wheel kinematics of the Yamcs drive commands (src/tmtc/drive_handler.py, DriveConf)
+      wheel_radius: 0.1778 # m
+      track_width: 0.571 # m, between the left and right wheel centers
+      skid_steer_factor: 3.24 # effective track / track_width; keeps the turn rate of turn_speed_coef 6.5 (not measured)
     pos_relative_to_prim: ""
     wheel_joints:
       left: ["front_left_wheel", "rear_left_wheel"]
@@ -50,7 +51,6 @@ robots_settings:
         resolutions:
           low: [320, 240]
           high: [1280, 720]
-    turn_speed_coef: 6.5
     zenoh:
       camera:
         publish_period_s: 0.2 # 5 hz

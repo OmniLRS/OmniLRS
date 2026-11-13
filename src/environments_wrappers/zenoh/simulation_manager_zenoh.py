@@ -49,9 +49,12 @@ class Zenoh_SimulationManager:
 
         # Setups the physics and acquires different interfaces to talk with Isaac
         self.timeline = omni.timeline.get_timeline_interface()
+        # cfg/physics (lunar gravity, solver, time step), as in ROS2 mode. Without it, the simulation ran with the
+        # Isaac Sim defaults, including Earth gravity.
         self.sim = Simulation(
             physics_dt=cfg["environment"]["physics_dt"],
             rendering_dt=cfg["environment"]["rendering_dt"],
+            physics_scene=cfg["physics"]["physics_scene"],
         )
 
         set_moon_env_name(cfg["environment"]["name"])

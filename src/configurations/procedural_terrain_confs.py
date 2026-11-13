@@ -3,7 +3,6 @@ __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
 
 import dataclasses
-from typing import List
 
 
 @dataclasses.dataclass
@@ -198,7 +197,6 @@ class DeformationEngineConf:
         terrain_resolution (float): Resolution of the terrain.
         terrain_width (float): Width of the terrain.
         terrain_height (float): Height of the terrain.
-        gravity (list): Gravity vector.
         footprint (dict): Footprint parameters.
         deform_constrain (dict): Deformation constrain parameters.
         boundary_distribution (dict): Boundary distribution parameters.
@@ -212,7 +210,6 @@ class DeformationEngineConf:
     terrain_resolution: float = dataclasses.field(default_factory=float)
     terrain_width: float = dataclasses.field(default_factory=float)
     terrain_height: float = dataclasses.field(default_factory=float)
-    gravity: List[float] = dataclasses.field(default_factory=list)
     footprint: FootprintConf = dataclasses.field(default_factory=dict)
     deform_constrain: DeformConstrainConf = dataclasses.field(default_factory=dict)
     boundary_distribution: BoundaryDistributionConf = dataclasses.field(default_factory=dict)

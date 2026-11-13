@@ -99,9 +99,9 @@ static_assets_settings:
     - asset_name: lander
       usd_path: USD_Assets/common/lander/Vikram/Vikram.usd
       pose:
-        position: [25.7, 10.6, 0.2]
-        orientation: [0.5, 0.5 , 0.5, 0.5]   # w/x/y/z
-        height_above_terrain_override: 0.2
+        position: [25.7, 10.6, 0.18]
+        orientation: [0., 0., 0.70711, 0.70711] # x, y, z, w (static_assets_manager). Vikram.usd is Z-up: yaw 90 deg
+        height_above_terrain_override: 0.18 # the footpads are 0.134 m below the origin
       collision: True
 
 monitoring_cameras_settings:

@@ -2,10 +2,12 @@ __author__ = "Aleksa Stanivuk"
 __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
 
+import itertools
 import socket
 import threading
 import time
 import traceback
+from collections import deque
 
 from src.tmtc import yamcs_naming
 from src.tmtc.mdb_parsing_service import MdbParsingService
@@ -32,6 +34,12 @@ def check_camera_argument(func, command_path: str, arg_names: list[str], cameras
         func(*args)
 
     return checked
+
+
+# The last commands received, newest last, as (number, full command name, arguments): the test video shows them
+# (src/environments_wrappers/yamcs/robot_video_recorder.py). The TC listener thread appends; readers take a copy (list()).
+RECEIVED_COMMANDS: deque = deque(maxlen=20)
+_command_numbers = itertools.count(1)
 
 
 class CommandsHandler:
@@ -87,6 +95,7 @@ class CommandsHandler:
             print(f"TC payload from {addr} matches no command of the server MDB: {tc_data[:40]!r}")
             return
 
+        RECEIVED_COMMANDS.append((next(_command_numbers), decoded["full_name"], dict(decoded["arguments"])))
         command = self._commands_catalogue.get(decoded["full_name"])
         if command is None:
             print(f"Command '{decoded['full_name']}' not found in catalogue")

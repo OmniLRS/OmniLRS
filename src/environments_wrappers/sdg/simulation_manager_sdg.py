@@ -42,7 +42,9 @@ class SDG_SimulationManager:
         self.simulation_app = simulation_app
         self.generation_settings = cfg["mode"]["generation_settings"]
         self.timeline = omni.timeline.get_timeline_interface()
-        self.sim = Simulation(physics_dt=1.0 / 60.0, rendering_dt=1.0 / 60.0)
+        self.sim = Simulation(
+            physics_dt=1.0 / 60.0, rendering_dt=1.0 / 60.0, physics_scene=cfg["physics"]["physics_scene"]
+        )
         self.sim.physics_scene.set_solver_type("PGS")
         # Lab manager thread
         self.sim.reset()

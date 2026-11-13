@@ -3,7 +3,7 @@ __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
 
 import math
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 
 @dataclass
@@ -34,3 +34,6 @@ class TerrainMechanicalParameter:
     phi: float = 30.0 * math.pi / 180.0
     K: float = 0.03
     rho: float = 1400.0
+    # m/s^2, from the physics scene (cfg/physics): Simulation's physics_scene_gravity(). No default, so that the model
+    # never uses another gravity than the simulation.
+    gravity: float = field(kw_only=True)
