@@ -608,19 +608,14 @@ class HighResDEMGen:
                     time.sleep(0.2)
                     logger.debug([self.block_grid_tracker[coord] for coord in self.list_missing_blocks()])
                 logger.debug("Map is done carrying on")
-            # Threaded update, the function will return before the update is done
-            if self.thread is None:
-                self.shift(coords)
-                self.thread = threading.Thread(target=self.threaded_high_res_dem_update).start()
-            elif self.thread.is_alive():
+            # Wait for the previous update to finish before shifting again
+            if self.thread is not None and self.thread.is_alive():
                 logger.debug("Thread is alive waiting for it to finish")
-                while self.thread.is_alive():
-                    time.sleep(0.1)
-                self.shift(coords)
-                self.thread = threading.Thread(target=self.threaded_high_res_dem_update).start()
-            else:
-                self.shift(coords)
-                self.thread = threading.Thread(target=self.threaded_high_res_dem_update).start()
+                self.thread.join()
+            self.shift(coords)
+            # Threaded update, the function will return before the update is done
+            self.thread = threading.Thread(target=self.threaded_high_res_dem_update)
+            self.thread.start()
             updated = True
         return updated
 
