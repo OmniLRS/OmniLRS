@@ -1,6 +1,6 @@
 # OmniLRS: Omniverse Lunar Robotics Simulator
 
-![test-startup](https://app.artefacts.com/api/omnilrs/omni-tests/badges/test-startup.png)
+![test-startup](https://app.artefacts.com/api/omnilrs/omni-tests/badges/test-startup.png?branch=main)
 
 <center>
 <img src="https://raw.githubusercontent.com/wiki/OmniLRS/OmniLRS/media/OmniLRS_HuskySouthPole.png" width=1080/>
