@@ -1,6 +1,6 @@
 # TODO: Pragyaan physics, scale and frames
 
-Branch `fix/pragyan_physics`, from `main` at `916b0dc`. Audit date: 2026-11-12. Status: Phases 1, 2 and 2b committed. Phase 3 done (not committed). Phase 4 is next.
+Branch `fix/pragyan_physics`, from `main` at `916b0dc`. Audit date: 2026-11-12. Status: Phases 1 to 3 committed. Phase 4 done and Phase 5 in progress (not committed).
 
 ## How the audit worked
 
@@ -12,22 +12,22 @@ The standard run (`pixi run -e yamcs yamcs`) loads the robot only after it conne
 
 Each run is `pixi run -e test-sim test-yamcs` on 2026-11-12 (about 3 min). The scenario starts the Yamcs server and the simulator. The values come from `test_integrated_solar_panel_drive_turn_imu` (Phase 7) and from the Kit log.
 
-| Measurement | Baseline (source asset) | After Phase 1 | After Phase 2, run 1 | After Phase 2, run 2 | After symmetry | After Phase 3 | Target |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| Sanity tests | 22 passed, 1 failed | 22 passed, 1 failed | 22 passed, 1 failed | 22 passed, 1 failed | 22 passed, 1 failed | 22 passed, 1 failed | all pass |
-| Inertia warnings in the Kit log | 2 | 0 | 0 | 0 | 0 | 0 | 0 |
-| PhysX total mass (probe) | 675.5 kg | 26.0 kg | 26.0 kg | 26.0 kg | 26.0 kg | 26.0 kg | 26 kg |
-| Solar panel deploy and stow | ok | ok | ok | ok | ok | ok | ok |
-| Straight drive distance, command 2.0 m | 3.186 m | 2.927 m | 2.851 m | 2.898 m | 2.878 m | 1.465 m | 2.0 m ± 10 % |
-| Straight drive direction error | -0.4° | -0.1° | -0.2° | 0.0° | -0.4° | -0.1° | 5° or less |
-| Heading change in the straight drive | 0.1° | 0.2° | 0.3° | 0.2° | 0.0° | 0.2° | 3° or less |
-| Turn angle, command 90° to the left | 102.9° | 111.0° | 125.6° | 104.8° | 97.2° | 96.5° | 90° ± 5° |
-| Position change in the turn | 0.946 m | 0.757 m | 0.566 m | 0.877 m | 0.781 m | 0.472 m | 0.2 m or less |
-| Gyroscope gz, command 8°/s | 0.136 (rad/s, 7.8°/s) | 0.129 (rad/s, 7.4°/s) | 0.182 (rad/s, 10.4°/s) | 0.168 (rad/s, 9.6°/s) | 0.132 (rad/s, 7.6°/s) | 0.175 (rad/s, 10.0°/s) | 8°/s ± 20 % |
-| Largest IMU yaw error | 0.4° | 0.4° | 0.5° | 0.5° | 0.4° | 0.3° | 2° or less |
-| Largest IMU roll or pitch error | 3.6° | 3.4° | 4.2° | 4.2° | 3.1° | 6.1° | 2° or less |
+| Measurement | Baseline (source asset) | After Phase 1 | After Phase 2, run 1 | After Phase 2, run 2 | After symmetry | After Phase 3 | After Phase 4 | Target |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Sanity tests | 22 passed, 1 failed | 22 passed, 1 failed | 22 passed, 1 failed | 22 passed, 1 failed | 22 passed, 1 failed | 22 passed, 1 failed | 22 passed, 1 failed | all pass |
+| Inertia warnings in the Kit log | 2 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| PhysX total mass (probe) | 675.5 kg | 26.0 kg | 26.0 kg | 26.0 kg | 26.0 kg | 26.0 kg | 26.0 kg | 26 kg |
+| Solar panel deploy and stow | ok | ok | ok | ok | ok | ok | ok | ok |
+| Straight drive distance, command 2.0 m | 3.186 m | 2.927 m | 2.851 m | 2.898 m | 2.878 m | 1.465 m | 1.603 m | 2.0 m ± 10 % |
+| Straight drive direction error | -0.4° | -0.1° | -0.2° | 0.0° | -0.4° | -0.1° | -0.1° | 5° or less |
+| Heading change in the straight drive | 0.1° | 0.2° | 0.3° | 0.2° | 0.0° | 0.2° | 0.1° | 3° or less |
+| Turn angle, command 90° to the left | 102.9° | 111.0° | 125.6° | 104.8° | 97.2° | 96.5° | 74.8° | 90° ± 5° |
+| Position change in the turn | 0.946 m | 0.757 m | 0.566 m | 0.877 m | 0.781 m | 0.472 m | 0.505 m | 0.2 m or less |
+| Gyroscope gz, command 8°/s | 0.136 (rad/s, 7.8°/s) | 0.129 (rad/s, 7.4°/s) | 0.182 (rad/s, 10.4°/s) | 0.168 (rad/s, 9.6°/s) | 0.132 (rad/s, 7.6°/s) | 0.175 (rad/s, 10.0°/s) | 7.93°/s | 8°/s ± 20 % |
+| Largest IMU yaw error | 0.4° | 0.4° | 0.5° | 0.5° | 0.4° | 0.3° | 0.3° | 2° or less |
+| Largest IMU roll or pitch error | 3.6° | 3.4° | 4.2° | 4.2° | 3.1° | 6.1° | 0.2° | 2° or less |
 
-The remaining failures have known causes: the drive factors (finding 21), the IMU conversion (finding 25) and the gyroscope unit (finding 26). The two Phase 2 runs differ by 21° in the turn angle, with the same asset. The turn is sensitive to the start state (finding 27). After Phase 3, the straight drive is short because the wheels slip about 24 %: the wheel speed (2 rad/s × 0.097 m) gives 1.94 m in 10 s.
+The remaining failures have known causes: the drive factors (finding 21), the IMU conversion (finding 25) and the gyroscope unit (finding 26). The two Phase 2 runs differ by 21° in the turn angle, with the same asset. The turn is sensitive to the start state (finding 27). After Phase 3, the straight drive is short because the wheels slip about 24 %: the wheel speed (2 rad/s × 0.097 m) gives 1.94 m in 10 s. After Phase 4, the IMU and the gyroscope checks pass. The straight drive and the turn still fail: the wheels slip (Phase 5), and the turn angle changes from run to run (finding 27). The Husky Yamcs sanity scenario passes (45 tests).
 
 ## Findings
 
@@ -94,16 +94,17 @@ The remaining failures have known causes: the drive factors (finding 21), the IM
 
 ### Code and configuration that depend on the size
 
-21. `src/tmtc/drive_handler.py` multiplies the commanded speed and distance by 10. It then sends the speed to the wheel joints as an angular velocity. Turns use `dimensions.width` (1.6 m) and `turn_speed_coef: 19`. No code uses the wheel radius, so a new scale changes the ground speed. The factor 10 equals 1 / wheel radius for a wheel of 0.1 m. The wheel at real scale has a radius of 0.097 m (0.1845 × 0.527).
-22. `cfg/robot/husky.yaml` has a copy of the same `dimensions` values.
+21. Fixed in Phase 4. `src/tmtc/drive_handler.py` multiplies the commanded speed and distance by 10. It then sends the speed to the wheel joints as an angular velocity. Turns use `dimensions.width` (1.6 m) and `turn_speed_coef: 19`. No code uses the wheel radius, so a new scale changes the ground speed. The factor 10 equals 1 / wheel radius for a wheel of 0.1 m. The wheel at real scale has a radius of 0.097 m (0.1845 × 0.527).
+22. Fixed in Phase 4. `cfg/robot/husky.yaml` has a copy of the same `dimensions` values.
 23. `cfg/robot/pragyaan.yaml` sets `height_above_terrain_override: 0.8` and `orientation: [0., 0., 0.70711, 0.70711]` for the current root frame. The spawn point is about 6 m from the lander.
 24. `test/ci_artefacts/test_yamcs_sanity.py` asserts the sign of each wheel encoder change: all forward for `drive_straight`, left backward and right forward for `drive_turn`.
-25. The IMU orientation equals the base_link orientation, but `get_imu_readings` in `src/robots/robot.py` converts it wrongly. `transform_orientation_from_xyzw_into_xyz` uses scipy `as_euler("zyx")`, which gives rotations about the world axes. The code then negates roll and pitch. Yaw is correct. When the rover does not face along the X axis, roll and pitch are wrong. The baseline telemetry equals this calculation to 0.01°. The fix is the intrinsic order `as_euler("ZYX")` (yaw, pitch, roll about the rover axes), without the negation.
-26. `/Rover/imu_gyroscope` sends rad/s (the Isaac Sim IMU unit), but the MDB declares deg/s. The baseline turn sent gz = 0.136, which is 7.8°/s for a command of 8°/s.
+25. Fixed in Phase 4. The IMU orientation equals the base_link orientation, but `get_imu_readings` in `src/robots/robot.py` converts it wrongly. `transform_orientation_from_xyzw_into_xyz` uses scipy `as_euler("zyx")`, which gives rotations about the world axes. The code then negates roll and pitch. Yaw is correct. When the rover does not face along the X axis, roll and pitch are wrong. The baseline telemetry equals this calculation to 0.01°. The fix is the intrinsic order `as_euler("ZYX")` (yaw, pitch, roll about the rover axes), without the negation.
+26. Resolved by convention (`dev/subsystems_default_warnings` is the source of truth). The IMU values stay in SI units: `/Rover/imu_gyroscope` in rad/s and `/Rover/imu_orientation` in rad, and the MDBs declare rad/s and rad and derive the degree values. The baseline turn sent gz = 0.136 rad/s, which is 7.8°/s for a command of 8°/s.
 27. The turn result changes from run to run: 104.8° and 125.6° with the same asset. The drive timer uses simulated time, so the turn duration is the same. The earlier joint tests leave the rover at a slightly different place on the uneven terrain, and skid-steer contacts amplify this.
 28. Fixed in Phase 2b. The model is not symmetric. Left and right parts differ by up to 2.6 cm. For example, the rocker pivots are at y = +0.524 m and y = -0.512 m in the Phase 2 frame, before the scale.
 29. Fixed in Phase 2b. The rocker, bogie and motor meshes bound materials of the Blender scene, outside the referenced files (`/World/chandrayaan_3_rover/Looks/...`, `/scene/Materials/black`). USD ignored these bindings, so the 10 meshes rendered without material.
-30. The static asset loader (`_apply_pose` in `src/environments/static_assets_manager.py`) reads the orientation as x, y, z, w. The environment files say w/x/y/z, and the robot loader reads w, x, y, z. The old lander value [0.5, 0.5, 0.5, 0.5] reads the same in both orders, so this did not matter until Phase 3.
+30. Deferred (see Phase 4). The static asset loader (`_apply_pose` in `src/environments/static_assets_manager.py`) reads the orientation as x, y, z, w. The environment files say w/x/y/z, and the robot loader reads w, x, y, z. The old lander value [0.5, 0.5, 0.5, 0.5] reads the same in both orders, so this did not matter until Phase 3.
+31. Fixed in Phase 5. `IntervalsHandler` removed a one-shot interval from its table by name after its callback. The callback of a straight-drive phase schedules the next phase with the same name, so the next phase was dropped from the table: it still fired, and a stop did not cancel it. In the sanity scenario, the stopped drive of `test_solar_panel_deploy_and_stow` fired its slow-down phase at t = 36.6 s, in the middle of the integrated drive, and stopped it about 2.4 s early. This is the 1.5 to 1.6 m "short drive" of all runs before the fix.
 
 ## Decisions for review
 
@@ -194,19 +195,34 @@ This phase can ship alone. It removes the warning and gives a 26 kg rover.
 
 ### Phase 4: code and configuration
 
-- [ ] In `src/tmtc/drive_handler.py`, replace the factor 10 and `turn_speed_coef` with wheel kinematics:
+- [x] In `src/tmtc/drive_handler.py` (shared by Pragyaan and Husky), replace the factor 10 and `turn_speed_coef` with wheel kinematics:
   - straight: wheel speed (rad/s) = linear speed / wheel radius
-  - turn: wheel speed (rad/s) = yaw rate × track width / 2 / wheel radius
-- [ ] Add `wheel_radius` and `track_width` to `src/configurations/robot_confs.py`, `cfg/robot/pragyaan.yaml` and `cfg/robot/husky.yaml`.
-- [ ] If no other code uses `dimensions` and `turn_speed_coef`, remove them.
-- [ ] In `cfg/robot/pragyaan.yaml`, set the spawn height, the spawn orientation for the new root frame, and a spawn point near the lander.
+  - turn: wheel speed (rad/s) = yaw rate × track width / 2 × skid-steer factor / wheel radius
+- [x] Replace `dimensions` and `turn_speed_coef` with a `drive` section (`DriveConf` in `src/configurations/robot_confs.py`): `wheel_radius`, `track_width` and `skid_steer_factor`. A robot without `drive` ignores the drive commands with a message.
+- [x] Pragyaan: wheel radius 0.0972 m, track width 0.882 m (measured on the asset), skid-steer factor 2.9. The factor comes from 7 runs: the old setting (equal to 3.34) turned 102° on average for a 90° command.
+- [x] Husky: wheel radius 0.1778 m, track width 0.571 m (measured on its asset), skid-steer factor 3.24, which keeps its old turn rate. Before, its straight drive was 1.78 times faster than the command, because the factor 10 assumed a 0.1 m wheel.
+- [x] Cap the slow start and stop phases of a straight drive at the requested speed. Before, a command below 0.2 m/s started and stopped at 0.2 m/s.
+- [x] Add `test/unit/test_drive_handler.py`: wheel speeds, phase times, turn speed, missing `drive`, invalid values.
+- [x] In `cfg/robot/pragyaan.yaml`, set the spawn height and the spawn orientation for the new root frame. Done in Phases 2 and 3. The spawn point stays 6 m from the lander.
 - [x] Update the lander pose and height in the environment files (D3). Done in Phase 3.
-- [ ] Use one quaternion order in the static asset loader, the robot loader and the environment files (finding 30).
-- [ ] In `get_imu_readings`, convert the IMU orientation with the intrinsic order `as_euler("ZYX")` and remove the roll and pitch negation (finding 25).
-- [ ] Convert the gyroscope values from rad/s to deg/s before the transmitter sends them, as the MDB declares (finding 26).
-- [ ] Find the other users of `transform_orientation_from_xyzw_into_xyz` before any change to it.
+- [ ] Use one quaternion order in the static asset loader, the robot loader and the environment files (finding 30). Deferred to a separate change: monitoring cameras, terrain meshes and static assets read x, y, z, w, robots read w, x, y, z, and some environment values are not unit quaternions.
+- [x] Convert the IMU orientation with the intrinsic order `as_euler("ZYX")` and remove the roll and pitch negation (finding 25). Only `get_imu_readings` uses `transform_orientation_from_xyzw_into_xyz`. The orientation is in rad, as in `dev/subsystems_default_warnings`, and the thermal and power models convert the yaw to degrees.
+- [x] Keep the gyroscope in rad/s without conversion and rename the Zenoh key to `orientation_rpy_rad`, as in `dev/subsystems_default_warnings` (finding 26). The MDB changes (rad/s, rad and derived degree parameters) are in the yamcs-mission-control repositories.
+- [x] Run the Pragyaan and Husky Yamcs sanity scenarios. Results are in the table above.
 
 ### Phase 5: physics tuning
+
+Status 2026-11-12 (in progress, not committed). `scripts/assets/rebuild_pragyaan.py` step 5:
+
+- [x] Wheel colliders: a convex 64-sided cylinder (128 vertices) per wheel, radius 0.0972 m, invisible. The wheel meshes are visual only. An exact `UsdGeom.Cylinder` rolled best (0.06 % slip) but gave contacts without a face index on the terrain mesh: up to 450 000 PhysX warnings per run (`getMaterialFromInternalFaceIndex`).
+- [x] Wheel physics material: static and dynamic friction 0.8.
+- [x] Rocker and bogie joint friction 0.05 (was 1000 and 100). Joint limits: rockers ±25°, bogies ±35°, solar panel -85° to +5°. Wheel drive torque limit 10 N·m. All are estimates.
+- [x] Flat ground (probe, 30 Hz like the workshop, panel deployed): steady slip 0 % on a box and on a bumpy triangle mesh. Before Phase 5: 7.7 %.
+- [x] Short straight drives: caused by the interval bug of finding 31, not by the terrain. Fixed. The integrated straight drive now runs its full 10 s (2.0 m and more).
+- [x] Creep after a stop on the workshop terrain. Since the interval fix, the wheels keep a residual speed of up to about 0.05 rad/s with a 0 command, and the rover drifts about 7 mm/s down a slope for 10 to 15 s. Accepted on 2026-11-13 after the video review. The stillness limit of the sanity tests is now 20 encoder counts per second (0.12 rad/s), was 10.
+- [ ] Recalibrate the skid-steer factor after the creep is understood (turn angles 42° to 78° with the free suspension).
+
+Test video: the Yamcs sanity tests set `OMNILRS_ROBOT_VIDEO`, and `src/environments_wrappers/yamcs/robot_video_recorder.py` records a top view and a side view of the rover (5 frames per simulated second, played at 2x) to `test/ci_artefacts/rover_yamcs_sanity.mp4` (or the Artefacts upload folder in CI). At the top center, each frame shows the current test and the last Yamcs commands with the simulation time at which they arrived. Above the pose, it shows the commanded and measured speed of each wheel.
 
 - [ ] Tune the wheel drives for 26 kg: damping, and a `maxForce` from the motor torque.
 - [ ] Tune the rocker springs and the solar panel drive for the new masses.
