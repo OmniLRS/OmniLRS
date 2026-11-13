@@ -12,20 +12,20 @@ The standard run (`pixi run -e yamcs yamcs`) loads the robot only after it conne
 
 Each run is `pixi run -e test-sim test-yamcs` on 2026-11-12 (about 3 min). The scenario starts the Yamcs server and the simulator. The values come from `test_integrated_solar_panel_drive_turn_imu` (Phase 7) and from the Kit log.
 
-| Measurement | Baseline (source asset) | After Phase 1 | After Phase 2, run 1 | After Phase 2, run 2 | After symmetry | After Phase 3 | After Phase 4 | Target |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Sanity tests | 22 passed, 1 failed | 22 passed, 1 failed | 22 passed, 1 failed | 22 passed, 1 failed | 22 passed, 1 failed | 22 passed, 1 failed | 22 passed, 1 failed | all pass |
-| Inertia warnings in the Kit log | 2 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
-| PhysX total mass (probe) | 675.5 kg | 26.0 kg | 26.0 kg | 26.0 kg | 26.0 kg | 26.0 kg | 26.0 kg | 26 kg |
-| Solar panel deploy and stow | ok | ok | ok | ok | ok | ok | ok | ok |
-| Straight drive distance, command 2.0 m | 3.186 m | 2.927 m | 2.851 m | 2.898 m | 2.878 m | 1.465 m | 1.603 m | 2.0 m ± 10 % |
-| Straight drive direction error | -0.4° | -0.1° | -0.2° | 0.0° | -0.4° | -0.1° | -0.1° | 5° or less |
-| Heading change in the straight drive | 0.1° | 0.2° | 0.3° | 0.2° | 0.0° | 0.2° | 0.1° | 3° or less |
-| Turn angle, command 90° to the left | 102.9° | 111.0° | 125.6° | 104.8° | 97.2° | 96.5° | 74.8° | 90° ± 5° |
-| Position change in the turn | 0.946 m | 0.757 m | 0.566 m | 0.877 m | 0.781 m | 0.472 m | 0.505 m | 0.2 m or less |
-| Gyroscope gz, command 8°/s | 0.136 (rad/s, 7.8°/s) | 0.129 (rad/s, 7.4°/s) | 0.182 (rad/s, 10.4°/s) | 0.168 (rad/s, 9.6°/s) | 0.132 (rad/s, 7.6°/s) | 0.175 (rad/s, 10.0°/s) | 7.93°/s | 8°/s ± 20 % |
-| Largest IMU yaw error | 0.4° | 0.4° | 0.5° | 0.5° | 0.4° | 0.3° | 0.3° | 2° or less |
-| Largest IMU roll or pitch error | 3.6° | 3.4° | 4.2° | 4.2° | 3.1° | 6.1° | 0.2° | 2° or less |
+| Measurement | Baseline (source asset) | After Phase 1 | After Phase 2, run 1 | After Phase 2, run 2 | After symmetry | After Phase 3 | After Phase 4 | Flat terrain, lunar gravity | Target |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Sanity tests | 22 passed, 1 failed | 22 passed, 1 failed | 22 passed, 1 failed | 22 passed, 1 failed | 22 passed, 1 failed | 22 passed, 1 failed | 22 passed, 1 failed | 23 passed | all pass |
+| Inertia warnings in the Kit log | 2 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| PhysX total mass (probe) | 675.5 kg | 26.0 kg | 26.0 kg | 26.0 kg | 26.0 kg | 26.0 kg | 26.0 kg | 26.0 kg | 26 kg |
+| Solar panel deploy and stow | ok | ok | ok | ok | ok | ok | ok | ok | ok |
+| Straight drive distance, command 2.0 m | 3.186 m | 2.927 m | 2.851 m | 2.898 m | 2.878 m | 1.465 m | 1.603 m | 2.011 m | 2.0 m ± 10 % |
+| Straight drive direction error | -0.4° | -0.1° | -0.2° | 0.0° | -0.4° | -0.1° | -0.1° | 0.0° | 5° or less |
+| Heading change in the straight drive | 0.1° | 0.2° | 0.3° | 0.2° | 0.0° | 0.2° | 0.1° | 0.0° | 3° or less |
+| Turn angle, command 90° to the left | 102.9° | 111.0° | 125.6° | 104.8° | 97.2° | 96.5° | 74.8° | 89.1° | 90° ± 5° |
+| Position change in the turn | 0.946 m | 0.757 m | 0.566 m | 0.877 m | 0.781 m | 0.472 m | 0.505 m | 0.041 m | 0.2 m or less |
+| Gyroscope gz, command 8°/s | 0.136 (rad/s, 7.8°/s) | 0.129 (rad/s, 7.4°/s) | 0.182 (rad/s, 10.4°/s) | 0.168 (rad/s, 9.6°/s) | 0.132 (rad/s, 7.6°/s) | 0.175 (rad/s, 10.0°/s) | 7.93°/s | 8.15°/s | 8°/s ± 20 % |
+| Largest IMU yaw error | 0.4° | 0.4° | 0.5° | 0.5° | 0.4° | 0.3° | 0.3° | 0.1° | 2° or less |
+| Largest IMU roll or pitch error | 3.6° | 3.4° | 4.2° | 4.2° | 3.1° | 6.1° | 0.2° | 0.0° | 2° or less |
 
 The remaining failures have known causes: the drive factors (finding 21), the IMU conversion (finding 25) and the gyroscope unit (finding 26). The two Phase 2 runs differ by 21° in the turn angle, with the same asset. The turn is sensitive to the start state (finding 27). After Phase 3, the straight drive is short because the wheels slip about 24 %: the wheel speed (2 rad/s × 0.097 m) gives 1.94 m in 10 s. After Phase 4, the IMU and the gyroscope checks pass. The straight drive and the turn still fail: the wheels slip (Phase 5), and the turn angle changes from run to run (finding 27). The Husky Yamcs sanity scenario passes (45 tests).
 
@@ -105,6 +105,8 @@ The remaining failures have known causes: the drive factors (finding 21), the IM
 29. Fixed in Phase 2b. The rocker, bogie and motor meshes bound materials of the Blender scene, outside the referenced files (`/World/chandrayaan_3_rover/Looks/...`, `/scene/Materials/black`). USD ignored these bindings, so the 10 meshes rendered without material.
 30. Deferred (see Phase 4). The static asset loader (`_apply_pose` in `src/environments/static_assets_manager.py`) reads the orientation as x, y, z, w. The environment files say w/x/y/z, and the robot loader reads w, x, y, z. The old lander value [0.5, 0.5, 0.5, 0.5] reads the same in both orders, so this did not matter until Phase 3.
 31. Fixed in Phase 5. `IntervalsHandler` removed a one-shot interval from its table by name after its callback. The callback of a straight-drive phase schedules the next phase with the same name, so the next phase was dropped from the table: it still fired, and a stop did not cancel it. In the sanity scenario, the stopped drive of `test_solar_panel_deploy_and_stow` fired its slow-down phase at t = 36.6 s, in the middle of the integrated drive, and stopped it about 2.4 s early. This is the 1.5 to 1.6 m "short drive" of all runs before the fix.
+32. Fixed in Phase 5. Yamcs and Zenoh modes did not apply `cfg/physics`: they ran with the Isaac Sim defaults, including Earth gravity (the IMU accelerometer read 9.81 m/s² at rest). All Yamcs results before this fix, and the probes with lunar gravity, are not comparable. The terramechanics model also used 9.81. `cfg/physics` is now the only gravity setting: `Simulation` requires it in every mode, and the terramechanics model reads the gravity of the physics scene.
+33. Fixed in Phase 5. With `cfg/physics` applied, the physics ran at half the speed of the simulation time: `configure_physics_scene` set 60 physics steps per second but kept one step per 1/30 s rendering frame. The straight drive covered 1.01 m for 2.0 m, and the pose turned at half the gyroscope rate.
 
 ## Decisions for review
 
@@ -220,7 +222,8 @@ Status 2026-11-12 (in progress, not committed). `scripts/assets/rebuild_pragyaan
 - [x] Flat ground (probe, 30 Hz like the workshop, panel deployed): steady slip 0 % on a box and on a bumpy triangle mesh. Before Phase 5: 7.7 %.
 - [x] Short straight drives: caused by the interval bug of finding 31, not by the terrain. Fixed. The integrated straight drive now runs its full 10 s (2.0 m and more).
 - [x] Creep after a stop on the workshop terrain. Since the interval fix, the wheels keep a residual speed of up to about 0.05 rad/s with a 0 command, and the rover drifts about 7 mm/s down a slope for 10 to 15 s. Accepted on 2026-11-13 after the video review. The stillness limit of the sanity tests is now 20 encoder counts per second (0.12 rad/s), was 10.
-- [ ] Recalibrate the skid-steer factor after the creep is understood (turn angles 42° to 78° with the free suspension).
+- [x] Recalibrate the skid-steer factor on flat ground (headless probe: flat box ground, PhysX default friction on the ground, 30 Hz physics, the turn of `drive_robot_turn` at 8°/s for 90°). The factor 2.9 turned 171.6° (steady 15.4°/s). The factor is now 1.59: 90.7° at a steady 8.14°/s, with a 19 mm position shift, the same with the solar panel deployed or stowed. On the sloped workshop terrain the same command turns much less (45° with the factor 2.9), so the turn check of the integrated test does not match a flat-ground calibration.
+- [x] Run the integrated test on flat terrain (Yamcs sanity startup overrides) with lunar gravity and the fixed time step. It passes: 2.011 m for 2.0 m, 89.1° for 90°, gyroscope 8.15°/s for 8°/s, IMU within 0.1°.
 
 Test video: the Yamcs sanity tests set `OMNILRS_ROBOT_VIDEO`, and `src/environments_wrappers/yamcs/robot_video_recorder.py` records a top view and a side view of the rover (5 frames per simulated second, played at 2x) to `test/ci_artefacts/rover_yamcs_sanity.mp4` (or the Artefacts upload folder in CI). At the top center, each frame shows the current test and the last Yamcs commands with the simulation time at which they arrived. Above the pose, it shows the commanded and measured speed of each wheel.
 
@@ -273,7 +276,7 @@ The test computes roll, pitch and yaw from the pose quaternion in the intrinsic 
 - [x] Put each tolerance in a named constant above the test.
 - [x] Print each measurement to the test log. Fail at the end with the list of failed checks.
 - [x] Record the baseline on the source asset.
-- [ ] After Phases 2 to 5, make sure that the test passes.
+- [x] After Phases 2 to 5, make sure that the test passes. It passes on flat terrain since the gravity and time-step fixes (findings 32 and 33).
 - [ ] After Phases 4 and 5, run the scenario 3 times and record the spread of the turn angle. Set the turn tolerance from this spread (finding 27).
 - [ ] Ask before each run. The scenario takes about 3 min.
 

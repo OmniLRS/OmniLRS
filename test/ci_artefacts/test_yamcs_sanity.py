@@ -39,6 +39,10 @@ SIM_COMMAND = [
     # Disable and pin.
     "rendering.renderer.multi_gpu=false",
     "rendering.renderer.active_gpu=0",
+    # Flat terrain, so that the drive and turn checks of the integrated test measure the drive, not the slopes. The
+    # generator needs scales above 0: the relief and the crater depths become micrometers.
+    "environment.terrain_manager.moon_yard.base_terrain_generator.z_scale=0.000001",
+    "environment.terrain_manager.moon_yard.crater_generator.z_scale=0.000001",
 ]
 
 # Robot of the sim task (robot=pragyaan); its yaml camera list defines the camera image buckets.
@@ -712,6 +716,11 @@ def test_integrated_solar_panel_drive_turn_imu(rover):
     turn_angle = _wrap_deg(_yaw_deg(after_turn) - _yaw_deg(after_straight))
     turn_shift = math.hypot(*_shift(after_straight, after_turn))
     _print_slow_stop(turn, TURN_ANGLE / TURN_RATE, "turn")
+    start_yaw = _yaw_deg(after_straight)
+    trace = " ".join(f"{_wrap_deg(_yaw_deg(pose) - start_yaw):.0f}" for _, pose in turn[POSE])
+    rates = " ".join(f"{math.degrees(gyro['gz']):.1f}" for _, gyro in turn[IMU_GYROSCOPE])
+    print(f"  turn trace, yaw from the start each second (deg): {trace}")
+    print(f"  turn trace, gyroscope gz each second (deg/s): {rates}")
     checks.expect(
         abs(turn_angle - TURN_ANGLE) <= TURN_ANGLE_TOLERANCE_DEG,
         f"turn angle {turn_angle:.1f} deg, commanded {TURN_ANGLE} deg to the left "

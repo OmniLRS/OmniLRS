@@ -15,7 +15,7 @@ from src.subsystems.device import HealthState, PowerState  # noqa: E402
 from src.subsystems.robot_enums import GoNogoState, ObcState  # noqa: E402
 from src.tmtc.drive_handler import DriveHandler  # noqa: E402
 
-PRAGYAAN = DriveConf(wheel_radius=0.0972, track_width=0.882, skid_steer_factor=2.9)
+PRAGYAAN = DriveConf(wheel_radius=0.0972, track_width=0.882, skid_steer_factor=1.59)
 
 
 class FakeSubsystems:
@@ -117,7 +117,7 @@ def test_slow_phase_never_faster_than_the_request():
 def test_turn_wheel_speed_and_time():
     handler, robot, intervals = make_handler()
     handler.drive_robot_turn(8.0, 90.0)
-    expected = math.radians(8.0) * (0.882 / 2) * 2.9 / 0.0972
+    expected = math.radians(8.0) * (0.882 / 2) * 1.59 / 0.0972
     assert robot.commands[-1] == ("turn", pytest.approx(expected))
     assert intervals.intervals["stop_robot"][0] == pytest.approx(90.0 / 8.0)
 
