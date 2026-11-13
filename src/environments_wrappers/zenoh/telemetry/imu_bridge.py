@@ -89,7 +89,7 @@ class IMUBridge:
             "imu": {
                 "lin_acc_m_s2": lin_acc,
                 "ang_vel_rad_s": ang_vel,
-                "orientation_rpy_deg": ori_rpy,
+                "orientation_rpy_rad": ori_rpy,
             },
         }
 

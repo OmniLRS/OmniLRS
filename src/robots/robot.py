@@ -423,6 +423,8 @@ class Robot:
         return None if data is None else data.numpy()[..., 0]
 
     def get_imu_readings(self):
+        """Raw IMU values in SI units, without conversion: (linear acceleration {ax, ay, az} in m/s^2, angular
+        velocity {gx, gy, gz} in rad/s, orientation {roll, pitch, yaw} in rad). The Yamcs MDBs derive degrees."""
         if self._imu_sensor_path == "":
             raise Exception(
                 "Path to imu sensor is not defined. Please check your .yaml configuration file. 'imu_sensor_path' should be defined on the same level as 'robot_name'."

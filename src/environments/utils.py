@@ -107,8 +107,9 @@ def transform_orientation_into_xyz(orientation_wxyz):
 
 
 def transform_orientation_from_xyzw_into_xyz(orientation_xyzw):
+    """Roll, pitch and yaw in radians of an (x, y, z, w) quaternion."""
     q_xyzw = np.array(orientation_xyzw)
-    e_zyx_from_wxyz = R.from_quat(q_xyzw).as_euler("zyx", degrees=True)
+    e_zyx_from_wxyz = R.from_quat(q_xyzw).as_euler("zyx")
     xyz_orient = [e_zyx_from_wxyz[2], e_zyx_from_wxyz[1], e_zyx_from_wxyz[0]]
 
     return np.array(xyz_orient)
