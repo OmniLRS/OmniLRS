@@ -12,8 +12,8 @@ The Artefacts scenarios (`artefacts.yaml`), one `test/ci_artefacts` file each:
 
 | Scenario | Environment | Robot | Mode |
 |---|---|---|---|
-| `test_ros2_sanity` | `lunalab` | husky (ROS 2 USD) | ROS2 |
-| `test_ros2_sanity_largescale` | `largescale` | husky (ROS 2 USD) | ROS2 |
+| `test_ros2_sanity` | `lunalab` | ex1 | ROS2 |
+| `test_ros2_sanity_largescale` | `largescale` | ex1 | ROS2 |
 | `test_yamcs_sanity` | `lunaryard_40m_workshop` | pragyaan | Yamcs |
 | `test_yamcs_sanity_largescale` | `largescale_workshop` | pragyaan | Yamcs |
 | `test_yamcs_husky_sanity` | `lunaryard_20m` | husky | Yamcs |

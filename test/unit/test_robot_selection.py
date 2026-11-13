@@ -48,9 +48,3 @@ def test_modes_with_a_robot_start_with_robot(mode):
 
 def test_sdg_needs_no_robot():
     _require_robot(_cfg("SDG", None))
-
-
-def test_ros2_ci_tests_use_the_ros2_husky_usd():
-    for name in ("test_ros2_sanity.py", "test_ros2_sanity_largescale.py"):
-        source = (REPO_ROOT / "test" / "ci_artefacts" / name).read_text()
-        assert '"robot=husky"' in source and f"usd_path={ROS2_HUSKY_USD}" in source, name

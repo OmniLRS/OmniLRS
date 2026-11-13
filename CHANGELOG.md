@@ -44,7 +44,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Robot yaml `camera` is a list of cameras, each with `name`, `prim_path`, `type` (`rgba` and/or `depth`) and `resolutions`, validated when the robot config is loaded in every mode (`src/configurations/robot_camera_confs.py`). In Yamcs mode, each camera has its own buckets (`images_<camera>_<kind>`), metadata and streaming telemetry (`/Rover/camera/<camera>/<kind>/...`), streaming job and compression model; the camera commands take a `camera_name` argument. Names come from `src/tmtc/yamcs_naming.py`, which the Yamcs MDB generators also use.
 - Yamcs controller yaml: `mdb` (file list) is replaced by `mdb_space_systems`, `images.buckets` is keyed by role (`lander`, `monitoring`) and `images.clear_buckets_on_startup` is added (default true; with `false`, earlier images are kept and each bucket's numbering continues after its last image).
 - Yamcs images are uploaded through the Yamcs storage API instead of written to `/tmp`. The image buckets are generated into the Yamcs `yamcs.yaml` together with the MDB, with limits sized to keep every image of a mission; OmniLRS never deletes images except when clearing the buckets at startup (`images.clear_buckets_on_startup`).
-- The ROS2 Artefacts CI scenarios load the Husky robot yaml (`robot=husky`, with the ROS 2 Husky USD) instead of the robot settings of the environment yaml.
+- The ROS2 Artefacts CI scenarios load the EX1 robot yaml (`robot=ex1`) instead of the robot settings of the environment yaml. They check its Ackermann drive topic `/ackermann_cmd` instead of the Husky `/cmd_vel` and `/pointcloud`.
 - Husky in Yamcs mode starts in GO and sends `/Rover/go_nogo`; it handles `go_nogo_command`: NOGO stops it and blocks the drive commands until GO (previously it could always drive and sent no GO/NOGO state).
 - Husky Zenoh camera images are published at 5 Hz (`zenoh.camera.publish_period_s: 0.2`, previously 30 Hz), for each of its 6 camera streams.
 - The Zenoh stream settings (publish periods, wire formats, logging) moved from the robot yaml (`robots_settings.parameters.zenoh`) to the controller yaml (`robots_settings.zenoh` in `cfg/controller/husky-controller.yaml`). Zenoh mode needs `controller=husky-controller`, which the `zenoh_*` pixi tasks now pass.
@@ -64,6 +64,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Joint commands from Yamcs and Zenoh are no longer dropped, entirely or for some joints, when they arrive while PhysX is stepping: `ArticulationControl` queues them and `Robot.update_articulation_api()` writes them from the simulation loop.
 - Yamcs mode no longer sends an empty `/Rover/motor_encoder` before the wheel joints are measured (startup, timeline restart).
 - Stopping and replaying the timeline (e.g. from the GUI) runs the ROS2, Yamcs and Zenoh restart handling again (environment and robot reset). It was skipped because Isaac Sim's physics warm-up advanced the step counter it relied on.
+- The `chromatic_aberration` settings of `cfg/rendering` are applied. The code read the key `chromatic_aberrations`, so they had no effect.
+- The deformation engine uses `y_deform_offset` for the y offset. It used `x_deform_offset` on the two axes.
+- The `cfg/physics` keys `gpu_max_rigid_patch_contact_count` and `gpu_max_num_partitions` (previously spelled `gpu_max_num_partions`) are applied.
+- When the scene loads, OmniLRS applies the Lunalab keys `projector_position`, `projector_orientation` (x, y, z, w), `projector_on` and `ceiling_lights_on`. They had no effect. If a key is not set, the Lunalab USD keeps its state.
+- ROS2 mode: if the `ROS_DOMAIN_ID` environment variable is not set, OmniLRS sets it to `ROS_DOMAIN_ID` of `cfg/mode/ROS2.yaml` before Isaac Sim starts. Before, the key had no effect.
+- The odometry and drive graphs of the EX1 USD (`ex1/ex1_spheres.usd`) use ROS 2 domain 0, like its clock graph and the other robots. If the `ROS_DOMAIN_ID` environment variable was not set, they used domain 81.
 
 See also the [Roadmap and Milestones tracking](https://github.com/orgs/OmniLRS/projects/1)
 

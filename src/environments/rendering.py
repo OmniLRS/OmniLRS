@@ -198,8 +198,8 @@ def set_chromatic_aberrations(cfg):
     Sets the chromatic aberration settings.
     """
 
-    if "chromatic_aberrations" in cfg["rendering"].keys():
-        chromatic_aberrations_cfg = cfg["rendering"]["chromatic_aberrations"]
+    if "chromatic_aberration" in cfg["rendering"].keys():
+        chromatic_aberrations_cfg = cfg["rendering"]["chromatic_aberration"]
         apply_chromatic_aberrations(chromatic_aberrations_cfg)
 
 

@@ -149,20 +149,20 @@ class Simulation:
             SimulationManager.enable_fabric(True)
         if "enable_scene_query_support" in args:
             api.CreateEnableSceneQuerySupportAttr().Set(args["enable_scene_query_support"])
-        gpu_cfg = {
-            key: args[key]
-            for key in (
-                "gpu_max_rigid_contact_count",
-                "gpu_found_lost_pairs_capacity",
-                "gpu_total_aggregate_pairs_capacity",
-                "gpu_max_soft_body_contacts",
-                "gpu_max_particle_contacts",
-                "gpu_heap_capacity",
-                "gpu_temp_buffer_capacity",
-                "gpu_collision_stack_size",
-            )
-            if key in args
+        # cfg/physics key -> field of the Isaac Sim PhysxGpuCfg
+        gpu_keys = {
+            "gpu_max_rigid_contact_count": "gpu_max_rigid_contact_count",
+            "gpu_max_rigid_patch_contact_count": "gpu_max_rigid_patch_count",
+            "gpu_found_lost_pairs_capacity": "gpu_found_lost_pairs_capacity",
+            "gpu_total_aggregate_pairs_capacity": "gpu_total_aggregate_pairs_capacity",
+            "gpu_max_soft_body_contacts": "gpu_max_soft_body_contacts",
+            "gpu_max_particle_contacts": "gpu_max_particle_contacts",
+            "gpu_heap_capacity": "gpu_heap_capacity",
+            "gpu_temp_buffer_capacity": "gpu_temp_buffer_capacity",
+            "gpu_max_num_partitions": "gpu_max_num_partitions",
+            "gpu_collision_stack_size": "gpu_collision_stack_size",
         }
+        gpu_cfg = {isaac_key: args[key] for key, isaac_key in gpu_keys.items() if key in args}
         if gpu_cfg:
             self._scene.set_gpu_configuration(gpu_cfg)
         if "solver_type" in args:

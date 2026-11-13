@@ -3,6 +3,7 @@ __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
 
 import logging
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -78,8 +79,22 @@ def _require_robot(cfg: dict) -> None:
     raise ValueError(f"mode={mode} needs a robot: pass robot=<name> (a file in cfg/robot), e.g. robot=husky.{hint}")
 
 
+def _set_ros_domain_id(cfg: dict) -> None:
+    """ROS2 mode: set the ROS_DOMAIN_ID environment variable to mode.ROS_DOMAIN_ID (cfg/mode/ROS2.yaml) if it is not set.
+
+    The OmniLRS nodes (rclpy) and the ROS2Context nodes of the robot graphs (useDomainIDEnvVar) read the variable.
+    Without it, a robot graph uses the domain_id of its USD. The variable wins.
+    """
+    if cfg["mode"]["name"] != "ROS2" or "ROS_DOMAIN_ID" not in cfg["mode"]:
+        return
+    if "ROS_DOMAIN_ID" not in os.environ:
+        os.environ["ROS_DOMAIN_ID"] = str(cfg["mode"]["ROS_DOMAIN_ID"])
+    logger.info("ROS 2 domain: ROS_DOMAIN_ID=%s", os.environ["ROS_DOMAIN_ID"])
+
+
 def startSim(cfg: dict):
     _require_robot(cfg)
+    _set_ros_domain_id(cfg)
 
     from isaacsim import SimulationApp
 

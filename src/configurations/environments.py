@@ -43,27 +43,33 @@ class LunalabConf:
         projector_shader_path (str): The path of the projector shader.
         room_lights_path (str): The path of the room lights.
         curtains_path (dict): The path of the curtains.
-        projector_position (tuple): The position of the projector. (x, y, z)
+        The keys below are applied when the scene loads. None (not set) keeps the state of the Lunalab USD.
+        projector_position (tuple): The position of the projector. (x, y, z). Set it with projector_orientation.
         projector_orientation (tuple): The orientation of the projector. (x, y, z, w)
-        projector_on (bool):
-        ceiling_lights_on (bool):
+        projector_on (bool): True turns the projector on, False turns it off.
+        ceiling_lights_on (bool): True turns the ceiling lights on, False turns them off.
     """
 
     lab_length: float = 10.0
     lab_width: float = 6.5
     resolution: float = 0.01
-    projector_position: tuple = (3.0, 0.0, 1.0)
-    projector_orientation: tuple = (0.0, 0.0, 0.0, 1.0)
-    projector_on: bool = True
-    ceiling_lights_on: bool = True
+    projector_position: tuple = None
+    projector_orientation: tuple = None
+    projector_on: bool = None
+    ceiling_lights_on: bool = None
 
     def __post_init__(self):
         assert type(self.resolution) is float, "The resolution must be a float."
         assert self.resolution > 0.0, "The resolution must be greater than 0."
-        assert type(self.projector_position) is tuple, "The projector position must be a tuple."
-        assert len(self.projector_position) == 3, "The projector position must have 3 elements."
-        assert type(self.projector_orientation) is tuple, "The projector orientation must be a tuple."
-        assert len(self.projector_orientation) == 4, "The projector orientation must have 4 elements."
+        assert (self.projector_position is None) == (self.projector_orientation is None), (
+            "Set projector_position and projector_orientation together."
+        )
+        if self.projector_position is not None:
+            # The yaml gives lists
+            self.projector_position = tuple(self.projector_position)
+            self.projector_orientation = tuple(self.projector_orientation)
+            assert len(self.projector_position) == 3, "The projector position must have 3 elements."
+            assert len(self.projector_orientation) == 4, "The projector orientation must have 4 elements."
 
         assert self.lab_length == 10.0, "The lab length cannot be changed, and must be 10.0 meters"
         assert self.lab_width == 6.5, "The lab width cannot be changed, and must be 6.5meters"

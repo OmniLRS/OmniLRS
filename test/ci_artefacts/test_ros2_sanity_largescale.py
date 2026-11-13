@@ -19,10 +19,9 @@ SIM_COMMAND = [
     "ci",
     "ros2",
     "environment=largescale",
-    # The Husky robot yaml (cfg/robot/husky.yaml) with the ROS 2 Husky USD: its action graphs publish the topics
-    # checked below (the robot yaml USD has no graphs, for the Zenoh and Yamcs modes).
-    "robot=husky",
-    "environment.robots_settings.parameters.usd_path=assets/USD_Assets/robots/ros2_husky_PhysX_vlp16.usd",
+    # The EX1 robot yaml (cfg/robot/ex1.yaml): the action graphs of its USD publish and subscribe to the topics
+    # checked below (Ackermann drive on /ackermann_cmd).
+    "robot=ex1",
     "rendering.renderer.headless=True",
     # For some reason AWS EKS AMI's duplicate NVIDIA Vulkan ICDs, making one GPU enumerate
     # causing Isaac to think there are two gpus available and then die.
@@ -36,11 +35,10 @@ FINAL_MARKER = "ArticulationTelemetry initialized"
 
 # Topics the tests check; the topics fixture waits up to TOPICS_TIMEOUT seconds for all of them.
 EXPECTED_TOPICS = {
+    "/ackermann_cmd",
     "/clock",
-    "/cmd_vel",
     "/odom",
     "/parameter_events",
-    "/pointcloud",
     "/rosout",
     "/tf",
     "/OmniLRS/Sun/Intensity",
@@ -197,8 +195,8 @@ def test_topic_clock(topics):
     assert "/clock" in topics
 
 
-def test_topic_cmd_vel(topics):
-    assert "/cmd_vel" in topics
+def test_topic_ackermann_cmd(topics):
+    assert "/ackermann_cmd" in topics
 
 
 def test_topic_odom(topics):
@@ -207,10 +205,6 @@ def test_topic_odom(topics):
 
 def test_topic_parameter_events(topics):
     assert "/parameter_events" in topics
-
-
-def test_topic_pointcloud(topics):
-    assert "/pointcloud" in topics
 
 
 def test_topic_rosout(topics):

@@ -56,7 +56,7 @@ configFactory.registerConfig("crater_distribution", CraterDistributionConf)
 configFactory.registerConfig("base_terrain_generator", BaseTerrainGeneratorConf)
 configFactory.registerConfig("deformation_engine", DeformationEngineConf)
 # Rendering Configs
-configFactory.registerConfig("chromatic_aberrations", ChromaticAberrationsConf)
+configFactory.registerConfig("chromatic_aberration", ChromaticAberrationsConf)
 configFactory.registerConfig("motion_blur", MotionBlurConf)
 configFactory.registerConfig("lens_flares", FlaresConf)
 configFactory.registerConfig("renderer", RendererConf)
