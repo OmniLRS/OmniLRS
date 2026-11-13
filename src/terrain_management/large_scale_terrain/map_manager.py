@@ -145,7 +145,9 @@ class MapManager:
             else:
                 raise ValueError(f"DEM info {name} does not exist in the folder path {self.settings.folder_path}")
         else:
-            logger.warn(f"DEM {name} does not exist in the folder path {self.settings.folder_path}")
+            raise FileNotFoundError(
+                f"DEM {name} does not exist: expected {os.path.join(self.settings.folder_path, name, 'dem.npy')}"
+            )
 
         # Override the source resolution
         lr_dem_res = self.lr_dem_info.pixel_size[0]
