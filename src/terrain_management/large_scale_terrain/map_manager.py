@@ -172,7 +172,8 @@ class MapManager:
             dem_info_path = os.path.join(path, "dem.yaml")
             if os.path.exists(dem_path) and os.path.exists(dem_info_path):
                 self.lr_dem = self.load(dem_path)
-                self.lr_dem_info = DemInfo(**yaml.load(open(dem_info_path, "r")))
+                with open(dem_info_path, "r") as file:
+                    self.lr_dem_info = DemInfo(**yaml.safe_load(file))
             else:
                 raise ValueError(f"DEM {dem_path} or DEM info {dem_info_path} does not exist in the folder path {path}")
         lr_dem_res = self.lr_dem_info.pixel_size[0]
