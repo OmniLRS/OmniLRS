@@ -38,12 +38,22 @@ Steps:
      position is scaled by SCALE about the root origin (D1: one factor, which matches the published length). The masses
      do not change and PhysX computes the inertia from the smaller colliders. The cooked collision data that the source
      stores (physxCookedData, a cache in the old mesh coordinates) is removed, so PhysX cooks the new meshes.
+  5. Contacts and joints, with estimates where no Pragyaan design value is known:
+     - each wheel collides with a convex 64-sided cylinder that rolls like a wheel of radius WHEEL_RADIUS_M (the
+       drive.wheel_radius of cfg/robot/pragyaan.yaml), invisible (purpose guide). The wheel mesh is visual only: its convex hull was not round
+       (0.094 to 0.098 m from the axle, at most 64 vertices), so the wheels rolled on a smaller radius and bumped;
+     - a physics material with WHEEL_FRICTION on the wheel cylinders (PhysX averages it with the terrain material);
+     - SUSPENSION_JOINT_FRICTION on the rocker and bogie joints (it was 1000 and 100, which locked the suspension);
+     - JOINT_LIMITS_DEG on the rocker, bogie and solar panel joints, and WHEEL_MAX_TORQUE_NM on the wheel drives (they
+       had no limit).
 """
 
+import math
 import sys
 from pathlib import Path
 
 import numpy as np
+import yaml
 from pxr import Gf, Sdf, Usd, UsdGeom, UsdPhysics, UsdShade
 from usd_bake import (
     apply_material_binding_api,
@@ -109,6 +119,23 @@ MIRROR_Y = Gf.Matrix4d(1, 0, 0, 0, 0, -1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1)
 MAX_SYMMETRY_MOVE_M = 0.015  # largest move that step 3 may apply to a joint or a mesh
 MAX_SYMMETRY_TURN_DEG = 0.5  # largest angle between the joint axes of a pair
 # Tolerances of the checks against the source.
+# Step 5: contacts and joints. Estimates (docs/todo_pragyaan_physics.md, Phase 5) unless stated.
+ROBOT_YAML = REPO_ROOT / "cfg" / "robot" / "pragyaan.yaml"
+WHEEL_RADIUS_M = 0.0972  # wheel bounding box / 2 after step 4; must equal drive.wheel_radius of ROBOT_YAML
+WHEEL_COLLIDER = "collision_cylinder"  # name of the cylinder collider mesh under each wheel rigid body
+WHEEL_SEGMENTS = 64  # sides of the wheel collider (128 vertices)
+WHEEL_HULL_VERTEX_LIMIT = 2 * WHEEL_SEGMENTS  # PhysX convex hull vertex limit (default 64, at most 255)
+WHEEL_MATERIAL = f"{ROOT}/Looks/wheel_physics"
+WHEEL_FRICTION = 0.8  # static and dynamic friction of the wheels on regolith
+SUSPENSION_JOINT_FRICTION = 0.05  # rocker and bogie bearings (plain bearing friction coefficient)
+JOINT_LIMITS_DEG = {  # from the rest pose of the asset (angle 0)
+    "rocker_l": (-25.0, 25.0),
+    "rocker_r": (-25.0, 25.0),
+    "bogie_l": (-35.0, 35.0),
+    "bogie_r": (-35.0, 35.0),
+    "solarJoint": (-85.0, 5.0),  # deployed 0 deg, stowed -80 deg (src/mission_specific/pragyaan/tmtc/commander.py)
+}
+WHEEL_MAX_TORQUE_NM = 10.0
 POINT_TOLERANCE_M = 1e-5
 ANGLE_TOLERANCE_DEG = 1e-3
 
@@ -366,7 +393,7 @@ def check(output: Usd.Stage, source: Usd.Stage, result: dict) -> None:
             scale = Gf.Transform(new_x.GetLocalToWorldTransform(prim)).GetScale()
             if any(abs(s - 1.0) > 1e-6 for s in scale):
                 failures.append(f"{prim.GetPath()}: world scale {tuple(scale)}")
-        if prim.IsA(UsdGeom.Mesh) and prim.GetPath() not in mirror_pairs:
+        if prim.IsA(UsdGeom.Mesh) and old and prim.GetPath() not in mirror_pairs:
             expected = world_points(old_x, old, to_new) + mesh_moves.get(prim.GetPath(), np.zeros(3))
             worst = max(worst, float(np.abs(world_points(new_x, prim) - expected).max()))
         if prim.GetTypeName() == "Camera":
@@ -431,8 +458,25 @@ def check(output: Usd.Stage, source: Usd.Stage, result: dict) -> None:
         old = source.GetPrimAtPath(prim.GetPath())
         if old and old.HasAPI(UsdPhysics.CollisionAPI) != prim.HasAPI(UsdPhysics.CollisionAPI):
             failures.append(f"{prim.GetPath()}: collision API differs from the source")
-        if prim.IsA(UsdGeom.Mesh) and not UsdShade.MaterialBindingAPI(prim).ComputeBoundMaterial()[0]:
+        is_guide = UsdGeom.Imageable(prim).GetPurposeAttr().Get() == UsdGeom.Tokens.guide
+        if prim.IsA(UsdGeom.Mesh) and not is_guide and not UsdShade.MaterialBindingAPI(prim).ComputeBoundMaterial()[0]:
             failures.append(f"{prim.GetPath()}: no bound material")
+    drive = yaml.safe_load(ROBOT_YAML.read_text())["robots_settings"]["parameters"]["drive"]
+    if abs(drive["wheel_radius"] - WHEEL_RADIUS_M) > 1e-9:
+        failures.append(
+            f"drive.wheel_radius {drive['wheel_radius']} in {ROBOT_YAML.name} differs from {WHEEL_RADIUS_M}"
+        )
+    for wheel in [p for p in rigid_body_prims(output) if p.GetName().startswith("Wheel_")]:
+        cylinder = output.GetPrimAtPath(wheel.GetPath().AppendChild(WHEEL_COLLIDER))
+        enabled = [
+            c
+            for c in Usd.PrimRange(wheel)
+            if c.HasAPI(UsdPhysics.CollisionAPI) and c.GetAttribute("physics:collisionEnabled").Get() is not False
+        ]
+        if not cylinder or enabled != [cylinder]:
+            failures.append(
+                f"{wheel.GetPath()}: colliders {[str(c.GetPath()) for c in enabled]}, expected only the cylinder"
+            )
     if output.GetRootLayer().externalReferences:
         failures.append(f"composition arcs to other files: {sorted(output.GetRootLayer().externalReferences)}")
     for prim in output.Traverse():
@@ -446,7 +490,75 @@ def check(output: Usd.Stage, source: Usd.Stage, result: dict) -> None:
     )
     if failures:
         sys.exit("Checks failed:\n  " + "\n  ".join(failures))
-    print("Checks passed: unit scales, meshes, symmetry, cameras, joints, masses, wheel layout, materials, textures")
+    print(
+        "Checks passed: unit scales, meshes, symmetry, cameras, joints, masses, wheel layout, materials, textures, wheel colliders"
+    )
+
+
+def wheel_collider_mesh(stage: Usd.Stage, path: Sdf.Path, width: float, y: float) -> UsdGeom.Mesh:
+    """
+    A convex cylinder of WHEEL_SEGMENTS sides along y (hull vertex limit raised to fit), centered at (0, y, 0), invisible (purpose guide). Its vertex
+    radius is larger than WHEEL_RADIUS_M so that its perimeter (the distance of one turn) is 2 pi WHEEL_RADIUS_M. An exact
+    UsdGeom.Cylinder (PhysX custom geometry) gave contacts without a face index on the terrain mesh, so PhysX found no
+    material for them and logged a warning for each contact.
+    """
+    n = WHEEL_SEGMENTS
+    radius = WHEEL_RADIUS_M * (math.pi / n) / math.sin(math.pi / n)
+    angles = [2 * math.pi * (k + 0.5) / n for k in range(n)]
+    points = [
+        Gf.Vec3f(radius * math.cos(a), y + side * width / 2, radius * math.sin(a)) for side in (-1, 1) for a in angles
+    ]
+    counts = [4] * n + [n, n]
+    # Faces counterclockwise seen from outside (normals outward).
+    indices = []
+    for k in range(n):
+        indices += [k, n + k, n + (k + 1) % n, (k + 1) % n]
+    indices += list(range(n))  # cap at -y
+    indices += [n + k for k in reversed(range(n))]  # cap at +y
+    mesh = UsdGeom.Mesh.Define(stage, path)
+    mesh.CreatePointsAttr(points)
+    mesh.CreateFaceVertexCountsAttr(counts)
+    mesh.CreateFaceVertexIndicesAttr(indices)
+    mesh.CreateExtentAttr(UsdGeom.Mesh.ComputeExtent(points))
+    mesh.CreatePurposeAttr(UsdGeom.Tokens.guide)
+    return mesh
+
+
+def contacts_and_joints(stage: Usd.Stage) -> None:
+    """Step 5: cylinder wheel colliders with a physics material, suspension friction, joint limits, wheel torque."""
+    material = UsdShade.Material.Define(stage, WHEEL_MATERIAL)
+    physics_material = UsdPhysics.MaterialAPI.Apply(material.GetPrim())
+    physics_material.CreateStaticFrictionAttr().Set(WHEEL_FRICTION)
+    physics_material.CreateDynamicFrictionAttr().Set(WHEEL_FRICTION)
+    physics_material.CreateRestitutionAttr().Set(0.0)
+    xforms = UsdGeom.XformCache()
+    for wheel in [p for p in rigid_body_prims(stage) if p.GetName().startswith("Wheel_")]:
+        meshes = [m for m in Usd.PrimRange(wheel) if m.IsA(UsdGeom.Mesh)]
+        points = np.vstack(
+            [world_points(xforms, m, xforms.GetLocalToWorldTransform(wheel).GetInverse()) for m in meshes]
+        )
+        center = (points.max(0) + points.min(0)) / 2
+        width = float(points[:, 1].max() - points[:, 1].min())
+        for mesh in meshes:
+            mesh.CreateAttribute("physics:collisionEnabled", Sdf.ValueTypeNames.Bool).Set(False)
+        cylinder = wheel_collider_mesh(stage, wheel.GetPath().AppendChild(WHEEL_COLLIDER), width, float(center[1]))
+        UsdPhysics.CollisionAPI.Apply(cylinder.GetPrim())
+        UsdPhysics.MeshCollisionAPI.Apply(cylinder.GetPrim()).CreateApproximationAttr(UsdPhysics.Tokens.convexHull)
+        cylinder.GetPrim().AddAppliedSchema("PhysxConvexHullCollisionAPI")
+        cylinder.GetPrim().CreateAttribute("physxConvexHullCollision:hullVertexLimit", Sdf.ValueTypeNames.Int).Set(
+            WHEEL_HULL_VERTEX_LIMIT
+        )
+        UsdShade.MaterialBindingAPI.Apply(cylinder.GetPrim()).Bind(material, materialPurpose="physics")
+    for prim in joint_prims(stage):
+        name = prim.GetName()
+        if name.startswith(("rocker_", "bogie_")):
+            prim.CreateAttribute("physxJoint:jointFriction", Sdf.ValueTypeNames.Float).Set(SUSPENSION_JOINT_FRICTION)
+        if name in JOINT_LIMITS_DEG:
+            lower, upper = JOINT_LIMITS_DEG[name]
+            UsdPhysics.RevoluteJoint(prim).CreateLowerLimitAttr(lower)
+            UsdPhysics.RevoluteJoint(prim).CreateUpperLimitAttr(upper)
+        if name.startswith("wheel_"):
+            UsdPhysics.DriveAPI.Get(prim, "angular").CreateMaxForceAttr(WHEEL_MAX_TORQUE_NM)
 
 
 def main() -> None:
@@ -458,19 +570,27 @@ def main() -> None:
     apply_masses(stage)
     result = clean_frames(source, stage)
     bind_unbound_meshes(stage)
+    contacts_and_joints(stage)
     apply_material_binding_api(stage)
     print(f"Removed the cooked collision data of {remove_cooked_data(stage)} meshes")
     UsdPhysics.SetStageKilogramsPerUnit(stage, 1.0)
-    layer.Export(str(OUTPUT))
+    # Written next to OUTPUT (same relative texture paths), and moved to OUTPUT only if the checks pass.
+    candidate = OUTPUT.with_name(OUTPUT.stem + ".candidate.usd")
+    layer.Export(str(candidate))
 
-    output = Usd.Stage.Open(str(OUTPUT))
+    output = Usd.Stage.Open(str(candidate))
     total = 0.0
     for prim in rigid_body_prims(output):
         mass = UsdPhysics.MassAPI(prim).GetMassAttr().Get()
         total += mass
         print(f"  {prim.GetPath().pathString:40s} {mass:6.2f} kg")
-    print(f"Wrote {OUTPUT.relative_to(REPO_ROOT)}: total mass {total:.2f} kg")
-    check(output, source, result)
+    print(f"Total mass {total:.2f} kg")
+    try:
+        check(output, source, result)
+    finally:
+        del output
+    candidate.replace(OUTPUT)
+    print(f"Wrote {OUTPUT.relative_to(REPO_ROOT)}")
 
 
 if __name__ == "__main__":

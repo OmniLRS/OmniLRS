@@ -129,10 +129,16 @@ def main() -> None:
     clean(source, stage)
     apply_material_binding_api(stage)
     UsdGeom.SetStageUpAxis(stage, UsdGeom.Tokens.z)
-    layer.Export(str(OUTPUT))
-    output = Usd.Stage.Open(str(OUTPUT))
+    # Written next to OUTPUT (same relative texture paths), and moved to OUTPUT only if the checks pass.
+    candidate = OUTPUT.with_name(OUTPUT.stem + ".candidate.usd")
+    layer.Export(str(candidate))
+    output = Usd.Stage.Open(str(candidate))
+    try:
+        check(output, source)
+    finally:
+        del output
+    candidate.replace(OUTPUT)
     print(f"Wrote {OUTPUT.relative_to(REPO_ROOT)}")
-    check(output, source)
 
 
 if __name__ == "__main__":
