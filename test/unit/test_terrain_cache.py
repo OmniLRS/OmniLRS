@@ -1,17 +1,25 @@
 """Large scale terrain cache (MapManagerConf.terrain_cache_dir): a start restored from the cache must stream the same
 terrain as the start that generated it, and the cache key must only depend on what the terrain depends on."""
 
+import importlib.util
 import pickle
 import signal
-from unittest.mock import patch
+import sys
+from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pytest
 from scipy.interpolate import CubicSpline
 
-from src.terrain_management.large_scale_terrain.crater_distribution import CraterMetadataGenerator
-from src.terrain_management.large_scale_terrain.high_resolution_DEM_generator import HighResDEMGen
-from src.terrain_management.large_scale_terrain.map_manager import MapManager, MapManagerConf
+# The terrain modules import zfpy (rocks) and matplotlib (debug plots) at module level, but this test does not use
+# them. They are not in the test-unit environment: adding them would change pixi.lock, which needs a new CI base image.
+for module in ("zfpy", "matplotlib"):
+    if importlib.util.find_spec(module) is None:
+        sys.modules[module] = MagicMock()
+
+from src.terrain_management.large_scale_terrain.crater_distribution import CraterMetadataGenerator  # noqa: E402
+from src.terrain_management.large_scale_terrain.high_resolution_DEM_generator import HighResDEMGen  # noqa: E402
+from src.terrain_management.large_scale_terrain.map_manager import MapManager, MapManagerConf  # noqa: E402
 
 START = (-10.0, 10.0)
 
