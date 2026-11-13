@@ -26,7 +26,9 @@ class RobotVideoRecorder:
     Set the environment variable OMNILRS_ROBOT_VIDEO to the path of an .mp4 file to record it (the Yamcs sanity tests do).
     The top view looks down from TOP_HEIGHT_M above base_link, with north (+y) up in the image. The side view looks at the
     left side of the robot from SIDE_DISTANCE_M, and turns with the robot. Each frame shows the simulation time and the
-    base_link pose. The video is a fragmented MP4, so it stays readable if the simulation stops without closing it.
+    base_link pose. The recorder writes the same frames to two files: the .mp4 path (H.264, a fragmented MP4) and the same
+    name with .webm (VP9, which VS Code and other viewers without H.264 play). Both stay readable if the simulation stops
+    without closing them.
 
     At the bottom left, each frame shows the commanded and measured speed of each wheel, one column per wheel. At the top
     center, each frame shows the test sequence: the current test step (the last line of the steps file
@@ -53,7 +55,6 @@ class RobotVideoRecorder:
     def __init__(self, path: str, robot_rigid_group, robot=None) -> None:
         import av  # only when recording
 
-        self._path = path
         self._robot = robot_rigid_group
         self._robot_joints = robot  # Robot, for the wheel speeds (optional)
         self._timeline = omni.timeline.get_timeline_interface()
@@ -69,13 +70,22 @@ class RobotVideoRecorder:
             # CameraSensor replaces the xform ops of the prim by translate, orient and scale ops: use these.
             ops = {op.GetOpName(): op for op in UsdGeom.Xformable(camera).GetOrderedXformOps()}
             self._cameras[name] = ((ops["xformOp:translate"], ops["xformOp:orient"]), sensor)
-        self._container = av.open(path, "w", options={"movflags": "frag_keyframe+empty_moov", "flush_packets": "1"})
-        codec = "libx264" if "libx264" in av.codecs_available else "mpeg4"
-        # A keyframe (and an MP4 fragment) each second of video and no frame held back by the encoder: a simulation
+        # A keyframe (and an MP4 fragment) each second of video and no frame held back by the encoders: a simulation
         # that stops without close() loses at most 1 s of video.
-        options = {"g": str(self.FPS), "tune": "zerolatency"} if codec == "libx264" else {"g": str(self.FPS)}
-        self._stream = self._container.add_stream(codec, rate=self.FPS, options=options)
-        self._stream.width, self._stream.height, self._stream.pix_fmt = 2 * self.WIDTH, self.HEIGHT, "yuv420p"
+        mp4_codec = "libx264" if "libx264" in av.codecs_available else "mpeg4"
+        mp4_options = {"g": str(self.FPS), "tune": "zerolatency"} if mp4_codec == "libx264" else {"g": str(self.FPS)}
+        outputs = [(path, {"movflags": "frag_keyframe+empty_moov", "flush_packets": "1"}, mp4_codec, mp4_options)]
+        if "libvpx-vp9" in av.codecs_available:
+            # Real-time VP9 at constant quality: about 4 ms per frame.
+            vp9_options = {"g": str(self.FPS), "deadline": "realtime", "cpu-used": "8", "lag-in-frames": "0"}
+            webm = os.path.splitext(path)[0] + ".webm"
+            outputs.append((webm, {"flush_packets": "1"}, "libvpx-vp9", {**vp9_options, "crf": "32", "b": "0"}))
+        self._outputs = []  # (path, container, stream)
+        for out_path, container_options, codec, options in outputs:
+            container = av.open(out_path, "w", options=container_options)
+            stream = container.add_stream(codec, rate=self.FPS, options=options)
+            stream.width, stream.height, stream.pix_fmt = 2 * self.WIDTH, self.HEIGHT, "yuv420p"
+            self._outputs.append((out_path, container, stream))
         self._next_time = 0.0
         self._frames = 0
         self._failed = False
@@ -84,7 +94,8 @@ class RobotVideoRecorder:
         self._steps_mtime = None
         self._last_command = max((number for number, _, _ in list(RECEIVED_COMMANDS)), default=0)
         self._commands = []  # (simulation time of receipt, text), oldest first
-        print(f"[RobotVideoRecorder] Recording {path} ({codec})")
+        recording = ", ".join(f"{out_path} ({stream.codec_context.name})" for out_path, _, stream in self._outputs)
+        print(f"[RobotVideoRecorder] Recording {recording}")
 
     def update(self) -> None:
         """
@@ -221,10 +232,11 @@ class RobotVideoRecorder:
             cv2.putText(frame, text, (left + 8, 2 + line_height * (i + 1)), font, scale, color, 1, cv2.LINE_AA)
 
     def close(self) -> None:
-        for packet in self._stream.encode(None):
-            self._container.mux(packet)
-        self._container.close()
-        print(f"[RobotVideoRecorder] Wrote {self._frames} frames to {self._path}")
+        for out_path, container, stream in self._outputs:
+            for packet in stream.encode(None):
+                container.mux(packet)
+            container.close()
+            print(f"[RobotVideoRecorder] Wrote {self._frames} frames to {out_path}")
 
     def _place(self, name: str, eye: Gf.Vec3d, target: Gf.Vec3d, up: Gf.Vec3d) -> None:
         (translate_op, orient_op), _ = self._cameras[name]
@@ -236,6 +248,8 @@ class RobotVideoRecorder:
     def _encode(self, frame: np.ndarray) -> None:
         import av
 
-        for packet in self._stream.encode(av.VideoFrame.from_ndarray(frame, format="rgb24")):
-            self._container.mux(packet)
+        video_frame = av.VideoFrame.from_ndarray(frame, format="rgb24")
+        for _, container, stream in self._outputs:
+            for packet in stream.encode(video_frame):
+                container.mux(packet)
         self._frames += 1

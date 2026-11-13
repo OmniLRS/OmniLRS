@@ -39,10 +39,10 @@ SIM_COMMAND = [
     # Disable and pin.
     "rendering.renderer.multi_gpu=false",
     "rendering.renderer.active_gpu=0",
-    # Flat terrain, so that the drive and turn checks of the integrated test measure the drive, not the slopes. The
-    # generator needs scales above 0: the relief and the crater depths become micrometers.
-    "environment.terrain_manager.moon_yard.base_terrain_generator.z_scale=0.000001",
-    "environment.terrain_manager.moon_yard.crater_generator.z_scale=0.000001",
+    # Start position of the flat area tests, heading +y as in cfg/robot/pragyaan.yaml. The spawn of that file, (26, 16.6),
+    # is on a slope (roll 2.2 deg, pitch 2.8 deg at rest). On the workshop terrain (seed 42), the rover tilts 1 deg or
+    # less here over the 2 m path and the turns: plane through the wheel contacts on the terrain DEM, 2026-11-13.
+    "environment.robots_settings.parameters.pose.position=[22.0,13.0,0.42]",
 ]
 
 # Robot of the sim task (robot=pragyaan); its yaml camera list defines the camera image buckets.
@@ -480,11 +480,39 @@ def test_telemetry_obc_state_exists(telemetry):
 
 
 """
-Joint tests: wheel velocity and solar panel position commands, checked against the measured joint motion.
+Joint tests: wheel velocity and solar panel position commands, checked against the measured joint motion, the ground
+truth pose and the IMU.
+
+The flat area tests run first, at the start position of SIM_COMMAND (a flat area of the workshop terrain), so that they
+measure the drive and not the slopes. The rover drives forward, drives backward to the spawn, turns left, then turns right
+to the start heading. The other joint tests run after them and can leave the flat area.
 """
+
+POSE = "/Rover/pose_ground_truth"  # base_link position relative to the lander, world orientation {w, x, y, z}
+IMU_ORIENTATION = "/Rover/imu_orientation"  # roll, pitch, yaw in rad (raw SI values; the checks work in deg)
+IMU_GYROSCOPE = "/Rover/imu_gyroscope"  # gx, gy, gz in rad/s (raw SI values)
 
 LEFT_BACKWARD_RIGHT_FORWARD = [-1, -1, -1, 1, 1, 1]
 ALL_FORWARD = [1] * 6
+
+STRAIGHT_SPEED = 0.2  # m/s
+STRAIGHT_DISTANCE = 2.0  # m
+TURN_RATE = 8.0  # deg/s; positive turns left (counterclockwise seen from above, REP-103)
+TURN_ANGLE = 90.0  # deg
+FLAT_MAX_TILT_DEG = 2.0  # roll and pitch of the rover at rest at the spawn
+DISTANCE_TOLERANCE = 0.10  # fraction of the commanded distance
+DIRECTION_TOLERANCE_DEG = 5.0  # travel direction against the heading (forward) or the opposite heading (backward)
+STRAIGHT_YAW_TOLERANCE_DEG = 3.0  # heading change during a straight drive
+RETURN_MAX_SHIFT_M = 0.2  # distance to the spawn after the forward and the backward drive
+# On the workshop terrain, the turns fall 5 to 8 % short of the flat-ground calibration of skid_steer_factor (83.8 and
+# -82.2 deg for 90 deg, 2026-11-13): the turn tolerances are wide.
+TURN_ANGLE_TOLERANCE_DEG = 15.0  # also the heading after the left and the right turn, against the start heading
+TURN_RATE_TOLERANCE = 0.20  # fraction of the commanded rate
+TURN_MAX_SHIFT_M = 0.4  # position change during a turn in place
+IMU_TOLERANCE_DEG = 2.0  # IMU roll, pitch and yaw against the ground truth pose
+PAIR_MAX_DT_S = 0.1  # IMU and pose samples sent closer in time than this are compared
+RAMP_SAMPLES = 2  # encoder and gyroscope samples skipped at the start and at the end of a motion
+MOTION_TIMEOUT_S = 180
 
 
 def _assert_wheels_turning(deltas, directions):
@@ -503,63 +531,6 @@ def _assert_wheels_still(deltas):
 
 def _stop(rover):
     rover.command(DRIVE_STRAIGHT, linear_velocity=0.0, distance=0.0)
-
-
-def test_wheels_drive_straight_then_stop(rover):
-    rover.command(DRIVE_STRAIGHT, linear_velocity=0.2, distance=4.0)
-    try:
-        _assert_wheels_turning(rover.encoder_deltas(), ALL_FORWARD)
-    finally:
-        _stop(rover)
-    time.sleep(STOP_SETTLE_S)
-    _assert_wheels_still(rover.encoder_deltas())
-
-
-def test_wheels_turn_sides_independently(rover):
-    # Left and right wheels are commanded separately: the right side command must keep the left side targets.
-    rover.command(DRIVE_TURN, angular_velocity=8.0, angle=40.0)
-    try:
-        _assert_wheels_turning(rover.encoder_deltas(), LEFT_BACKWARD_RIGHT_FORWARD)
-    finally:
-        _stop(rover)
-
-
-def test_solar_panel_deploy_and_stow(rover):
-    rover.wait_for(SOLAR_PANEL_STATE, "STOWED")
-    rover.command(DRIVE_STRAIGHT, linear_velocity=0.2, distance=4.0)
-    rover.command(SOLAR_PANEL, deployment="DEPLOY")
-    try:
-        # The solar panel position command must keep the wheel velocity targets.
-        _assert_wheels_turning(rover.encoder_deltas(), ALL_FORWARD)
-    finally:
-        _stop(rover)
-    rover.wait_for(SOLAR_PANEL_STATE, "DEPLOYED")
-    rover.command(SOLAR_PANEL, deployment="STOW")
-    rover.wait_for(SOLAR_PANEL_STATE, "STOWED")
-
-
-"""
-Integrated test: solar panel, drive and turn commands, checked against the ground truth pose and the IMU.
-"""
-
-POSE = "/Rover/pose_ground_truth"  # base_link position relative to the lander, world orientation {w, x, y, z}
-IMU_ORIENTATION = "/Rover/imu_orientation"  # roll, pitch, yaw in rad (raw SI values; the checks work in deg)
-IMU_GYROSCOPE = "/Rover/imu_gyroscope"  # gx, gy, gz in rad/s (raw SI values)
-
-STRAIGHT_SPEED = 0.2  # m/s
-STRAIGHT_DISTANCE = 2.0  # m
-TURN_RATE = 8.0  # deg/s; positive turns left (counterclockwise seen from above, REP-103)
-TURN_ANGLE = 90.0  # deg
-DISTANCE_TOLERANCE = 0.10  # fraction of the commanded distance
-DIRECTION_TOLERANCE_DEG = 5.0  # travel direction against the start heading
-STRAIGHT_YAW_TOLERANCE_DEG = 3.0  # heading change during the straight drive
-TURN_ANGLE_TOLERANCE_DEG = 5.0
-TURN_RATE_TOLERANCE = 0.20  # fraction of the commanded rate
-TURN_MAX_SHIFT_M = 0.2  # position change during a turn in place
-IMU_TOLERANCE_DEG = 2.0  # IMU roll, pitch and yaw against the ground truth pose
-PAIR_MAX_DT_S = 0.1  # IMU and pose samples sent closer in time than this are compared
-RAMP_SAMPLES = 2  # gyroscope samples skipped at the start and at the end of a turn
-MOTION_TIMEOUT_S = 180
 
 
 def _wrap_deg(angle):
@@ -607,20 +578,26 @@ def _paired(samples):
     return pairs
 
 
+def _encoder_changes(samples):
+    """Signed change of each wheel encoder between consecutive recorded samples (one sample per second of sim time)."""
+    half = ENCODER_COUNTS // 2
+    encoder = [value for _, value in samples[ENCODER]]
+    return [
+        [(c - p + half) % ENCODER_COUNTS - half for p, c in zip(prev, cur)] for prev, cur in zip(encoder, encoder[1:])
+    ]
+
+
 def _print_slow_stop(samples, nominal_s, label):
     """If a motion took more than 5 s longer than commanded, print the pose and encoder changes of each second."""
     if len(samples[ENCODER]) <= nominal_s + 5:
         return
-    half = ENCODER_COUNTS // 2
     print(f"  {label}: {len(samples[ENCODER])} s until the wheels stopped (commanded {nominal_s:.0f} s)")
     poses = samples[POSE]
     for i in range(1, len(poses)):
         dx, dy = _shift(poses[i - 1][1], poses[i][1])
         print(f"    pose {i:2d}: moved {math.hypot(dx, dy) * 1000:6.1f} mm, yaw {_yaw_deg(poses[i][1]):7.2f} deg")
-    encoder = samples[ENCODER]
-    for i in range(1, len(encoder)):
-        deltas = [(c - p + half) % ENCODER_COUNTS - half for p, c in zip(encoder[i - 1][1], encoder[i][1])]
-        print(f"    encoder {i:2d}: {deltas}")
+    for i, changes in enumerate(_encoder_changes(samples), start=1):
+        print(f"    encoder {i:2d}: {changes}")
 
 
 class _Checks:
@@ -633,6 +610,19 @@ class _Checks:
         print(f"  {'ok  ' if ok else 'FAIL'}  {message}")
         if not ok:
             self.failures.append(message)
+
+    def assert_passed(self, name):
+        assert not self.failures, f"{name} failures:\n" + "\n".join(self.failures)
+
+    def wheels_turning(self, samples, directions, where):
+        """Each wheel turns in its direction (1 forward, -1 backward), without the samples of the start and the stop."""
+        changes = _encoder_changes(samples)[RAMP_SAMPLES:-RAMP_SAMPLES]
+        ok = bool(changes) and all(c * d >= TURNING_COUNTS for change in changes for c, d in zip(change, directions))
+        self.expect(
+            ok,
+            f"wheels {where}: directions {directions}, encoder changes per second {changes} "
+            f"(min {TURNING_COUNTS} counts)",
+        )
 
     def imu_at_rest(self, pose, imu, where):
         errors = _imu_errors(pose, imu)
@@ -659,89 +649,191 @@ class _Checks:
             )
 
 
-def test_integrated_solar_panel_drive_turn_imu(rover):
-    """Deploys the solar panel, drives straight, turns in place and stows the panel, against the pose and the IMU."""
-    checks = _Checks()
-    print("\nIntegrated test:")
-
-    rover.wait_for(SOLAR_PANEL_STATE, "STOWED")
-    rover.command(SOLAR_PANEL, deployment="DEPLOY")
-    state = rover.poll_for(SOLAR_PANEL_STATE, "DEPLOYED")
-    checks.expect(state == "DEPLOYED", f"solar panel after DEPLOY: {state}")
-
-    start = rover.next_value(POSE)
-    checks.imu_at_rest(start, rover.next_value(IMU_ORIENTATION), "at rest before the drive")
-
-    # Straight drive.
+def _drive_straight(rover, checks, speed, label):
+    """
+    Drives STRAIGHT_DISTANCE at `speed` (m/s, negative drives backward) and checks the wheels, the distance, the travel
+    direction, the heading and the IMU. Returns the ground truth pose at rest after the drive.
+    """
+    before = rover.next_value(POSE)
+    checks.imu_at_rest(before, rover.next_value(IMU_ORIENTATION), f"at rest before the {label}")
+    nominal_s = STRAIGHT_DISTANCE / abs(speed)
     try:
-        rover.command(DRIVE_STRAIGHT, linear_velocity=STRAIGHT_SPEED, distance=STRAIGHT_DISTANCE)
-        straight = rover.record_until_still(
-            [POSE, IMU_ORIENTATION], min_samples=int(STRAIGHT_DISTANCE / STRAIGHT_SPEED) - 2
-        )
+        rover.command(DRIVE_STRAIGHT, linear_velocity=speed, distance=STRAIGHT_DISTANCE)
+        samples = rover.record_until_still([POSE, IMU_ORIENTATION], min_samples=int(nominal_s) - 2)
     finally:
         _stop(rover)
     time.sleep(STOP_SETTLE_S)
-    after_straight = rover.next_value(POSE)
-    dx, dy = _shift(start, after_straight)
+    after = rover.next_value(POSE)
+    _print_slow_stop(samples, nominal_s, label)
+
+    forward = speed > 0
+    checks.wheels_turning(samples, ALL_FORWARD if forward else [-d for d in ALL_FORWARD], f"during the {label}")
+    dx, dy = _shift(before, after)
     distance = math.hypot(dx, dy)
-    direction_error = _wrap_deg(math.degrees(math.atan2(dy, dx)) - _yaw_deg(start))
-    yaw_change = _wrap_deg(_yaw_deg(after_straight) - _yaw_deg(start))
-    _print_slow_stop(straight, STRAIGHT_DISTANCE / STRAIGHT_SPEED, "straight drive")
+    direction_error = _wrap_deg(math.degrees(math.atan2(dy, dx)) - _yaw_deg(before) - (0.0 if forward else 180.0))
+    yaw_change = _wrap_deg(_yaw_deg(after) - _yaw_deg(before))
     checks.expect(
         abs(distance - STRAIGHT_DISTANCE) <= DISTANCE_TOLERANCE * STRAIGHT_DISTANCE,
-        f"straight drive distance {distance:.3f} m, commanded {STRAIGHT_DISTANCE} m "
-        f"(max error {DISTANCE_TOLERANCE:.0%}, {len(straight[ENCODER])} s)",
+        f"{label} distance {distance:.3f} m, commanded {STRAIGHT_DISTANCE} m at {speed} m/s "
+        f"(max error {DISTANCE_TOLERANCE:.0%}, {len(samples[ENCODER])} s)",
     )
     checks.expect(
         abs(direction_error) <= DIRECTION_TOLERANCE_DEG,
-        f"straight drive direction {direction_error:.1f} deg from the start heading (max {DIRECTION_TOLERANCE_DEG})",
+        f"{label} travel direction {direction_error:.1f} deg from the {'heading' if forward else 'opposite heading'} "
+        f"(max {DIRECTION_TOLERANCE_DEG})",
     )
     checks.expect(
         abs(yaw_change) <= STRAIGHT_YAW_TOLERANCE_DEG,
-        f"straight drive heading change {yaw_change:.1f} deg (max {STRAIGHT_YAW_TOLERANCE_DEG})",
+        f"{label} heading change {yaw_change:.1f} deg (max {STRAIGHT_YAW_TOLERANCE_DEG})",
     )
-    checks.imu_in_motion(straight, "during the straight drive")
-    checks.imu_at_rest(after_straight, rover.next_value(IMU_ORIENTATION), "at rest after the straight drive")
-
-    # Turn in place.
-    try:
-        rover.command(DRIVE_TURN, angular_velocity=TURN_RATE, angle=TURN_ANGLE)
-        turn = rover.record_until_still(
-            [POSE, IMU_ORIENTATION, IMU_GYROSCOPE], min_samples=int(TURN_ANGLE / TURN_RATE) - 2
+    tilts = [_rpy_deg(pose["orientation"])[:2] for _, pose in samples[POSE]]
+    if tilts:
+        print(
+            f"  {label}: largest roll {max(abs(roll) for roll, _ in tilts):.1f} deg, "
+            f"largest pitch {max(abs(pitch) for _, pitch in tilts):.1f} deg along the path"
         )
+    checks.imu_in_motion(samples, f"during the {label}")
+    checks.imu_at_rest(after, rover.next_value(IMU_ORIENTATION), f"at rest after the {label}")
+    return after
+
+
+def _spot_turn(rover, checks, rate, label):
+    """
+    Turns TURN_ANGLE in place at `rate` (deg/s, positive turns left) and checks the wheels, the turn angle, the position
+    change, the gyroscope yaw rate and the IMU. Returns the ground truth pose at rest after the turn. The left and the
+    right wheels get separate commands: the wheel check also makes sure that one side command keeps the other side targets.
+    """
+    before = rover.next_value(POSE)
+    checks.imu_at_rest(before, rover.next_value(IMU_ORIENTATION), f"at rest before the {label}")
+    nominal_s = TURN_ANGLE / abs(rate)
+    try:
+        rover.command(DRIVE_TURN, angular_velocity=rate, angle=TURN_ANGLE)
+        samples = rover.record_until_still([POSE, IMU_ORIENTATION, IMU_GYROSCOPE], min_samples=int(nominal_s) - 2)
     finally:
         _stop(rover)
     time.sleep(STOP_SETTLE_S)
-    after_turn = rover.next_value(POSE)
-    turn_angle = _wrap_deg(_yaw_deg(after_turn) - _yaw_deg(after_straight))
-    turn_shift = math.hypot(*_shift(after_straight, after_turn))
-    _print_slow_stop(turn, TURN_ANGLE / TURN_RATE, "turn")
-    start_yaw = _yaw_deg(after_straight)
-    trace = " ".join(f"{_wrap_deg(_yaw_deg(pose) - start_yaw):.0f}" for _, pose in turn[POSE])
-    rates = " ".join(f"{math.degrees(gyro['gz']):.1f}" for _, gyro in turn[IMU_GYROSCOPE])
-    print(f"  turn trace, yaw from the start each second (deg): {trace}")
-    print(f"  turn trace, gyroscope gz each second (deg/s): {rates}")
-    checks.expect(
-        abs(turn_angle - TURN_ANGLE) <= TURN_ANGLE_TOLERANCE_DEG,
-        f"turn angle {turn_angle:.1f} deg, commanded {TURN_ANGLE} deg to the left "
-        f"(max error {TURN_ANGLE_TOLERANCE_DEG}, {len(turn[ENCODER])} s)",
-    )
-    checks.expect(turn_shift <= TURN_MAX_SHIFT_M, f"turn position change {turn_shift:.3f} m (max {TURN_MAX_SHIFT_M})")
-    rates = sorted(math.degrees(gyro["gz"]) for _, gyro in turn[IMU_GYROSCOPE][RAMP_SAMPLES:-RAMP_SAMPLES])
-    rate = rates[len(rates) // 2] if rates else float("nan")
-    checks.expect(
-        abs(rate - TURN_RATE) <= TURN_RATE_TOLERANCE * TURN_RATE,
-        f"gyroscope yaw rate (median gz) {rate:.3f} deg/s, commanded {TURN_RATE} deg/s "
-        f"(max error {TURN_RATE_TOLERANCE:.0%}, {len(rates)} samples)",
-    )
-    checks.imu_in_motion(turn, "during the turn")
-    checks.imu_at_rest(after_turn, rover.next_value(IMU_ORIENTATION), "at rest after the turn")
+    after = rover.next_value(POSE)
+    _print_slow_stop(samples, nominal_s, label)
 
+    directions = LEFT_BACKWARD_RIGHT_FORWARD if rate > 0 else [-d for d in LEFT_BACKWARD_RIGHT_FORWARD]
+    checks.wheels_turning(samples, directions, f"during the {label}")
+    start_yaw = _yaw_deg(before)
+    trace = " ".join(f"{_wrap_deg(_yaw_deg(pose) - start_yaw):.0f}" for _, pose in samples[POSE])
+    rates = " ".join(f"{math.degrees(gyro['gz']):.1f}" for _, gyro in samples[IMU_GYROSCOPE])
+    print(f"  {label} trace, yaw from the start each second (deg): {trace}")
+    print(f"  {label} trace, gyroscope gz each second (deg/s): {rates}")
+    commanded = math.copysign(TURN_ANGLE, rate)
+    angle = _wrap_deg(_yaw_deg(after) - start_yaw)
+    shift = math.hypot(*_shift(before, after))
+    checks.expect(
+        abs(angle - commanded) <= TURN_ANGLE_TOLERANCE_DEG,
+        f"{label} angle {angle:.1f} deg, commanded {commanded:.1f} deg at {rate} deg/s "
+        f"(max error {TURN_ANGLE_TOLERANCE_DEG}, {len(samples[ENCODER])} s)",
+    )
+    checks.expect(shift <= TURN_MAX_SHIFT_M, f"{label} position change {shift:.3f} m (max {TURN_MAX_SHIFT_M})")
+    gz = sorted(math.degrees(gyro["gz"]) for _, gyro in samples[IMU_GYROSCOPE][RAMP_SAMPLES:-RAMP_SAMPLES])
+    median = gz[len(gz) // 2] if gz else float("nan")
+    checks.expect(
+        abs(median - rate) <= TURN_RATE_TOLERANCE * abs(rate),
+        f"{label} gyroscope yaw rate (median gz) {median:.3f} deg/s, commanded {rate} deg/s "
+        f"(max error {TURN_RATE_TOLERANCE:.0%}, {len(gz)} samples)",
+    )
+    checks.imu_in_motion(samples, f"during the {label}")
+    checks.imu_at_rest(after, rover.next_value(IMU_ORIENTATION), f"at rest after the {label}")
+    return after
+
+
+@pytest.fixture(scope="session")
+def start_pose(rover):
+    """Ground truth pose of the rover at rest at the spawn, solar panel stowed, before the first drive command."""
+    rover.wait_for(SOLAR_PANEL_STATE, "STOWED")
+    return rover.next_value(POSE)
+
+
+def test_start_pose_is_flat(rover, start_pose):
+    """The flat area tests measure the drive, not the slopes: the rover starts on flat ground."""
+    checks = _Checks()
+    print("\nStart pose:")
+    roll, pitch, yaw = _rpy_deg(start_pose["orientation"])
+    position = start_pose["position"]
+    checks.expect(
+        abs(roll) <= FLAT_MAX_TILT_DEG and abs(pitch) <= FLAT_MAX_TILT_DEG,
+        f"start pose roll {roll:.1f} deg, pitch {pitch:.1f} deg (max {FLAT_MAX_TILT_DEG}), yaw {yaw:.1f} deg, "
+        f"x {position['x']:.2f} m, y {position['y']:.2f} m from the lander",
+    )
+    checks.imu_at_rest(start_pose, rover.next_value(IMU_ORIENTATION), "at rest at the start")
+    checks.assert_passed("Start pose")
+
+
+def test_drive_forward(rover, start_pose):
+    checks = _Checks()
+    print("\nDrive forward:")
+    _drive_straight(rover, checks, STRAIGHT_SPEED, "forward drive")
+    checks.assert_passed("Drive forward")
+
+
+def test_drive_backward(rover, start_pose):
+    """Drives back over the path of the forward drive, to the start position."""
+    checks = _Checks()
+    print("\nDrive backward:")
+    after = _drive_straight(rover, checks, -STRAIGHT_SPEED, "backward drive")
+    shift = math.hypot(*_shift(start_pose, after))
+    checks.expect(
+        shift <= RETURN_MAX_SHIFT_M,
+        f"distance to the start position after the forward and the backward drive {shift:.3f} m "
+        f"(max {RETURN_MAX_SHIFT_M})",
+    )
+    checks.assert_passed("Drive backward")
+
+
+def test_spot_turn_left(rover, start_pose):
+    checks = _Checks()
+    print("\nSpot turn left:")
+    _spot_turn(rover, checks, TURN_RATE, "left turn")
+    checks.assert_passed("Spot turn left")
+
+
+def test_spot_turn_right(rover, start_pose):
+    """Turns back to the start heading."""
+    checks = _Checks()
+    print("\nSpot turn right:")
+    after = _spot_turn(rover, checks, -TURN_RATE, "right turn")
+    heading_error = _wrap_deg(_yaw_deg(after) - _yaw_deg(start_pose))
+    checks.expect(
+        abs(heading_error) <= TURN_ANGLE_TOLERANCE_DEG,
+        f"heading after the left and the right turn {heading_error:.1f} deg from the start heading "
+        f"(max {TURN_ANGLE_TOLERANCE_DEG})",
+    )
+    checks.assert_passed("Spot turn right")
+
+
+"""
+Other joint tests, after the flat area tests: they can leave the flat area.
+"""
+
+
+def test_wheels_drive_straight_then_stop(rover):
+    rover.command(DRIVE_STRAIGHT, linear_velocity=0.2, distance=4.0)
+    try:
+        _assert_wheels_turning(rover.encoder_deltas(), ALL_FORWARD)
+    finally:
+        _stop(rover)
+    time.sleep(STOP_SETTLE_S)
+    _assert_wheels_still(rover.encoder_deltas())
+
+
+def test_solar_panel_deploy_and_stow(rover):
+    rover.wait_for(SOLAR_PANEL_STATE, "STOWED")
+    rover.command(DRIVE_STRAIGHT, linear_velocity=0.2, distance=4.0)
+    rover.command(SOLAR_PANEL, deployment="DEPLOY")
+    try:
+        # The solar panel position command must keep the wheel velocity targets.
+        _assert_wheels_turning(rover.encoder_deltas(), ALL_FORWARD)
+    finally:
+        _stop(rover)
+    rover.wait_for(SOLAR_PANEL_STATE, "DEPLOYED")
     rover.command(SOLAR_PANEL, deployment="STOW")
-    state = rover.poll_for(SOLAR_PANEL_STATE, "STOWED")
-    checks.expect(state == "STOWED", f"solar panel after STOW: {state}")
-
-    assert not checks.failures, "Integrated test failures:\n" + "\n".join(checks.failures)
+    rover.wait_for(SOLAR_PANEL_STATE, "STOWED")
 
 
 def test_no_ignored_joint_writes(sim):

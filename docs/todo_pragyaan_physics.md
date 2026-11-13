@@ -247,32 +247,26 @@ Test video: the Yamcs sanity tests set `OMNILRS_ROBOT_VIDEO`, and `src/environme
 
 ### Phase 7: integrated test in Yamcs mode
 
-Done before Phase 1, so that the baseline uses the source asset. The test is `test_integrated_solar_panel_drive_turn_imu` in `test/ci_artefacts/test_yamcs_sanity.py`. It runs in the `test_yamcs_sanity` scenario of `artefacts.yaml`, after the joint tests and before `test_no_ignored_joint_writes`. It uses the `rover` fixture, so the motor controller is on and the rover is GO.
+Done before Phase 1, so that the baseline uses the source asset. On 2026-11-13, five flat area tests replaced the first test, `test_integrated_solar_panel_drive_turn_imu`. They are in `test/ci_artefacts/test_yamcs_sanity.py` and run in the `test_yamcs_sanity` scenario of `artefacts.yaml`, after the telemetry tests and before the other joint tests. They use the `rover` fixture, so the motor controller is on and the rover is GO.
 
-The test reads this telemetry, which the rover sends every 1 s:
+The scenario uses the workshop terrain without changes (the flat-terrain overrides are removed). The spawn of `cfg/robot/pragyaan.yaml`, (26, 16.6), is on a slope: the rover rests at 2.2° roll and 2.8° pitch, and the right turn reached -84.2° there. The test command starts the rover at (22, 13) instead, heading +y, and the first test makes sure that this start is flat. The position comes from the terrain DEM, rebuilt offline with the workshop seed: the plane through the six wheel contacts tilts 1° or less over the 2 m path and the turns, and 1.4° or less if the rover settles 0.3 m away. The same DEM gives 2.4° roll and 3.3° pitch at the old spawn (sim: 2.2° and 2.8°). The solar panel stays stowed. `test_solar_panel_deploy_and_stow` checks the panel after the flat area tests.
+
+The tests read this telemetry, which the rover sends every 1 s:
 
 - `/Rover/pose_ground_truth`: base_link position relative to the lander, and orientation as a quaternion (w, x, y, z).
-- `/Rover/imu_orientation`: roll, pitch and yaw in degrees.
-- `/Rover/imu_gyroscope`: angular velocity gx, gy and gz in deg/s (MDB unit).
+- `/Rover/imu_orientation`: roll, pitch and yaw in rad (raw SI values).
+- `/Rover/imu_gyroscope`: angular velocity gx, gy and gz in rad/s (raw SI values).
 - `/Rover/motor_encoder`: wheel angles. When all wheels are still between two samples, the motion is complete.
 - `/Rover/solar_panel_state`: `DEPLOYED` or `STOWED`.
 
-The test computes roll, pitch and yaw from the pose quaternion in the intrinsic order yaw, pitch, roll (REP-103). It compares the IMU with the pose sample of the same time (0.1 s or less apart).
+The tests compute roll, pitch and yaw from the pose quaternion in the intrinsic order yaw, pitch, roll (REP-103). They compare the IMU with the pose sample of the same time (0.1 s or less apart). Each motion records the pose and the IMU until the wheels stop, then waits 2 s. The wheel checks skip the first and the last 2 encoder samples (start and stop).
 
-- [x] Send `/Rover/system/deploy_solar_panel` with `deployment=DEPLOY`. Wait for `DEPLOYED`.
-- [x] At rest, make sure that the IMU roll, pitch and yaw match the pose within 2°.
-- [x] Send `/Rover/motor/drive_straight` with `linear_velocity=0.2` and `distance=2.0`.
-- [x] Record the pose and the IMU until the wheels stop, then wait 2 s.
-- [x] Make sure that the horizontal travel distance is 2.0 m ± 10 %.
-- [x] Make sure that the travel direction matches the start heading (base_link x axis) within 5°.
-- [x] Make sure that the pose yaw changed by 3° or less.
-- [x] During and after the drive, make sure that the IMU matches the pose within 2°.
-- [x] Send `/Rover/motor/drive_turn` with `angular_velocity=8.0` and `angle=90.0`.
-- [x] Make sure that the median gyroscope yaw rate (gz) is 8°/s ± 20 %, without the first and last 2 samples.
-- [x] Make sure that the pose yaw increased by 90° ± 5°. A positive `angular_velocity` turns left (counterclockwise from above).
-- [x] Make sure that the position moved 0.2 m or less during the turn.
-- [x] During and after the turn, make sure that the IMU matches the pose within 2°.
-- [x] Send `deployment=STOW`. Wait for `STOWED`, so that the next tests start from the stowed state.
+- [x] `test_start_pose_is_flat`: at rest at the start position, make sure that the roll and the pitch are 2° or less, and that the IMU matches the pose within 2°.
+- [x] `test_drive_forward`: send `/Rover/motor/drive_straight` with `linear_velocity=0.2` and `distance=2.0`. Make sure that all six wheels turn forward and that the distance is 2.0 m ± 10 %. Make sure that the travel direction matches the heading (base_link x axis) within 5°, and that the yaw changed by 3° or less. During and after the drive, make sure that the IMU matches the pose within 2°.
+- [x] `test_drive_backward`: send `linear_velocity=-0.2` and `distance=2.0`. Make the same checks, with all wheels backward and the travel direction opposite to the heading. Make sure that the rover stops within 0.2 m of the start position.
+- [x] `test_spot_turn_left`: send `/Rover/motor/drive_turn` with `angular_velocity=8.0` and `angle=90.0`. A positive `angular_velocity` turns left (counterclockwise from above). Make sure that the left wheels turn backward and the right wheels forward. Make sure that the yaw increased by 90° ± 15°, that the position moved 0.4 m or less, and that the median gyroscope yaw rate (gz) is 8°/s ± 20 %, without the first and last 2 samples. During and after the turn, make sure that the IMU matches the pose within 2°.
+- [x] `test_spot_turn_right`: send `angular_velocity=-8.0` and `angle=90.0`. Make the same checks, mirrored. Make sure that the heading is within 15° of the start heading.
+- [x] Run the flat area tests on the workshop terrain (2026-11-13). Start (22, 13): roll 0.1°, pitch -0.8°. Forward 2.036 m, backward 2.044 m, back within 0.010 m of the start. Turns 83.8° and -82.2° for 90°, at a steady 7.4 to 7.7°/s, against 8.0 to 8.15°/s on flat terrain: the small bumps of the real terrain slow the skid-steer turn by 5 to 8 %. The skid-steer factor stays calibrated on flat ground, and the turn tolerances are 15° and 0.4 m (user decision).
 - [x] Put each tolerance in a named constant above the test.
 - [x] Print each measurement to the test log. Fail at the end with the list of failed checks.
 - [x] Record the baseline on the source asset.
