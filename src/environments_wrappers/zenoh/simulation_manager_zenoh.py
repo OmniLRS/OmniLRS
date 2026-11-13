@@ -4,7 +4,7 @@ __email__ = "ljburtz@jaops.com"
 
 import logging
 
-import omni
+import omni.timeline
 from isaacsim import SimulationApp
 
 from src.configurations.procedural_terrain_confs import TerrainManagerConf
@@ -91,21 +91,21 @@ class Zenoh_SimulationManager:
         if environment_name == "LargeScale":
             self.Zenoh_EC = Zenoh_LargeScaleManager(
                 environment_cfg=self.cfg["environment"],
-                zenoh_cfg=self.cfg["mode"],
+                mode_cfg=self.cfg["mode"],
                 is_simulation_alive=self.simulation_app.is_running,
                 close_simulation=self.simulation_app.close,
             )
         elif environment_name == "Lunaryard":
             self.Zenoh_EC = Zenoh_LunaryardManager(
                 environment_cfg=self.cfg["environment"],
-                zenoh_cfg=self.cfg["mode"],
+                mode_cfg=self.cfg["mode"],
                 is_simulation_alive=self.simulation_app.is_running,
                 close_simulation=self.simulation_app.close,
             )
         elif environment_name == "Lunalab":
             self.Zenoh_EC = Zenoh_LunalabManager(
                 environment_cfg=self.cfg["environment"],
-                zenoh_cfg=self.cfg["mode"],
+                mode_cfg=self.cfg["mode"],
                 is_simulation_alive=self.simulation_app.is_running,
                 close_simulation=self.simulation_app.close,
             )

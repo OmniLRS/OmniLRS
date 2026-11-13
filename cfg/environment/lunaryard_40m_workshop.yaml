@@ -171,6 +171,7 @@ terrain_manager:
   resolution: ${..lunaryard_settings.resolution}
 
 # robot settings are defined in the robot specific yaml files in the `cfg/robot` folder
+# The robot comes from a robot yaml (cfg/robot): run.py environment=... robot=...
 robots_settings:
   robots_root: "/Robots"
 

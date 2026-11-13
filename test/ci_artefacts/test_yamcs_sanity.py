@@ -488,3 +488,8 @@ def test_solar_panel_deploy_and_stow(rover):
 def test_no_ignored_joint_writes(sim):
     # Runs after the joint tests: PhysX ignores (and logs) joint drive writes made while it is stepping.
     assert IGNORED_WRITE_MARKER not in sim.log, f"PhysX ignored joint writes (see {sim.log_path.name})"
+
+
+def test_durations_within_baseline(check_durations, sim):
+    # Keep this test last: it compares the durations of this run with durations_baseline.yaml (Artefacts infra only).
+    check_durations(sim.log)

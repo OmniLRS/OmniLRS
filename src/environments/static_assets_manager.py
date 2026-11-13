@@ -5,7 +5,7 @@ __email__ = "ljburtz@jaops.com"
 import os
 from pathlib import Path
 
-import omni
+import omni.usd
 from pxr import Gf, PhysxSchema, UsdGeom, UsdPhysics
 
 from assets import get_assets_path

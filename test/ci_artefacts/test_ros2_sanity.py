@@ -16,10 +16,9 @@ SIM_COMMAND = [
     "-e",
     "ci",
     "ros2",
-    # The Husky robot yaml (cfg/robot/husky.yaml) with the ROS 2 Husky USD: its action graphs publish the topics
-    # checked below (the robot yaml USD has no graphs, for the Zenoh and Yamcs modes).
-    "robot=husky",
-    "environment.robots_settings.parameters.usd_path=assets/USD_Assets/robots/ros2_husky_PhysX_vlp16.usd",
+    # The EX1 robot yaml (cfg/robot/ex1.yaml): the action graphs of its USD publish and subscribe to the topics
+    # checked below (Ackermann drive on /ackermann_cmd).
+    "robot=ex1",
     "rendering.renderer.headless=True",
     # For some reason AWS EKS AMI's duplicate NVIDIA Vulkan ICDs, making one GPU enumerate
     # causing Isaac to think there are two gpus available and then die.
@@ -32,7 +31,7 @@ SIM_COMMAND = [
 FINAL_MARKER = "ArticulationTelemetry initialized"
 
 # Topics the tests check; the topics fixture waits up to TOPICS_TIMEOUT seconds for all of them.
-EXPECTED_TOPICS = {"/clock", "/cmd_vel", "/odom", "/parameter_events", "/pointcloud", "/rosout", "/tf"}
+EXPECTED_TOPICS = {"/ackermann_cmd", "/clock", "/odom", "/parameter_events", "/rosout", "/tf"}
 TOPICS_TIMEOUT = int(os.environ.get("OMNILRS_TOPICS_TIMEOUT", "60"))
 
 # Fast fail on the following.
@@ -164,8 +163,8 @@ def test_topic_clock(topics):
     assert "/clock" in topics
 
 
-def test_topic_cmd_vel(topics):
-    assert "/cmd_vel" in topics
+def test_topic_ackermann_cmd(topics):
+    assert "/ackermann_cmd" in topics
 
 
 def test_topic_odom(topics):
@@ -174,10 +173,6 @@ def test_topic_odom(topics):
 
 def test_topic_parameter_events(topics):
     assert "/parameter_events" in topics
-
-
-def test_topic_pointcloud(topics):
-    assert "/pointcloud" in topics
 
 
 def test_topic_rosout(topics):
@@ -191,3 +186,8 @@ def test_topic_tf(topics):
 def test_omnilrs_control_topics(topics):
     omnilrs = [t for t in topics if t.startswith("/OmniLRS/")]
     assert omnilrs, f"No /OmniLRS/* control topics advertised. Advertised: {topics}"
+
+
+def test_durations_within_baseline(check_durations, sim):
+    # Keep this test last: it compares the durations of this run with durations_baseline.yaml (Artefacts infra only).
+    check_durations(sim.log)

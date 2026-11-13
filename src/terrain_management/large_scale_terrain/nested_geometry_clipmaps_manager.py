@@ -8,7 +8,7 @@ import warnings
 from typing import Tuple
 
 import numpy as np
-import omni
+import omni.usd
 from isaacsim.core.experimental.utils.semantics import add_labels
 
 from src.terrain_management.large_scale_terrain.geometry_clipmaps import GeometryClipmapConf

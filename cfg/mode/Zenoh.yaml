@@ -7,9 +7,9 @@ keyexprs:
 
   # multi-instance channels: child topics will be appended (sensor / resolution name from robot.yaml)
   camera:            "OmniLRS/{robot_name}/camera"   # pub, -> OmniLRS/husky/camera/cam_color/high
-  imu:               "OmniLRS/{robot_name}/imu"      # pub, -> OmniLRS/husky/imu/adxl6090
 
   # singletons: full keys, nothing appended
+  imu:               "OmniLRS/{robot_name}/imu"      # pub
   joint_telemetry:   "OmniLRS/{robot_name}/joint_telemetry" # pub
   joint_commands:    "OmniLRS/{robot_name}/joint_cmd" # sub
   ground_truth_pose: "OmniLRS/{robot_name}/gt_pose" # pub

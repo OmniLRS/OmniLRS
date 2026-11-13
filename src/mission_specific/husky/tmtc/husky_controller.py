@@ -18,10 +18,10 @@ class HuskyController(YamcsTMTC):
     Inherits YamcsTMTC and wires up Husky-specific handlers.
 
     Implements the two mandatory abstract methods:
-        command_handlers()      — maps each command of the controller yaml `commands` (by key) to its HuskyCommander
-                                  method and the argument names it takes; YamcsTMTC registers them and checks them
-                                  against the Yamcs server MDB at startup.
-        start_streaming_data()  — schedules periodic telemetry transmissions.
+        command_handlers()         — maps each command of the controller yaml `commands` (by key) to its HuskyCommander
+                                     method and the argument names it takes; YamcsTMTC registers them and checks them
+                                     against the Yamcs server MDB at startup.
+        start_transmitting_data()  — schedules periodic telemetry transmissions.
     """
 
     CAMERA_STREAMING_FIELDS = STREAMING_FIELDS
@@ -72,7 +72,7 @@ class HuskyController(YamcsTMTC):
             "camera_capture_depth": (self._commander.handle_depth_capture, ["camera_name"]),
         }
 
-    def start_streaming_data(self):
+    def start_transmitting_data(self):
         """Schedule periodic telemetry intervals."""
         self._camera_handler.transmit_no_data_images()
 

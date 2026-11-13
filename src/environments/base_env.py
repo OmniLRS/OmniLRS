@@ -2,7 +2,7 @@ __author__ = "Antoine Richard, Junnosuke Kamohara, Aleksa Stanivuk"
 __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
 
-import omni
+import omni.usd
 from pxr import Usd
 
 from src.configurations.simulator_mode_enum import SimulatorMode

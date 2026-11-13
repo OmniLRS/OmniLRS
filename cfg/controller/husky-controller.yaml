@@ -23,7 +23,7 @@ robots_settings:
       # OmniLRS does not create buckets: generate_mdb_rover.py (yamcs-mission-control repository) declares all of them
       # in the Yamcs yamcs.yaml, and the startup check aborts if one is missing.
       #   name: Yamcs storage bucket
-      #   path: MDB space system receiving number/name/url_* metadata
+      #   path: MDB space system receiving the number, name and url_* Yamcs parameters
       buckets: {}
     parameters:
       # Note: the per-camera telemetry (streaming state) is computed from the robot cameras and
@@ -66,3 +66,25 @@ robots_settings:
       camera_capture_high: "/Rover/camera/camera_capture_high"
       camera_streaming_on_off: "/Rover/camera/camera_streaming"
       camera_capture_depth: "/Rover/camera/camera_capture_depth"
+
+  zenoh: # These settings are relevant if mode=Zenoh (stream settings of each Zenoh channel)
+    # Key expressions, default_wire_format and the log frequencies are in cfg/mode/Zenoh.yaml.
+    # wire_format (optional, per channel) overrides default_wire_format.
+    camera:
+      publish_period_s: 0.2 # 5 hz
+      wire_format: "msgspec" # specify custom wire_format, not using default_wire_format in Zenoh.yaml
+      is_logging: False
+    imu:
+      publish_period_s: 0.02
+      is_logging: False
+    joint_telemetry:
+      publish_period_s: 0.1
+      init_retry_s: 0.5
+      not_ready_log_period_s: 1.0
+      keep_history: False
+      history_len: 200
+      is_logging: False
+    joint_commands:
+      is_logging: False
+    ground_truth_pose:
+      is_logging: False

@@ -62,6 +62,9 @@ class ChromaticAberrationsConf:
     enable_lanczos: bool = dataclasses.field(default_factory=bool)
 
     def __post_init__(self):
+        # The yaml gives lists
+        self.strength = tuple(self.strength)
+        self.model = tuple(self.model)
         assert type(self.enable) is bool, "enable must be a boolean"
         assert type(self.strength) is tuple, "strength must be a tuple"
         assert all([type(i) is float for i in self.strength]), "strength must be a tuple of floats"

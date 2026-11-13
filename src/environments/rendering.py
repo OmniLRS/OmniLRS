@@ -4,8 +4,7 @@ __email__ = "ljburtz@jaops.com"
 
 from typing import Tuple
 
-import carb
-import omni
+import carb.settings
 
 from src.configurations.rendering_confs import ChromaticAberrationsConf, FlaresConf, MotionBlurConf
 
@@ -43,6 +42,8 @@ def enable_RTX_interactive(*kwargs) -> None:
     Args:
         data (int, optional): Not used. Defaults to 0.
     """
+
+    import omni.kit.actions.core
 
     action_registry = omni.kit.actions.core.get_action_registry()
     action = action_registry.get_action("omni.kit.viewport.actions", "set_renderer_rtx_pathtracing")
@@ -197,8 +198,8 @@ def set_chromatic_aberrations(cfg):
     Sets the chromatic aberration settings.
     """
 
-    if "chromatic_aberrations" in cfg["rendering"].keys():
-        chromatic_aberrations_cfg = cfg["rendering"]["chromatic_aberrations"]
+    if "chromatic_aberration" in cfg["rendering"].keys():
+        chromatic_aberrations_cfg = cfg["rendering"]["chromatic_aberration"]
         apply_chromatic_aberrations(chromatic_aberrations_cfg)
 
 

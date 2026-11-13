@@ -26,6 +26,6 @@ run.log
 **/.venv
 **/venv
 
-# Assets baked into ci.Dockerfile 
+# Assets baked into ci.Dockerfile
 
 assets/

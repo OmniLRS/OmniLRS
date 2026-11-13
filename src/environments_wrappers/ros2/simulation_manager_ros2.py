@@ -6,7 +6,7 @@ import logging
 from threading import Thread
 from typing import Union
 
-import omni
+import omni.timeline
 import rclpy
 from isaacsim import SimulationApp
 from rclpy.executors import ExternalShutdownException

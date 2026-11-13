@@ -31,7 +31,7 @@ SIM_COMMAND = [
     "rendering.renderer.multi_gpu=false",
     "rendering.renderer.active_gpu=0",
     # Log every joint command received (checked by test_mixed_command).
-    "environment.robots_settings.parameters.zenoh.joint_commands.is_logging=true",
+    "environment.robots_settings.zenoh.joint_commands.is_logging=true",
     "mode.sub_log_every_n=1",
 ]
 
@@ -413,3 +413,8 @@ def test_stop_then_play_restarts(husky, sim):
 def test_no_ignored_joint_writes(sim):
     # Runs after the joint tests: PhysX ignores (and logs) joint drive writes made while it is stepping.
     assert IGNORED_WRITE_MARKER not in sim.log, f"PhysX ignored joint writes (see {sim.log_path.name})"
+
+
+def test_durations_within_baseline(check_durations, sim):
+    # Keep this test last: it compares the durations of this run with durations_baseline.yaml (Artefacts infra only).
+    check_durations(sim.log)

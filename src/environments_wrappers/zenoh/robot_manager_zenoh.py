@@ -19,7 +19,16 @@ class Zenoh_RobotManager:
     Zenoh wrapper that manages the robots.
     """
 
-    def __init__(self, RM_conf: dict, zenoh_conf: dict) -> None:
+    def __init__(self, RM_conf: dict, mode_cfg: dict) -> None:
+        # mode_cfg: cfg/mode/Zenoh.yaml (key expressions, default_wire_format, log frequencies)
+        # streams: the controller yaml robots_settings.zenoh (stream settings of each Zenoh channel)
+        streams = RM_conf.get("zenoh")
+        if not streams:
+            raise ValueError(
+                "Zenoh mode needs the `zenoh` stream settings of the controller yaml (robots_settings.zenoh): "
+                "run with controller=<robot>-controller, e.g. controller=husky-controller."
+            )
+
         self.RM_ = RobotManager(RM_conf, mode=SimulatorMode.ZENOH)
 
         self.modifications: List[Tuple[Callable, dict]] = []
@@ -35,15 +44,16 @@ class Zenoh_RobotManager:
         ### BEGIN TELEMETRY ###
 
         ## Camera Telemetry
-        self.camera_bridge = CameraBridge(robot, zenoh_conf, self.RM_)
+        self.camera_bridge = CameraBridge(robot, mode_cfg, streams, self.RM_)
 
         ## IMU Telemetry
-        self.imu_bridge = IMUBridge(robot, zenoh_conf, self.RM_)
+        self.imu_bridge = IMUBridge(robot, mode_cfg, streams, self.RM_)
 
         ## Joint Force Telemetry
         self.joint_bridge = JointForceBridge(
             robot,
-            zenoh_conf,
+            mode_cfg,
+            streams,
             RM=self.RM_,
             robot_root_prim=robot_path,
         )
@@ -52,24 +62,24 @@ class Zenoh_RobotManager:
         ## Joint Commands
         self.cmd_receiver = ZenohCommandReceiver(
             RM=self.RM_,
-            keyexpr=zenoh_conf["keyexprs"]["joint_commands"].format(robot_name=robot_name),
-            wire_format=robot["zenoh"]["joint_commands"].get(
+            keyexpr=mode_cfg["keyexprs"]["joint_commands"].format(robot_name=robot_name),
+            wire_format=streams["joint_commands"].get(
                 "wire_format",
-                zenoh_conf["default_wire_format"],
+                mode_cfg["default_wire_format"],
             ),
-            is_logging=robot["zenoh"]["joint_commands"]["is_logging"],
-            log_every_n=zenoh_conf["sub_log_every_n"],
+            is_logging=streams["joint_commands"]["is_logging"],
+            log_every_n=mode_cfg["sub_log_every_n"],
         )
 
         ## Ground Truth
         gt_pub = ZenohPubTransport(
-            keyexpr=zenoh_conf["keyexprs"]["ground_truth_pose"].format(robot_name=robot_name),
-            wire_format=robot["zenoh"]["ground_truth_pose"].get(
+            keyexpr=mode_cfg["keyexprs"]["ground_truth_pose"].format(robot_name=robot_name),
+            wire_format=streams["ground_truth_pose"].get(
                 "wire_format",
-                zenoh_conf["default_wire_format"],
+                mode_cfg["default_wire_format"],
             ),
-            is_logging=robot["zenoh"]["ground_truth_pose"]["is_logging"],
-            log_every_n=zenoh_conf["pub_log_every_n"],
+            is_logging=streams["ground_truth_pose"]["is_logging"],
+            log_every_n=mode_cfg["pub_log_every_n"],
         )
         self.gt = gt_pub
         self.publishers.append(gt_pub)

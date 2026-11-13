@@ -50,7 +50,7 @@ class YamcsTMTC(ABC):
         command_handlers() - commands-yaml key -> (handler, argument names it takes). setup_command_callbacks registers
                              each handler for its command with the CommandsHandler, and check_yamcs_server verifies
                              the command and its arguments exist in the server MDB.
-        start_streaming_data - utilizes IntervalsHandler to setup and trigger update of rover's parameters in Yamcs
+        start_transmitting_data - utilizes IntervalsHandler to setup and trigger update of rover's parameters in Yamcs
 
     """
 
@@ -99,7 +99,7 @@ class YamcsTMTC(ABC):
         self.check_yamcs_server()
         self._images_handler.prepare_buckets()
         self.setup_command_callbacks(commands_conf)
-        self.start_streaming_data()
+        self.start_transmitting_data()
 
     def check_yamcs_server(self) -> None:
         """Check the Yamcs server MDB and buckets against this robot and controller; raise if anything OmniLRS needs
@@ -134,7 +134,7 @@ class YamcsTMTC(ABC):
             )
 
     @abstractmethod
-    def start_streaming_data(self):
+    def start_transmitting_data(self):
         """Start streaming data from the robot to Yamcs."""
         pass
 
