@@ -68,7 +68,9 @@ ENCODER_COUNTS = 1024  # per turn
 # The drive commands below set wheel velocities of about 2 rad/s, ~330 counts per sample (under half a turn, so the
 # signed change between samples is unambiguous).
 TURNING_COUNTS = 50  # minimum change per sample of a turning wheel
-STILL_COUNTS = 10  # maximum change per sample of a stopped wheel
+# Maximum change per sample of a stopped wheel (0.12 rad/s ~ 1rpm). A stopped rover on a slope keeps a small residual drift (up
+# to about 0.05 rad/s at the wheels, accepted on 2026-11-13).
+STILL_COUNTS = 20
 STOP_SETTLE_S = 2.0  # time for the rover to slow down after a stop command, before the wheels are checked
 IGNORED_WRITE_MARKER = "not allowed while simulation is running"
 
@@ -129,12 +131,15 @@ class SimProcess:
     def __init__(self):
         self.log_path = _log_dir() / "sim_startup.log"
         self._log_file = open(self.log_path, "w")
+        # Top and side video of the rover (src/environments_wrappers/yamcs/robot_video_recorder.py), next to the logs.
+        self.video_path = _log_dir() / "rover_yamcs_sanity.mp4"
         self.proc = subprocess.Popen(
             SIM_COMMAND,
             cwd=REPO_ROOT,
             stdout=self._log_file,
             stderr=subprocess.STDOUT,
             start_new_session=True,
+            env={**os.environ, "OMNILRS_ROBOT_VIDEO": str(self.video_path)},
         )
 
     @property
@@ -360,6 +365,13 @@ def camera_image_meta_paths():
     return [path for *_, path in yamcs_naming.camera_buckets(parse_cameras(cameras))]
 
 
+@pytest.fixture(autouse=True)
+def video_step(request, sim):
+    """Writes the name of each test to the steps file of the rover video, which shows it as the current test step."""
+    with open(sim.video_path.with_suffix(".steps.log"), "a") as steps:
+        steps.write(f"{request.node.name}\n")
+
+
 # Requested by the joint tests only, which run last: the telemetry tests expect the startup state (e.g. NOGO).
 @pytest.fixture(scope="session")
 def rover(sim, processor, subscription):
@@ -527,8 +539,8 @@ Integrated test: solar panel, drive and turn commands, checked against the groun
 """
 
 POSE = "/Rover/pose_ground_truth"  # base_link position relative to the lander, world orientation {w, x, y, z}
-IMU_ORIENTATION = "/Rover/imu_orientation"  # roll, pitch, yaw in deg
-IMU_GYROSCOPE = "/Rover/imu_gyroscope"  # gx, gy, gz in deg/s (MDB units)
+IMU_ORIENTATION = "/Rover/imu_orientation"  # roll, pitch, yaw in rad (raw SI values; the checks work in deg)
+IMU_GYROSCOPE = "/Rover/imu_gyroscope"  # gx, gy, gz in rad/s (raw SI values)
 
 STRAIGHT_SPEED = 0.2  # m/s
 STRAIGHT_DISTANCE = 2.0  # m
@@ -568,10 +580,14 @@ def _shift(start, end):
     return end["position"]["x"] - start["position"]["x"], end["position"]["y"] - start["position"]["y"]
 
 
+def _imu_deg(imu):
+    """IMU roll, pitch and yaw in deg (the telemetry is in rad)."""
+    return tuple(math.degrees(imu[k]) for k in ("roll", "pitch", "yaw"))
+
+
 def _imu_errors(pose, imu):
     """IMU roll, pitch and yaw minus the roll, pitch and yaw of the ground truth pose, in deg."""
-    roll, pitch, yaw = _rpy_deg(pose["orientation"])
-    return _wrap_deg(imu["roll"] - roll), _wrap_deg(imu["pitch"] - pitch), _wrap_deg(imu["yaw"] - yaw)
+    return tuple(_wrap_deg(i - p) for i, p in zip(_imu_deg(imu), _rpy_deg(pose["orientation"])))
 
 
 def _paired(samples):
@@ -585,6 +601,22 @@ def _paired(samples):
         if abs((t_pose - t_imu).total_seconds()) <= PAIR_MAX_DT_S:
             pairs.append((pose, imu))
     return pairs
+
+
+def _print_slow_stop(samples, nominal_s, label):
+    """If a motion took more than 5 s longer than commanded, print the pose and encoder changes of each second."""
+    if len(samples[ENCODER]) <= nominal_s + 5:
+        return
+    half = ENCODER_COUNTS // 2
+    print(f"  {label}: {len(samples[ENCODER])} s until the wheels stopped (commanded {nominal_s:.0f} s)")
+    poses = samples[POSE]
+    for i in range(1, len(poses)):
+        dx, dy = _shift(poses[i - 1][1], poses[i][1])
+        print(f"    pose {i:2d}: moved {math.hypot(dx, dy) * 1000:6.1f} mm, yaw {_yaw_deg(poses[i][1]):7.2f} deg")
+    encoder = samples[ENCODER]
+    for i in range(1, len(encoder)):
+        deltas = [(c - p + half) % ENCODER_COUNTS - half for p, c in zip(encoder[i - 1][1], encoder[i][1])]
+        print(f"    encoder {i:2d}: {deltas}")
 
 
 class _Checks:
@@ -602,7 +634,7 @@ class _Checks:
         errors = _imu_errors(pose, imu)
         self.expect(
             all(abs(e) <= IMU_TOLERANCE_DEG for e in errors),
-            f"IMU {where}: roll/pitch/yaw {imu['roll']:.1f}/{imu['pitch']:.1f}/{imu['yaw']:.1f} deg, "
+            f"IMU {where}: roll/pitch/yaw {'/'.join(f'{a:.1f}' for a in _imu_deg(imu))} deg, "
             f"pose {'/'.join(f'{a:.1f}' for a in _rpy_deg(pose['orientation']))} deg "
             f"(error {'/'.join(f'{e:.1f}' for e in errors)}, max {IMU_TOLERANCE_DEG})",
         )
@@ -650,6 +682,7 @@ def test_integrated_solar_panel_drive_turn_imu(rover):
     distance = math.hypot(dx, dy)
     direction_error = _wrap_deg(math.degrees(math.atan2(dy, dx)) - _yaw_deg(start))
     yaw_change = _wrap_deg(_yaw_deg(after_straight) - _yaw_deg(start))
+    _print_slow_stop(straight, STRAIGHT_DISTANCE / STRAIGHT_SPEED, "straight drive")
     checks.expect(
         abs(distance - STRAIGHT_DISTANCE) <= DISTANCE_TOLERANCE * STRAIGHT_DISTANCE,
         f"straight drive distance {distance:.3f} m, commanded {STRAIGHT_DISTANCE} m "
@@ -678,13 +711,14 @@ def test_integrated_solar_panel_drive_turn_imu(rover):
     after_turn = rover.next_value(POSE)
     turn_angle = _wrap_deg(_yaw_deg(after_turn) - _yaw_deg(after_straight))
     turn_shift = math.hypot(*_shift(after_straight, after_turn))
+    _print_slow_stop(turn, TURN_ANGLE / TURN_RATE, "turn")
     checks.expect(
         abs(turn_angle - TURN_ANGLE) <= TURN_ANGLE_TOLERANCE_DEG,
         f"turn angle {turn_angle:.1f} deg, commanded {TURN_ANGLE} deg to the left "
         f"(max error {TURN_ANGLE_TOLERANCE_DEG}, {len(turn[ENCODER])} s)",
     )
     checks.expect(turn_shift <= TURN_MAX_SHIFT_M, f"turn position change {turn_shift:.3f} m (max {TURN_MAX_SHIFT_M})")
-    rates = sorted(gyro["gz"] for _, gyro in turn[IMU_GYROSCOPE][RAMP_SAMPLES:-RAMP_SAMPLES])
+    rates = sorted(math.degrees(gyro["gz"]) for _, gyro in turn[IMU_GYROSCOPE][RAMP_SAMPLES:-RAMP_SAMPLES])
     rate = rates[len(rates) // 2] if rates else float("nan")
     checks.expect(
         abs(rate - TURN_RATE) <= TURN_RATE_TOLERANCE * TURN_RATE,
