@@ -5,9 +5,13 @@ __email__ = "ljburtz@jaops.com"
 import copy
 import dataclasses
 import logging
+import os
+import pickle
+import shutil
 import sys
 import threading
 import time
+from pathlib import Path
 from typing import List, Tuple
 
 import numpy as np
@@ -114,6 +118,7 @@ class HighResDEMGen:
         profiling: bool = True,
         is_simulation_alive: callable = lambda: True,
         close_simulation: callable = lambda: None,
+        cache_path: Path = None,
     ) -> None:
         """
         Args:
@@ -122,6 +127,8 @@ class HighResDEMGen:
             profiling (bool): True if the profiling is enabled, False otherwise.
             is_simulation_alive (callable): A callable that returns True if the simulation is alive, False otherwise.
             close_simulation (callable): A callable that closes the simulation.
+            cache_path (Path): A folder written by save. If given, the generator resumes from it instead of
+                generating the high resolution DEM and the crater profiles again.
         """
         self.low_res_dem = low_res_dem
         self.settings = settings
@@ -136,18 +143,27 @@ class HighResDEMGen:
         self.thread = None
         self.terrain_is_primed = False
         self.crater_db_is_primed = False
-        self.build()
+        self.build(cache_path)
 
-    def build(self) -> None:
+    def build(self, cache_path: Path = None) -> None:
         """
         Builds the objects responsible to generate the high resolution DEM.
+
+        Args:
+            cache_path (Path): A folder written by save to resume from, or None to start from scratch.
         """
 
         # Creates the crater DB and crater sampler
         # The DB is used to store the crater metadata and the sampler is used
         # to generate the craters metadata.
-        self.crater_db = CraterDB(self.settings.crater_db_cfg)
-        self.crater_sampler = CraterSampler(self.settings.crater_sampler_cfg, db=self.crater_db)
+        if cache_path is None:
+            self.crater_db = CraterDB(self.settings.crater_db_cfg)
+            self.crater_sampler = CraterSampler(self.settings.crater_sampler_cfg, db=self.crater_db)
+        else:
+            with open(cache_path / "state.pkl", "rb") as file:
+                state = pickle.load(file)
+            self.crater_db = state["crater_db"]
+            self.crater_sampler = state["crater_sampler"]
         # Creates the crater builder and the interpolator they are used by the
         # worker managers to distribute the generation of craters and the
         # interpolation of the terrain data accross multiple workers.
@@ -173,9 +189,51 @@ class HighResDEMGen:
         self.monitor_thread.add_shutdowns(self.crater_builder_manager.shutdown, self.interpolator_manager.shutdown)
         # Instantiates the high resolution DEM with the given settings.
         self.settings = self.settings.high_res_dem_cfg
-        self.build_block_grid()
-        self.instantiate_high_res_dem()
+        if cache_path is None:
+            self.build_block_grid()
+            self.instantiate_high_res_dem()
+        else:
+            # Loaded once the workers are forked: loaded before, they would share its memory pages and shifting the
+            # DEM would have to copy them (copy-on-write), slowing down the first shifts.
+            self.high_res_dem = np.load(cache_path / "dem.npy")
+            self.block_grid_tracker = state["block_grid_tracker"]
+            self.map_grid_block2coords = state["map_grid_block2coords"]
+            self.current_block_coord = state["current_block_coord"]
+            self.sim_is_warm = True
+            self.terrain_is_primed = True
         self.get_low_res_dem_offset()
+
+    def save(self, path: Path) -> None:
+        """
+        Saves the high resolution DEM and what is needed to keep generating it (the state of its blocks, and the
+        crater database and sampler: profiles, metadata and random generators), so that a generator built with
+        cache_path=path streams the same terrain as this one. The folder is written under a temporary name and then
+        renamed, so an interrupted save never leaves a partial one. A failed save only logs a warning.
+
+        Args:
+            path (Path): The folder to save to.
+        """
+
+        assert self.is_map_done(), "The high resolution DEM must be fully generated to be saved."
+        state = {
+            "block_grid_tracker": self.block_grid_tracker,
+            "map_grid_block2coords": self.map_grid_block2coords,
+            "current_block_coord": self.current_block_coord,
+            "crater_db": self.crater_db,
+            "crater_sampler": self.crater_sampler,
+        }
+        tmp_path = path.with_name(f".tmp-{path.name}-{os.getpid()}")
+        try:
+            tmp_path.mkdir(parents=True)
+            np.save(tmp_path / "dem.npy", self.high_res_dem)
+            with open(tmp_path / "state.pkl", "wb") as file:
+                pickle.dump(state, file, protocol=pickle.HIGHEST_PROTOCOL)
+            os.rename(tmp_path, path)
+            logger.info(f"Saved HR DEM to cache {path}")
+        except OSError as error:
+            logger.warning(f"Could not save the HR DEM to cache {path}: {error}")
+        finally:
+            shutil.rmtree(tmp_path, ignore_errors=True)
 
     def get_current_block_coordinates(self) -> Tuple[float, float]:
         """

@@ -138,6 +138,7 @@ class LargeScaleTerrainConf:
     hr_dem_resolution: float = 0.025
     hr_dem_generate_craters: bool = True
     hr_dem_num_blocks: int = 4
+    terrain_cache_dir: str = None
 
     crater_gen_densities: list = dataclasses.field(default_factory=list)
     crater_gen_radius: list = dataclasses.field(default_factory=list)
@@ -200,6 +201,9 @@ class LargeScaleTerrainConf:
         assert type(self.hr_dem_generate_craters) is bool, "hr_dem_generate_craters must be a boolean."
         assert type(self.hr_dem_num_blocks) is int, "hr_dem_num_blocks must be an integer."
         assert self.hr_dem_num_blocks > 0, "hr_dem_num_blocks must be a positive integer."
+        assert self.terrain_cache_dir is None or type(self.terrain_cache_dir) is str, (
+            "terrain_cache_dir must be a string or None."
+        )
 
         if self.crater_gen_seed is None:
             self.crater_gen_seed = self.seed + 1
@@ -359,6 +363,7 @@ class LargeScaleTerrainConf:
         self.MMConf_D = {
             "folder_path": self.lr_dem_folder_path,
             "hrdem_settings": HRDEMGenCfg_D,
+            "terrain_cache_dir": self.terrain_cache_dir,
         }
 
         assert type(self.geo_cm_num_texels_per_level) is int, "geo_cm_num_texels_per_level must be an integer."
