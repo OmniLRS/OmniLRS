@@ -158,6 +158,9 @@ numpy = "*"
 pandas = "*"
 opencv-python-headless = "*"
 scipy = "*"
+# Imported by the large scale terrain generator (test_terrain_cache)
+zfpy = "*"
+matplotlib = "*"
 
 [feature.test-unit.tasks]
 test-unit = "pytest -v test/unit"

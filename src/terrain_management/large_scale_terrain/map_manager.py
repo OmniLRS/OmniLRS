@@ -3,10 +3,13 @@ __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
 
 import dataclasses
+import hashlib
+import json
 import logging
 import math
 import os
 import time
+from pathlib import Path
 from typing import Tuple
 
 import numpy as np
@@ -19,6 +22,9 @@ from src.terrain_management.large_scale_terrain.high_resolution_DEM_generator im
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(format="%(asctime)s %(message)s", datefmt="%m/%d/%Y %I:%M:%S %p")
+
+# Bump when a change to the high resolution DEM generation changes its output, to invalidate the terrain caches.
+TERRAIN_CACHE_VERSION = 1
 
 
 @dataclasses.dataclass
@@ -41,10 +47,12 @@ class MapManagerConf:
     Args:
         folder_path (str): path to the folder containing the DEMs.
         hrdem_settings (HighResDEMGenConf): settings for the high resolution DEM generation.
+        terrain_cache_dir (str): folder to cache the generated high resolution DEM in, None to disable the cache.
     """
 
     folder_path: str = dataclasses.field(default_factory=str)
     hrdem_settings: HighResDEMGenConf = dataclasses.field(default_factory=dict)
+    terrain_cache_dir: str = None
 
     def __post_init__(self):
         assert type(self.folder_path) is str, "folder_path must be a string"
@@ -132,7 +140,7 @@ class MapManager:
 
     def load_lr_dem_by_name(self, name: str) -> None:
         """
-        Loads the low resolution DEM by name, and initializes the high resolution DEM generator.
+        Loads the low resolution DEM by name.
 
         Args:
             name (str): name of the DEM to load.
@@ -147,20 +155,9 @@ class MapManager:
         else:
             logger.warn(f"DEM {name} does not exist in the folder path {self.settings.folder_path}")
 
-        # Override the source resolution
-        lr_dem_res = self.lr_dem_info.pixel_size[0]
-        self.hr_dem_settings.high_res_dem_cfg.source_resolution = lr_dem_res
-        self.hr_dem_settings.interpolator_cfg.source_resolution = lr_dem_res
-        self.hr_dem_gen = HighResDEMGen(
-            self.lr_dem,
-            self.hr_dem_settings,
-            is_simulation_alive=self.is_simulation_alive,
-            close_simulation=self.close_simulation,
-        )
-
     def load_lr_dem_by_path(self, path: str) -> None:
         """
-        Loads the low resolution DEM by path, and initializes the high resolution DEM generator.
+        Loads the low resolution DEM by path.
         This method is used to load a DEM from a specific path outside of the folder path.
 
         Args:
@@ -175,19 +172,10 @@ class MapManager:
                 self.lr_dem_info = DemInfo(**yaml.load(open(dem_info_path, "r")))
             else:
                 raise ValueError(f"DEM {dem_path} or DEM info {dem_info_path} does not exist in the folder path {path}")
-        lr_dem_res = self.lr_dem_info.pixel_size[0]
-        self.hr_dem_settings.high_res_dem_cfg.source_resolution = lr_dem_res
-        self.hr_dem_settings.interpolator_cfg.source_resolution = lr_dem_res
-        self.hr_dem_gen = HighResDEMGen(
-            self.lr_dem,
-            self.hr_dem_settings,
-            is_simulation_alive=self.is_simulation_alive,
-            close_simulation=self.close_simulation,
-        )
 
     def load_lr_dem_by_id(self, id: int) -> None:
         """
-        Loads the low resolution DEM by id, and initializes the high resolution DEM generator.
+        Loads the low resolution DEM by id.
         This method is a legacy method and should not be used.
 
         Args:
@@ -205,15 +193,6 @@ class MapManager:
             raise ValueError(
                 f"id {id} is not in the range of the number of DEMs in the folder path {self.settings.folder_path}"
             )
-        lr_dem_res = self.lr_dem_info.pixel_size[0]
-        self.hr_dem_settings.high_res_dem_cfg.source_resolution = lr_dem_res
-        self.hr_dem_settings.interpolator_cfg.source_resolution = lr_dem_res
-        self.hr_dem_gen = HighResDEMGen(
-            self.lr_dem,
-            self.hr_dem_settings,
-            is_simulation_alive=self.is_simulation_alive,
-            close_simulation=self.close_simulation,
-        )
 
     def generate_procedural_lr_dem(self):
         """
@@ -381,8 +360,9 @@ class MapManager:
 
     def initialize_hr_dem(self, coordinates: Tuple[float, float]) -> None:
         """
-        Initializes the high resolution DEM around the coordinates.
-        Calling this method will block until the high resolution DEM is updated.
+        Initializes the high resolution DEM generator and the high resolution DEM around the coordinates.
+        Calling this method will block until the high resolution DEM is updated. If terrain_cache_dir is set,
+        the high resolution DEM is loaded from the cache when available, and cached after being generated.
 
         Args:
             coordinates (Tuple[float,float]): coordinates in meters.
@@ -390,11 +370,51 @@ class MapManager:
 
         logger.info("Initializing HR DEM")
         start = time.time()
-        self.update_hr_dem(coordinates)
-        while not self.is_hr_dem_updated():
-            time.sleep(0.1)
+        # Override the source resolution
+        lr_dem_res = self.lr_dem_info.pixel_size[0]
+        self.hr_dem_settings.high_res_dem_cfg.source_resolution = lr_dem_res
+        self.hr_dem_settings.interpolator_cfg.source_resolution = lr_dem_res
+
+        cache_path = self.get_terrain_cache_path(coordinates)
+        cached = cache_path is not None and cache_path.is_dir()
+        if cached:
+            logger.info(f"Loading HR DEM from cache {cache_path}")
+        self.hr_dem_gen = HighResDEMGen(
+            self.lr_dem,
+            self.hr_dem_settings,
+            is_simulation_alive=self.is_simulation_alive,
+            close_simulation=self.close_simulation,
+            cache_path=cache_path if cached else None,
+        )
+        if not cached:
+            self.update_hr_dem(coordinates)
+            while not self.is_hr_dem_updated():
+                time.sleep(0.1)
+            if cache_path is not None:
+                self.hr_dem_gen.save(cache_path)
         end = time.time()
         logger.info(f"HR DEM initialized in {end - start} seconds")
+
+    def get_terrain_cache_path(self, coordinates: Tuple[float, float]) -> Path:
+        """
+        Returns the folder caching the high resolution DEM generated around the coordinates, or None if the cache
+        is disabled. Its name hashes everything the generated terrain depends on: the low resolution DEM, the
+        generation settings (not the worker settings) and the coordinates.
+
+        Args:
+            coordinates (Tuple[float,float]): coordinates in meters.
+
+        Returns:
+            Path: the cache folder, or None.
+        """
+
+        if self.settings.terrain_cache_dir is None:
+            return None
+        settings = dataclasses.asdict(self.hr_dem_settings)
+        del settings["crater_worker_manager_cfg"], settings["interpolator_worker_manager_cfg"]
+        key = hashlib.sha256(json.dumps([TERRAIN_CACHE_VERSION, settings, list(coordinates)], sort_keys=True).encode())
+        key.update(np.ascontiguousarray(self.lr_dem))
+        return Path(self.settings.terrain_cache_dir).expanduser() / key.hexdigest()
 
     def is_hr_dem_updated(self) -> bool:
         """
