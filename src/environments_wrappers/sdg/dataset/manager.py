@@ -61,7 +61,9 @@ class SDGDataset_SimulationManager:
                     raise ValueError(f"guards.{name} needs the depth and rgb annotators on {self.cam}")
 
         self.timeline = omni.timeline.get_timeline_interface()
-        self.sim = Simulation(physics_dt=1.0 / 60.0, rendering_dt=1.0 / 60.0)
+        self.sim = Simulation(
+            physics_dt=1.0 / 60.0, rendering_dt=1.0 / 60.0, physics_scene=cfg["physics"]["physics_scene"]
+        )
         self.sim.physics_scene.set_solver_type("PGS")
         self.sim.reset()
 

@@ -370,9 +370,16 @@ if __name__ == "__main__":
     from isaacsim import SimulationApp
 
     simulation_app = SimulationApp({"headless": False})
+    import yaml
+
+    from src.configurations.physics_confs import PhysicsSceneConf
     from src.simulation import Simulation
 
-    sim = Simulation(physics_dt=1.0 / 60.0, rendering_dt=1.0 / 60.0)
+    with open("cfg/physics/default_physics.yaml") as f:
+        physics_scene = PhysicsSceneConf(
+            **yaml.safe_load(f)["physics_scene"]
+        )  # the gravity comes only from cfg/physics
+    sim = Simulation(physics_dt=1.0 / 60.0, rendering_dt=1.0 / 60.0, physics_scene=physics_scene)
     T = TerrainManager()
 
     j = 0

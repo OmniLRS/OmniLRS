@@ -65,9 +65,12 @@ class Yamcs_SimulationManager:
         # simulation state can drift while we wait.
         self._wait_for_yamcs(cfg["mode"]["instance_conf"]["address"], cfg["mode"]["instance_conf"]["instance"])
 
+        # cfg/physics (lunar gravity, solver, time step), as in ROS2 mode. Without it, the simulation ran with the
+        # Isaac Sim defaults, including Earth gravity.
         self.sim = Simulation(
             physics_dt=cfg["environment"]["physics_dt"],
             rendering_dt=cfg["environment"]["rendering_dt"],
+            physics_scene=cfg["physics"]["physics_scene"],
         )
 
         set_moon_env_name(cfg["environment"]["name"])
