@@ -92,9 +92,9 @@ class LunaryardController(BaseEnv, StellarEngineEnvMixin, TerrainControlMixin):
         # Builds the scene
         self.build_scene()
 
-        # Generates the instancer for the rocks
-        self.build_RM()  # TODO should first call switch_terrain() as it calls load_DEM() which sets up self.dem and self.mask that are used inside build_RM(), otherwise they are just None (but either ways inside RM.build() neither of those params are being utilized)
-        # Loads the DEM and the mask
+        # Keep the existing order: create rock instancers first, then load the
+        # terrain and placement masks in switch_terrain().
+        self.build_RM()
         self.switch_terrain(self.stage_settings.terrain_id)
         if self.enable_stellar_engine:
             self.SE.set_lat_lon(self.stage_settings.coordinates.latitude, self.stage_settings.coordinates.longitude)
@@ -105,3 +105,11 @@ class LunaryardController(BaseEnv, StellarEngineEnvMixin, TerrainControlMixin):
 
         if self.MCM:
             self.MCM.spawn(get_height_func=self.get_terrain_height)
+
+    def get_rock_placement_mask(self):
+        """Use all valid terrain for LunarYard's ordinary rocks, as in PR #86.
+
+        This includes crater interiors. The separate ejecta population still uses
+        crater_ejecta_mask. Keeping this override here leaves Lunalab's policy intact.
+        """
+        return self.background_mask
