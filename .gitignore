@@ -33,3 +33,6 @@ benchmarks/outputs/
 test/physics_models/venv/
 test/physics_models/outputs/
 test/ci_artefacts/*.log
+test/ci_artefacts/*.mp4
+test/ci_artefacts/*.webm
+assets/**/*.candidate.usd

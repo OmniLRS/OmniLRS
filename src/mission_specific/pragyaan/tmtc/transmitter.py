@@ -68,7 +68,7 @@ class PragyaanTransmitter:
 
     def transmit_thermal_info(self, interval_s):
         _, _, imu_orientation = self._robot.get_imu_readings()
-        robot_yaw_deg = imu_orientation["yaw"]
+        robot_yaw_deg = math.degrees(imu_orientation["yaw"])
         temperatures = self._robot.subsystems.get_thermal_model_outputs(robot_yaw_deg, interval_s)
         self._transmit(self._parameters_conf["temperature_front"], temperatures["+X"])
         self._transmit(self._parameters_conf["temperature_back"], temperatures["-X"])
@@ -80,7 +80,7 @@ class PragyaanTransmitter:
 
     def transmit_power_info(self, interval_s):
         _, _, imu_orientation = self._robot.get_imu_readings()
-        robot_yaw_deg = imu_orientation["yaw"]
+        robot_yaw_deg = math.degrees(imu_orientation["yaw"])
         obc_state = self._robot.subsystems.get_obc_state()
         power_status = self._robot.subsystems.get_power_model_outputs(robot_yaw_deg, interval_s, obc_state)
         self._transmit(self._parameters_conf["battery_charge"], int(power_status["battery_percentage_measured"]))

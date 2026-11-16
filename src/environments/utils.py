@@ -107,8 +107,10 @@ def transform_orientation_into_xyz(orientation_wxyz):
 
 
 def transform_orientation_from_xyzw_into_xyz(orientation_xyzw):
-    q_xyzw = np.array(orientation_xyzw)
-    e_zyx_from_wxyz = R.from_quat(q_xyzw).as_euler("zyx", degrees=True)
-    xyz_orient = [e_zyx_from_wxyz[2], e_zyx_from_wxyz[1], e_zyx_from_wxyz[0]]
-
-    return np.array(xyz_orient)
+    """
+    Roll, pitch and yaw in radians of an (x, y, z, w) quaternion, in the REP-103 convention: the rotation is yaw about z,
+    then pitch about the new y, then roll about the new x (intrinsic z-y'-x'', scipy "ZYX"). Roll and pitch are about the
+    axes of the rotated body, so they do not depend on the yaw.
+    """
+    yaw, pitch, roll = R.from_quat(np.array(orientation_xyzw)).as_euler("ZYX")
+    return np.array([roll, pitch, yaw])

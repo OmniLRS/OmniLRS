@@ -20,7 +20,7 @@ from scipy.spatial.transform import Rotation as R
 from WorldBuilders.pxr_utils import createObject, createXform
 
 from src.configurations.robot_camera_confs import RobotCameraConf
-from src.configurations.robot_confs import RobotManagerConf
+from src.configurations.robot_confs import DriveConf, RobotManagerConf
 from src.configurations.simulator_mode_enum import SimulatorMode
 from src.environments.utils import resolve_position, transform_orientation_from_xyzw_into_xyz
 from src.robots.articulation_control import ArticulationControl
@@ -79,8 +79,7 @@ class RobotManager:
             self.robot_parameters.wheel_joints,
             self.robot_parameters.camera,
             self.robot_parameters.imu_sensor_path,
-            self.robot_parameters.dimensions,
-            self.robot_parameters.turn_speed_coef,
+            self.robot_parameters.drive,
             self.robot_parameters.pos_relative_to_prim,
             self.robot_parameters.solar_panel_joint,
         )
@@ -113,8 +112,7 @@ class RobotManager:
             self.robot_parameters.wheel_joints,
             self.robot_parameters.camera,
             self.robot_parameters.imu_sensor_path,
-            self.robot_parameters.dimensions,
-            self.robot_parameters.turn_speed_coef,
+            self.robot_parameters.drive,
             self.robot_parameters.pos_relative_to_prim,
             self.robot_parameters.solar_panel_joint,
         )
@@ -135,8 +133,7 @@ class RobotManager:
         wheel_joints: dict = {},
         camera_conf: list[RobotCameraConf] = None,
         imu_sensor_path: str = "",
-        dimensions: dict = {},
-        turn_speed_coef: float = 1,
+        drive: DriveConf | None = None,
         pos_relative_to_prim: str = "",
         solar_panel_joint: str = None,
     ) -> None:
@@ -164,8 +161,7 @@ class RobotManager:
             wheel_joints=wheel_joints,
             camera_conf=camera_conf,
             imu_sensor_path=imu_sensor_path,
-            dimensions=dimensions,
-            turn_speed_coef=turn_speed_coef,
+            drive=drive,
             pos_relative_to_prim=pos_relative_to_prim,
             solar_panel_joint=solar_panel_joint,
         )
@@ -230,8 +226,7 @@ class Robot:
         wheel_joints: Dict = {},
         camera_conf: list[RobotCameraConf] = None,
         imu_sensor_path: str = "",
-        dimensions: dict = {},
-        turn_speed_coef: float = 1,
+        drive: DriveConf | None = None,
         pos_relative_to_prim: str = "",
         solar_panel_joint: str = None,
     ) -> None:
@@ -269,8 +264,7 @@ class Robot:
         # Robot yaml `camera` list, parsed with the robot config (RobotParameters)
         self.cameras: list[RobotCameraConf] = list(camera_conf or [])
         self._camera_sensors: dict[tuple[str, str], CameraSensor] = {}  # (camera name, resolution) -> sensor
-        self.dimensions = dimensions
-        self.turn_speed_coef = turn_speed_coef
+        self.drive = drive  # wheel kinematics of the Yamcs drive commands, None if the robot yaml has no `drive`
         self._imu_sensor: Optional[IMUSensor] = None
         self._imu_sensor_path: str = imu_sensor_path
         self._solar_panel_joint = solar_panel_joint
@@ -423,6 +417,8 @@ class Robot:
         return None if data is None else data.numpy()[..., 0]
 
     def get_imu_readings(self):
+        """Raw IMU values in SI units, without conversion: (linear acceleration {ax, ay, az} in m/s^2, angular
+        velocity {gx, gy, gz} in rad/s, orientation {roll, pitch, yaw} in rad). The Yamcs MDBs derive degrees."""
         if self._imu_sensor_path == "":
             raise Exception(
                 "Path to imu sensor is not defined. Please check your .yaml configuration file. 'imu_sensor_path' should be defined on the same level as 'robot_name'."
@@ -471,9 +467,10 @@ class Robot:
 
             xyz_orientation = transform_orientation_from_xyzw_into_xyz(raw_orientation)
 
+        # The IMU frame is base_link (REP-103: x forward, y left, z up). Roll, pitch and yaw follow REP-103 too.
         orientation = {
-            "roll": -float(xyz_orientation[0]),
-            "pitch": -float(xyz_orientation[1]),
+            "roll": float(xyz_orientation[0]),
+            "pitch": float(xyz_orientation[1]),
             "yaw": float(xyz_orientation[2]),
         }
 
