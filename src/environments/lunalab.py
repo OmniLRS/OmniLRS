@@ -57,7 +57,9 @@ class LunalabController(BaseEnv, TerrainControlMixin):
         if monitoring_cameras_settings and monitoring_cameras_settings["enabled"]:
             self.MCM = MonitoringCamerasManager(self._mode, monitoring_cameras_settings)
 
-        self.init_terrain_control(terrain_manager=terrain_manager, rocks_settings=rocks_settings)
+        self.init_terrain_control(
+            terrain_manager=terrain_manager, rocks_settings=rocks_settings, rocks_inside_craters=False
+        )
 
     def build_scene(self) -> None:
         """

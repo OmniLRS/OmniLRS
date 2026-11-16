@@ -62,7 +62,9 @@ class LunaryardController(BaseEnv, StellarEngineEnvMixin, TerrainControlMixin):
         self._sun_settings = sun_settings
         self.init_stellar_engine(stage_settings=self.stage_settings, stellar_engine_settings=stellar_engine_settings)
 
-        self.init_terrain_control(terrain_manager=terrain_manager, rocks_settings=rocks_settings)
+        self.init_terrain_control(
+            terrain_manager=terrain_manager, rocks_settings=rocks_settings, rocks_inside_craters=True
+        )
 
     def build_scene(self) -> None:
         """
@@ -105,11 +107,3 @@ class LunaryardController(BaseEnv, StellarEngineEnvMixin, TerrainControlMixin):
 
         if self.MCM:
             self.MCM.spawn(get_height_func=self.get_terrain_height)
-
-    def get_rock_placement_mask(self):
-        """Use all valid terrain for LunarYard's ordinary rocks, as in PR #86.
-
-        This includes crater interiors. The separate ejecta population still uses
-        crater_ejecta_mask. Keeping this override here leaves Lunalab's policy intact.
-        """
-        return self.background_mask

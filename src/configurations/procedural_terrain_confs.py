@@ -63,7 +63,8 @@ class CraterDistributionConf:
         assert self.x_size > 0, "x_size must be greater than 0"
         assert self.y_size > 0, "y_size must be greater than 0"
         assert self.num_repeat >= 0, "num_repeat must be greater or equal to 0"
-        # The power-law model is not used when both radius and densities are provided.
+        # radius and densities default to empty lists. If either is empty, Distribute.run() generates it
+        # from the power law (dist_coef, dist_exp), so the power-law terms are only checked in that case.
         if self.radius and self.densities:
             assert len(self.densities) == len(self.radius), "densities and radius must have the same length"
         else:
