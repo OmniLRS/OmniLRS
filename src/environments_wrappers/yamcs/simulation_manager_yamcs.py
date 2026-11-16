@@ -17,7 +17,8 @@ from src.environments.lunaryard import LunaryardController
 from src.environments.stellar_engine_env_mixin import StellarEngineEnvMixin
 from src.environments.utils import set_moon_env_name
 from src.environments_wrappers.rate import Rate
-from src.environments_wrappers.yamcs.robot_video_recorder import RobotVideoRecorder
+from src.environments_wrappers.robot_video_recorder import RobotVideo
+from src.environments_wrappers.yamcs.commands_overlay import YamcsCommandsOverlay
 from src.robots.robot import RobotManager
 from src.simulation import Simulation
 
@@ -218,8 +219,8 @@ class Yamcs_SimulationManager:
         """
 
         self.timeline.play()
-        # Opt-in test video (OMNILRS_ROBOT_VIDEO), after the robot is loaded.
-        video = RobotVideoRecorder.from_env(self.RM.robot_RG, self.RM.robot) if self.RM.robot is not None else None
+        # Opt-in test video (OMNILRS_ROBOT_VIDEO), with the received Yamcs commands as text overlay.
+        video = RobotVideo(self.RM, YamcsCommandsOverlay())
         try:
             while self.simulation_app.is_running():
                 self.rate.reset()
@@ -245,8 +246,7 @@ class Yamcs_SimulationManager:
                         if self.RM.robot is not None:
                             self.RM.robot.update_articulation_api()
                         self.EC.update()
-                        if video is not None:
-                            video.update()
+                        video.update()
 
                 if not self.EC.monitor_thread_is_alive():
                     if self.EC.monitor_caught_ctrl_c():
@@ -258,8 +258,7 @@ class Yamcs_SimulationManager:
                 self.rate.sleep()
 
         finally:
-            if video is not None:
-                video.close()
+            video.close()
         if self.RM.robot is not None:
             self.RM.robot.invalidate_articulation_api()
 

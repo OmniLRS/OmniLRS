@@ -14,24 +14,57 @@ import omni.usd
 from isaacsim.sensors.experimental.rtx import CameraSensor
 from pxr import Gf, UsdGeom
 
-from src.tmtc.commands_handler import RECEIVED_COMMANDS
-
 ENV_VAR = "OMNILRS_ROBOT_VIDEO"
+
+
+class RobotVideo:
+    """
+    The opt-in robot video of a simulation loop (Yamcs, ROS 2, Zenoh). If the environment variable OMNILRS_ROBOT_VIDEO is
+    set (the sanity tests set it), it starts a RobotVideoRecorder once the robot of `robot_manager` (a RobotManager) is
+    loaded, and records it on each update(). A failure stops the video, with one message, never the simulation.
+    """
+
+    def __init__(self, robot_manager, text_overlay=None) -> None:
+        self._path = os.environ.get(ENV_VAR)
+        self._robot_manager = robot_manager
+        self._text_overlay = text_overlay  # see RobotVideoRecorder
+        self._recorder = None
+
+    def update(self) -> None:
+        if not self._path:
+            return
+        if self._recorder is None:
+            robot_manager = self._robot_manager
+            if robot_manager.robot is None or robot_manager.robot_RG is None:
+                return  # not loaded yet
+            try:
+                self._recorder = RobotVideoRecorder(
+                    self._path, robot_manager.robot_RG, robot_manager.robot, self._text_overlay
+                )
+            except Exception:
+                self._path = None
+                print("[RobotVideoRecorder] Could not start the recording:")
+                traceback.print_exc()
+                return
+        self._recorder.update()
+
+    def close(self) -> None:
+        if self._recorder is not None:
+            self._recorder.close()
 
 
 class RobotVideoRecorder:
     """
-    Opt-in video of the robot, to follow a test run: a top view and a side view that follow base_link.
-
-    Set the environment variable OMNILRS_ROBOT_VIDEO to the path of an .mp4 file to record it (the Yamcs sanity tests do).
+    Opt-in video of the robot, to follow a test run: a top view and a side view that follow base_link. Created by
+    RobotVideo when the environment variable OMNILRS_ROBOT_VIDEO holds the path of an .mp4 file (the sanity tests set it).
     The top view looks down from TOP_HEIGHT_M above base_link, with north (+y) up in the image. The side view looks at the
     left side of the robot from SIDE_DISTANCE_M, and turns with the robot. Each frame shows the simulation time and the
     base_link pose. The video is a fragmented MP4, so it stays readable if the simulation stops without closing it.
 
     At the bottom left, each frame shows the commanded and measured speed of each wheel, one column per wheel. At the top
     center, each frame shows the test sequence: the current test step (the last line of the steps file
-    <video name>.steps.log, which the test writes) and the last COMMAND_LINES Yamcs commands with the simulation time at
-    which the simulation received them. The newest command is yellow for NEW_COMMAND_S.
+    <video name>.steps.log, which the test writes) and below it the lines of the optional text overlay of the mode (in Yamcs
+    mode, the last commands received: src/environments_wrappers/yamcs/commands_overlay.py). Highlighted lines are yellow.
     """
 
     WIDTH, HEIGHT = 480, 270  # pixels of each view; the video is two views side by side
@@ -41,16 +74,18 @@ class RobotVideoRecorder:
     SIDE_DISTANCE_M = 3.0
     SIDE_HEIGHT_M = 0.8
     ROOT = "/RobotVideo"
-    COMMAND_LINES = 3
     WHEEL_MISMATCH = 0.2  # rad/s between the commanded and the measured speed of a wheel
-    NEW_COMMAND_S = 3.0
 
-    @classmethod
-    def from_env(cls, robot_rigid_group, robot=None) -> "RobotVideoRecorder | None":
-        path = os.environ.get(ENV_VAR)
-        return cls(path, robot_rigid_group, robot) if path else None
-
-    def __init__(self, path: str, robot_rigid_group, robot=None) -> None:
+    def __init__(self, path: str, robot_rigid_group, robot=None, text_overlay=None) -> None:
+        """
+        Args:
+            path: the .mp4 file.
+            robot_rigid_group: the RobotRigidGroup of the robot, for the base_link pose.
+            robot: the Robot, for the wheel speeds (optional).
+            text_overlay: optional callable(simulation time) -> list of (text, highlighted) lines, drawn under the test
+                step. It is called on each update (each simulation step while playing), so it can stamp new events with
+                the simulation time.
+        """
         import av  # only when recording
 
         self._path = path
@@ -82,8 +117,8 @@ class RobotVideoRecorder:
         self._steps_path = os.path.splitext(path)[0] + ".steps.log"
         self._step = ""
         self._steps_mtime = None
-        self._last_command = max((number for number, _, _ in list(RECEIVED_COMMANDS)), default=0)
-        self._commands = []  # (simulation time of receipt, text), oldest first
+        self._text_overlay = text_overlay
+        self._overlay_lines = []  # (text, highlighted), from the last call of the text overlay
         print(f"[RobotVideoRecorder] Recording {path} ({codec})")
 
     def update(self) -> None:
@@ -112,7 +147,8 @@ class RobotVideoRecorder:
         self._place("side", side_eye, target, Gf.Vec3d(0, 0, 1))
 
         now = self._timeline.get_current_time()
-        self._read_commands(now)
+        if self._text_overlay is not None:
+            self._overlay_lines = list(self._text_overlay(now))
         if now < self._next_time - 2 * self.PERIOD_S:  # timeline restarted
             self._next_time = now
         if now < self._next_time:
@@ -129,7 +165,7 @@ class RobotVideoRecorder:
         text = f"t={now:7.1f} s  x={x:7.2f} y={y:7.2f} z={z:6.2f} m  yaw={math.degrees(yaw):7.1f} deg"
         cv2.putText(frame, text, (8, self.HEIGHT - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 0), 1, cv2.LINE_AA)
         self._draw_wheels(frame)
-        self._draw_sequence(frame, now)
+        self._draw_sequence(frame)
         self._encode(frame)
         self._next_time = now + self.PERIOD_S
 
@@ -184,18 +220,8 @@ class RobotVideoRecorder:
                 separator_x = 8 + label_width + column * n_left + 9
                 cv2.putText(frame, "|", (separator_x, y), font, scale, (200, 200, 200), 1, cv2.LINE_AA)
 
-    def _read_commands(self, now: float) -> None:
-        """Stamps the commands received since the last call with the simulation time `now`."""
-        for number, name, arguments in list(RECEIVED_COMMANDS):
-            if number <= self._last_command:
-                continue
-            self._last_command = number
-            short = name.split("/", 2)[-1] if name.count("/") >= 2 else name  # /Rover/motor/x -> motor/x
-            values = " ".join(f"{k}={v:.3g}" if isinstance(v, float) else f"{k}={v}" for k, v in arguments.items())
-            self._commands = (self._commands + [(now, f"{short} {values}".strip())])[-self.COMMAND_LINES :]
-
-    def _draw_sequence(self, frame: np.ndarray, now: float) -> None:
-        """Draws the current test step and the last commands at the top center of the frame."""
+    def _draw_sequence(self, frame: np.ndarray) -> None:
+        """Draws the current test step and the text overlay lines at the top center of the frame."""
         try:
             mtime = os.path.getmtime(self._steps_path)
             if mtime != self._steps_mtime:
@@ -206,9 +232,8 @@ class RobotVideoRecorder:
         except OSError:
             pass
         lines = [(self._step, (255, 255, 255))] if self._step else []
-        for i, (received, text) in enumerate(self._commands):
-            newest = i == len(self._commands) - 1 and now - received < self.NEW_COMMAND_S
-            lines.append((f"t={received:6.1f} s  {text}", (255, 230, 0) if newest else (170, 170, 170)))
+        for text, highlighted in self._overlay_lines:
+            lines.append((text, (255, 230, 0) if highlighted else (170, 170, 170)))
         if not lines:
             return
         font, scale, line_height = cv2.FONT_HERSHEY_SIMPLEX, 0.45, 17

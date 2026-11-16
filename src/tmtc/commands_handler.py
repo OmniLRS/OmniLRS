@@ -37,7 +37,7 @@ def check_camera_argument(func, command_path: str, arg_names: list[str], cameras
 
 
 # The last commands received, newest last, as (number, full command name, arguments): the test video shows them
-# (src/environments_wrappers/yamcs/robot_video_recorder.py). The TC listener thread appends; readers take a copy (list()).
+# (src/environments_wrappers/yamcs/commands_overlay.py). The TC listener thread appends; readers take a copy (list()).
 RECEIVED_COMMANDS: deque = deque(maxlen=20)
 _command_numbers = itertools.count(1)
 

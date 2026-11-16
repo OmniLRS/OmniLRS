@@ -87,6 +87,10 @@ def _log_dir():
     return log_dir
 
 
+# Top and side video of the rover, next to the logs (conftest.py writes the test steps it shows).
+VIDEO_PATH = _log_dir() / "rover_yamcs_sanity.mp4"
+
+
 def _port_open(address):
     host, port = address.rsplit(":", 1)
     try:
@@ -135,15 +139,13 @@ class SimProcess:
     def __init__(self):
         self.log_path = _log_dir() / "sim_startup.log"
         self._log_file = open(self.log_path, "w")
-        # Top and side video of the rover (src/environments_wrappers/yamcs/robot_video_recorder.py), next to the logs.
-        self.video_path = _log_dir() / "rover_yamcs_sanity.mp4"
         self.proc = subprocess.Popen(
             SIM_COMMAND,
             cwd=REPO_ROOT,
             stdout=self._log_file,
             stderr=subprocess.STDOUT,
             start_new_session=True,
-            env={**os.environ, "OMNILRS_ROBOT_VIDEO": str(self.video_path)},
+            env={**os.environ, "OMNILRS_ROBOT_VIDEO": str(VIDEO_PATH)},
         )
 
     @property
@@ -367,13 +369,6 @@ def camera_image_meta_paths():
     with open(REPO_ROOT / "cfg" / "robot" / f"{ROBOT}.yaml") as f:
         cameras = yaml.safe_load(f)["robots_settings"]["parameters"]["camera"]
     return [path for *_, path in yamcs_naming.camera_buckets(parse_cameras(cameras))]
-
-
-@pytest.fixture(autouse=True)
-def video_step(request, sim):
-    """Writes the name of each test to the steps file of the rover video, which shows it as the current test step."""
-    with open(sim.video_path.with_suffix(".steps.log"), "a") as steps:
-        steps.write(f"{request.node.name}\n")
 
 
 # Requested by the joint tests only, which run last: the telemetry tests expect the startup state (e.g. NOGO).
