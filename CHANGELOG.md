@@ -41,6 +41,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Scripts moved: the DEM download and preprocessing scripts to `scripts/dem_related/`, the pixi activation script to `scripts/pixi/`. `install_docker.sh`, `install_native.sh` and `download_only_native.sh` are removed.
 - LargeScale static assets no longer implicitly add the terrain height to their z; set `height_above_terrain_override` instead.
 - LargeScale robot spawn uses the configured pose in both ROS2 and Yamcs modes (ROS2 previously forced `(0, 0)`); the `largescale*` configs set `height_above_terrain_override: 0.5` to keep the previous spawn height.
 - The Lunaryard workshop configs and `robot=pragyaan` now place the rover, lander, rock and monitoring camera relative to the terrain height.
