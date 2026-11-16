@@ -104,10 +104,11 @@ class RobotVideoRecorder:
             # CameraSensor replaces the xform ops of the prim by translate, orient and scale ops: use these.
             ops = {op.GetOpName(): op for op in UsdGeom.Xformable(camera).GetOrderedXformOps()}
             self._cameras[name] = ((ops["xformOp:translate"], ops["xformOp:orient"]), sensor)
-        self._container = av.open(path, "w", options={"movflags": "frag_keyframe+empty_moov", "flush_packets": "1"})
+        # One MP4 fragment per frame, written at once, and no frame held back by the encoder: a simulation that stops
+        # without close() loses at most the last frame. The sanity tests stop it with SIGINT, which skips close(). A
+        # keyframe each second of video, for seeking.
+        self._container = av.open(path, "w", options={"movflags": "frag_every_frame+empty_moov", "flush_packets": "1"})
         codec = "libx264" if "libx264" in av.codecs_available else "mpeg4"
-        # A keyframe (and an MP4 fragment) each second of video and no frame held back by the encoder: a simulation
-        # that stops without close() loses at most 1 s of video.
         options = {"g": str(self.FPS), "tune": "zerolatency"} if codec == "libx264" else {"g": str(self.FPS)}
         self._stream = self._container.add_stream(codec, rate=self.FPS, options=options)
         self._stream.width, self._stream.height, self._stream.pix_fmt = 2 * self.WIDTH, self.HEIGHT, "yuv420p"
@@ -181,8 +182,17 @@ class RobotVideoRecorder:
         indices = articulation.get_dof_indices(left + right)
         targets = np.asarray(articulation.get_dof_velocity_targets(dof_indices=indices).numpy()).reshape(-1)
         speeds = np.asarray(articulation.get_dof_velocities(dof_indices=indices).numpy()).reshape(-1)
-        labels = [name.split("_")[-1] for name in left + right]  # wheel_fl -> fl
+        labels = [self._wheel_label(name) for name in left + right]
         return labels, targets, speeds, len(left)
+
+    @staticmethod
+    def _wheel_label(joint_name: str) -> str:
+        """Short label of a wheel joint: the words other than wheel and joint, long words by their first letter.
+
+        wheel_fl -> fl (Pragyaan), front_left_wheel -> fl (Husky).
+        """
+        words = [word for word in joint_name.lower().split("_") if word and word not in ("wheel", "joint")]
+        return "".join(word if len(word) <= 2 else word[0] for word in words) or joint_name
 
     def _draw_wheels(self, frame: np.ndarray) -> None:
         """
