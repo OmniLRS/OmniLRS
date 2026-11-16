@@ -4,8 +4,11 @@ The rebuild scripts flatten a source asset, give each Xform and camera a transfo
 transform (scale, mirror) into the mesh points, normals and face order. USD matrices act on row vectors (p' = p * M).
 """
 
+import os
+from pathlib import Path
+
 import numpy as np
-from pxr import Gf, Sdf, Usd, UsdGeom, UsdShade, Vt
+from pxr import Ar, Gf, Sdf, Usd, UsdGeom, UsdShade, Vt
 
 
 def rigid(matrix: Gf.Matrix4d) -> Gf.Matrix4d:
@@ -123,6 +126,66 @@ def remove_cooked_data(stage: Usd.Stage) -> int:
         prim.SetMetadata("apiSchemas", schemas)
         count += 1
     return count
+
+
+def _asset_values(type_name: Sdf.ValueTypeName, value) -> list:
+    """The Sdf.AssetPath values of an attribute value of type `type_name` (asset or asset array), else []."""
+    if type_name == Sdf.ValueTypeNames.Asset:
+        return [value] if value else []
+    if type_name == Sdf.ValueTypeNames.AssetArray:
+        return list(value or [])
+    return []
+
+
+def _is_absolute(asset: Sdf.AssetPath) -> bool:
+    return bool(asset.path) and os.path.isabs(Ar.SplitPackageRelativePathOuter(asset.path)[0])
+
+
+def relative_asset_paths(layer: Sdf.Layer, directory: Path) -> int:
+    """
+    Usd.Stage.Flatten() anchors every asset path (texture, MDL module) to its source file: the flattened layer holds
+    absolute paths of the checkout that ran the script, which do not resolve in another checkout (for example the CI
+    container). Rewrites each absolute path relative to `directory`, the folder of the output file
+    ("./textures.usdz[0/a.jpg]"). Returns the number of attributes changed.
+    """
+
+    def relative(asset: Sdf.AssetPath) -> Sdf.AssetPath:
+        if not _is_absolute(asset):
+            return asset
+        outer, inner = Ar.SplitPackageRelativePathOuter(asset.path)
+        path = Path(os.path.relpath(outer, directory)).as_posix()
+        path = path if path.startswith("../") else f"./{path}"
+        return Sdf.AssetPath(Ar.JoinPackageRelativePath(path, inner) if inner else path)
+
+    changed = 0
+
+    def visit(path: Sdf.Path) -> None:
+        nonlocal changed
+        spec = layer.GetObjectAtPath(path)
+        if not isinstance(spec, Sdf.AttributeSpec):
+            return
+        values = _asset_values(spec.typeName, spec.default)
+        if not any(_is_absolute(v) for v in values):
+            return
+        if spec.typeName == Sdf.ValueTypeNames.Asset:
+            spec.default = relative(values[0])
+        else:
+            spec.default = Sdf.AssetPathArray([relative(v) for v in values])
+        changed += 1
+
+    layer.Traverse(Sdf.Path.absoluteRootPath, visit)
+    return changed
+
+
+def absolute_asset_paths(stage: Usd.Stage) -> list[str]:
+    """'<attribute>: <path>' for each absolute asset path of the stage, which resolves only in the checkout that wrote it."""
+    found = []
+    for prim in Usd.PrimRange.Stage(stage, Usd.PrimAllPrimsPredicate):
+        for attr in prim.GetAttributes():
+            for asset in _asset_values(attr.GetTypeName(), attr.Get()) if attr.HasAuthoredValue() else []:
+                if _is_absolute(asset):
+                    found.append(f"{attr.GetPath()}: {asset.path}")
+    return found
 
 
 def apply_material_binding_api(stage: Usd.Stage) -> None:

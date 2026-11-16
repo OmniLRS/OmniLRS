@@ -56,8 +56,10 @@ import numpy as np
 import yaml
 from pxr import Gf, Sdf, Usd, UsdGeom, UsdPhysics, UsdShade
 from usd_bake import (
+    absolute_asset_paths,
     apply_material_binding_api,
     bake_mesh,
+    relative_asset_paths,
     remove_cooked_data,
     rigid,
     rotation_of,
@@ -479,6 +481,7 @@ def check(output: Usd.Stage, source: Usd.Stage, result: dict) -> None:
             )
     if output.GetRootLayer().externalReferences:
         failures.append(f"composition arcs to other files: {sorted(output.GetRootLayer().externalReferences)}")
+    failures += [f"absolute asset path, resolves only in this checkout: {a}" for a in absolute_asset_paths(output)]
     for prim in output.Traverse():
         texture = prim.GetAttribute("inputs:file")
         if texture and texture.HasAuthoredValue() and not texture.Get().resolvedPath:
@@ -491,7 +494,8 @@ def check(output: Usd.Stage, source: Usd.Stage, result: dict) -> None:
     if failures:
         sys.exit("Checks failed:\n  " + "\n  ".join(failures))
     print(
-        "Checks passed: unit scales, meshes, symmetry, cameras, joints, masses, wheel layout, materials, textures, wheel colliders"
+        "Checks passed: unit scales, meshes, symmetry, cameras, joints, masses, wheel layout, materials, relative asset paths, "
+        "textures, wheel colliders"
     )
 
 
@@ -574,6 +578,7 @@ def main() -> None:
     apply_material_binding_api(stage)
     print(f"Removed the cooked collision data of {remove_cooked_data(stage)} meshes")
     UsdPhysics.SetStageKilogramsPerUnit(stage, 1.0)
+    print(f"Made the asset paths of {relative_asset_paths(layer, OUTPUT.parent)} attributes relative")
     # Written next to OUTPUT (same relative texture paths), and moved to OUTPUT only if the checks pass.
     candidate = OUTPUT.with_name(OUTPUT.stem + ".candidate.usd")
     layer.Export(str(candidate))

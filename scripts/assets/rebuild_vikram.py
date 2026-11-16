@@ -23,7 +23,15 @@ from pathlib import Path
 
 import numpy as np
 from pxr import Gf, Sdf, Usd, UsdGeom
-from usd_bake import apply_material_binding_api, bake_mesh, rigid, set_local_transform, world_points
+from usd_bake import (
+    absolute_asset_paths,
+    apply_material_binding_api,
+    bake_mesh,
+    relative_asset_paths,
+    rigid,
+    set_local_transform,
+    world_points,
+)
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 ASSET_DIR = REPO_ROOT / "assets" / "USD_Assets" / "common" / "lander" / "Vikram"
@@ -110,6 +118,7 @@ def check(output: Usd.Stage, source: Usd.Stage) -> None:
         failures.append("stage up axis is not Z")
     if output.GetRootLayer().externalReferences:
         failures.append(f"composition arcs to other files: {sorted(output.GetRootLayer().externalReferences)}")
+    failures += [f"absolute asset path, resolves only in this checkout: {a}" for a in absolute_asset_paths(output)]
     for prim in output.Traverse():
         texture = prim.GetAttribute("inputs:file")
         if texture and texture.HasAuthoredValue() and not texture.Get().resolvedPath:
@@ -117,7 +126,7 @@ def check(output: Usd.Stage, source: Usd.Stage) -> None:
     print(f"Mesh points match the scaled source in the environment within {worst:.1e} m")
     if failures:
         sys.exit("Checks failed:\n  " + "\n  ".join(failures))
-    print("Checks passed: unit scales, meshes, camera, body size, up axis, textures")
+    print("Checks passed: unit scales, meshes, camera, body size, up axis, relative asset paths, textures")
 
 
 def main() -> None:
@@ -129,6 +138,7 @@ def main() -> None:
     clean(source, stage)
     apply_material_binding_api(stage)
     UsdGeom.SetStageUpAxis(stage, UsdGeom.Tokens.z)
+    print(f"Made the asset paths of {relative_asset_paths(layer, OUTPUT.parent)} attributes relative")
     # Written next to OUTPUT (same relative texture paths), and moved to OUTPUT only if the checks pass.
     candidate = OUTPUT.with_name(OUTPUT.stem + ".candidate.usd")
     layer.Export(str(candidate))
