@@ -401,11 +401,6 @@ class Distribute:
         self._area = self._x_max * self._y_max
         self._num_repeat = cfg.num_repeat
         self._rng = np.random.default_rng(cfg.seed)
-        self._radius_range = cfg.radius_range
-        self._dist_exp = cfg.dist_exp
-        self._dist_coef = cfg.dist_coef
-        self._radius_step = cfg.radius_step
-        self._radius_step_factor = cfg.radius_step_factor
 
     def sampleFromPoisson(self, density: float, r_minmax: Tuple[float]) -> Tuple[np.ndarray, np.ndarray]:
         """
@@ -495,45 +490,6 @@ class Distribute:
         coords, radius = self.checkPrevious(coords, radius, prev_coords)
         return coords, radius
 
-    def calcRadiiBins(self) -> None:
-        """
-        Automatically generate crater radii bin as ranges for the generation process. The bin width grows exponentially
-        """
-        # TODO: bins currently have a fixed width (radius_step), so the exponential growth described above and
-        # radius_step_factor are not implemented. The last bin may also extend beyond radius_range[1].
-        self._radius = []
-        cur_radius = self._radius_range[0]
-        while cur_radius < self._radius_range[1]:
-            next_radius = cur_radius + self._radius_step
-            self._radius.append([cur_radius, next_radius])
-            cur_radius = next_radius
-        # Largest craters first, as in the presets with explicit lists: a crater is rejected when its centre
-        # falls inside an earlier one, so small craters must not block the large ones.
-        self._radius.reverse()
-
-    def calcDensities(self) -> None:
-        """Compute crater sampling densities for each radius interval, in craters per m^2.
-
-        The cumulative power law N(>=D) = dist_coef * D**dist_exp counts craters
-        with rim-to-rim diameter >= D per km^2, with D in metres. The crater
-        profiles place the rim at about half of the sampled radius, so a crater
-        sampled with radius r has a rim diameter of about r. For a radius
-        interval [r_min, r_max), the density is [N(>=r_min) - N(>=r_max)] / 1_000_000.
-        The Poisson sampler multiplies each interval's density by the terrain area
-        to get its expected crater count. Spatial rejection is applied afterwards.
-
-        Source: NASA VIPER (2023), slide 40:
-        https://ntrs.nasa.gov/api/citations/20230008874/downloads/2023-06-HBRC-VIPER.pdf#page=40
-        """
-        self._densities = []
-        for radius_range in self._radius:
-            # Rim diameter of the generated craters, as described above.
-            min_diameter = radius_range[0]
-            max_diameter = radius_range[1]
-            # Expected number of craters per km^2 within this diameter interval
-            bin_num_per_km2 = self._dist_coef * (min_diameter**self._dist_exp - max_diameter**self._dist_exp)
-            self._densities.append(bin_num_per_km2 / 1_000_000)
-
     def run(self) -> Tuple[np.ndarray, np.ndarray]:
         """
         Runs the hardcore Poisson process for all the densities and radius in order.
@@ -541,18 +497,6 @@ class Distribute:
         Returns:
             tuple: coordinates of the craters, radii of the craters."""
 
-        # If radius list is empty, automatically generate them. Else uses defined radius list
-        if len(self._radius) == 0:
-            print("Empty radius list set. Generating radius list and density list")
-            self.calcRadiiBins()
-            self.calcDensities()
-        else:
-            # If density list is empty, automatically calculate density. Else uses defined density list
-            if len(self._densities) == 0:
-                print("Empty density list set. Generating density list")
-                self.calcDensities()
-
-        # Generate craters
         prev_coords = None
         for d, r_minmax in zip(self._densities, self._radius):
             new_coords, new_radius = self.simulateHCPoissonProcess(d, r_minmax, prev_coords)

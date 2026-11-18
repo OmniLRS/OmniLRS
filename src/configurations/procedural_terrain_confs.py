@@ -38,6 +38,58 @@ class CraterGeneratorConf:
         assert self.z_scale > 0, "z_scale must be greater than 0"
 
 
+# Automatic crater bins and densities. CraterDistributionConf (Lunaryard/Lunalab) and LargeScaleTerrainConf use
+# them to turn the power law into explicit lists, so the crater generators only sample from those lists.
+def compute_radius_bins(radius_range: List[float], radius_step: float) -> List[List[float]]:
+    """Split radius_range into bins of width radius_step, largest bin first.
+
+    The order matters when hardcore rejection is used: a crater is rejected when its centre falls inside an
+    earlier one, so the large craters must be placed before the small ones can block them.
+
+    Args:
+        radius_range (List[float]): smallest and largest sampled radius, in metres.
+        radius_step (float): width of each bin, in metres.
+
+    Returns:
+        List[List[float]]: [r_min, r_max] of each bin.
+    """
+
+    # TODO: bins have a fixed width, so radius_step_factor (exponential growth of the width) is not implemented.
+    # The last bin may also extend beyond radius_range[1].
+    bins = []
+    cur_radius = radius_range[0]
+    while cur_radius < radius_range[1]:
+        next_radius = cur_radius + radius_step
+        bins.append([cur_radius, next_radius])
+        cur_radius = next_radius
+    bins.reverse()
+    return bins
+
+
+def compute_bin_densities(radius_bins: List[List[float]], dist_coef: float, dist_exp: float) -> List[float]:
+    """Expected number of craters per m^2 in each radius bin.
+
+    The cumulative power law N(>=D) = dist_coef * D**dist_exp counts craters with rim-to-rim diameter >= D per
+    km^2, with D in metres. Both terrain generators (Lunaryard/Lunalab and LargeScale) stamp a crater sampled with
+    radius r over a 2r-wide footprint whose rim sits at about half of it, so the rim diameter is about r and a bin
+    [r_min, r_max) holds N(>=r_min) - N(>=r_max) craters per km^2. The Poisson samplers multiply this density by
+    the sampled area; any spatial rejection happens afterwards.
+
+    Source: NASA VIPER (2023), slide 40:
+    https://ntrs.nasa.gov/api/citations/20230008874/downloads/2023-06-HBRC-VIPER.pdf#page=40
+
+    Args:
+        radius_bins (List[List[float]]): [r_min, r_max] of each bin, in metres.
+        dist_coef (float): coefficient of the cumulative power law, per km^2.
+        dist_exp (float): exponent of the cumulative power law (negative).
+
+    Returns:
+        List[float]: density of each bin, in craters per m^2.
+    """
+
+    return [dist_coef * (r_min**dist_exp - r_max**dist_exp) / 1_000_000 for r_min, r_max in radius_bins]
+
+
 @dataclasses.dataclass
 class CraterDistributionConf:
     x_size: float = dataclasses.field(default_factory=float)
@@ -63,13 +115,20 @@ class CraterDistributionConf:
         assert self.x_size > 0, "x_size must be greater than 0"
         assert self.y_size > 0, "y_size must be greater than 0"
         assert self.num_repeat >= 0, "num_repeat must be greater or equal to 0"
-        # radius and densities default to empty lists. If either is empty, Distribute.run() generates it
-        # from the power law (dist_coef, dist_exp), so the power-law terms are only checked in that case.
-        if self.radius and self.densities:
-            assert len(self.densities) == len(self.radius), "densities and radius must have the same length"
-        else:
+        # radius and densities default to empty lists. An empty radius list is built from radius_range and
+        # radius_step, together with its densities; an empty density list alone is computed for the given radius
+        # bins. Both use the power law (dist_coef, dist_exp), so its terms are only checked in those cases.
+        if not (self.radius and self.densities):
             assert self.dist_exp < 0, "density distribution exponential term must be less than 0"
             assert self.dist_coef > 0, "density distribution coefficient term must be greater than 0"
+        if not self.radius:
+            assert len(self.radius_range) == 2, "radius_range must be [r_min, r_max]"
+            assert self.radius_step > 0, "radius_step must be greater than 0"
+            self.radius = compute_radius_bins(self.radius_range, self.radius_step)
+            self.densities = compute_bin_densities(self.radius, self.dist_coef, self.dist_exp)
+        elif not self.densities:
+            self.densities = compute_bin_densities(self.radius, self.dist_coef, self.dist_exp)
+        assert len(self.densities) == len(self.radius), "densities and radius must have the same length"
 
 
 @dataclasses.dataclass
