@@ -40,18 +40,18 @@ class CraterGeneratorConf:
 
 # Automatic crater bins and densities. CraterDistributionConf (Lunaryard/Lunalab) and LargeScaleTerrainConf use
 # them to turn the power law into explicit lists, so the crater generators only sample from those lists.
-def compute_radius_bins(radius_range: List[float], radius_step: float) -> List[List[float]]:
+def compute_radius_bins(radius_range: list[float], radius_step: float) -> list[list[float]]:
     """Split radius_range into bins of width radius_step, largest bin first.
 
     The order matters when hardcore rejection is used: a crater is rejected when its centre falls inside an
     earlier one, so the large craters must be placed before the small ones can block them.
 
     Args:
-        radius_range (List[float]): smallest and largest sampled radius, in metres.
+        radius_range (list[float]): smallest and largest sampled radius, in metres.
         radius_step (float): width of each bin, in metres.
 
     Returns:
-        List[List[float]]: [r_min, r_max] of each bin.
+        list[list[float]]: [r_min, r_max] of each bin.
     """
 
     # TODO: bins have a fixed width, so radius_step_factor (exponential growth of the width) is not implemented.
@@ -66,7 +66,7 @@ def compute_radius_bins(radius_range: List[float], radius_step: float) -> List[L
     return bins
 
 
-def compute_bin_densities(radius_bins: List[List[float]], dist_coef: float, dist_exp: float) -> List[float]:
+def compute_bin_densities(radius_bins: list[list[float]], dist_coef: float, dist_exp: float) -> list[float]:
     """Expected number of craters per m^2 in each radius bin.
 
     The cumulative power law N(>=D) = dist_coef * D**dist_exp counts craters with rim-to-rim diameter >= D per
@@ -79,12 +79,12 @@ def compute_bin_densities(radius_bins: List[List[float]], dist_coef: float, dist
     https://ntrs.nasa.gov/api/citations/20230008874/downloads/2023-06-HBRC-VIPER.pdf#page=40
 
     Args:
-        radius_bins (List[List[float]]): [r_min, r_max] of each bin, in metres.
+        radius_bins (list[list[float]]): [r_min, r_max] of each bin, in metres.
         dist_coef (float): coefficient of the cumulative power law, per km^2.
         dist_exp (float): exponent of the cumulative power law (negative).
 
     Returns:
-        List[float]: density of each bin, in craters per m^2.
+        list[float]: density of each bin, in craters per m^2.
     """
 
     return [dist_coef * (r_min**dist_exp - r_max**dist_exp) / 1_000_000 for r_min, r_max in radius_bins]
