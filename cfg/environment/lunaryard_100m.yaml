@@ -105,7 +105,7 @@ rocks_settings:
             name: Uniform
             randomization_space: 1
             seed: ${.......seed}
-            
+
     medium_rocks:
       seed: ${....seed}
       collections: ["apollo_rocks"] # Where to get the rock models from.
@@ -168,7 +168,7 @@ rocks_settings:
             name: Uniform
             randomization_space: 1
             seed: ${.......seed}
- 
+
     large_rocks:
       seed: ${....seed}
       collections: ["apollo_rocks"] # Where to get the rock models from.
@@ -304,7 +304,7 @@ rocks_settings:
             name: Uniform
             randomization_space: 1
             seed: ${.......seed}
-            
+
     ejecta_medium_rocks:
       seed: ${....seed}
       collections: ["apollo_rocks"] # Where to get the rock models from.
@@ -430,7 +430,7 @@ rocks_settings:
             name: Uniform
             randomization_space: 1
             seed: ${.......seed}
-            
+
 
 terrain_manager:
   moon_yard:
@@ -458,7 +458,7 @@ terrain_manager:
       dist_coef: 76192.0
       radius_step: 0.5
       radius_step_factor: 1.5
-      num_repeat: 0      
+      num_repeat: 0
       seed: ${....seed}
 
     base_terrain_generator:
@@ -469,7 +469,7 @@ terrain_manager:
       min_elevation: -0.25
       z_scale: 5.0
       seed: ${....seed}
-    
+
     deformation_engine:
       enable: False
       delay: 2.0
@@ -483,10 +483,10 @@ terrain_manager:
         x_deform_offset: 0.0
         y_deform_offset: 0.0
         deform_decay_ratio: 0.01
-      boundary_distribution: 
+      boundary_distribution:
         distribution: trapezoidal
         angle_of_repose: 1.047 #pi/3
-      depth_distribution: 
+      depth_distribution:
         distribution: sinusoidal
         wave_frequency: 4.14 # num_grouser/pi (no slip)
       force_depth_regression:
