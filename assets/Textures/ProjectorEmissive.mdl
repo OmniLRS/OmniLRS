@@ -1,3 +1,52 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:8688edfad9edf46d56e482b53d820e3335a63d8b8932978e7e951878227606c8
-size 1617
+mdl 1.6;
+
+import ::state::normal;
+using ::OmniPBR import OmniPBR;
+import ::base::mono_mode;
+import ::tex::gamma_mode;
+
+export material Light_12000K(*)
+ = OmniPBR(
+    diffuse_color_constant: color(1.f, 1.f, 1.f),
+    diffuse_texture: texture_2d(),
+    albedo_desaturation: 0.f,
+    albedo_add: 0.f,
+    albedo_brightness: 1.f,
+    diffuse_tint: color(1.f, 1.f, 1.f),
+    reflection_roughness_constant: 1.f,
+    reflection_roughness_texture_influence: 0.f,
+    reflectionroughness_texture: texture_2d(),
+    metallic_constant: 0.f,
+    metallic_texture_influence: 0.f,
+    metallic_texture: texture_2d(),
+    specular_level: 0.5f,
+    enable_ORM_texture: false,
+    ORM_texture: texture_2d(),
+    ao_to_diffuse: 0.f,
+    ao_texture: texture_2d(),
+    enable_emission: true,
+    emissive_color: color(1.f, 0.982054055f, 0.797468364f),
+    emissive_color_texture: texture_2d(),
+    emissive_mask_texture: texture_2d(),
+    emissive_intensity: 200000.f,
+    enable_opacity: false,
+    opacity_texture: texture_2d(),
+    opacity_constant: 1.f,
+    enable_opacity_texture: false,
+    opacity_mode: base::mono_average,
+    opacity_threshold: 0.f,
+    bump_factor: 0.f,
+    normalmap_texture: texture_2d(),
+    detail_bump_factor: 0.300000012f,
+    detail_normalmap_texture: texture_2d(),
+    flip_tangent_u: false,
+    flip_tangent_v: true,
+    project_uvw: false,
+    world_or_object: false,
+    uv_space_index: 0,
+    texture_translate: float2(0.f),
+    texture_rotate: 0.f,
+    texture_scale: float2(1.f),
+    detail_texture_translate: float2(0.f),
+    detail_texture_rotate: 0.f,
+    detail_texture_scale: float2(1.f));

@@ -20,6 +20,7 @@ REQUIRED_EXTENSIONS = (
     "isaacsim.core.simulation_manager",
     "isaacsim.sensors.experimental.physics",
     "isaacsim.sensors.experimental.rtx",
+    "omni.replicator.core",
 )
 
 

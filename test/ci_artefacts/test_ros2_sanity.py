@@ -43,17 +43,26 @@ FATAL_MARKERS = [
 ]
 
 
+def _log_dir():
+    # Artefacts upload dir if available, otherwise a local test dir.
+    upload_dir = os.environ.get("ARTEFACTS_SCENARIO_UPLOAD_DIR")
+    log_dir = Path(upload_dir) if upload_dir else Path(__file__).resolve().parent
+    log_dir.mkdir(parents=True, exist_ok=True)
+    return log_dir
+
+
+# Top and side video of the robot, next to the logs (conftest.py writes the test steps it shows).
+VIDEO_PATH = _log_dir() / "rover_ros2_sanity.mp4"
+
+
 class SimProcess:
     def __init__(self):
-        # Artefacts upload dir if available, otherwise a local test dir.
-        upload_dir = os.environ.get("ARTEFACTS_SCENARIO_UPLOAD_DIR")
-        log_dir = Path(upload_dir) if upload_dir else Path(__file__).resolve().parent
-        log_dir.mkdir(parents=True, exist_ok=True)
-        self.log_path = log_dir / "sim_startup.log"
+        self.log_path = _log_dir() / "sim_startup.log"
         self._log_file = open(self.log_path, "w")
         self.proc = subprocess.Popen(
             SIM_COMMAND,
             cwd=REPO_ROOT,
+            env={**os.environ, "OMNILRS_ROBOT_VIDEO": str(VIDEO_PATH)},
             stdout=self._log_file,
             stderr=subprocess.STDOUT,
             start_new_session=True,

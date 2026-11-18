@@ -4,6 +4,8 @@ __author__ = "Louis Burtz"
 __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
 
+import math
+
 import carb.eventdispatcher
 import carb.settings
 import isaacsim.core.experimental.utils.stage as stage_utils
@@ -11,11 +13,13 @@ import omni.kit.app
 import omni.physics.core
 import omni.timeline
 from isaacsim.core.simulation_manager import PhysxScene, SimulationManager
-from pxr import PhysxSchema, Usd
+from pxr import PhysxSchema, Usd, UsdPhysics
 
 from src.configurations.physics_confs import PhysicsSceneConf
 
 _PLAY_SIMULATIONS = "/app/player/playSimulations"
+# The physics scene of every mode. Its gravity comes only from cfg/physics (physics_scene_gravity() reads it back).
+PHYSICS_SCENE_PATH = "/physicsScene"
 
 
 class Simulation:
@@ -31,7 +35,8 @@ class Simulation:
     Args:
         physics_dt (float): Physics step in seconds.
         rendering_dt (float): Rendering (app update) step in seconds.
-        physics_scene (PhysicsSceneConf, optional): Physics scene settings to apply on top of the defaults.
+        physics_scene (PhysicsSceneConf): cfg/physics, applied on top of the defaults. It is the only source of the
+            gravity: without it, the simulation does not start.
         physics_prim_path (str): Path of the physics scene prim.
     """
 
@@ -39,8 +44,8 @@ class Simulation:
         self,
         physics_dt: float,
         rendering_dt: float,
-        physics_scene: PhysicsSceneConf | None = None,
-        physics_prim_path: str = "/physicsScene",
+        physics_scene: PhysicsSceneConf,
+        physics_prim_path: str = PHYSICS_SCENE_PATH,
     ) -> None:
         self._app = omni.kit.app.get_app()
         self._settings = carb.settings.get_settings()
@@ -54,13 +59,13 @@ class Simulation:
         stage_utils.set_stage_units(meters_per_unit=1.0)
         self.render()
 
+        self._rendering_dt = rendering_dt
         self._scene = PhysxScene(physics_prim_path)
         SimulationManager.set_default_physics_scene(physics_prim_path)
         self._set_cpu_defaults()
         self._set_physics_dt(physics_dt)
         self._set_simulation_dt(physics_dt, rendering_dt)
-        if physics_scene is not None:
-            self.configure_physics_scene(physics_scene)
+        self.configure_physics_scene(physics_scene)
 
         self._num_steps = 0
         self._restart_pending = False
@@ -135,10 +140,15 @@ class Simulation:
         """Apply OmniLRS physics scene settings (cfg/physics)."""
         args = conf.physics_scene_args
         api = PhysxSchema.PhysxSceneAPI(self._scene.prim)
-        if "gravity" in args:
-            self._scene.set_gravity(args["gravity"])
+        if "gravity" not in args:
+            raise ValueError("cfg/physics must set physics_scene.gravity: it is the only gravity setting of OmniLRS")
+        self._scene.set_gravity(args["gravity"])
         if "dt" in args:
-            self._set_physics_dt(args["dt"], args.get("substeps"))
+            # Physics steps per rendering frame: without them, the minimum frame rate became the physics rate and PhysX
+            # simulated only one physics step per (longer) rendering frame, so the physics ran slower than the
+            # timeline (half speed with dt 1/60 s and a 1/30 s rendering step).
+            substeps = args.get("substeps") or max(int(round(self._rendering_dt / args["dt"])), 1)
+            self._set_physics_dt(args["dt"], substeps)
             stage = stage_utils.get_current_stage(backend="usd")
             with Usd.EditContext(stage, Usd.EditTarget(stage.GetRootLayer())):
                 stage.SetTimeCodesPerSecond(1 / args["dt"])
@@ -183,7 +193,6 @@ class Simulation:
     def _set_cpu_defaults(self) -> None:
         self._scene.set_broadphase_type("MBP")
         self._scene.set_enabled_gpu_dynamics(False)
-        self._scene.set_gravity((0.0, 0.0, -9.81))
         self._scene.set_enabled_stabilization(False)
         self._scene.set_enabled_ccd(True)
         self._settings.set_bool("/physics/suppressReadback", False)
@@ -219,3 +228,12 @@ class Simulation:
     def _on_timeline_stop(self, event: object) -> None:
         self._num_steps = 0
         self._restart_pending = True
+
+
+def physics_scene_gravity(stage: Usd.Stage, path: str = PHYSICS_SCENE_PATH) -> float:
+    """Gravity magnitude (m/s^2) of the physics scene, as Simulation set it from cfg/physics."""
+    scene = UsdPhysics.Scene(stage.GetPrimAtPath(path))
+    magnitude = scene.GetGravityMagnitudeAttr().Get() if scene else None
+    if magnitude is None or not math.isfinite(magnitude) or magnitude <= 0:
+        raise ValueError(f"No gravity set on the physics scene {path}: create Simulation (cfg/physics) first")
+    return float(magnitude)

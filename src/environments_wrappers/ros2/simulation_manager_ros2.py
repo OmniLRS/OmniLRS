@@ -16,6 +16,7 @@ from src.configurations.procedural_terrain_confs import TerrainManagerConf
 from src.environments.stellar_engine_env_mixin import StellarEngineEnvMixin
 from src.environments.utils import set_moon_env_name
 from src.environments_wrappers.rate import Rate
+from src.environments_wrappers.robot_video_recorder import RobotVideo
 from src.environments_wrappers.ros2.largescale_ros2 import ROS_LargeScaleManager
 from src.environments_wrappers.ros2.lunalab_ros2 import ROS_LunalabManager
 from src.environments_wrappers.ros2.lunaryard_ros2 import ROS_LunaryardManager
@@ -181,63 +182,69 @@ class ROS2_SimulationManager:
         """
 
         self.timeline.play()
-        # rclpy.ok() turns False when ROS handles SIGINT/SIGTERM (rclpy on Jazzy also handles SIGTERM).
-        while self.simulation_app.is_running() and rclpy.ok():
-            self.rate.reset()
-            self.sim.step()
-            if self.sim.is_playing():
-                did_reset = False
+        # Opt-in test video (OMNILRS_ROBOT_VIDEO).
+        video = RobotVideo(self.ROSRobotManager.RM)
+        try:
+            # rclpy.ok() turns False when ROS handles SIGINT/SIGTERM (rclpy on Jazzy also handles SIGTERM).
+            while self.simulation_app.is_running() and rclpy.ok():
+                self.rate.reset()
+                self.sim.step()
+                if self.sim.is_playing():
+                    did_reset = False
 
-                if self.sim.consume_restart():
-                    logger.info("Timeline restarted: resetting the environment and robot")
-                    self.sim.reset()
-                    did_reset = True
-
-                    if self.ROSRobotManager.RM.robot is not None:
-                        self.ROSRobotManager.RM.robot.invalidate_articulation_api()
-
-                    self.ROSEnvironmentManager.reset()
-                    self.ROSRobotManager.reset()
-
-                if not did_reset:
-                    # Must happen before periodic_update(), because LargeScale may call robot.get_pose().
-                    if self.ROSRobotManager.RM.robot is not None:
-                        self.ROSRobotManager.RM.robot.update_articulation_api()
-
-                    # Apply modifications to the lab only once the simulation step is finished.
-                    # This is extremely important as modifying the stage during a simulation step
-                    # will lead to a crash.
-                    self.ROSEnvironmentManager.periodic_update(dt=self.sim.get_physics_dt())
-
-                    self.ROSEnvironmentManager.apply_modifications()
-
-                    if self.ROSEnvironmentManager.trigger_reset:
-                        self.ROSRobotManager.reset()
-                        self.ROSEnvironmentManager.trigger_reset = False
+                    if self.sim.consume_restart():
+                        logger.info("Timeline restarted: resetting the environment and robot")
+                        self.sim.reset()
+                        did_reset = True
 
                         if self.ROSRobotManager.RM.robot is not None:
                             self.ROSRobotManager.RM.robot.invalidate_articulation_api()
 
-                    self.ROSRobotManager.apply_modifications()
+                        self.ROSEnvironmentManager.reset()
+                        self.ROSRobotManager.reset()
 
-                    if self.enable_deformation:
-                        if self.sim.current_time_step_index >= (self.deform_delay * self.sim.get_physics_dt()):
-                            self.ROSEnvironmentManager.EC.deform_terrain()
-                        # self.ROSLabManager.EC.applyTerramechanics()
-            if not self.ROSEnvironmentManager.monitor_thread_is_alive():
-                logger.debug("Destroying the ROS nodes")
-                self.ROSEnvironmentManager.destroy_node()
-                self.ROSRobotManager.destroy_node()
-                logger.debug("Shutting down the ROS executors")
-                self.exec1.shutdown()
-                self.exec2.shutdown()
-                logger.debug("Joining the ROS threads")
-                self.exec1_thread.join()
-                self.exec2_thread.join()
-                logger.debug("Shutting down ROS2")
-                rclpy.shutdown()
-                break
+                    if not did_reset:
+                        # Must happen before periodic_update(), because LargeScale may call robot.get_pose().
+                        if self.ROSRobotManager.RM.robot is not None:
+                            self.ROSRobotManager.RM.robot.update_articulation_api()
 
-            self.rate.sleep()
+                        # Apply modifications to the lab only once the simulation step is finished.
+                        # This is extremely important as modifying the stage during a simulation step
+                        # will lead to a crash.
+                        self.ROSEnvironmentManager.periodic_update(dt=self.sim.get_physics_dt())
+
+                        self.ROSEnvironmentManager.apply_modifications()
+
+                        if self.ROSEnvironmentManager.trigger_reset:
+                            self.ROSRobotManager.reset()
+                            self.ROSEnvironmentManager.trigger_reset = False
+
+                            if self.ROSRobotManager.RM.robot is not None:
+                                self.ROSRobotManager.RM.robot.invalidate_articulation_api()
+
+                        self.ROSRobotManager.apply_modifications()
+                        video.update()
+
+                        if self.enable_deformation:
+                            if self.sim.current_time_step_index >= (self.deform_delay * self.sim.get_physics_dt()):
+                                self.ROSEnvironmentManager.EC.deform_terrain()
+                            # self.ROSLabManager.EC.applyTerramechanics()
+                if not self.ROSEnvironmentManager.monitor_thread_is_alive():
+                    logger.debug("Destroying the ROS nodes")
+                    self.ROSEnvironmentManager.destroy_node()
+                    self.ROSRobotManager.destroy_node()
+                    logger.debug("Shutting down the ROS executors")
+                    self.exec1.shutdown()
+                    self.exec2.shutdown()
+                    logger.debug("Joining the ROS threads")
+                    self.exec1_thread.join()
+                    self.exec2_thread.join()
+                    logger.debug("Shutting down ROS2")
+                    rclpy.shutdown()
+                    break
+
+                self.rate.sleep()
+        finally:
+            video.close()
         self.sim.stop()
         self.timeline.stop()

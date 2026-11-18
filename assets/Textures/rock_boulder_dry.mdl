@@ -1,3 +1,58 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:2a6d5d778da308f44e0f43efd201c631a171cb2dbe09761bd671ca030dfb847c
-size 2268
+// exported by: omni.mdl.usd_converter [1.0.19]
+// --/exts/omni.mdl.usd_converter/enableNewDemangling=False
+// --/exts/omni.mdl.usd_converter/allowRelativeExports=True
+// --/exts/omni.mdl.usd_converter/allowRelativeExportUpwardLevels=-1
+
+mdl 1.8;
+
+import ::state::normal;
+import ::OmniPBR::OmniPBR;
+import ::base::mono_mode;
+import ::tex::gamma_mode;
+
+export material rock_boulder_dry_2k(*)
+ = OmniPBR::OmniPBR(
+    diffuse_color_constant: color(0.200000003f, 0.200000003f, 0.200000003f),
+    diffuse_texture: texture_2d("./rock_boulder_dry_2k/rock_boulder_dry_diff_2k.png", ::tex::gamma_default, ""),
+    albedo_desaturation: 0.f,
+    albedo_add: 0.f,
+    albedo_brightness: 1.f,
+    diffuse_tint: color(1.f, 1.f, 1.f),
+    reflection_roughness_constant: 1.f,
+    reflection_roughness_texture_influence: 0.1299999952f,
+    reflectionroughness_texture: texture_2d("./rock_boulder_dry_2k/rock_boulder_dry_rough_2k.png", ::tex::gamma_default, ""),
+    metallic_constant: 0.f,
+    metallic_texture_influence: 0.f,
+    metallic_texture: texture_2d(),
+    specular_level: 0.2599999905f,
+    enable_ORM_texture: false,
+    ORM_texture: texture_2d(),
+    ao_to_diffuse: 0.349999994f,
+    ao_texture: texture_2d("./rock_boulder_dry_2k/rock_boulder_dry_ao_2k.png", ::tex::gamma_srgb, ""),
+    enable_emission: false,
+    emissive_color: color(1.f, 0.1000000015f, 0.1000000015f),
+    emissive_color_texture: texture_2d(),
+    emissive_mask_texture: texture_2d(),
+    emissive_intensity: 40.f,
+    enable_opacity: false,
+    opacity_texture: texture_2d(),
+    opacity_constant: 1.f,
+    enable_opacity_texture: false,
+    opacity_mode: base::mono_average,
+    opacity_threshold: 0.f,
+    geometry_normal_roughness_strength: 1.f,
+    bump_factor: 0.80f,
+    normalmap_texture: texture_2d("./rock_boulder_dry_2k/rock_boulder_dry_nor_gl_2k.png", ::tex::gamma_linear, ""),
+    detail_bump_factor: 1.f,
+    detail_normalmap_texture: texture_2d(),
+    flip_tangent_u: false,
+    flip_tangent_v: true,
+    project_uvw: false,
+    world_or_object: false,
+    uv_space_index: 0,
+    texture_translate: float2(0.f),
+    texture_rotate: 0.f,
+    texture_scale: float2(0.5f),
+    detail_texture_translate: float2(0.f),
+    detail_texture_rotate: 0.f,
+    detail_texture_scale: float2(1.f));

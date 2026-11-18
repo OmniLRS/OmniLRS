@@ -10,6 +10,7 @@ from isaacsim import SimulationApp
 from src.configurations.procedural_terrain_confs import TerrainManagerConf
 from src.environments.utils import set_moon_env_name
 from src.environments_wrappers.rate import Rate
+from src.environments_wrappers.robot_video_recorder import RobotVideo
 from src.environments_wrappers.zenoh.largescale_zenoh import Zenoh_LargeScaleManager
 from src.environments_wrappers.zenoh.lunalab_zenoh import Zenoh_LunalabManager
 from src.environments_wrappers.zenoh.lunaryard_zenoh import Zenoh_LunaryardManager
@@ -49,9 +50,12 @@ class Zenoh_SimulationManager:
 
         # Setups the physics and acquires different interfaces to talk with Isaac
         self.timeline = omni.timeline.get_timeline_interface()
+        # cfg/physics (lunar gravity, solver, time step), as in ROS2 mode. Without it, the simulation ran with the
+        # Isaac Sim defaults, including Earth gravity.
         self.sim = Simulation(
             physics_dt=cfg["environment"]["physics_dt"],
             rendering_dt=cfg["environment"]["rendering_dt"],
+            physics_scene=cfg["physics"]["physics_scene"],
         )
 
         set_moon_env_name(cfg["environment"]["name"])
@@ -158,49 +162,54 @@ class Zenoh_SimulationManager:
         """
 
         self.timeline.play()
+        # Opt-in test video (OMNILRS_ROBOT_VIDEO).
+        video = RobotVideo(self.Zenoh_RM.RM_)
+        try:
+            while self.simulation_app.is_running():
+                self.rate.reset()
+                self._apply_simulation_control()
 
-        while self.simulation_app.is_running():
-            self.rate.reset()
-            self._apply_simulation_control()
+                did_reset = False
 
-            did_reset = False
-
-            if self.sim.is_playing():
-                if self.sim.consume_restart():
-                    logger.info("Timeline restarted: resetting the environment and robot")
-                    self.sim.reset()
-                    did_reset = True
-                    self.Zenoh_EC.reset()
-                    self.Zenoh_RM.invalidate_articulation_api()
-                    self.Zenoh_RM.reset_robot()
-                    self.Zenoh_RM.apply_modifications()
-
-                if not did_reset:
-                    # Must happen before periodic_update(), because LargeScale calls robot.get_pose().
-                    self.Zenoh_RM.update_articulation_api()
-                    self.Zenoh_EC.periodic_update(dt=self.sim.get_physics_dt())
-                    self.Zenoh_EC.apply_modifications()
-                    if self.Zenoh_EC.trigger_reset:
-                        self.Zenoh_RM.invalidate_articulation_api()
-                        self.Zenoh_RM.reset()
-                        self.Zenoh_EC.trigger_reset = False
+                if self.sim.is_playing():
+                    if self.sim.consume_restart():
+                        logger.info("Timeline restarted: resetting the environment and robot")
+                        self.sim.reset()
                         did_reset = True
+                        self.Zenoh_EC.reset()
+                        self.Zenoh_RM.invalidate_articulation_api()
+                        self.Zenoh_RM.reset_robot()
+                        self.Zenoh_RM.apply_modifications()
+
+                    if not did_reset:
+                        # Must happen before periodic_update(), because LargeScale calls robot.get_pose().
+                        self.Zenoh_RM.update_articulation_api()
+                        self.Zenoh_EC.periodic_update(dt=self.sim.get_physics_dt())
+                        self.Zenoh_EC.apply_modifications()
+                        if self.Zenoh_EC.trigger_reset:
+                            self.Zenoh_RM.invalidate_articulation_api()
+                            self.Zenoh_RM.reset()
+                            self.Zenoh_EC.trigger_reset = False
+                            did_reset = True
+                        self.Zenoh_RM.apply_modifications()
+                        video.update()
+                        if self.enable_deformation:
+                            if self.sim.current_time_step_index >= (self.deform_delay * self.sim.get_physics_dt()):
+                                self.Zenoh_EC.LC.deform_terrain()
+
+                if self.Zenoh_EC.pubs_inited:
+                    self.Zenoh_EC.pub_sim_is_running(True, is_playing=self.sim.is_playing())
+
+                if self.Zenoh_RM.pubs_inited and self.sim.is_playing() and not did_reset:
                     self.Zenoh_RM.apply_modifications()
-                    if self.enable_deformation:
-                        if self.sim.current_time_step_index >= (self.deform_delay * self.sim.get_physics_dt()):
-                            self.Zenoh_EC.LC.deform_terrain()
+                    self.Zenoh_RM.publish_telemetry()
+                    self.Zenoh_RM.publish_gt()
 
-            if self.Zenoh_EC.pubs_inited:
-                self.Zenoh_EC.pub_sim_is_running(True, is_playing=self.sim.is_playing())
+                self.rate.sleep()
 
-            if self.Zenoh_RM.pubs_inited and self.sim.is_playing() and not did_reset:
-                self.Zenoh_RM.apply_modifications()
-                self.Zenoh_RM.publish_telemetry()
-                self.Zenoh_RM.publish_gt()
-
-            self.rate.sleep()
-
-            self.simulation_app.update()
+                self.simulation_app.update()
+        finally:
+            video.close()
 
         self.sim_control.close()
         self.Zenoh_EC.close()

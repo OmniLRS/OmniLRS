@@ -1,3 +1,203 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:cd103f71d217829b054c51999d60780977b6205c119a65c274b814e29c4e0693
-size 9017
+mdl 1.6;
+
+import ::math::*;
+import ::state::*;
+import ::tex::*;
+import ::anno::*;
+import ::scene::*;
+using OmniUe4Function import *;
+using OmniUe4Base import *;
+
+export annotation sampler_color();
+export annotation sampler_normal();
+export annotation sampler_grayscale();
+export annotation sampler_alpha();
+export annotation sampler_masks();
+export annotation sampler_distancefield();
+export annotation dither_masked_off();
+export annotation world_space_normal();
+
+export material MI_Rock(
+	float Tiling = 0.0
+	[[
+		anno::display_name("Tiling"),
+		anno::ui_order(32)
+	]],
+	float4 GlobalColor = float4(1.0,1.0,1.0,1.0)
+	[[
+		anno::display_name("Global Color"),
+		anno::ui_order(32)
+	]],
+	float Colorizer_01_Desaturate_01 = 0.0
+	[[
+		anno::display_name("Colorizer_01 - Desaturate_01"),
+		anno::ui_order(32),
+		anno::in_group("Colorizer_01")
+	]],
+	float4 Colorizer_01_Color_01 = float4(1.0,1.0,1.0,1.0)
+	[[
+		anno::display_name("Colorizer_01 - Color_01"),
+		anno::ui_order(32),
+		anno::in_group("Colorizer_01")
+	]],
+	float Colorizer_01_Scale_01 = 100.0
+	[[
+		anno::display_name("Colorizer_01 - Scale_01"),
+		anno::ui_order(32),
+		anno::in_group("Colorizer_01")
+	]],
+	uniform texture_2d Colorizer_01_Mask_01 = texture_2d("./Textures/T_Default_RGBA.png",::tex::gamma_linear)
+	[[
+		anno::display_name("Colorizer_01 - Mask_01"),
+		anno::ui_order(32),
+		anno::in_group("Colorizer_01"),
+		sampler_masks()
+	]],
+	float4 Colorizer_01_Channel_01 = float4(1.0,0.0,0.0,0.0)
+	[[
+		anno::display_name("Colorizer_01 - Channel_01"),
+		anno::ui_order(32),
+		anno::in_group("Colorizer_01")
+	]],
+	float Colorizer_01_Contrast_01 = 1.0
+	[[
+		anno::display_name("Colorizer_01 - Contrast_01"),
+		anno::ui_order(32),
+		anno::in_group("Colorizer_01")
+	]],
+	float Colorizer_01_Amount_01 = 1.0
+	[[
+		anno::display_name("Colorizer_01 - Amount_01"),
+		anno::ui_order(32),
+		anno::in_group("Colorizer_01")
+	]],
+	float Colorizer_01_Desaturate_02 = 0.0
+	[[
+		anno::display_name("Colorizer_01 - Desaturate_02"),
+		anno::ui_order(32),
+		anno::in_group("Colorizer_01")
+	]],
+	float4 Colorizer_01_Color_02 = float4(1.0,1.0,1.0,1.0)
+	[[
+		anno::display_name("Colorizer_01 - Color_02"),
+		anno::ui_order(32),
+		anno::in_group("Colorizer_01")
+	]],
+	float Colorizer_01_Scale_02 = 100.0
+	[[
+		anno::display_name("Colorizer_01 - Scale_02"),
+		anno::ui_order(32),
+		anno::in_group("Colorizer_01")
+	]],
+	uniform texture_2d Colorizer_01_Mask_02 = texture_2d("./Textures/T_Default_RGBA.png",::tex::gamma_linear)
+	[[
+		anno::display_name("Colorizer_01 - Mask_02"),
+		anno::ui_order(32),
+		anno::in_group("Colorizer_01"),
+		sampler_masks()
+	]],
+	float4 Colorizer_01_Channel_02 = float4(1.0,0.0,0.0,0.0)
+	[[
+		anno::display_name("Colorizer_01 - Channel_02"),
+		anno::ui_order(32),
+		anno::in_group("Colorizer_01")
+	]],
+	float Colorizer_01_Contrast_02 = 1.0
+	[[
+		anno::display_name("Colorizer_01 - Contrast_02"),
+		anno::ui_order(32),
+		anno::in_group("Colorizer_01")
+	]],
+	float Colorizer_01_Amount_02 = 1.0
+	[[
+		anno::display_name("Colorizer_01 - Amount_02"),
+		anno::ui_order(32),
+		anno::in_group("Colorizer_01")
+	]],
+	float Shadow = 15.0
+	[[
+		anno::display_name("Shadow"),
+		anno::ui_order(32)
+	]],
+	uniform bool ShadowReplaceState = false
+	[[
+		anno::hidden()
+	]],
+	int MaxTexCoordIndex = 3
+	[[
+		anno::hidden()
+	]])
+ = 
+	let {
+	float Local40 = (Shadow * -1.0);
+	float3 Local41 = (Local40 * ::vertex_normal_world_space(true));
+	float3 Local42 = (ShadowReplaceState ? (Local41) : (float3(0.0,0.0,0.0)));
+	float3 Local43 = (float3(0.0,0.0,0.0) + Local42);
+
+	float3 WorldPositionOffset_mdl = Local43;
+	float2 CustomizedUV0_mdl = float2(state::texture_coordinate(math::min(0,MaxTexCoordIndex)).x,1.0-state::texture_coordinate(math::min(0,MaxTexCoordIndex)).y);
+
+	float2 Local0 = (CustomizedUV0_mdl * Tiling);
+	float4 Local1 = tex::lookup_float4(texture_2d("./Textures/T_Soil_01_N.png",::tex::gamma_linear),float2(Local0.x,1.0-Local0.y),tex::wrap_repeat,tex::wrap_repeat);
+	float2 Local2 = (-0.5 + float2(float3(Local1.x,Local1.y,Local1.z).x,float3(Local1.x,Local1.y,Local1.z).y));
+	float2 Local3 = (Local2 * 2.0);
+	float Local4 = math::dot(Local3, Local3);
+	float Local5 = (1.0 - Local4);
+	float Local6 = math::saturate(Local5);
+	float Local7 = math::sqrt(Local6);
+	float Local8 = math::dot(float3(Local3.x,Local3.y,Local7), float3(Local3.x,Local3.y,Local7));
+	float3 Local9 = math::normalize(float3(Local3.x,Local3.y,Local7));
+	float4 Local10 = ((math::abs(Local8 - 0.000001) > 0.00001) ? (Local8 >= 0.000001 ? float4(Local9.x,Local9.y,Local9.z,0.0) : float4(float3(Local3.x,Local3.y,0.0).x,float3(Local3.x,Local3.y,0.0).y,float3(Local3.x,Local3.y,0.0).z,1.0)) : float4(float3(Local3.x,Local3.y,0.0).x,float3(Local3.x,Local3.y,0.0).y,float3(Local3.x,Local3.y,0.0).z,1.0));
+	float Local11 = (float3(Local10.x,Local10.y,Local10.z).z + 1.0);
+	float4 Local12 = ::unpack_normal_map(tex::lookup_float4(texture_2d("./Textures/T_Rock_01_N.png",::tex::gamma_linear),float2(CustomizedUV0_mdl.x,1.0-CustomizedUV0_mdl.y),tex::wrap_repeat,tex::wrap_repeat));
+	float2 Local13 = (float2(float3(Local12.x,Local12.y,Local12.z).x,float3(Local12.x,Local12.y,Local12.z).y) * -1.0);
+	float Local14 = math::dot(float3(float2(float3(Local10.x,Local10.y,Local10.z).x,float3(Local10.x,Local10.y,Local10.z).y).x,float2(float3(Local10.x,Local10.y,Local10.z).x,float3(Local10.x,Local10.y,Local10.z).y).y,Local11), float3(Local13.x,Local13.y,float3(Local12.x,Local12.y,Local12.z).z));
+	float3 Local15 = (float3(float2(float3(Local10.x,Local10.y,Local10.z).x,float3(Local10.x,Local10.y,Local10.z).y).x,float2(float3(Local10.x,Local10.y,Local10.z).x,float3(Local10.x,Local10.y,Local10.z).y).y,Local11) * Local14);
+	float3 Local16 = (Local11 * float3(Local13.x,Local13.y,float3(Local12.x,Local12.y,Local12.z).z));
+	float3 Local17 = (Local15 - Local16);
+
+	float3 Normal_mdl = Local17;
+
+	float4 Local18 = tex::lookup_float4(texture_2d("./Textures/T_Soil_01_A.png",::tex::gamma_srgb),float2(Local0.x,1.0-Local0.y),tex::wrap_repeat,tex::wrap_repeat);
+	float3 Local19 = (float3(Local18.x,Local18.y,Local18.z) * float3(GlobalColor.x,GlobalColor.y,GlobalColor.z));
+	float Local20 = math::dot(Local19, float3(0.3,0.59,0.11));
+	float3 Local21 = math::lerp(Local19,float3(Local20,Local20,Local20),Colorizer_01_Desaturate_01);
+	float3 Local22 = (Local21 * float3(Colorizer_01_Color_01.x,Colorizer_01_Color_01.y,Colorizer_01_Color_01.z));
+	float2 Local23 = (float2((::convert_to_left_hand(state::transform_point(state::coordinate_internal,state::coordinate_world,state::position()), true)*state::meters_per_scene_unit()*100.0).x,(::convert_to_left_hand(state::transform_point(state::coordinate_internal,state::coordinate_world,state::position()), true)*state::meters_per_scene_unit()*100.0).y) / Colorizer_01_Scale_01);
+	float4 Local24 = tex::lookup_float4(Colorizer_01_Mask_01,float2(Local23.x,1.0-Local23.y),tex::wrap_repeat,tex::wrap_repeat);
+	float Local25 = math::dot(Local24, Colorizer_01_Channel_01);
+	float Local26 = math::pow(math::max(Local25,float(0.000001)),Colorizer_01_Contrast_01);
+	float Local27 = (Local26 * Colorizer_01_Amount_01);
+	float Local28 = math::saturate(Local27);
+	float3 Local29 = math::lerp(Local19,Local22,Local28);
+	float3 Local30 = math::lerp(Local19,float3(Local20,Local20,Local20),Colorizer_01_Desaturate_02);
+	float3 Local31 = (Local30 * float3(Colorizer_01_Color_02.x,Colorizer_01_Color_02.y,Colorizer_01_Color_02.z));
+	float2 Local32 = (float2((::convert_to_left_hand(state::transform_point(state::coordinate_internal,state::coordinate_world,state::position()), true)*state::meters_per_scene_unit()*100.0).x,(::convert_to_left_hand(state::transform_point(state::coordinate_internal,state::coordinate_world,state::position()), true)*state::meters_per_scene_unit()*100.0).y) / Colorizer_01_Scale_02);
+	float4 Local33 = tex::lookup_float4(Colorizer_01_Mask_02,float2(Local32.x,1.0-Local32.y),tex::wrap_repeat,tex::wrap_repeat);
+	float Local34 = math::dot(Local33, Colorizer_01_Channel_02);
+	float Local35 = math::pow(math::max(Local34,float(0.000001)),Colorizer_01_Contrast_02);
+	float Local36 = (Local35 * Colorizer_01_Amount_02);
+	float Local37 = math::saturate(Local36);
+	float3 Local38 = math::lerp(Local29,Local31,Local37);
+	float3 Local39 = math::min(math::max(Local38,float3(0.0,0.0,0.0)),float3(1.0,1.0,1.0));
+
+	float3 EmissiveColor_mdl = float3(0.0,0.0,0.0);
+	float OpacityMask_mdl = 1.0;
+	float3 BaseColor_mdl = Local39;
+	float Metallic_mdl = 0.0;
+	float Specular_mdl = 0.5;
+	float Roughness_mdl = 1.0;
+	float SurfaceThickness_mdl = 0.01;
+	float Displacement_mdl = 0.0;
+
+	} in
+		::OmniUe4Base(
+			base_color: BaseColor_mdl,
+			metallic: Metallic_mdl,
+			roughness: Roughness_mdl,
+			specular: Specular_mdl,
+			normal: Normal_mdl,
+			opacity: OpacityMask_mdl,
+			emissive_color: EmissiveColor_mdl,
+			displacement: WorldPositionOffset_mdl,
+			two_sided: false);

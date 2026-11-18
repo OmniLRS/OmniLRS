@@ -82,6 +82,10 @@ def _log_dir():
     return log_dir
 
 
+# Top and side video of the robot, next to the logs (conftest.py writes the test steps it shows).
+VIDEO_PATH = _log_dir() / "rover_yamcs_husky_sanity.mp4"
+
+
 def _port_open(address):
     host, port = address.rsplit(":", 1)
     try:
@@ -143,6 +147,7 @@ class SimProcess:
         self.proc = subprocess.Popen(
             SIM_COMMAND,
             cwd=REPO_ROOT,
+            env={**os.environ, "OMNILRS_ROBOT_VIDEO": str(VIDEO_PATH)},
             stdout=self._log_file,
             stderr=subprocess.STDOUT,
             start_new_session=True,
@@ -492,7 +497,8 @@ def test_wheels_drive_straight_then_stop(rover):
 
 def test_wheels_turn_sides_independently(rover):
     # Left and right wheels are commanded separately: the right side command must keep the left side targets.
-    # 16 deg/s for 10 s: wheel speed 16 deg/s * width / 2 * turn_speed_coef (cfg/robot/husky.yaml), about 1.5 rad/s.
+    # 16 deg/s for 10 s: wheel speed radians(16) * track_width / 2 * skid_steer_factor / wheel_radius (drive section of
+    # cfg/robot/husky.yaml), about 1.45 rad/s.
     rover.command(DRIVE_TURN, angular_velocity=16.0, angle=160.0)
     try:
         _assert_wheels_turning(rover.encoder_deltas(), LEFT_BACKWARD_RIGHT_FORWARD)

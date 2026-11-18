@@ -1,6 +1,6 @@
 physics_scene:
   dt: 0.016666
-  gravity: [0.0, 0.0, -1.62]
+  gravity: [0.0, 0.0, -1.62] # lunar surface gravity (NASA Moon fact sheet). The only gravity setting: every mode and model reads it
   enable_ccd: true
   enable_stabilization: true
   solver_type: PGS

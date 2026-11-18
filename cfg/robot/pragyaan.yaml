@@ -6,10 +6,10 @@ robots_settings:
     robot_name: pragyaan
     usd_path: assets/USD_Assets/robots/pragyaan/nograph_pragyaan.usd
     pose:
-      position: [26., 16.6, 0.8] # Lunaryard, LargeScale
+      position: [26., 16.6, 0.42] # Lunaryard, LargeScale
       # position: [5.0, 5.0, 0.1] # Lunalab
-      orientation: [0., 0., 0.70711, 0.70711]
-      height_above_terrain_override: 0.8 # optional, replaces position z with terrain height at (x, y) + this value
+      orientation: [0.70711, 0., 0., 0.70711] # w, x, y, z. The asset is REP-103 (x forward, z up): yaw 90 deg, facing +y
+      height_above_terrain_override: 0.42 # optional, replaces position z with terrain height at (x, y) + this value. base_link is 0.25 m above the ground at rest
     base_link: "base_link" # core link used to determine the position of the robot
     pos_relative_to_prim: "/StaticAssets/lander"  # if no lander in environment, rover position will be reported in world frame and a warning will be printed at initialization
     target_links: [
@@ -23,10 +23,10 @@ robots_settings:
     wheel_joints:
       left: ["wheel_fl", "wheel_ml", "wheel_bl"]
       right: ["wheel_fr", "wheel_mr", "wheel_br"]
-    dimensions:
-      width: 1.6 # m
-      length: 1.5
-    turn_speed_coef: 19
+    drive: # wheel kinematics of the Yamcs drive commands (src/tmtc/drive_handler.py, DriveConf)
+      wheel_radius: 0.0972 # m
+      track_width: 0.882 # m, between the left and right wheel centers
+      skid_steer_factor: 1.59 # effective track / track_width. Flat ground, 30 Hz physics: 90.7 deg for a 90 deg turn at 8 deg/s
     imu_sensor_path: "/Robots/pragyaan/base_link/Imu_Sensor"
     solar_panel_joint: "solarJoint"  # finds it within the main robot articulation
     # Define camera names and types here:

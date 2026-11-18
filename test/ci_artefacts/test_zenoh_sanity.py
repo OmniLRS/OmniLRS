@@ -78,6 +78,10 @@ def _log_dir():
     return log_dir
 
 
+# Top and side video of the robot, next to the logs (conftest.py writes the test steps it shows).
+VIDEO_PATH = _log_dir() / "rover_zenoh_sanity.mp4"
+
+
 class SimProcess:
     def __init__(self, zenoh_config_path):
         self.log_path = _log_dir() / "sim_startup_zenoh.log"
@@ -85,7 +89,11 @@ class SimProcess:
         self.proc = subprocess.Popen(
             SIM_COMMAND,
             cwd=REPO_ROOT,
-            env={**os.environ, "ZENOH_SESSION_CONFIG_URI": str(zenoh_config_path)},
+            env={
+                **os.environ,
+                "ZENOH_SESSION_CONFIG_URI": str(zenoh_config_path),
+                "OMNILRS_ROBOT_VIDEO": str(VIDEO_PATH),
+            },
             stdout=self._log_file,
             stderr=subprocess.STDOUT,
             start_new_session=True,

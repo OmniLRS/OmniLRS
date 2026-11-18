@@ -82,7 +82,7 @@ isaacsim = "isaacsim"
 
 # ros2-specific tasks, env variables in feature "ros2"
 [feature.ros2.activation]
-scripts = ["scripts/activate_isaac_ros.sh"]
+scripts = ["scripts/pixi/activate_isaac_ros.sh"]
 
 [feature.ros2.activation.env]
 ROS_DISTRO = "jazzy"

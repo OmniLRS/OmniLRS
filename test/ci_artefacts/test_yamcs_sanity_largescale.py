@@ -65,6 +65,10 @@ def _log_dir():
     return log_dir
 
 
+# Top and side video of the robot, next to the logs (conftest.py writes the test steps it shows).
+VIDEO_PATH = _log_dir() / "rover_yamcs_sanity_largescale.mp4"
+
+
 def _port_open(address):
     host, port = address.rsplit(":", 1)
     try:
@@ -116,6 +120,7 @@ class SimProcess:
         self.proc = subprocess.Popen(
             SIM_COMMAND,
             cwd=REPO_ROOT,
+            env={**os.environ, "OMNILRS_ROBOT_VIDEO": str(VIDEO_PATH)},
             stdout=self._log_file,
             stderr=subprocess.STDOUT,
             start_new_session=True,

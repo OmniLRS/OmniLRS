@@ -2,17 +2,17 @@
 Generate top-down PNG previews for DEM .npy files.
 
 Quick usage:
-    python scripts/generate_dem_previews.py
+    python scripts/dem_related/generate_dem_previews.py
 
     Generate preview PNGs for all DEMs under assets/Terrains/SouthPole, saving preview.png next to each dem.npy.
-    python scripts/generate_dem_previews.py
+    python scripts/dem_related/generate_dem_previews.py
 
     Generate a mosaic preview of all DEMs under assets/Terrains/SouthPole, saving to preview_mosaic.png:
-    python scripts/generate_dem_previews.py \
+    python scripts/dem_related/generate_dem_previews.py \
         --mode mosaic \
 
     Generate a Markdown table of DEM metadata and elevation ranges for all DEMs under assets/Terrains/SouthPole, saving to preview_statistics.md:
-    python scripts/generate_dem_previews.py \
+    python scripts/dem_related/generate_dem_previews.py \
         --mode preview_statistics \
 
 Notes:

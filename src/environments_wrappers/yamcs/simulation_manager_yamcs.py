@@ -17,6 +17,8 @@ from src.environments.lunaryard import LunaryardController
 from src.environments.stellar_engine_env_mixin import StellarEngineEnvMixin
 from src.environments.utils import set_moon_env_name
 from src.environments_wrappers.rate import Rate
+from src.environments_wrappers.robot_video_recorder import RobotVideo
+from src.environments_wrappers.yamcs.commands_overlay import YamcsCommandsOverlay
 from src.robots.robot import RobotManager
 from src.simulation import Simulation
 
@@ -64,9 +66,12 @@ class Yamcs_SimulationManager:
         # simulation state can drift while we wait.
         self._wait_for_yamcs(cfg["mode"]["instance_conf"]["address"], cfg["mode"]["instance_conf"]["instance"])
 
+        # cfg/physics (lunar gravity, solver, time step), as in ROS2 mode. Without it, the simulation ran with the
+        # Isaac Sim defaults, including Earth gravity.
         self.sim = Simulation(
             physics_dt=cfg["environment"]["physics_dt"],
             rendering_dt=cfg["environment"]["rendering_dt"],
+            physics_scene=cfg["physics"]["physics_scene"],
         )
 
         set_moon_env_name(cfg["environment"]["name"])
@@ -214,40 +219,46 @@ class Yamcs_SimulationManager:
         """
 
         self.timeline.play()
-        while self.simulation_app.is_running():
-            self.rate.reset()
-            self.sim.step()
+        # Opt-in test video (OMNILRS_ROBOT_VIDEO), with the received Yamcs commands as text overlay.
+        video = RobotVideo(self.RM, YamcsCommandsOverlay())
+        try:
+            while self.simulation_app.is_running():
+                self.rate.reset()
+                self.sim.step()
 
-            if self.sim.is_playing():
-                did_reset = False
+                if self.sim.is_playing():
+                    did_reset = False
 
-                if hasattr(self.EC, "enable_stellar_engine") and self.EC.enable_stellar_engine:
-                    self.EC.update_stellar_engine(dt=self.sim.get_physics_dt())
+                    if hasattr(self.EC, "enable_stellar_engine") and self.EC.enable_stellar_engine:
+                        self.EC.update_stellar_engine(dt=self.sim.get_physics_dt())
 
-                if self.sim.consume_restart():
-                    logger.info("Timeline restarted: resetting the environment and robot")
-                    self.sim.reset()
+                    if self.sim.consume_restart():
+                        logger.info("Timeline restarted: resetting the environment and robot")
+                        self.sim.reset()
 
-                    did_reset = True
+                        did_reset = True
 
-                    if self.RM.robot is not None:
-                        self.RM.robot.invalidate_articulation_api()
+                        if self.RM.robot is not None:
+                            self.RM.robot.invalidate_articulation_api()
 
-                if not did_reset:
-                    # Must happen before EC.update(), because LargeScale calls robot.get_pose().
-                    if self.RM.robot is not None:
-                        self.RM.robot.update_articulation_api()
-                    self.EC.update()
+                    if not did_reset:
+                        # Must happen before EC.update(), because LargeScale calls robot.get_pose().
+                        if self.RM.robot is not None:
+                            self.RM.robot.update_articulation_api()
+                        self.EC.update()
+                        video.update()
 
-            if not self.EC.monitor_thread_is_alive():
-                if self.EC.monitor_caught_ctrl_c():
-                    logger.info("Ctrl-C: environment workers shut down. Stopping the simulation.")
-                else:
-                    logger.warning("Environment worker thread died. Stopping the simulation.")
-                break
+                if not self.EC.monitor_thread_is_alive():
+                    if self.EC.monitor_caught_ctrl_c():
+                        logger.info("Ctrl-C: environment workers shut down. Stopping the simulation.")
+                    else:
+                        logger.warning("Environment worker thread died. Stopping the simulation.")
+                    break
 
-            self.rate.sleep()
+                self.rate.sleep()
 
+        finally:
+            video.close()
         if self.RM.robot is not None:
             self.RM.robot.invalidate_articulation_api()
 

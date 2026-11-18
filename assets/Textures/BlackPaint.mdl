@@ -1,3 +1,52 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:7b9b1b93882730d21063331bab5f3a7998b519a2ee98778cc7b74f295a5aa5bb
-size 1817
+mdl 1.7;
+
+using ::OmniPBR import OmniPBR;
+import ::state::normal;
+import ::base::mono_mode;
+import ::tex::gamma_mode;
+
+export material Black_Matte(*)
+ = OmniPBR(
+    diffuse_color_constant: color(0.426160336f, 0.417541981f, 0.400986314f),
+    diffuse_texture: texture_2d(),
+    albedo_desaturation: 0.f,
+    albedo_add: 0.f,
+    albedo_brightness: 1.f,
+    diffuse_tint: color(0.0548523068f, 0.0520749763f, 0.0520749763f),
+    reflection_roughness_constant: 0.f,
+    reflection_roughness_texture_influence: 1.f,
+    reflectionroughness_texture: texture_2d("./BlackPaint/BlackPaint_rough_4k.exr", ::tex::gamma_linear, ""),
+    metallic_constant: 0.f,
+    metallic_texture_influence: 0.f,
+    metallic_texture: texture_2d(),
+    specular_level: 0.f,
+    enable_ORM_texture: false,
+    ORM_texture: texture_2d(),
+    ao_to_diffuse: 0.f,
+    ao_texture: texture_2d(),
+    enable_emission: false,
+    emissive_color: color(0.0675105453f, 0.0658446774f, 0.0635225847f),
+    emissive_color_texture: texture_2d(),
+    emissive_mask_texture: texture_2d(),
+    emissive_intensity: 40.f,
+    enable_opacity: false,
+    opacity_texture: texture_2d(),
+    opacity_constant: 1.f,
+    enable_opacity_texture: false,
+    opacity_mode: base::mono_average,
+    opacity_threshold: 0.f,
+    bump_factor: 0.699999988f,
+    normalmap_texture: texture_2d("./BlackPaint/BlackPaint_nor_dx_4k.exr", ::tex::gamma_linear, ""),
+    detail_bump_factor: 0.300000012f,
+    detail_normalmap_texture: texture_2d(),
+    flip_tangent_u: false,
+    flip_tangent_v: true,
+    project_uvw: false,
+    world_or_object: false,
+    uv_space_index: 0,
+    texture_translate: float2(0.f),
+    texture_rotate: 0.f,
+    texture_scale: float2(1.f),
+    detail_texture_translate: float2(0.f),
+    detail_texture_rotate: 0.f,
+    detail_texture_scale: float2(1.f));

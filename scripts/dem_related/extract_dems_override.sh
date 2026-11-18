@@ -9,8 +9,8 @@ echo "Reading DEMs info..."
 for dem in $(ls $DEMS_PATH/*.tif); do
     dem_name_no_ext="${dem%.*}"
     gdalinfo $dem > $dem_name_no_ext.info
-    python3 scripts/process_info.py --info_path $dem_name_no_ext.info --output_dir $DEMS_PATH --output_name $dem_name_no_ext
-    python3 scripts/preprocess_dem.py --dem_path $dem --output_dir $DEMS_PATH --output_name $dem_name_no_ext.npy
+    python3 scripts/dem_related/process_info.py --info_path $dem_name_no_ext.info --output_dir $DEMS_PATH --output_name $dem_name_no_ext
+    python3 scripts/dem_related/preprocess_dem.py --dem_path $dem --output_dir $DEMS_PATH --output_name $dem_name_no_ext.npy
 done
 echo "Finished extracting DEMs."
 
