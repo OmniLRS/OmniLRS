@@ -116,6 +116,8 @@ layerFactory.register_type("Sphere", Sphere_T)
 layerFactory.register_type("Cone", Cone_T)
 layerFactory.register_type("Torus", Torus_T)
 layerFactory.register_type("Image", Image_T)
+# Ejecta uses the same image-backed layer type, but receives its own placement mask.
+layerFactory.register_type("Ejecta", Image_T)
 layerFactory.register_type("NormalMap", NormalMap_T)
 layerFactory.register_type("RollPitchYaw", RollPitchYaw_T)
 
@@ -151,29 +153,33 @@ def getMixer(requests: dict) -> RequestMixer:
     return RequestMixer([requestGenerator(request) for request in requests.values()])
 
 
-def addImageData(requests: dict, image: np.ndarray, mask: np.ndarray = None) -> dict:
+def addImageData(requests: dict, image: np.ndarray, mask: np.ndarray = None, ejecta_mask: np.ndarray = None) -> dict:
     """
     Adds image data to the requests.
 
     Args:
         requests (dict): The requests.
-        image (np.ndarray): The image.
-        mask (np.ndarray): The mask.
+        image (np.ndarray): Terrain heights (DEM), used by the height sampler.
+        mask (np.ndarray): Ordinary-rock placement region selected by the environment.
+        ejecta_mask (np.ndarray): Placement region for the additional ejecta rocks.
 
     Returns:
         dict: The requests.
     """
 
     for name in requests.keys():
+        # XY placement regions are separate from the DEM used to sample rock Z.
         if requests[name]["layer"]["name"] == "Image":
             requests[name]["layer"]["data"] = mask
+        elif requests[name]["layer"]["name"] == "Ejecta":
+            requests[name]["layer"]["data"] = ejecta_mask
         if requests[name]["sampler"]["name"] in ["Image", "ClipMap", "Geoclipmap"]:
             requests[name]["sampler"]["data"] = image
             requests[name]["sampler"]["resolution"] = image.shape[:2]
     return requests
 
 
-def generateMixer(requests: dict, image: np.ndarray, mask: np.ndarray) -> RequestMixer:
+def generateMixer(requests: dict, image: np.ndarray, mask: np.ndarray, ejecta_mask: np.ndarray) -> RequestMixer:
     """
     Generates a mixer.
 
@@ -181,11 +187,12 @@ def generateMixer(requests: dict, image: np.ndarray, mask: np.ndarray) -> Reques
         requests (dict): The requests.
         image (np.ndarray): The image.
         mask (np.ndarray): The mask.
+        ejecta_mask (np.ndarray): The separate ejecta placement mask.
 
     Returns:
         RequestMixer: The mixer.
     """
-    requests = addImageData(requests, image, mask)
+    requests = addImageData(requests, image, mask, ejecta_mask)
     return getMixer(requests)
 
 
@@ -251,6 +258,12 @@ class RockManager:
 
         for name, settings in rocks_settings.items():
             self.settings[name] = settings
+        # Groups placed with the separate ejecta mask instead of the ordinary-rock mask.
+        self.ejecta_groups = {
+            name
+            for name, settings in self.settings.items()
+            if any(request["layer"]["name"] == "Ejecta" for request in settings["requests"].values())
+        }
 
         self.enable = enable
         if self.enable:
@@ -335,32 +348,43 @@ class RockManager:
         # Sorts the paths by length, and keeps the last element.
         self.execution_order = [i[-1] for i in sorted(paths, key=lambda i: len(i))]
 
-    def build(self, image: np.ndarray, mask: np.ndarray) -> None:
-        # TODO neither dem (image) nor mask are beingutilized
+    def build(self, image: np.ndarray, mask: np.ndarray, ejecta_mask: np.ndarray) -> None:
         """
-        Builds the rock manager.
-        It first creates the mixers, and then creates the instancers.
-        Finally the mixers are exectuted, and the instancers are set to the randomized parameters.
+        Builds the rock instancers before terrain placement data is available.
 
         Args:
-            image (np.ndarray): The image data.
-            mask (np.ndarray): The mask data."""
+            image (np.ndarray): Terrain heights; may still be None during setup.
+            mask (np.ndarray): Ordinary-rock mask; may still be None during setup.
+            ejecta_mask (np.ndarray): Ejecta mask; may still be None during setup.
+        """
+        # Keep the existing lifecycle: updateImageData() creates the placement
+        # mixers after terrain loading, so none of these arrays is consumed here.
         if self.enable:
             self.createInstancers()
 
-    def updateImageData(self, image: np.ndarray, mask: np.ndarray) -> None:
+    def updateImageData(self, image: np.ndarray, mask: np.ndarray, ejecta_mask: np.ndarray) -> None:
         """
         Creates the mixers with the image and mask data loaded in.
         The image and mask are used to place assets in the scene.
 
         Args:
             image (np.ndarray): The image data.
-            mask (np.ndarray): The mask data."""
+            mask (np.ndarray): The environment's ordinary-rock placement mask.
+            ejecta_mask (np.ndarray): The separate ejecta placement mask.
+        """
 
         if self.enable:
             self.image = image
-            for name, settings in self.settings.items():
-                self.mixers[name] = generateMixer(settings["requests"], image, mask)
+            has_ejecta = np.any(ejecta_mask)
+            for name in self.execution_order:
+                settings = self.settings[name]
+                parent = settings.get("parent")
+                # An empty ejecta mask cannot be sampled. Its dependent groups have no parents either.
+                no_ejecta = name in self.ejecta_groups and not has_ejecta
+                if no_ejecta or (parent is not None and self.mixers[parent] is None):
+                    self.mixers[name] = None
+                else:
+                    self.mixers[name] = generateMixer(settings["requests"], image, mask, ejecta_mask)
 
     def createInstancers(self) -> None:
         """
@@ -403,6 +427,39 @@ class RockManager:
                     seed=settings["seed"],
                 )
 
+    def executeMixer(self, name: str, num: int, parents: dict) -> Union[dict, None]:
+        """
+        Runs the mixer of one group of rocks.
+
+        Args:
+            name (str): The name of the group.
+            num (int): The number of instances to generate.
+            parents (dict): The parent coordinates collected from the groups already executed.
+
+        Returns:
+            Union[dict, None]: The sampled attributes, or None when the group has no rocks to place.
+        """
+
+        if self.mixers[name] is None:
+            return None
+        try:
+            if name in self.children_nodes:
+                parent = self.settings[name]["parent"]
+                if parent not in parents:
+                    return None
+                return self.mixers[name].executeGraph(parents=parents[parent])
+            # Ordinary rocks estimate their number of clusters from the entire sampling area.
+            # Ejecta rocks use only the area of the ejecta mask: its size changes with the
+            # generated craters, so lambda_parent is a density per m^2 of ejecta region.
+            # In both cases, rocks are placed only where the mask allows.
+            return self.mixers[name].executeGraph(num, use_mask_area=name in self.ejecta_groups)
+        except ValueError as error:
+            # Sparse groups can draw zero rocks. WorldBuilders then fails when sampling
+            # their heights, as it cannot stack an empty list of points.
+            if "need at least one array to stack" not in str(error):
+                raise
+            return None
+
     def randomizeInstancers(self, num: int) -> None:
         """
         Runs the mixers, collects the randomized parameters, and sets them to the instancers.
@@ -413,10 +470,13 @@ class RockManager:
         if self.enable:
             parents = {}
             for name in self.execution_order:
-                if name in self.children_nodes:
-                    output = self.mixers[name].executeGraph(parents=parents[self.settings[name]["parent"]])
-                else:
-                    output = self.mixers[name].executeGraph(num)
+                output = self.executeMixer(name, num, parents)
+                if output is None:
+                    # Also remove instances left by a previous terrain.
+                    self.instancers[name].setInstanceParameter(
+                        position=np.empty((0, 3)), orientation=np.empty((0, 4)), scale=np.empty((0, 3))
+                    )
+                    continue
                 # Check if it the node is the parent of any other node.
                 if (name in self.dependency_graph.keys()) and (len(self.dependency_graph[name]) > 0):
                     # If so collects parent data from the mixer.

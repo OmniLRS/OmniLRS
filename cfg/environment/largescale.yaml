@@ -10,6 +10,12 @@ large_scale_terrain:
   starting_position: [2800,-2200]
   crater_gen_densities: [0.025, 0.05, 0.5]
   crater_gen_radius: [[1.5, 2.5], [0.75, 1.5], [0.25, 0.5]]
+  # Automatic alternative, as in lunaryard_100m.yaml: empty the two lists above and set the power law below
+  # (RSIM highlands fit, VIPER 2023 slide 40). It gives about 2.5x more craters per block than the lists above.
+  # crater_gen_radius_range: [0.25, 2.5]
+  # crater_gen_radius_step: 0.25
+  # crater_gen_dist_coef: 76192.0
+  # crater_gen_dist_exp: -2.132
   rock_gen_cfgs:
     -
       rock_sampler_cfg:

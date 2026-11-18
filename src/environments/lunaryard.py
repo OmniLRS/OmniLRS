@@ -64,7 +64,9 @@ class LunaryardController(BaseEnv, StellarEngineEnvMixin, TerrainControlMixin):
         self._sun_settings = sun_settings
         self.init_stellar_engine(stage_settings=self.stage_settings, stellar_engine_settings=stellar_engine_settings)
 
-        self.init_terrain_control(terrain_manager=terrain_manager, rocks_settings=rocks_settings)
+        self.init_terrain_control(
+            terrain_manager=terrain_manager, rocks_settings=rocks_settings, rocks_inside_craters=True
+        )
 
     def build_scene(self) -> None:
         """
@@ -94,9 +96,9 @@ class LunaryardController(BaseEnv, StellarEngineEnvMixin, TerrainControlMixin):
         # Builds the scene
         self.build_scene()
 
-        # Generates the instancer for the rocks
-        self.build_RM()  # TODO should first call switch_terrain() as it calls load_DEM() which sets up self.dem and self.mask that are used inside build_RM(), otherwise they are just None (but either ways inside RM.build() neither of those params are being utilized)
-        # Loads the DEM and the mask
+        # Keep the existing order: create rock instancers first, then load the
+        # terrain and placement masks in switch_terrain().
+        self.build_RM()
         self.switch_terrain(self.stage_settings.terrain_id)
         if self.enable_stellar_engine:
             self.SE.set_lat_lon(self.stage_settings.coordinates.latitude, self.stage_settings.coordinates.longitude)

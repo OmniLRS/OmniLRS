@@ -200,7 +200,14 @@ class CraterGenerator:
 
         # Index of the profile
         if index == -1:
-            index = self._rng.integers(0, len(self._profiles), 1)[0]
+            if size > (15 / self._resolution):
+                low_ratio_ind = self._rng.integers(0, 2, 1)  # To pick between 5 and 13 for large craters
+                if low_ratio_ind == 0:
+                    index = 5
+                else:
+                    index = 13
+            else:
+                index = self._rng.integers(0, len(self._profiles), 1)[0]
             pass
         elif index < len(self._profiles):
             pass
@@ -237,7 +244,7 @@ class CraterGenerator:
         coords: np.ndarray = None,
         radius: np.ndarray = None,
         craters_data: List[CraterData] = None,
-    ) -> Tuple[np.ndarray, np.ndarray, List[CraterData]]:
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, List[CraterData]]:
         """
         Generates a DEM with craters.
 
@@ -248,35 +255,67 @@ class CraterGenerator:
         Returns:
             np.ndarray: unpadded DEM with craters, and matching mask."""
 
-        # Creates a padded DEM and mask
+        # Temporary borders let crater patches extend beyond the final terrain bounds.
         DEM_padded = np.zeros((self._pad_size * 2 + DEM.shape[0], self._pad_size * 2 + DEM.shape[1]))
-        mask_padded = np.ones_like(DEM_padded)
+        # Binary masks use uint8; OpenCV drawing does not support bool arrays.
+        crater_mask_padded = np.ones_like(DEM_padded, dtype=np.uint8)
+        background_mask_padded = np.ones_like(DEM_padded, dtype=np.uint8)
+        crater_ejecta_mask_padded = np.zeros_like(DEM_padded, dtype=np.uint8)
         DEM_padded[self._pad_size : -self._pad_size, self._pad_size : -self._pad_size] = DEM
 
         # Creates a cache to store craters data
         if craters_data is None:
             craters_data = []
 
+        # Sort the radius in decreasing order so that deformation is applied to big crater first then small ones
+        sorted_ind = (-radius).argsort()
+
         # Adds the craters to the DEM
         if len(craters_data) == 0:
-            for coord, rad in zip(coords, radius):
+            for crater_ind in sorted_ind:
+                coord = coords[crater_ind]
+                rad = radius[crater_ind]
                 rad = int(rad * 2 / self._resolution)
                 coord_s = coord / self._resolution
                 c, crater_data = self.generateCrater(int(rad))
                 crater_data.coord = (coord[0], coord[1])
                 coord2 = (coord_s + self._pad_size).astype(np.int64)
                 coord = (coord_s - crater_data.size / 2 + self._pad_size).astype(np.int64)
+
+                # Add logic to apply smaller crater last. For each smaller crater, super position them then smooth the internal of crater to remove artifacts
+                # TODO: the smoothing described above (from PR #45) is not implemented; craters are only superposed.
                 DEM_padded[
                     coord[0] : coord[0] + crater_data.size,
                     coord[1] : coord[1] + crater_data.size,
                 ] += c
-                mask_padded = cv2.circle(
-                    mask_padded,
+
+                # Generate several other mask for inter crater rocks and ejecta regions
+                crater_mask_padded = cv2.circle(
+                    crater_mask_padded,
                     (coord2[1], coord2[0]),
                     int(crater_data.size / 4),
                     0,
                     -1,
                 )
+
+                # Crater ejecta mask if crater is large enough
+                if rad > (15 / self._resolution):
+                    crater_ejecta_mask_padded = cv2.circle(
+                        crater_ejecta_mask_padded,
+                        (coord2[1], coord2[0]),
+                        int(crater_data.size / 4),
+                        1,
+                        int(crater_data.size / 2),
+                    )
+
+                crater_ejecta_mask_padded = cv2.circle(
+                    crater_ejecta_mask_padded,
+                    (coord2[1], coord2[0]),
+                    int(crater_data.size / 4) - 5,
+                    0,
+                    -1,
+                )
+
                 craters_data.append(crater_data)
         else:
             for crater_data in craters_data:
@@ -289,21 +328,51 @@ class CraterGenerator:
                     coord[0] : coord[0] + crater_data.size,
                     coord[1] : coord[1] + crater_data.size,
                 ] += c
-                mask_padded = cv2.circle(
-                    mask_padded,
+                crater_mask_padded = cv2.circle(
+                    crater_mask_padded,
+                    (coord2[1], coord2[0]),
+                    int(crater_data.size / 4),
+                    0,
+                    -1,
+                )
+                # Crater ejecta mask if crater is large enough
+                if rad > (15 / self._resolution):
+                    crater_ejecta_mask_padded = cv2.circle(
+                        crater_ejecta_mask_padded,
+                        (coord2[1], coord2[0]),
+                        int(crater_data.size / 4),
+                        1,
+                        int(crater_data.size / 2),
+                    )
+                crater_ejecta_mask_padded = cv2.circle(
+                    crater_ejecta_mask_padded,
                     (coord2[1], coord2[0]),
                     int(crater_data.size / 4),
                     0,
                     -1,
                 )
 
-        mask_padded[: self._pad_size + 1, :] = 0
-        mask_padded[:, : self._pad_size + 1] = 0
-        mask_padded[-self._pad_size - 1 :, :] = 0
-        mask_padded[:, -self._pad_size - 1 :] = 0
+        background_mask_padded[: self._pad_size + 1, :] = 0
+        background_mask_padded[:, : self._pad_size + 1] = 0
+        background_mask_padded[-self._pad_size - 1 :, :] = 0
+        background_mask_padded[:, -self._pad_size - 1 :] = 0
+
+        crater_mask_padded[: self._pad_size + 1, :] = 0
+        crater_mask_padded[:, : self._pad_size + 1] = 0
+        crater_mask_padded[-self._pad_size - 1 :, :] = 0
+        crater_mask_padded[:, -self._pad_size - 1 :] = 0
+
+        crater_ejecta_mask_padded[: self._pad_size + 1, :] = 0
+        crater_ejecta_mask_padded[:, : self._pad_size + 1] = 0
+        crater_ejecta_mask_padded[-self._pad_size - 1 :, :] = 0
+        crater_ejecta_mask_padded[:, -self._pad_size - 1 :] = 0
+
+        # Copy the cropped data so the returned arrays do not retain the padding.
         return (
-            DEM_padded[self._pad_size : -self._pad_size, self._pad_size : -self._pad_size],
-            mask_padded[self._pad_size : -self._pad_size, self._pad_size : -self._pad_size],
+            DEM_padded[self._pad_size : -self._pad_size, self._pad_size : -self._pad_size].copy(),
+            background_mask_padded[self._pad_size : -self._pad_size, self._pad_size : -self._pad_size].copy(),
+            crater_mask_padded[self._pad_size : -self._pad_size, self._pad_size : -self._pad_size].copy(),
+            crater_ejecta_mask_padded[self._pad_size : -self._pad_size, self._pad_size : -self._pad_size].copy(),
             craters_data,
         )
 
@@ -490,15 +559,14 @@ class BaseTerrainGenerator:
             lr_noise = self._rng.uniform(self._min_elevation, self._max_elevation, [4, 4])
         hr_noise = cv2.resize(lr_noise, (self._y_size, self._x_size), interpolation=cv2.INTER_CUBIC)
         self._DEM += hr_noise
-        # Generate high frequency noise to simulate small scale terrain features.
-        lr_noise = self._rng.uniform(self._min_elevation * 0.01, self._max_elevation * 0.01, [100, 100])
-        hr_noise = cv2.resize(lr_noise, (self._y_size, self._x_size), interpolation=cv2.INTER_CUBIC)
-        self._DEM += hr_noise
-        # Normalize the DEM between 0 and 1 and scale it to the desired elevation range.
-        # self._DEM = (self._DEM - self._DEM.min()) / (self._DEM.max() - self._DEM.min())
-        # Scale the DEM to the desired elevation range.
-        # self._DEM = self._DEM * (self._max_elevation - self._min_elevation) + self._min_elevation
         return self._DEM * self._z_scale
+
+    def applyHighResolutionNoise(self, DEM: np.ndarray) -> np.ndarray:
+        ## Apply high frequency noise to DEM with crater. HR noise is separated to prevent smoothing artifacts
+        lr_noise = self._rng.uniform(self._min_elevation * 0.01, self._max_elevation * 0.01, [10000, 10000])
+        hr_noise = cv2.resize(lr_noise, (self._y_size, self._x_size), interpolation=cv2.INTER_CUBIC)
+        DEM += hr_noise
+        return DEM
 
 
 class GenerateProceduralMoonYard:
@@ -534,7 +602,9 @@ class GenerateProceduralMoonYard:
 
         self.DE = DeformationEngine(moon_yard.deformation_engine)
         self._dem_init = None
-        self._mask = None
+        self._background_mask = None
+        self._crater_mask = None
+        self._crater_ejecta_mask = None
         self._dem_delta = None
         self._num_pass = None
 
@@ -548,37 +618,63 @@ class GenerateProceduralMoonYard:
 
         DEM = self.T.generateRandomTerrain(is_lab=self.is_lab, is_yard=self.is_yard)
         coords, radius = self.D.run()
-        DEM, mask, craters_data = self.G.generateCraters(DEM, coords, radius)
+        DEM, background_mask, crater_mask, crater_ejecta_mask, craters_data = self.G.generateCraters(
+            DEM, coords, radius
+        )
+        DEM = self.T.applyHighResolutionNoise(DEM)
         self._dem_init = DEM
         self._dem_delta = np.zeros_like(DEM)
-        self._mask = mask
-        self._num_pass = np.zeros_like(mask)
-        return DEM, mask, craters_data
+        self._background_mask = background_mask
+        self._crater_mask = crater_mask
+        self._crater_ejecta_mask = crater_ejecta_mask
+        # Per-cell deformation counts need integers wider than the binary masks' uint8.
+        self._num_pass = np.zeros_like(crater_mask, dtype=np.uint32)
+        return DEM, background_mask, crater_mask, crater_ejecta_mask, craters_data
 
-    def augment(self, DEM: np.ndarray, mask: np.ndarray) -> np.ndarray:
+    def augment(
+        self, DEM: np.ndarray, background_mask: np.ndarray, crater_mask: np.ndarray, crater_ejecta_mask: np.ndarray
+    ) -> np.ndarray:
         """
-        Generates a random terrain DEM with craters.
+        Adds craters to a loaded DEM while preserving its rock-placement exclusions.
 
         Returns:
-            tuple: random terrain DEM with craters, mask of the craters, and the data regarding the craters generation.
+            tuple: updated DEM, background mask, crater mask, ejecta mask, and crater metadata.
         """
+        # On entry, crater_mask is the loaded DEM's rock-placement mask (0 = excluded).
+        # It does not restrict where procedural craters are generated.
+        loaded_mask = crater_mask
         coords, radius = self.D.run()
-        DEM, mask_, craters_data = self.G.generateCraters(DEM, coords, radius)
-        mask = mask * mask_
+        DEM, background_mask, crater_mask, crater_ejecta_mask, craters_data = self.G.generateCraters(
+            DEM, coords, radius
+        )
+        # Apply loaded exclusions/weights to every rock-placement mask.
+        # Keep the loader's floating-point dtype; generated masks contain only 0/1.
+        background_mask = loaded_mask * background_mask
+        crater_mask = loaded_mask * crater_mask
+        crater_ejecta_mask = loaded_mask * crater_ejecta_mask
         self._dem_init = DEM
         self._dem_delta = np.zeros_like(DEM)
-        self._mask = mask
-        self._num_pass = np.zeros_like(mask)
-        return DEM, mask, craters_data
+        self._crater_mask = crater_mask
+        self._background_mask = background_mask
+        self._crater_ejecta_mask = crater_ejecta_mask
+        self._num_pass = np.zeros_like(crater_mask, dtype=np.uint32)
+        return DEM, background_mask, crater_mask, crater_ejecta_mask, craters_data
 
-    def register_terrain(self, DEM: np.ndarray, mask: np.ndarray):
+    def register_terrain(
+        self, DEM: np.ndarray, mask: np.ndarray
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """
-        Register dem and mask to instance variables.
+        Register a loaded DEM and return its heights and three placement masks.
         """
         self._dem_init = DEM
         self._dem_delta = np.zeros_like(DEM)
-        self._mask = mask
-        self._num_pass = np.zeros_like(mask)
+        self._crater_mask = mask
+        # Ordinary rocks follow the placement mask loaded with this DEM.
+        self._background_mask = mask.copy()
+        # This loader provides no ejecta mask; clear any regions from the previous terrain.
+        self._crater_ejecta_mask = np.zeros_like(mask)
+        self._num_pass = np.zeros_like(mask, dtype=np.uint32)
+        return DEM, self._background_mask, self._crater_mask, self._crater_ejecta_mask
 
     def deform(
         self, world_positions: np.ndarray, world_orientations: np.ndarray, contact_forces: np.ndarray
@@ -593,7 +689,7 @@ class GenerateProceduralMoonYard:
         self._dem_delta, self._num_pass = self.DE.deform(
             self._dem_delta, self._num_pass, world_positions, world_orientations, contact_forces[:, 2]
         )
-        return self._dem_init + self._dem_delta, self._mask
+        return self._dem_init + self._dem_delta, self._background_mask, self._crater_mask, self._crater_ejecta_mask
 
 
 if __name__ == "__main__":
