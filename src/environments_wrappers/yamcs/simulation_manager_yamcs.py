@@ -5,7 +5,7 @@ __email__ = "ljburtz@jaops.com"
 import logging
 import time
 
-import omni
+import omni.timeline
 from isaacsim import SimulationApp
 from yamcs.client import YamcsClient
 

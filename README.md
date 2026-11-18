@@ -3,7 +3,7 @@
 ![test-startup](https://app.artefacts.com/api/omnilrs/omni-tests/badges/test-startup.png?branch=main)
 
 <center>
-<img src="https://raw.githubusercontent.com/wiki/OmniLRS/OmniLRS/media/OmniLRS_HuskySouthPole.png" width=1080/>
+<img src="https://raw.githubusercontent.com/wiki/OmniLRS/OmniLRS/media/OmniLRS_EX1_SouthPole.png" width=1080/>
 </center>
 
 OmniLRS is powered by NVIDIA Isaac Sim and NVIDIA Omniverse libraries to provide visually realistic and physically accurate robotics simulation of lunar rovers.

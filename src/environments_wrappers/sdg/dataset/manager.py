@@ -15,7 +15,7 @@ import threading
 import time
 
 import numpy as np
-import omni
+import omni.timeline
 
 from src.environments_wrappers.sdg.dataset import guards
 from src.labeling.auto_label import AutonomousLabeling

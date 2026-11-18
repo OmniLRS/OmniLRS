@@ -90,7 +90,7 @@ Steps 4–6 run in order in `YamcsTMTC.start()`, which the simulation manager ca
 
 4. **Check ([§3](#3-how-camera-telemetry-and-buckets-get-checked)), then report** (`check_yamcs_server()`), against the MDB and the server's storage buckets, before any command is registered or any telemetry or image is sent. Print one summary of everything found. Stop if anything is missing; only warn about extras.
 5. **Prepare the buckets** (`ImagesHandler.prepare_buckets()`): images are named `<bucket>_<number>.png`. With `images.clear_buckets_on_startup: true` (the default when the key is left out), delete the objects of every bucket OmniLRS uses; numbering restarts at 0000. With `false`, keep them and continue each bucket's numbering after its highest `<bucket>_<number>.png`. OmniLRS never creates or deletes buckets, and never deletes images otherwise.
-6. **Continue as today:** register command handlers (`setup_command_callbacks`), send the "no data" placeholder images and start the telemetry intervals (`start_streaming_data`).
+6. **Continue as today:** register command handlers (`setup_command_callbacks`), send the "no data" placeholder images and start the telemetry intervals (`start_transmitting_data`).
 
 ## 3. How camera telemetry and buckets get checked
 

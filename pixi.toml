@@ -89,7 +89,10 @@ ROS_DISTRO = "jazzy"
 RMW_IMPLEMENTATION = "rmw_fastrtps_cpp"
 
 [feature.ros2.tasks]
-ros2 = "python run.py mode=ROS2"
+# Note: you need to always pass the robot explicitly:
+# pixi run ros2 robot=ex1
+# pixi run ros2 robot=husky environment.robots_settings.parameters.usd_path=assets/USD_Assets/robots/ros2_husky_PhysX_vlp16.usd
+ros2 = "python run.py mode=ROS2 environment=lunalab"
 
 # yamcs-specific deps, tasks in feature "yamcs"
 [feature.yamcs.pypi-dependencies]
@@ -112,9 +115,9 @@ asyncio_for_robotics = "==1.5.0"
 msgspec = "*"
 
 [feature.zenoh.tasks]
-zenoh_lunaryard = "python run.py mode=Zenoh environment=lunaryard_20m robot=husky"
-zenoh_lab = "python run.py mode=Zenoh environment=lunalab robot=husky"
-zenoh_largescale = "python run.py mode=Zenoh environment=largescale robot=husky"
+zenoh_lunaryard = "python run.py mode=Zenoh environment=lunaryard_20m robot=husky controller=husky-controller"
+zenoh_lab = "python run.py mode=Zenoh environment=lunalab robot=husky controller=husky-controller"
+zenoh_largescale = "python run.py mode=Zenoh environment=largescale robot=husky controller=husky-controller"
 
 [feature.zenoh-client.pypi-dependencies]
 # GUI OpenCV for cv2.imshow; the Isaac environments use the headless build shipped with Isaac Sim
@@ -170,4 +173,9 @@ zenoh = { features = ["core", "isaac", "zenoh"]}
 zenoh-client = { features = ["core", "zenoh", "zenoh-client"]}
 test-sim = { features = ["test-sim"] }
 test-unit = { features = ["test-unit"] }
-ci = { features = ["core", "isaac", "ros2", "yamcs", "zenoh"] }
+ci = { features = ["core", "isaac", "ros2", "yamcs", "zenoh"], solve-group = "ci" }
+# For the IDE type checker (Pylance/pyright) only; no task or CI job uses it. One env that imports everything the code
+# and tests import, solved with `ci` so the shared packages have the same versions. Add new features here as well, or
+# their imports stay unresolved in the IDE. test-unit is left out: its opencv-python-headless would clash with the
+# Isaac Sim OpenCV build, and test-sim + ci already cover its imports.
+dev = { features = ["core", "isaac", "ros2", "yamcs", "zenoh", "test-sim"], solve-group = "ci" }

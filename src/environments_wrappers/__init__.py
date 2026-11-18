@@ -2,6 +2,16 @@ __author__ = "Antoine Richard, Bach Nguyen"
 __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
 
+import logging
+import os
+
+logger = logging.getLogger(__name__)
+
+# Modes that spawn a robot from robots_settings.parameters (set by the robot yaml: robot=<name>)
+MODES_WITH_ROBOT = ("ROS2", "Yamcs", "Zenoh")
+# Husky USD with the ROS 2 action graphs (cfg/robot/husky.yaml uses a USD without graphs)
+ROS2_HUSKY_USD = "assets/USD_Assets/robots/ros2_husky_PhysX_vlp16.usd"
+
 # Isaac Sim extensions whose Python modules OmniLRS imports. Enabled explicitly so OmniLRS does not depend on the
 # default app enabling them (or on other extensions pulling them in).
 REQUIRED_EXTENSIONS = (
@@ -23,7 +33,70 @@ def _enable_required_extensions() -> None:
             ext_manager.set_extension_enabled_immediate(ext, True)
 
 
+def _wait_for_isaac_sim(simulation_app) -> None:
+    """Finish the startup work of Isaac Sim before OmniLRS starts, then log `Isaac Sim ready after <seconds>s`.
+
+    After `app ready`, the Kit material library still loads its MDL list during the next app updates. Waiting here
+    keeps that Isaac Sim work out of the OmniLRS startup steps. The RTX ray tracing pipelines compile on the first
+    rendered frame, which can come before or after this line (about 5 min on the CI GPU without a warm cache, see
+    docs/todo_performance.md). The sanity tests (test/ci_artefacts) read the seconds of this line, which count from
+    the Kit start, and the RTX compile from the Kit log.
+    """
+    import asyncio
+    import time
+
+    import omni.kit.app
+
+    wait_start = time.monotonic()
+    try:
+        import omni.kit.material.library as material_library
+    except ImportError:
+        material_library = None
+    if material_library is not None:
+        # Returns once the MDL list is ready (or after 1000 app updates)
+        task = asyncio.ensure_future(material_library.get_mdl_list_async())
+        while not task.done():
+            simulation_app.update()
+    logger.info(
+        "Isaac Sim ready after %.3fs since the Kit start (material library ready in %.1fs). OmniLRS startup begins.",
+        omni.kit.app.get_app().get_time_since_start_s(),
+        time.monotonic() - wait_start,
+    )
+
+
+def _require_robot(cfg: dict) -> None:
+    """Stop before Isaac Sim starts if a mode that spawns a robot has none: the environment yamls have no robot."""
+    mode = cfg["mode"]["name"]
+    if mode not in MODES_WITH_ROBOT:
+        return
+    if (cfg["environment"].get("robots_settings") or {}).get("parameters"):
+        return
+    hint = (
+        " The Husky needs its ROS 2 USD in this mode: robot=husky "
+        f"environment.robots_settings.parameters.usd_path={ROS2_HUSKY_USD}"
+        if mode == "ROS2"
+        else ""
+    )
+    raise ValueError(f"mode={mode} needs a robot: pass robot=<name> (a file in cfg/robot), e.g. robot=husky.{hint}")
+
+
+def _set_ros_domain_id(cfg: dict) -> None:
+    """ROS2 mode: set the ROS_DOMAIN_ID environment variable to mode.ROS_DOMAIN_ID (cfg/mode/ROS2.yaml) if it is not set.
+
+    The OmniLRS nodes (rclpy) and the ROS2Context nodes of the robot graphs (useDomainIDEnvVar) read the variable.
+    Without it, a robot graph uses the domain_id of its USD. The variable wins.
+    """
+    if cfg["mode"]["name"] != "ROS2" or "ROS_DOMAIN_ID" not in cfg["mode"]:
+        return
+    if "ROS_DOMAIN_ID" not in os.environ:
+        os.environ["ROS_DOMAIN_ID"] = str(cfg["mode"]["ROS_DOMAIN_ID"])
+    logger.info("ROS 2 domain: ROS_DOMAIN_ID=%s", os.environ["ROS_DOMAIN_ID"])
+
+
 def startSim(cfg: dict):
+    _require_robot(cfg)
+    _set_ros_domain_id(cfg)
+
     from isaacsim import SimulationApp
 
     from src.environments.rendering import (
@@ -67,6 +140,7 @@ def startSim(cfg: dict):
     set_lens_flares(cfg)
     set_motion_blur(cfg)
     set_chromatic_aberrations(cfg)
+    _wait_for_isaac_sim(simulation_app)
 
     # NOTE mode is chosen by setting the value of "mode" property within "defaults" @cfg/config.yaml
     # it can also be overwritten through console, same as environment

@@ -1,5 +1,5 @@
 # Base image built from ci.docker/ci.Dockerfile (Isaac Sim 6.2, Ubuntu 24.04 / Jazzy)
-FROM public.ecr.aws/jaops/jaops-omnilrs:omni-ci-0.5.3
+FROM public.ecr.aws/jaops/jaops-omnilrs:omni-ci-0.5.4
 
 WORKDIR /workspace/omnilrs
 

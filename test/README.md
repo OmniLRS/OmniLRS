@@ -3,7 +3,7 @@
 | Folder | What | Run | Needs |
 |---|---|---|---|
 | `test/unit/` | Unit tests: robot camera configuration, Yamcs naming and startup check, camera argument check of the commands, image uploads, SDG writers and dataset tools, import rule (only Yamcs mode imports Yamcs code) | `pixi run -e test-unit test-unit` (or a bare `pytest`). CI: `.github/workflows/unit-tests.yaml`, on every push and pull request | No Isaac Sim, no server |
-| `test/ci_artefacts/` | Sanity tests: start Isaac Sim (plus a Yamcs server, ROS 2 or Zenoh clients) and check the running sim | `pixi run test-ros2`, `test-ros2-largescale`, `test-yamcs`, `test-yamcs-largescale`, `test-yamcs-husky`, `test-zenoh`. CI: the Artefacts scenarios of `artefacts.yaml`, on push to main (below) | Isaac Sim and the pixi `test-sim` env; Yamcs: a `yamcs-mission-control-pragyaan` (`yamcs-mission-control-husky` for `test-yamcs-husky`) checkout next to this repository, or `YAMCS_MC_DIR` (`YAMCS_HUSKY_MC_DIR`) |
+| `test/ci_artefacts/` | Sanity tests: start Isaac Sim (plus a Yamcs server, ROS 2 or Zenoh clients) and check the running sim | `pixi run -e test-sim test-ros2`, `test-ros2-largescale`, `test-yamcs`, `test-yamcs-largescale`, `test-yamcs-husky`, `test-zenoh`. CI: the Artefacts scenarios of `artefacts.yaml`, on push to main (below) | Isaac Sim and the pixi `test-sim` env; Yamcs: a `yamcs-mission-control-pragyaan` (`yamcs-mission-control-husky` for `test-yamcs-husky`) checkout next to this repository, or `YAMCS_MC_DIR` (`YAMCS_HUSKY_MC_DIR`) |
 | `test/physics_models/` | Inputs of the physics model scripts (below) | `pixi run python -m src.subsystems.robot_physics_models.<model>` | The pixi `default` environment (the scripts do not start Isaac Sim) |
 
 ## Sanity test matrix
@@ -12,8 +12,8 @@ The Artefacts scenarios (`artefacts.yaml`), one `test/ci_artefacts` file each:
 
 | Scenario | Environment | Robot | Mode |
 |---|---|---|---|
-| `test_ros2_sanity` | `lunalab` | husky (ROS 2 USD) | ROS2 |
-| `test_ros2_sanity_largescale` | `largescale` | husky (ROS 2 USD) | ROS2 |
+| `test_ros2_sanity` | `lunalab` | ex1 | ROS2 |
+| `test_ros2_sanity_largescale` | `largescale` | ex1 | ROS2 |
 | `test_yamcs_sanity` | `lunaryard_40m_workshop` | pragyaan | Yamcs |
 | `test_yamcs_sanity_largescale` | `largescale_workshop` | pragyaan | Yamcs |
 | `test_yamcs_husky_sanity` | `lunaryard_20m` | husky | Yamcs |

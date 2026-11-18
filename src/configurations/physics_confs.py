@@ -23,7 +23,7 @@ class PhysicsSceneConf:
     gpu_max_particle_contacts: int = None
     gpu_heap_capacity: int = None
     gpu_temp_buffer_capacity: int = None
-    gpu_max_num_partions: int = None
+    gpu_max_num_partitions: int = None
     gpu_collision_stack_size: int = None
     solver_type: str = None
     broadphase_type: str = None

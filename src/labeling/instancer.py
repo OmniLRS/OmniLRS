@@ -7,7 +7,7 @@ import os
 import isaacsim.core.experimental.utils.prim as prim_utils
 import isaacsim.core.experimental.utils.stage as stage_utils
 import numpy as np
-import omni
+import omni.usd
 from isaacsim.core.experimental.utils.semantics import add_labels
 from pxr import Gf, UsdGeom
 from WorldBuilders.pxr_utils import createObject, createXform

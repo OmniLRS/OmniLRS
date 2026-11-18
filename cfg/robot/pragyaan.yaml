@@ -23,7 +23,7 @@ robots_settings:
     wheel_joints:
       left: ["wheel_fl", "wheel_ml", "wheel_bl"]
       right: ["wheel_fr", "wheel_mr", "wheel_br"]
-    drive: # wheel kinematics of the Yamcs drive commands (src/tmtc/drive_handler.py, DriveConf)
+    drive: # wheel kinematics (used e.g for driving calculations)
       wheel_radius: 0.0972 # m
       track_width: 0.882 # m, between the left and right wheel centers
       skid_steer_factor: 1.59 # effective track / track_width. Flat ground, 30 Hz physics: 90.7 deg for a 90 deg turn at 8 deg/s

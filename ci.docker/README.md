@@ -22,7 +22,7 @@ artefacts run-remote test-startup # Run in the cloud on the artefacts platform
 
 2. With Pytest override the command from the command line
 ```
-docker run --gpus all --rm omnilrs pixi run test-ros2 # or test-yamcs
+docker run --gpus all --rm omnilrs pixi run -e test-sim test-ros2 # or test-yamcs
 ```
 
 ## Notes for Building the Base Image
@@ -50,7 +50,7 @@ It is based on `public.ecr.aws/artefacts/ros2:jazzy-harmonic-nvidia` (Ubuntu 24.
 git lfs pull && git submodule update --init
 # The largescale tests need the Site20 DEM, which is not tracked in git (assets/Terrains/SouthPole is gitignored):
 # get it by copying assets/Terrains/SouthPole/Site20_final_adj_5mpp_surf from a dev tree (or re-download from s3)
-docker build -t public.ecr.aws/jaops/jaops-omnilrs:omni-ci-0.5.3 -f ci.docker/ci.Dockerfile .
+docker build -t public.ecr.aws/jaops/jaops-omnilrs:omni-ci-0.5.4 -f ci.docker/ci.Dockerfile .
 aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws
-docker push public.ecr.aws/jaops/jaops-omnilrs:omni-ci-0.5.3
+docker push public.ecr.aws/jaops/jaops-omnilrs:omni-ci-0.5.4
 ```

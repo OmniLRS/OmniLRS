@@ -52,7 +52,6 @@ class RobotParameters:
     imu_sensor_path: str = field(default_factory=str)
     drive: Optional[DriveConf] = None  # robot yaml `drive` section; only robots driven by Yamcs commands need it
     solar_panel_joint: str = field(default_factory=str)
-    zenoh: Dict = field(default_factory=dict)
 
     def __post_init__(self):
         self.usd_path = os.path.join(os.getcwd(), self.usd_path)
@@ -70,6 +69,7 @@ class RobotManagerConf:
         default_factory=dict
     )  # TODO for v4: separate yamcs_tmtc and robot_controller into separate dataclass (and don't merge with environment configs)
     robot_controller: str = field(default_factory=str)
+    zenoh: Dict = field(default_factory=dict)  # controller yaml stream settings, used if mode=Zenoh
 
     def __post_init__(self):
         if self.parameters:

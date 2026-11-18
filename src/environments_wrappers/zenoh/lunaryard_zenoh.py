@@ -24,7 +24,7 @@ class Zenoh_LunaryardManager(Zenoh_BaseManager):
     def __init__(
         self,
         environment_cfg: dict = None,
-        zenoh_cfg: dict = None,
+        mode_cfg: dict = None,
         **kwargs,
     ) -> None:
         """
@@ -35,13 +35,13 @@ class Zenoh_LunaryardManager(Zenoh_BaseManager):
             **kwargs: Additional arguments.
         """
 
-        super().__init__(environment_cfg=environment_cfg, zenoh_cfg=zenoh_cfg, **kwargs)
+        super().__init__(environment_cfg=environment_cfg, mode_cfg=mode_cfg, **kwargs)
         self.LC = LunaryardController(mode=SimulatorMode.ZENOH, **environment_cfg)
         self.LC.load()
 
-        self.zenoh_cfg = zenoh_cfg
+        self.mode_cfg = mode_cfg
 
-        self.rocks_randomize_keyexpr = self.zenoh_cfg["keyexprs"]["randomize_rocks"]
+        self.rocks_randomize_keyexpr = self.mode_cfg["keyexprs"]["randomize_rocks"]
 
         self.log = logger.info
 
@@ -69,7 +69,7 @@ class Zenoh_LunaryardManager(Zenoh_BaseManager):
         self.subs_inited = True
 
         self.log(
-            f"[ZenohLunaryardManager] listening: {self.rocks_randomize_keyexpr} wire_format={self.zenoh_cfg['default_wire_format']}"
+            f"[ZenohLunaryardManager] listening: {self.rocks_randomize_keyexpr} wire_format={self.mode_cfg['default_wire_format']}"
         )
 
     async def _randomize_rocks_sub(self) -> None:

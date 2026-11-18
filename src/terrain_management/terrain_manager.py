@@ -6,7 +6,7 @@ import os
 import warnings
 
 import numpy as np
-import omni
+import omni.usd
 import warp as wp
 from isaacsim.core.experimental.utils.semantics import add_labels
 from pxr import Sdf, UsdGeom

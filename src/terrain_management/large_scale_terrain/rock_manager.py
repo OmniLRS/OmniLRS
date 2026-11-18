@@ -10,7 +10,7 @@ import time
 from typing import List, Tuple
 
 import numpy as np
-import omni
+import omni.usd
 from isaacsim.core.experimental.utils.semantics import add_labels
 from pxr import Gf, Sdf, Usd, UsdGeom, Vt
 
