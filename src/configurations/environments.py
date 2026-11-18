@@ -5,6 +5,8 @@ __email__ = "ljburtz@jaops.com"
 import dataclasses
 import os
 
+from src.configurations.procedural_terrain_confs import compute_bin_densities, compute_radius_bins
+
 
 @dataclasses.dataclass
 class Coordinates:
@@ -139,8 +141,15 @@ class LargeScaleTerrainConf:
     hr_dem_generate_craters: bool = True
     hr_dem_num_blocks: int = 4
 
+    # Craters of the high-resolution DEM. The sampled radius is about the rim-to-rim diameter, as in Lunaryard.
+    # Either give explicit [r_min, r_max] bins and densities (craters per m^2), or leave them empty to generate
+    # them from radius_range / radius_step and the cumulative power law (dist_coef, dist_exp).
     crater_gen_densities: list = dataclasses.field(default_factory=list)
     crater_gen_radius: list = dataclasses.field(default_factory=list)
+    crater_gen_radius_range: list = dataclasses.field(default_factory=list)
+    crater_gen_radius_step: float = 0.0
+    crater_gen_dist_coef: float = 0.0
+    crater_gen_dist_exp: float = 0.0
     crater_gen_profiles_path: str = "assets/Terrains/crater_spline_profiles.pkl"
     crater_gen_padding: float = 10.0
     crater_gen_min_xy_ratio: float = 0.85
@@ -225,6 +234,27 @@ class LargeScaleTerrainConf:
         }
 
         assert type(self.crater_gen_densities) is list, "crater_gen_densities must be a list."
+        assert type(self.crater_gen_radius) is list, "crater_gen_radius must be a list."
+        # Same rule as CraterDistributionConf for Lunaryard: an empty crater_gen_radius is built from radius_range
+        # and radius_step, together with its densities; empty crater_gen_densities alone are computed for the
+        # given radius bins. Both use the power law (dist_coef, dist_exp).
+        if not (self.crater_gen_radius and self.crater_gen_densities):
+            assert self.crater_gen_dist_coef > 0, "crater_gen_dist_coef must be a positive float."
+            assert self.crater_gen_dist_exp < 0, "crater_gen_dist_exp must be a negative float."
+        if not self.crater_gen_radius:
+            assert len(self.crater_gen_radius_range) == 2, "crater_gen_radius_range must be [r_min, r_max]."
+            assert 0 < self.crater_gen_radius_range[0] < self.crater_gen_radius_range[1], (
+                "crater_gen_radius_range must be positive and increasing."
+            )
+            assert self.crater_gen_radius_step > 0, "crater_gen_radius_step must be a positive float."
+            self.crater_gen_radius = compute_radius_bins(self.crater_gen_radius_range, self.crater_gen_radius_step)
+            self.crater_gen_densities = compute_bin_densities(
+                self.crater_gen_radius, self.crater_gen_dist_coef, self.crater_gen_dist_exp
+            )
+        elif not self.crater_gen_densities:
+            self.crater_gen_densities = compute_bin_densities(
+                self.crater_gen_radius, self.crater_gen_dist_coef, self.crater_gen_dist_exp
+            )
         assert len(self.crater_gen_densities) > 0, "crater_gen_densities must have at least one element."
         assert all([type(d) is float for d in self.crater_gen_densities]), (
             "crater_gen_densities must be a list of floats."
@@ -232,7 +262,6 @@ class LargeScaleTerrainConf:
         assert all([d > 0 for d in self.crater_gen_densities]), (
             "crater_gen_densities must be a list of positive floats."
         )
-        assert type(self.crater_gen_radius) is list, "crater_gen_radius must be a list."
         assert len(self.crater_gen_radius) > 0, "crater_gen_radius must have at least one element."
         assert all(type(r) is list for r in self.crater_gen_radius), "crater_gen_radius must be a list of list."
         assert all(len(r) == 2 for r in self.crater_gen_radius), (
