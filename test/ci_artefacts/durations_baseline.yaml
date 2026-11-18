@@ -9,38 +9,40 @@
 #   tests_s:   all later tests
 # If a change makes a scenario slower on purpose, update its values in the same PR.
 #
-# Current Baseline: values from job 2d34adf8-6eaf-4b10-90e6-9c155a29cb55 (2026-11-12, dev/subsystems_default_warnings at 6bcb305,
-# Isaac Sim 6.2, all functional tests passed), from the durations.json file of each scenario, rounded up to 5 s.
+# Current Baseline: values from job 42576b6f-20b1-40dd-a488-3b73dd9e4384 (2026-11-18, dev/subsystems_default_warnings at
+# 381fa2e, base image omni-ci-0.5.4, all functional tests passed), from the durations.json file of each scenario, rounded
+# up to 5 s, at least 5 s. It follows the merge of main: the Yamcs drive tests and the robot video of main made
+# test_yamcs_sanity and test_yamcs_husky_sanity slower than the previous baseline (job 2d34adf8, 2026-11-12).
 # isaac_s is one value for all scenarios (the mean of the six runs): the Isaac Sim startup before the ready line is the
-# same work in every scenario (same render configuration, same extensions). The spread (315 to 343 s) comes from the
+# same work in every scenario (same render configuration, same extensions). The spread (326 to 335 s) comes from the
 # T4 node of each scenario. Mode-specific extensions (e.g. the ROS 2 bridge) load after the line, in omnilrs_s.
 gpu: Tesla T4 # the infra GPU: a different GPU fails the check, because the baseline must then be measured again
 tolerance:
   ratio: 1.2
   min_increase_s: 20
-isaac_s: &isaac_s 325
+isaac_s: &isaac_s 335
 scenarios: # Artefacts scenario name (artefacts.yaml) = test file name
   test_ros2_sanity:
     isaac_s: *isaac_s
-    omnilrs_s: 80
+    omnilrs_s: 65
     tests_s: 5
   test_ros2_sanity_largescale:
     isaac_s: *isaac_s
-    omnilrs_s: 335
-    tests_s: 5
+    omnilrs_s: 345
+    tests_s: 10
   test_yamcs_husky_sanity:
     isaac_s: *isaac_s
-    omnilrs_s: 75
-    tests_s: 85
+    omnilrs_s: 105
+    tests_s: 110
   test_yamcs_sanity:
     isaac_s: *isaac_s
-    omnilrs_s: 175
-    tests_s: 120
+    omnilrs_s: 195
+    tests_s: 510
   test_yamcs_sanity_largescale:
     isaac_s: *isaac_s
-    omnilrs_s: 370
+    omnilrs_s: 375
     tests_s: 5
   test_zenoh_sanity:
     isaac_s: *isaac_s
-    omnilrs_s: 65
+    omnilrs_s: 85
     tests_s: 20
