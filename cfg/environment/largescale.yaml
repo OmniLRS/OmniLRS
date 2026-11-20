@@ -8,6 +8,10 @@ enforce_realtime: true
 large_scale_terrain:
   hr_dem_generate_craters: True
   starting_position: [2800,-2200]
+  # Folder to cache the generated high resolution terrain (e.g. ~/.cache/omnilrs/terrain), so that the next starts
+  # with the same terrain settings, source DEM and starting position load it instead of generating it again.
+  # ~2 GB per cached terrain with the default settings. null: generate the terrain at every start.
+  terrain_cache_dir: null
   crater_gen_densities: [0.025, 0.05, 0.5]
   crater_gen_radius: [[1.5, 2.5], [0.75, 1.5], [0.25, 0.5]]
   rock_gen_cfgs:
