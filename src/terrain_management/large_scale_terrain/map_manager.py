@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 logging.basicConfig(format="%(asctime)s %(message)s", datefmt="%m/%d/%Y %I:%M:%S %p")
 
 # Bump when a change to the high resolution DEM generation changes its output, to invalidate the terrain caches.
-TERRAIN_CACHE_VERSION = 1
+TERRAIN_CACHE_VERSION = 2
 
 
 @dataclasses.dataclass
