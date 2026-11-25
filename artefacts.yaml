@@ -1,4 +1,4 @@
-project: omnilrs/omni-tests
+project: omnilrs-test/omni-tests
 version: 0.1.0
 
 jobs:

@@ -6,7 +6,7 @@ __email__ = "ljburtz@jaops.com"
 from src.mission_specific.pragyaan.tmtc.camera_handler import PragyaanCameraHandler
 from src.mission_specific.pragyaan.tmtc.commander import PragyaanCommander
 from src.mission_specific.pragyaan.tmtc.payload_handler import PayloadHandler
-from src.mission_specific.pragyaan.tmtc.transmitter import PragyaanTransmitter
+from src.mission_specific.pragyaan.tmtc.pragyaan_tm_collector import PragyaanTMCollector
 from src.tmtc.yamcs_TMTC import YamcsTMTC
 
 
@@ -20,7 +20,8 @@ class PragyaanController(YamcsTMTC):
         _setup_command_callbacks(commands_conf) - utilizes CommandsHandler to construct the mapping between high level Yamcs commands,
                                                         and desired functionalities
                                                 - commands_conf are previously defined inside .yaml configuration file
-        start_streaming_data - utilizes IntervalsHandler to setup and trigger update of rover's parameters in Yamcs
+        start_transmitting_TM - utilizes IntervalsHandler to periodically transmit the parameters collected inside
+                                PragyaanTMCollector to Yamcs
 
     The rest of the functions are implementations of specific desired behaviour of the Pragyaan rover.
     Implementations of controllers for other rovers should follow the same architecture, and separation of high level YamcsTMTC concepts, and
@@ -34,20 +35,21 @@ class PragyaanController(YamcsTMTC):
         self._intervals = yamcs_conf["intervals"]
         self._payload_handler: PayloadHandler = PayloadHandler(self._images_handler, self._yamcs_conf["payload"])
         self._camera_handler = PragyaanCameraHandler(self._images_handler, robot, yamcs_conf["lander_camera"])
-        self._transmitter: PragyaanTransmitter = PragyaanTransmitter(
-            self.transmit_to_yamcs,
+        self._tm_collector: PragyaanTMCollector = PragyaanTMCollector(
             self._intervals_handler,
             self._robot,
             self._robot_RG,
             robot_name,
             self._yamcs_conf["parameters"],
+            self._intervals,
         )
+        self._tm_collector.start_collecting_TM()
         self._commander: PragyaanCommander = PragyaanCommander(
             self._robot,
             self._intervals,
             self._payload_handler,
             self._camera_handler,
-            self._transmitter,
+            self._tm_collector,
             self._drive_handler,
             self._obc_handler,
             self._intervals_handler,
@@ -92,83 +94,11 @@ class PragyaanController(YamcsTMTC):
             args=["battery_percentage"],
         )
 
-    "Creates intervals for automatic transmission of rover's parameters to yamcs"
+    "Creates intervals for automatic transmission of rover's collected parameters to yamcs"
 
-    def start_streaming_data(self):
+    def start_transmitting_TM(self):
         self._payload_handler.snap_apxs()  # snaps initial blank apxs reading
         self._images_handler.snap_no_data_images()
-        self._intervals_handler.add_new_interval(
-            name="Pose of base link",
-            seconds=self._intervals["robot_stats"],
-            is_repeating=True,
-            execute_immediately=True,
-            function=self._transmitter.transmit_pose_of_base_link,
-        )
-        self._intervals_handler.add_new_interval(
-            name="camera streaming state",
-            seconds=self._intervals["robot_stats"],
-            is_repeating=True,
-            execute_immediately=True,
-            function=self._transmitter.transmit_camera_streaming_state,
-        )
-        self._intervals_handler.add_new_interval(
-            name="GO_NOGO",
-            seconds=self._intervals["robot_stats"],
-            is_repeating=True,
-            execute_immediately=True,
-            function=self._transmitter.transmit_go_nogo,
-        )
-        self._intervals_handler.add_new_interval(
-            name="IMU readings",
-            seconds=self._intervals["robot_stats"],
-            is_repeating=True,
-            execute_immediately=True,
-            function=self._transmitter.transmit_imu_readings,
-        )
-        self._intervals_handler.add_new_interval(
-            name="OBC state",
-            seconds=self._intervals["robot_stats"],
-            is_repeating=True,
-            execute_immediately=True,
-            function=self._transmitter.transmit_obc_state,
-        )
-        self._intervals_handler.add_new_interval(
-            name="Radio rssi",
-            seconds=self._intervals["robot_stats"],
-            is_repeating=True,
-            execute_immediately=True,
-            function=self._transmitter.transmit_radio_signal_info,
-        )
-        self._intervals_handler.add_new_interval(
-            name="Thermal info",
-            seconds=self._intervals["robot_stats"],
-            is_repeating=True,
-            execute_immediately=True,
-            function=self._transmitter.transmit_thermal_info,
-            f_args=[self._intervals["robot_stats"]],
-        )
-        self._intervals_handler.add_new_interval(
-            name="Power status",
-            seconds=self._intervals["robot_stats"],
-            is_repeating=True,
-            execute_immediately=True,
-            function=self._transmitter.transmit_power_info,
-            f_args=[self._intervals["robot_stats"]],
-        )
-        self._intervals_handler.add_new_interval(
-            name="OBC metrics",
-            seconds=self._intervals["robot_stats"],
-            is_repeating=True,
-            execute_immediately=True,
-            function=self._transmitter.transmit_obc_metrics,
-        )
-        self._intervals_handler.add_new_interval(
-            name="Solar panel state",
-            seconds=self._intervals["robot_stats"],
-            is_repeating=True,
-            execute_immediately=True,
-            function=self._transmitter.transmit_solar_panel_state,
-        )
         self._intervals_handler.add_new_interval(
             name="Monitoring camera stream",
             seconds=self._intervals["robot_stats"],
@@ -177,10 +107,20 @@ class PragyaanController(YamcsTMTC):
             function=self._camera_handler.transmit_monitoring_camera_view,
         )
         self._intervals_handler.add_new_interval(
-            name="Motor encoder",
-            seconds=self._intervals["robot_stats"],
+            name="TM transmission",
+            seconds=self._intervals["tm_transmission"],
             is_repeating=True,
             execute_immediately=True,
-            function=self._transmitter.transmit_wheels_joint_angles,
+            function=self._transmit_collected_TM,
         )
         # here add further intervals and their functionalities
+
+    def _transmit_collected_TM(self):
+        # TM is already being collected by self._tm_collector (see start_collecting_TM, called in __init__)
+        param_values = {
+            param_name: entry.value
+            for param_name, entry in self._tm_collector.take_snapshot().items()
+            if entry.value is not None  # never collected, and cannot be encoded by Yamcs
+        }
+        if param_values:
+            self.transmit_to_yamcs_in_batch(param_values)

@@ -11,6 +11,7 @@ robots_settings:
     intervals:
       robot_stats: 1
       camera_streaming: 2
+      tm_transmission: 2
     lander_camera:
       prim_path: "/StaticAssets/lander/Lander/Cam_Right/Lander_Camera"
       resolution: [1440, 1080]

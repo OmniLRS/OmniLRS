@@ -1,3 +1,4 @@
+
 __author__ = "Aleksa Stanivuk"
 __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
@@ -5,7 +6,7 @@ __email__ = "ljburtz@jaops.com"
 from src.mission_specific.pragyaan.tmtc.camera_handler import CameraViewType, PragyaanCameraHandler
 from src.mission_specific.pragyaan.tmtc.enums import PragyaanCameraResolution, PragyaanYamcsArguments
 from src.mission_specific.pragyaan.tmtc.payload_handler import PayloadHandler
-from src.mission_specific.pragyaan.tmtc.transmitter import PragyaanTransmitter
+from src.mission_specific.pragyaan.tmtc.pragyaan_tm_collector import PragyaanTMCollector
 from src.subsystems.device import CommonDevice, HealthState, PowerState
 from src.subsystems.robot_enums import GoNogoState, ObcState, SolarPanelState
 from src.tmtc.intervals_handler import IntervalName
@@ -33,7 +34,7 @@ class PragyaanCommander:
         intervals,
         payload_handler,
         camera_handler,
-        transmitter,
+        tm_collector,
         drive_handler,
         obc_handler,
         intervals_handler,
@@ -42,7 +43,7 @@ class PragyaanCommander:
         self._intervals = intervals
         self._payload_handler: PayloadHandler = payload_handler
         self._camera_handler: PragyaanCameraHandler = camera_handler
-        self._transmitter: PragyaanTransmitter = transmitter
+        self._tm_collector: PragyaanTMCollector = tm_collector
         self._drive_handler = drive_handler
         self._obc_handler = obc_handler
         self._intervals_handler = intervals_handler
@@ -102,8 +103,7 @@ class PragyaanCommander:
                 "START"
             ) if new_state == PowerState.ON else self.set_activity_of_camera_streaming("STOP")
         elif electronics == CommonDevice.NEUTRON_SPECTROMETER:
-            self.set_activity_of_neutron_streaming(new_state)
-            pass
+            self._tm_collector.set_activity_of_neutron_collecting(new_state)
         elif electronics == CommonDevice.MOTOR_CONTROLLER:
             if new_state == PowerState.OFF:
                 self._drive_handler.stop_robot()
@@ -141,19 +141,6 @@ class PragyaanCommander:
                 )
         else:
             print("Unknown action:", action)
-
-    def set_activity_of_neutron_streaming(self, power_state: PowerState):
-        if power_state == PowerState.OFF:
-            self._intervals_handler.remove_interval(IntervalName.NEUTRON_COUNT.value)
-        elif power_state == PowerState.ON:
-            if not self._intervals_handler.does_exist(IntervalName.NEUTRON_COUNT.value):
-                self._intervals_handler.add_new_interval(
-                    name=IntervalName.NEUTRON_COUNT.value,
-                    seconds=self._intervals["camera_streaming"],
-                    is_repeating=True,
-                    execute_immediately=False,
-                    function=self._transmitter.transmit_neutroun_count,
-                )
 
     def drive_straight(self, linear_velocity, distance):
         self._drive_handler.drive_robot_straight(linear_velocity, distance)

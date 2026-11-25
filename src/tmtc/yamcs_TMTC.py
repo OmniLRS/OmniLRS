@@ -12,6 +12,7 @@ from src.tmtc.drive_handler import DriveHandler
 from src.tmtc.images_handler import ImagesHandler
 from src.tmtc.intervals_handler import IntervalsHandler
 from src.tmtc.obc_handler import ObcHandler
+from src.tmtc.tm_collector import TMCollector
 
 logging.getLogger("urllib3").setLevel(logging.WARNING)
 
@@ -37,11 +38,14 @@ class YamcsTMTC(ABC):
         CommandsHandler - handles addition and execution of commands coming from Yamcs by conducing mapping between the predefined commands and
                             specific functions (functions are implemented inside specific rover controllers that will utilize the CommandsHandler)
         ImagesHandler - facilitates working with Yamcs bucket storages for saving the images created inside the simulator
+        TMCollector - holds the latest value of every TM parameter, to be periodically packed into a CCSDS packet and sent to Yamcs
+                            (created empty; parameters are defined by the inheriting controllers)
 
     The class also implements two abstract methods that are required to be implemented by the inheriting controllers:
         setup_command_callbacks(commands_conf) - utilizes CommandsHandler to construct the mapping between high level Yamcs commands,
                                                 and desired functionalities (check PragyaanController for ref. impl.)
-        start_streaming_data - utilizes IntervalsHandler to setup and trigger update of rover's parameters in Yamcs (check PragyaanController for ref. impl.)
+        start_transmitting_TM - utilizes IntervalsHandler to periodically transmit the parameters collected inside TMCollector to Yamcs
+                                (check PragyaanController for ref. impl.)
 
     """
 
@@ -74,6 +78,7 @@ class YamcsTMTC(ABC):
             yamcs_conf["images"],
             yamcs_instance_conf["url_full_nginx"],
         )
+        self._tm_collector: TMCollector = TMCollector()  # TM parameters are defined by the inheriting controllers
 
     @abstractmethod
     def setup_command_callbacks(self, commands_conf):
@@ -81,9 +86,13 @@ class YamcsTMTC(ABC):
         pass
 
     @abstractmethod
-    def start_streaming_data(self):
-        """Start streaming data from the robot to Yamcs."""
+    def start_transmitting_TM(self):
+        """Start transmitting TM from the robot to Yamcs."""
         pass
 
     def transmit_to_yamcs(self, param_name, param_value):
         self._yamcs_processor.set_parameter_value(param_name, param_value)
+
+    def transmit_to_yamcs_in_batch(self, param_values: dict):
+        # sends all values in a single request, instead of one request per parameter
+        self._yamcs_processor.set_parameter_values(param_values)
