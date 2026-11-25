@@ -260,6 +260,10 @@ class LargeScaleTerrainConf:
         assert all((r[0] > 0) for r in self.crater_gen_radius), (
             "crater_gen_radius must be a list of list with the first element greater than 0."
         )
+        # Each HR block gets the craters of its 3x3 neighbourhood only, so a larger crater would be cut.
+        assert all(r[1] <= self.block_size for r in self.crater_gen_radius), (
+            "crater_gen_radius must not exceed block_size."
+        )
         assert len(self.crater_gen_radius) == len(self.crater_gen_densities), (
             "crater_gen_radius and crater_gen_densities must have the same length."
         )
