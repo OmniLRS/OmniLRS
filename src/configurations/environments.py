@@ -43,27 +43,33 @@ class LunalabConf:
         projector_shader_path (str): The path of the projector shader.
         room_lights_path (str): The path of the room lights.
         curtains_path (dict): The path of the curtains.
-        projector_position (tuple): The position of the projector. (x, y, z)
+        The keys below are applied when the scene loads. None (not set) keeps the state of the Lunalab USD.
+        projector_position (tuple): The position of the projector. (x, y, z). Set it with projector_orientation.
         projector_orientation (tuple): The orientation of the projector. (x, y, z, w)
-        projector_on (bool):
-        ceiling_lights_on (bool):
+        projector_on (bool): True turns the projector on, False turns it off.
+        ceiling_lights_on (bool): True turns the ceiling lights on, False turns them off.
     """
 
     lab_length: float = 10.0
     lab_width: float = 6.5
     resolution: float = 0.01
-    projector_position: tuple = (3.0, 0.0, 1.0)
-    projector_orientation: tuple = (0.0, 0.0, 0.0, 1.0)
-    projector_on: bool = True
-    ceiling_lights_on: bool = True
+    projector_position: tuple = None
+    projector_orientation: tuple = None
+    projector_on: bool = None
+    ceiling_lights_on: bool = None
 
     def __post_init__(self):
         assert type(self.resolution) is float, "The resolution must be a float."
         assert self.resolution > 0.0, "The resolution must be greater than 0."
-        assert type(self.projector_position) is tuple, "The projector position must be a tuple."
-        assert len(self.projector_position) == 3, "The projector position must have 3 elements."
-        assert type(self.projector_orientation) is tuple, "The projector orientation must be a tuple."
-        assert len(self.projector_orientation) == 4, "The projector orientation must have 4 elements."
+        assert (self.projector_position is None) == (self.projector_orientation is None), (
+            "Set projector_position and projector_orientation together."
+        )
+        if self.projector_position is not None:
+            # The yaml gives lists
+            self.projector_position = tuple(self.projector_position)
+            self.projector_orientation = tuple(self.projector_orientation)
+            assert len(self.projector_position) == 3, "The projector position must have 3 elements."
+            assert len(self.projector_orientation) == 4, "The projector orientation must have 4 elements."
 
         assert self.lab_length == 10.0, "The lab length cannot be changed, and must be 10.0 meters"
         assert self.lab_width == 6.5, "The lab width cannot be changed, and must be 6.5meters"
@@ -91,6 +97,8 @@ class LunaryardConf:
         earth_elevation (float): The elevation of the earth. (in meters)
         earth_azimuth (float): The azimuth of the earth. (in degrees)
         earth_distance (float): The distance of the earth. (in meters)
+        boundary_walls_enabled (bool): Whether static walls contain the rover within the terrain.
+        boundary_walls_visible (bool): Whether boundary walls are rendered for debugging.
     """
 
     lab_length: float = 20.0
@@ -101,11 +109,15 @@ class LunaryardConf:
     earth_elevation: float = 22.0
     earth_azimuth: float = 90.0
     earth_distance: float = 384400000.0
+    boundary_walls_enabled: bool = True
+    boundary_walls_visible: bool = False
 
     def __post_init__(self):
         assert type(self.lab_length) is float, "The lab length must be a float."
         assert type(self.lab_width) is float, "The lab width must be a float."
         assert type(self.resolution) is float, "The resolution must be a float."
+        assert type(self.boundary_walls_enabled) is bool, "boundary_walls_enabled must be a boolean."
+        assert type(self.boundary_walls_visible) is bool, "boundary_walls_visible must be a boolean."
 
         assert self.lab_length > 0.0, "The lab length must be greater than 0."
         assert self.lab_width > 0.0, "The lab width must be greater than 0."
@@ -138,6 +150,7 @@ class LargeScaleTerrainConf:
     hr_dem_resolution: float = 0.025
     hr_dem_generate_craters: bool = True
     hr_dem_num_blocks: int = 4
+    terrain_cache_dir: str = None
 
     crater_gen_densities: list = dataclasses.field(default_factory=list)
     crater_gen_radius: list = dataclasses.field(default_factory=list)
@@ -169,8 +182,8 @@ class LargeScaleTerrainConf:
     geo_cm_coarse_acceleration_mode: str = "gpu"
     geo_cm_apply_smooth_shading: bool = False
     geo_cm_semantic_label: str = "terrain"
-    geo_cm_texture_name: str = "LunarRegolith8k"
-    geo_cm_texture_path: str = "assets/Textures/LunarRegolith8k.mdl"
+    geo_cm_texture_name: str = "LunarRegolithInfiniteWorld"
+    geo_cm_texture_path: str = "assets/Textures/LunarRegolithInfiniteWorld.mdl"
 
     terrain_collider_enabled: bool = True
     terrain_collider_resolution: float = 0.05
@@ -200,6 +213,9 @@ class LargeScaleTerrainConf:
         assert type(self.hr_dem_generate_craters) is bool, "hr_dem_generate_craters must be a boolean."
         assert type(self.hr_dem_num_blocks) is int, "hr_dem_num_blocks must be an integer."
         assert self.hr_dem_num_blocks > 0, "hr_dem_num_blocks must be a positive integer."
+        assert self.terrain_cache_dir is None or type(self.terrain_cache_dir) is str, (
+            "terrain_cache_dir must be a string or None."
+        )
 
         if self.crater_gen_seed is None:
             self.crater_gen_seed = self.seed + 1
@@ -359,6 +375,7 @@ class LargeScaleTerrainConf:
         self.MMConf_D = {
             "folder_path": self.lr_dem_folder_path,
             "hrdem_settings": HRDEMGenCfg_D,
+            "terrain_cache_dir": self.terrain_cache_dir,
         }
 
         assert type(self.geo_cm_num_texels_per_level) is int, "geo_cm_num_texels_per_level must be an integer."

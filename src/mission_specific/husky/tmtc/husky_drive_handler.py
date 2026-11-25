@@ -2,6 +2,7 @@ __author__ = "Amaan Javed"
 __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
 
+from src.subsystems.robot_enums import GoNogoState
 from src.tmtc.drive_handler import DriveHandler
 
 
@@ -9,9 +10,9 @@ class HuskyDriveHandler(DriveHandler):
     """
     Husky-specific drive handler.
 
-    Overrides the drive gate so that the Husky can always drive without
-    requiring a GO command, motor controller power-on, or health checks.
+    The Husky drives while GO (its startup state), without the motor controller power and health checks: it has no
+    power commands.
     """
 
     def _is_robot_able_to_drive(self) -> bool:
-        return True
+        return self._robot.subsystems.get_go_nogo_state() == GoNogoState.GO

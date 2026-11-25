@@ -30,6 +30,7 @@ class LargeScaleController(BaseEnv, StellarEngineEnvMixin):
         stellar_engine_settings: StellarEngineConf = None,
         sun_settings: SunConf = None,
         is_simulation_alive: callable = lambda: True,
+        close_simulation: callable = lambda: None,
         static_assets_settings: Dict = None,
         monitoring_cameras_settings: Dict = None,
         **kwargs,
@@ -51,6 +52,7 @@ class LargeScaleController(BaseEnv, StellarEngineEnvMixin):
         self.scene_name = "/LargeScaleLunar"
         self.stage_settings = large_scale_terrain
         self.is_simulation_alive = is_simulation_alive
+        self.close_simulation = close_simulation
 
         if static_assets_settings:
             self.SAM = StaticAssetsManager(static_assets_settings)
@@ -84,6 +86,10 @@ class LargeScaleController(BaseEnv, StellarEngineEnvMixin):
     def monitor_thread_is_alive(self) -> None:
         return self.LSTM.map_manager.hr_dem_gen.monitor_thread.thread.is_alive()
 
+    def monitor_caught_ctrl_c(self) -> bool:
+        # The terrain ThreadMonitor handles SIGINT itself: it shuts the workers down, then its thread exits.
+        return self.LSTM.map_manager.hr_dem_gen.monitor_thread.ctrl_c
+
     def get_wait_for_threads(self) -> None:
         return [self.LSTM.map_manager.hr_dem_gen.monitor_thread.thread.join]
 
@@ -95,17 +101,21 @@ class LargeScaleController(BaseEnv, StellarEngineEnvMixin):
 
         self.build_scene()
         # Instantiates the terrain manager
-        self.LSTM = LargeScaleTerrainManager(self.stage_settings, is_simulation_alive=self.is_simulation_alive)
+        self.LSTM = LargeScaleTerrainManager(
+            self.stage_settings,
+            is_simulation_alive=self.is_simulation_alive,
+            close_simulation=self.close_simulation,
+        )
         self.LSTM.build()
         # Sets the sun using the stellar engine if enabled
         if self.enable_stellar_engine:
             self.SE.set_lat_lon(*self.LSTM.get_lat_lon())
 
         if self.SAM:
-            self.SAM.spawn(get_height_func=self.LSTM.get_height_local)
+            self.SAM.spawn(get_height_func=self.get_terrain_height)
 
         if self.MCM:
-            self.MCM.spawn()
+            self.MCM.spawn(get_height_func=self.get_terrain_height)
 
     def add_robot_manager(self, robotManager: RobotManager) -> None:
         """
@@ -121,6 +131,16 @@ class LargeScaleController(BaseEnv, StellarEngineEnvMixin):
     # ==============================================================================
     # Terrain info
     # ==============================================================================
+
+    def get_terrain_height(self, position: Tuple[float, float]) -> float:
+        """
+        Returns the terrain height at a local (x, y) position.
+
+        Args:
+            position (Tuple[float, float]): the (x, y) position in meters.
+        """
+
+        return self.LSTM.get_height_local(position)
 
     def get_height_and_normal(
         self, position: Tuple[float, float, float]

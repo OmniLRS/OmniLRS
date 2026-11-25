@@ -94,7 +94,9 @@ def sweep_rssi(
 
 
 def plot_rssi_profile(
-    distances: Sequence[float], rssi: Sequence[float], filename: str = "test/outputs/radio_model_rssi.png"
+    distances: Sequence[float],
+    rssi: Sequence[float],
+    filename: str = "test/physics_models/outputs/radio_model_rssi.png",
 ) -> str:
     """Plot RSSI vs. distance."""
 
@@ -116,7 +118,7 @@ def plot_rssi_profile(
 def main() -> None:
     import os
 
-    os.makedirs("test/outputs", exist_ok=True)
+    os.makedirs("test/physics_models/outputs", exist_ok=True)
     distances, rssi_values = sweep_rssi()
     output = plot_rssi_profile(distances, rssi_values)
     print(f"Radio model plot saved to {output}")

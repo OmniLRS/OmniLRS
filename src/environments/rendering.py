@@ -4,8 +4,7 @@ __email__ = "ljburtz@jaops.com"
 
 from typing import Tuple
 
-import carb
-import omni
+import carb.settings
 
 from src.configurations.rendering_confs import ChromaticAberrationsConf, FlaresConf, MotionBlurConf
 
@@ -16,15 +15,24 @@ from src.configurations.rendering_confs import ChromaticAberrationsConf, FlaresC
 
 def enable_RTX_real_time(**kwargs) -> None:
     """
-    Enables the RTX real time renderer. The ray-traced render.
+    Enables the RTX real time renderer (RTX Real-Time 2.0, "RealTimePathTracing").
+
+    The viewport action "set_renderer_rtx_realtime" still selects the legacy "RaytracedLighting" mode,
+    so the render mode is set directly.
 
     Args:
         data (int, optional): Not used. Defaults to 0.
     """
 
-    action_registry = omni.kit.actions.core.get_action_registry()
-    action = action_registry.get_action("omni.kit.viewport.actions", "set_renderer_rtx_realtime")
-    action.execute()
+    carb.settings.get_settings().set("/rtx/rendermode", "RealTimePathTracing")
+    try:
+        from omni.kit.viewport.utility import get_active_viewport
+
+        viewport = get_active_viewport()
+    except ImportError:
+        viewport = None
+    if viewport is not None:
+        viewport.set_hd_engine("rtx", "RealTimePathTracing")
 
 
 def enable_RTX_interactive(*kwargs) -> None:
@@ -35,9 +43,16 @@ def enable_RTX_interactive(*kwargs) -> None:
         data (int, optional): Not used. Defaults to 0.
     """
 
+    import omni.kit.actions.core
+
     action_registry = omni.kit.actions.core.get_action_registry()
     action = action_registry.get_action("omni.kit.viewport.actions", "set_renderer_rtx_pathtracing")
     action.execute()
+
+
+def set_tbn_frame_mode(mode: int) -> None:
+    """Sets the RTX mode used to generate tangent and bitangent frames."""
+    carb.settings.get_settings().set("/rtx/hydra/TBNFrameMode", mode)
 
 
 # ==============================================================================
@@ -183,8 +198,8 @@ def set_chromatic_aberrations(cfg):
     Sets the chromatic aberration settings.
     """
 
-    if "chromatic_aberrations" in cfg["rendering"].keys():
-        chromatic_aberrations_cfg = cfg["rendering"]["chromatic_aberrations"]
+    if "chromatic_aberration" in cfg["rendering"].keys():
+        chromatic_aberrations_cfg = cfg["rendering"]["chromatic_aberration"]
         apply_chromatic_aberrations(chromatic_aberrations_cfg)
 
 

@@ -5,12 +5,14 @@ __email__ = "ljburtz@jaops.com"
 from typing import Dict
 
 import numpy as np
+import omni.usd
 
 from src.configurations.procedural_terrain_confs import TerrainManagerConf
 from src.environments.rock_manager import RockManager
 from src.physics.terramechanics_parameters import RobotParameter, TerrainMechanicalParameter
 from src.physics.terramechanics_solver import TerramechanicsSolver
 from src.robots.robot import RobotManager
+from src.simulation import physics_scene_gravity
 from src.terrain_management.terrain_manager import TerrainManager
 
 
@@ -47,7 +49,7 @@ class TerrainControlMixin:
         self.RM = RockManager(**rocks_settings)
         self.TS = TerramechanicsSolver(
             robot_param=RobotParameter(),
-            terrain_param=TerrainMechanicalParameter(),
+            terrain_param=TerrainMechanicalParameter(gravity=physics_scene_gravity(omni.usd.get_context().get_stage())),
         )
         self.deformation_conf = terrain_manager.moon_yard.deformation_engine
 
@@ -65,6 +67,16 @@ class TerrainControlMixin:
 
         self.dem = self.T.getDEM()
         self.mask = self.T.getMask()
+
+    def get_terrain_height(self, position) -> float:
+        """
+        Returns the terrain height at a world (x, y) position.
+
+        Args:
+            position (Tuple[float, float]): the (x, y) position in meters.
+        """
+
+        return self.T.get_height(position)
 
     def switch_terrain(self, flag: int = -1) -> None:
         """

@@ -139,15 +139,15 @@ class GeoClipmap:
 
         with ScopedTimer("Complete mesh backbone generation", active=self.profiling):
             with ScopedTimer("numba mesh backbone generation", active=self.profiling):
-                self.points, self.uvs, self.indices = _build_mesh(
+                self.points, self.indices = _build_mesh(
                     self.specs.startingLODLevel,
                     self.specs.numMeshLODLevels,
                     self.specs.meshBaseLODExtentHeightfieldTexels,
                 )
-            with ScopedTimer("cast to numpy", active=self.profiling):
-                self.points = np.array(self.points) * 2 * self.specs.minimum_target_resolution
-                self.uvs = np.array(self.uvs) * 2 * self.specs.minimum_target_resolution
-                self.indices = np.array(self.indices)
+            with ScopedTimer("scale mesh backbone and compute uvs", active=self.profiling):
+                self.points = self.points * 2 * self.specs.minimum_target_resolution
+                # The UVs of the triangle corners are the planar coordinates of their vertices.
+                self.uvs = self.points[self.indices, :2]
 
     def save_mesh(self) -> None:
         """

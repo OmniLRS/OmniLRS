@@ -13,6 +13,7 @@ class TMEntry:
     value: Any = None
     updated_since_send: bool = False
 
+
 class TMCollector:
     """
     Holds the latest (single) value of every defined TM parameter
@@ -23,7 +24,7 @@ class TMCollector:
     """
 
     def __init__(self) -> None:
-        self._lock = threading.Lock() # protects the stored values in case updates come from threads other than the sender's (for example ROS2 callbacks)
+        self._lock = threading.Lock()  # protects the stored values in case updates come from threads other than the sender's (for example ROS2 callbacks)
         self._entries: dict[str, TMEntry] = {}
 
     def define_parameter(self, name: str) -> None:

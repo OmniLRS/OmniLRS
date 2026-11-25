@@ -3,24 +3,27 @@ __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
 
 
-from src.mission_specific.husky.tmtc.camera_handler import CameraViewType, HuskyCameraHandler
-from src.mission_specific.husky.tmtc.enums import HuskyCameraResolution, HuskyYamcsArguments
+from functools import partial
+
+from src.mission_specific.husky.tmtc.camera_handler import HuskyCameraHandler
+from src.mission_specific.husky.tmtc.enums import HuskyYamcsArguments
 from src.mission_specific.husky.tmtc.transmitter import HuskyTransmitter
-from src.subsystems.robot_enums import ObcState
-from src.tmtc.intervals_handler import IntervalName
+from src.subsystems.robot_enums import GoNogoState, ObcState
+from src.tmtc.intervals_handler import camera_streaming_interval
 
 
 class HuskyCommander:
     """
     Commander for the Husky UGV.
 
-    Contains the rover-specific logic behind each Yamcs command.  Methods here
-    are registered as callbacks inside HuskyController.setup_command_callbacks().
+    Contains the rover-specific logic behind each Yamcs command. Methods here
+    are mapped to their commands in HuskyController.command_handlers().
 
     Husky-specific capabilities vs. Pragyaan:
-      * Differential-drive only (drive_straight / drive_turn).
-      * Onboard camera (RGBA + depth capture, streaming on/off).
-      * No solar panel, no GO/NOGO gate.
+      * Differential-drive only (drive_straight / drive_turn), gated by GO/NOGO only. The Husky starts in GO.
+      * Onboard cameras (robot yaml `camera` list): on-command and streaming RGB images per rgba camera, depth
+        images per depth camera. Camera commands take a camera_name argument.
+      * No solar panel, no power commands, no streaming compression model.
     """
 
     def __init__(
@@ -42,6 +45,21 @@ class HuskyCommander:
         self._intervals_handler = intervals_handler
 
     # ------------------------------------------------------------------
+    # GO/NOGO
+    # ------------------------------------------------------------------
+
+    def handle_go_nogo(self, decision: str):
+        if decision not in [GoNogoState.GO.name, GoNogoState.NOGO.name]:
+            print("New decision for GO / NOGO is unknown:", decision)
+            return
+
+        decision = GoNogoState[decision]
+        self._robot.subsystems.set_go_nogo_state(decision)
+
+        if decision == GoNogoState.NOGO:
+            self._drive_handler.stop_robot()
+
+    # ------------------------------------------------------------------
     # Drive commands
     # ------------------------------------------------------------------
 
@@ -55,37 +73,28 @@ class HuskyCommander:
     # Camera commands
     # ------------------------------------------------------------------
 
-    def handle_high_res_capture(self):
-        self._camera_handler.transmit_camera_view(
-            HuskyCameraHandler.BUCKET_ONCOMMAND,
-            HuskyCameraResolution.HIGH.value,
-            CameraViewType.RGBA,
-        )
+    # YamcsTMTC only calls them with a camera_name of the command's camera type (commands_handler.check_camera_argument)
+
+    def handle_high_res_capture(self, camera_name: str):
+        self._camera_handler.transmit_camera_view(camera_name, kind="oncommand")
         self._obc_handler.set_obc_state(ObcState.CAMERA, 10)
 
-    def handle_depth_capture(self):
-        self._camera_handler.transmit_camera_view(
-            HuskyCameraHandler.BUCKET_DEPTH,
-            HuskyCameraResolution.HIGH.value,
-            CameraViewType.DEPTH,
-        )
+    def handle_depth_capture(self, camera_name: str):
+        self._camera_handler.transmit_camera_view(camera_name, kind="depth")
         self._obc_handler.set_obc_state(ObcState.CAMERA, 10)
 
-    def set_activity_of_camera_streaming(self, action: str):
+    def set_activity_of_camera_streaming(self, camera_name: str, action: str):
+        interval_name = camera_streaming_interval(camera_name)
         if action == HuskyYamcsArguments.STOP.value:
-            self._intervals_handler.remove_interval(IntervalName.CAMERA_STREAMING.value)
+            self._intervals_handler.remove_interval(interval_name)
         elif action == HuskyYamcsArguments.START.value:
-            if not self._intervals_handler.does_exist(IntervalName.CAMERA_STREAMING.value):
+            if not self._intervals_handler.does_exist(interval_name):
                 self._intervals_handler.add_new_interval(
-                    name=IntervalName.CAMERA_STREAMING.value,
+                    name=interval_name,
                     seconds=self._intervals["camera_streaming"],
                     is_repeating=True,
                     execute_immediately=False,
-                    function=self._camera_handler.transmit_camera_view,
-                    f_args=(
-                        HuskyCameraHandler.BUCKET_STREAMING,
-                        HuskyCameraResolution.LOW.value,
-                    ),
+                    function=partial(self._camera_handler.transmit_camera_view, camera_name, kind="streaming"),
                 )
         else:
             print("HuskyCommander.set_activity_of_camera_streaming: unknown action:", action)

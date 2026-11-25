@@ -158,7 +158,12 @@ class TerramechanicsSolver:
     def compute_sigma_max(self):
         self.sigma_max = (
             (self.terrain_param.c * self.terrain_param.k_c)
-            + (self.terrain_param.rho * 9.81 * self.robot_param.wheel_base * self.terrain_param.k_phi)
+            + (
+                self.terrain_param.rho
+                * self.terrain_param.gravity
+                * self.robot_param.wheel_base
+                * self.terrain_param.k_phi
+            )
         ) * (self.robot_param.wheel_radius / self.robot_param.wheel_base) ** self.terrain_param.n
 
     def compute_fx(self):

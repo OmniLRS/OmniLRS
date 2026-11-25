@@ -5,7 +5,7 @@ __email__ = "ljburtz@jaops.com"
 import logging
 import os
 
-import omni
+import omni.kit.commands
 from pxr import Gf, PhysxSchema, Usd, UsdGeom, UsdPhysics, UsdShade
 
 logger = logging.getLogger(__name__)

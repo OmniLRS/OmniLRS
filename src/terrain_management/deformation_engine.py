@@ -31,7 +31,7 @@ class FootprintProfileGenerator:
         self.profile_width = footprint_conf.width
         self.profile_height = footprint_conf.height
         self.x_deform_offset = deform_constrain_conf.x_deform_offset
-        self.y_deform_offset = deform_constrain_conf.x_deform_offset
+        self.y_deform_offset = deform_constrain_conf.y_deform_offset
         self.profile = None
 
     def create_profile(self) -> Tuple[np.ndarray, int, int]:

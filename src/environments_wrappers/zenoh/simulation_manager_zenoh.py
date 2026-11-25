@@ -1,0 +1,219 @@
+__author__ = "Shamistan Karimov, Elian NEPPEL, Bach Nguyen"
+__maintainer__ = "Louis Burtz"
+__email__ = "ljburtz@jaops.com"
+
+import logging
+
+import omni.timeline
+from isaacsim import SimulationApp
+
+from src.configurations.procedural_terrain_confs import TerrainManagerConf
+from src.environments.utils import set_moon_env_name
+from src.environments_wrappers.rate import Rate
+from src.environments_wrappers.robot_video_recorder import RobotVideo
+from src.environments_wrappers.zenoh.largescale_zenoh import Zenoh_LargeScaleManager
+from src.environments_wrappers.zenoh.lunalab_zenoh import Zenoh_LunalabManager
+from src.environments_wrappers.zenoh.lunaryard_zenoh import Zenoh_LunaryardManager
+from src.environments_wrappers.zenoh.robot_manager_zenoh import Zenoh_RobotManager
+from src.environments_wrappers.zenoh.transport.zenoh_sim_control import ZenohSimulationControl
+from src.simulation import Simulation
+
+logger = logging.getLogger(__name__)
+logging.basicConfig(format="%(asctime)s %(message)s", datefmt="%m/%d/%Y %I:%M:%S %p")
+
+
+class Zenoh_SimulationManager:
+    """
+    Manages the simulation. This class is responsible for:
+    - Initializing the simulation
+    - Running the lab manager thread
+    - Running the robot manager thread
+    - Running the simulation
+    - Cleaning the simulation
+    """
+
+    def __init__(
+        self,
+        cfg: dict,
+        simulation_app: SimulationApp,
+    ) -> None:
+        """
+        Initializes the simulation.
+
+        Args:
+            cfg (dict): Configuration dictionary.
+            simulation_app (SimulationApp): SimulationApp instance.
+        """
+
+        self.cfg = cfg
+        self.simulation_app = simulation_app
+
+        # Setups the physics and acquires different interfaces to talk with Isaac
+        self.timeline = omni.timeline.get_timeline_interface()
+        # cfg/physics (lunar gravity, solver, time step), as in ROS2 mode. Without it, the simulation ran with the
+        # Isaac Sim defaults, including Earth gravity.
+        self.sim = Simulation(
+            physics_dt=cfg["environment"]["physics_dt"],
+            rendering_dt=cfg["environment"]["rendering_dt"],
+            physics_scene=cfg["physics"]["physics_scene"],
+        )
+
+        set_moon_env_name(cfg["environment"]["name"])
+
+        self._step_and_reset()
+        self._setup_rate()
+
+        self.Zenoh_EC = self._get_environment_controller(self.cfg["environment"]["name"])
+        assert self.Zenoh_EC is not None
+
+        self.Zenoh_RM = Zenoh_RobotManager(cfg["environment"]["robots_settings"], cfg["mode"])
+
+        self._setup_terrain_manager()
+        self._preload_robot()
+
+        self._start_transports()
+
+        self.Zenoh_EC.LC.add_robot_manager(self.Zenoh_RM.get_RM())
+
+        self._step_and_reset()
+
+        self.entry_task_is_done = False
+
+    def _step_and_reset(self, n=100):
+        for i in range(n):
+            self.sim.step()
+        self.sim.reset()
+
+    def _setup_rate(self):
+        if self.cfg["environment"]["enforce_realtime"]:
+            self.rate = Rate(dt=self.cfg["environment"]["physics_dt"])
+        else:
+            self.rate = Rate(is_disabled=True)
+
+    def _get_environment_controller(self, environment_name: str):
+        self.Zenoh_EC = None
+        if environment_name == "LargeScale":
+            self.Zenoh_EC = Zenoh_LargeScaleManager(
+                environment_cfg=self.cfg["environment"],
+                mode_cfg=self.cfg["mode"],
+                is_simulation_alive=self.simulation_app.is_running,
+                close_simulation=self.simulation_app.close,
+            )
+        elif environment_name == "Lunaryard":
+            self.Zenoh_EC = Zenoh_LunaryardManager(
+                environment_cfg=self.cfg["environment"],
+                mode_cfg=self.cfg["mode"],
+                is_simulation_alive=self.simulation_app.is_running,
+                close_simulation=self.simulation_app.close,
+            )
+        elif environment_name == "Lunalab":
+            self.Zenoh_EC = Zenoh_LunalabManager(
+                environment_cfg=self.cfg["environment"],
+                mode_cfg=self.cfg["mode"],
+                is_simulation_alive=self.simulation_app.is_running,
+                close_simulation=self.simulation_app.close,
+            )
+
+        return self.Zenoh_EC
+
+    def _setup_terrain_manager(self):
+        if "terrain_manager" in self.cfg["environment"].keys():
+            self.terrain_manager_conf: TerrainManagerConf = self.cfg["environment"]["terrain_manager"]
+            self.deform_delay = self.terrain_manager_conf.moon_yard.deformation_engine.delay
+            self.enable_deformation = self.terrain_manager_conf.moon_yard.deformation_engine.enable
+        else:
+            self.enable_deformation = False
+
+    def _preload_robot(self):
+        self.Zenoh_RM.get_RM().preload_robot(self.sim, get_height_func=self.Zenoh_EC.LC.get_terrain_height)
+
+    def _start_transports(self):
+        """
+        Start publishers & subcribers from both environment & robot controllers
+        """
+
+        self.Zenoh_EC.start_publishing()
+        self.Zenoh_EC.start_listening()
+
+        self.Zenoh_RM.start_publishing()
+        self.Zenoh_RM.start_listening()
+
+        keyexprs = self.cfg["mode"]["keyexprs"]
+        self.sim_control = ZenohSimulationControl(
+            {action: keyexprs[f"sim_{action}"] for action in ZenohSimulationControl.ACTIONS}
+        )
+        self.sim_control.start()
+
+    def _apply_simulation_control(self) -> None:
+        """Apply the play/pause/stop requests received over Zenoh. A stop then play restarts (see consume_restart)."""
+        for action in self.sim_control.pop_requests():
+            logger.info(f"Simulation control: {action}")
+            if action == "play":
+                self.sim.play()
+            elif action == "pause":
+                self.sim.pause()
+            elif action == "stop":
+                self.sim.stop()
+
+    def run_simulation(self) -> None:
+        """
+        Runs simulation in synchronous manner,
+        while zenoh's asyncio tasks has already been started in backend.
+        """
+
+        self.timeline.play()
+        # Opt-in test video (OMNILRS_ROBOT_VIDEO).
+        video = RobotVideo(self.Zenoh_RM.RM_)
+        try:
+            while self.simulation_app.is_running():
+                self.rate.reset()
+                self._apply_simulation_control()
+
+                did_reset = False
+
+                if self.sim.is_playing():
+                    if self.sim.consume_restart():
+                        logger.info("Timeline restarted: resetting the environment and robot")
+                        self.sim.reset()
+                        did_reset = True
+                        self.Zenoh_EC.reset()
+                        self.Zenoh_RM.invalidate_articulation_api()
+                        self.Zenoh_RM.reset_robot()
+                        self.Zenoh_RM.apply_modifications()
+
+                    if not did_reset:
+                        # Must happen before periodic_update(), because LargeScale calls robot.get_pose().
+                        self.Zenoh_RM.update_articulation_api()
+                        self.Zenoh_EC.periodic_update(dt=self.sim.get_physics_dt())
+                        self.Zenoh_EC.apply_modifications()
+                        if self.Zenoh_EC.trigger_reset:
+                            self.Zenoh_RM.invalidate_articulation_api()
+                            self.Zenoh_RM.reset()
+                            self.Zenoh_EC.trigger_reset = False
+                            did_reset = True
+                        self.Zenoh_RM.apply_modifications()
+                        video.update()
+                        if self.enable_deformation:
+                            if self.sim.current_time_step_index >= (self.deform_delay * self.sim.get_physics_dt()):
+                                self.Zenoh_EC.LC.deform_terrain()
+
+                if self.Zenoh_EC.pubs_inited:
+                    self.Zenoh_EC.pub_sim_is_running(True, is_playing=self.sim.is_playing())
+
+                if self.Zenoh_RM.pubs_inited and self.sim.is_playing() and not did_reset:
+                    self.Zenoh_RM.apply_modifications()
+                    self.Zenoh_RM.publish_telemetry()
+                    self.Zenoh_RM.publish_gt()
+
+                self.rate.sleep()
+
+                self.simulation_app.update()
+        finally:
+            video.close()
+
+        self.sim_control.close()
+        self.Zenoh_EC.close()
+        self.Zenoh_RM.close()
+
+        self.sim.stop()
+        self.timeline.stop()

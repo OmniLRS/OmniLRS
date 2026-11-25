@@ -17,6 +17,11 @@ class IntervalName(Enum):
     NEUTRON_COUNT = "neutron_count"
 
 
+def camera_streaming_interval(camera_name: str) -> str:
+    """Name of the streaming interval of one camera (each streaming camera has its own)."""
+    return f"{IntervalName.CAMERA_STREAMING.value}_{camera_name}"
+
+
 class IntervalsHandler:
     def __init__(self):
         self._intervals = {}
@@ -40,6 +45,9 @@ class IntervalsHandler:
         }
 
         def callback(e, _interval=interval, _name=name):
+            # A removed or replaced interval never fires (its subscription can still get the current update event).
+            if self._intervals.get(_name) is not _interval:
+                return
             now = self._timeline.get_current_time()
             if now < interval["next_time"]:
                 return
@@ -51,7 +59,9 @@ class IntervalsHandler:
             else:
                 if _interval["sub"] is not None:
                     _interval["sub"].unsubscribe()
-                self._intervals.pop(_name, None)
+                # func can add a new interval with the same name (the next phase of a drive): keep that one.
+                if self._intervals.get(_name) is _interval:
+                    self._intervals.pop(_name, None)
 
         interval["sub"] = self._update_stream.create_subscription_to_pop(
             callback,

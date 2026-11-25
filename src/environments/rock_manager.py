@@ -6,7 +6,7 @@ import os
 from typing import Any, List, Union
 
 import numpy as np
-import omni
+import omni.usd
 from WorldBuilders.Mixer import RequestMixer
 from WorldBuilders.pxr_utils import createInstancerAndCache, setInstancerParameters
 from WorldBuilders.Types import (

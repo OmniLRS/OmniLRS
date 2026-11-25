@@ -8,24 +8,46 @@ robots_settings:
     # usd_path: assets/USD_Assets/robots/ros2_husky_PhysX_vlp16_mono_depth_imu.usd
     usd_path: assets/USD_Assets/robots/nograph_husky.usd
     pose:
-        position: [26., 16.6, 0.8] # Lunaryard, LargeScale
-        # position: [5.0, 5.0, 0.1] # Lunalab
-        orientation: [0.70711, 0., 0., 0.70711]
+      position: [5.0, 5.0, 0.5] # the same x, y in every environment
+      orientation: [0.70711, 0., 0., 0.70711]
+      height_above_terrain_override: 0.5 # replaces position z with terrain height at (x, y) + this value
     base_link: "base_link" # core link used to determine the position of the robot
     domain_id: 0
     target_links: ["front_left_wheel_link", "front_right_wheel_link", "rear_left_wheel_link", "rear_right_wheel_link"]
 
-    dimensions:
-      width: 1.6 # m
-      length: 1.5
+    drive: # wheel kinematics (used e.g for driving calculations)
+      wheel_radius: 0.1778 # m
+      track_width: 0.571 # m, between the left and right wheel centers
+      skid_steer_factor: 3.24 # effective track / track_width; keeps the turn rate of turn_speed_coef 6.5 (not measured)
     pos_relative_to_prim: ""
     wheel_joints:
       left: ["front_left_wheel", "rear_left_wheel"]
       right: ["front_right_wheel", "rear_right_wheel"]
-    camera:
-      prim_path: "/Robots/husky/d455/RSD455/Camera_OmniVision_OV9782_Color"
-      resolutions:
-        low: [320, 240]
-        high: [1280, 720]
     imu_sensor_path: "/Robots/husky/d455/RSD455/Imu_Sensor"
-    turn_speed_coef: 6.5
+    # Define camera names and types here:
+    #   type: render products created per resolution. rgba -> streaming + oncommand commands, depth -> capture depth commands
+    #   Parsed and validated with the robot config in every mode (src/configurations/robot_camera_confs.py)
+    #   In Zenoh mode, every rgba camera is published per resolution: OmniLRS/husky/camera/<camera>/<resolution>
+    # Camera bucket and telemetry names are then automatically derived from this list:
+    #   - OmniLRS computes the names at startup with the src/tmtc/yamcs_naming.py module and checks them against the Yamcs server MDB and buckets
+    #   - in the yamcs-mission-control repository, generate_mdb_rover.py also reads this file and uses that module to build the Yamcs MDB
+    #     and the image buckets (yamcs.yaml)
+    camera:
+      - name: "cam_color"
+        prim_path: "/Robots/husky/d455/RSD455/Camera_OmniVision_OV9782_Color"
+        type: [rgba]
+        resolutions:
+          low: [320, 240]
+          high: [1280, 720]
+      - name: "cam_left" # the D455 depth is aligned to its left imager
+        prim_path: "/Robots/husky/d455/RSD455/Camera_OmniVision_OV9782_Left"
+        type: [rgba, depth]
+        resolutions:
+          low: [320, 240]
+          high: [1280, 720]
+      - name: "cam_right"
+        prim_path: "/Robots/husky/d455/RSD455/Camera_OmniVision_OV9782_Right"
+        type: [rgba]
+        resolutions:
+          low: [320, 240]
+          high: [1280, 720]

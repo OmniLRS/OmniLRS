@@ -3,6 +3,7 @@ __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
 
 import copy
+import logging
 import math
 from typing import Tuple
 
@@ -25,6 +26,9 @@ from src.terrain_management.large_scale_terrain.rock_manager import (
     RockManager,
     RockManagerConf,
 )
+
+logger = logging.getLogger(__name__)
+logging.basicConfig(format="%(asctime)s %(message)s", datefmt="%m/%d/%Y %I:%M:%S %p")
 
 
 def is_map_done():
@@ -211,10 +215,10 @@ class LargeScaleTerrainManager:
             #    self.mesh_position[0] + delta[0],
             #    self.mesh_position[1] + delta[1],
             # )
-            print("terrain updated")
+            logger.info("terrain updated")
             fine_position = self.map_manager.get_hr_coordinates(global_corrected_coordinates)
             coarse_position = self.map_manager.get_lr_coordinates(global_corrected_coordinates)
-            print("coordinates aquired")
+            logger.info("coordinates aquired")
             # print("coarse_position", coarse_position)
             # print("min value lr dem", self.map_manager.get_lr_dem().min())
             # print("max value lr dem", self.map_manager.get_lr_dem().max())
@@ -222,7 +226,7 @@ class LargeScaleTerrainManager:
             # print("max value hr dem", self.map_manager.get_hr_dem().max())
 
             self.nested_clipmap_manager.update_clipmaps(fine_position, coarse_position, corrected_coordinates)
-            print("clipmaps updated")
+            logger.info("clipmaps updated")
             # The rock DB requires block-aligned coordinates (multiples of block_size).
             # Local frame is offset by `starting_position` which is generally NOT block
             # aligned, so we sample rocks in the GLOBAL frame and let the rock manager
@@ -233,9 +237,9 @@ class LargeScaleTerrainManager:
                 int(global_corrected_coordinates[1] // bs) * bs,
             )
             self.rock_manager.sample(global_corrected_coordinates, block_corner_global)
-            print("rock manager sampled")
+            logger.info("rock manager sampled")
             self.collider_manager.update_shifting_map(local_coordinates)
-            print("collider manager updated")
+            logger.info("collider manager updated")
             update = True
         else:
             corrected_coordinates = (0, 0)

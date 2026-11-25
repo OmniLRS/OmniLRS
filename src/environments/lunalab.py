@@ -4,7 +4,7 @@ __email__ = "ljburtz@jaops.com"
 
 from typing import Dict, List, Tuple
 
-from isaacsim.core.utils.stage import add_reference_to_stage
+from isaacsim.core.experimental.utils.stage import add_reference_to_stage
 from pxr import Gf, Usd, UsdGeom, UsdLux
 
 from assets import get_assets_path
@@ -77,15 +77,16 @@ class LunalabController(BaseEnv, TerrainControlMixin):
         self.build_scene()
         # Fetches the interactive elements
         self.collect_interactive_assets()
+        self.apply_lab_settings()
         self.build_RM()  # TODO should first call switch_terrain() as it calls load_DEM() which sets up self.dem and self.mask that are used inside build_RM(), otherwise they are just None (but either ways inside RM.build() neither of those params are being utilized)
         # Loads the DEM and the mask
         self.switch_terrain(0)
 
         if self.SAM:
-            self.SAM.spawn()
+            self.SAM.spawn(get_height_func=self.get_terrain_height)
 
         if self.MCM:
-            self.MCM.spawn()
+            self.MCM.spawn(get_height_func=self.get_terrain_height)
 
     # ==============================================================================
     # Lunalab-specific configs
@@ -130,6 +131,18 @@ class LunalabController(BaseEnv, TerrainControlMixin):
         self._curtain_prims: Dict[str, Usd.Prim] = {}
         for key in self.stage_settings.curtains_path.keys():
             self._curtain_prims[key] = self.stage.GetPrimAtPath(self.stage_settings.curtains_path[key])
+
+    def apply_lab_settings(self) -> None:
+        """Applies the projector and ceiling light keys of lunalab_settings that are set (None keeps the USD state)."""
+
+        settings = self.stage_settings
+        if settings.projector_position is not None:
+            x, y, z, w = settings.projector_orientation
+            self.set_projector_pose(settings.projector_position, (w, x, y, z))
+        if settings.projector_on is not None:
+            self.turn_projector_on_off(settings.projector_on)
+        if settings.ceiling_lights_on is not None:
+            self.turn_room_lights_on_off(settings.ceiling_lights_on)
 
     # ==============================================================================
     # Projector control

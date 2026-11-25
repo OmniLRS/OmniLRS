@@ -1,0 +1,22 @@
+name: Unit tests
+
+on: [push, pull_request]
+
+permissions:
+  contents: read
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      # test/unit needs no Isaac Sim, ROS 2 or server: only the small pixi `test-unit` environment (pixi.lock).
+      # The sanity tests (test/ci_artefacts) run in the Artefacts CI.
+      - uses: prefix-dev/setup-pixi@ad1da6449d9e506fd127fd67ab2d054a769f6a94 # v0.11.2
+        with:
+          pixi-version: v0.81.0
+          environments: test-unit
+
+      - name: Unit tests
+        run: pixi run -e test-unit test-unit

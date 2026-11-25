@@ -6,15 +6,15 @@ import os
 import warnings
 
 import numpy as np
-import omni
+import omni.usd
 import warp as wp
+from isaacsim.core.experimental.utils.semantics import add_labels
 from pxr import Sdf, UsdGeom
-from semantics.schema.editor import PrimSemanticData
+from WorldBuilders import pxr_utils
 
 from assets import get_assets_path
 from src.configurations.procedural_terrain_confs import TerrainManagerConf
 from src.terrain_management.terrain_generation import GenerateProceduralMoonYard
-from WorldBuilders import pxr_utils
 
 
 class TerrainManager:
@@ -315,8 +315,7 @@ class TerrainManager:
         self.loadTerrainByName(name)
 
     def autoLabel(self):
-        prim_sd = PrimSemanticData(self._stage.GetPrimAtPath(self._mesh_path))
-        prim_sd.add_entry("class", "ground")
+        add_labels(self._stage.GetPrimAtPath(self._mesh_path), labels="ground", taxonomy="class")
 
     def getDEM(self):
         """
@@ -327,6 +326,33 @@ class TerrainManager:
         """
 
         return self._DEM
+
+    def get_height(self, position) -> float:
+        """
+        Returns the terrain height at a world (x, y) position, bilinearly interpolated and clamped to the terrain
+        bounds. Assumes the terrain mesh is not rotated or scaled.
+
+        Args:
+            position (Tuple[float, float]): the (x, y) position in meters.
+
+        Returns:
+            float: the terrain height in meters.
+        """
+
+        # Mesh vertex (xi, yi) sits at (xi, yi) * grid_size with height np.flip(DEM, 0)[yi, xi] (see update()).
+        dem = np.flip(self._DEM, 0)
+        x = float(np.clip((position[0] - self._mesh_pos[0]) / self._grid_size, 0, self._sim_width - 1))
+        y = float(np.clip((position[1] - self._mesh_pos[1]) / self._grid_size, 0, self._sim_length - 1))
+        x0, y0 = int(x), int(y)
+        x1, y1 = min(x0 + 1, self._sim_width - 1), min(y0 + 1, self._sim_length - 1)
+        dx, dy = x - x0, y - y0
+        height = (
+            dem[y0, x0] * (1 - dx) * (1 - dy)
+            + dem[y0, x1] * dx * (1 - dy)
+            + dem[y1, x0] * (1 - dx) * dy
+            + dem[y1, x1] * dx * dy
+        )
+        return float(height) + self._mesh_pos[2]
 
     def getMask(self):
         """
@@ -344,9 +370,16 @@ if __name__ == "__main__":
     from isaacsim import SimulationApp
 
     simulation_app = SimulationApp({"headless": False})
-    from isaacsim.core.api.world import World
+    import yaml
 
-    world = World(stage_units_in_meters=1.0)
+    from src.configurations.physics_confs import PhysicsSceneConf
+    from src.simulation import Simulation
+
+    with open("cfg/physics/default_physics.yaml") as f:
+        physics_scene = PhysicsSceneConf(
+            **yaml.safe_load(f)["physics_scene"]
+        )  # the gravity comes only from cfg/physics
+    sim = Simulation(physics_dt=1.0 / 60.0, rendering_dt=1.0 / 60.0, physics_scene=physics_scene)
     T = TerrainManager()
 
     j = 0
@@ -355,4 +388,4 @@ if __name__ == "__main__":
         T.loadTerrainId(j)
         j += 1
         for i in range(20):
-            world.step(render=True)
+            sim.step()

@@ -26,7 +26,11 @@ class PayloadHandler:
 
     _draw_text method is used to write name of the new reading (incremental counter),
     as to show that there was an update to readings, after the sensor was used.
+
+    APXS images go to the bucket of payload.apxs.bucket in the controller yaml, registered as bucket role "apxs".
     """
+
+    APXS_ROLE = "apxs"
 
     def __init__(self, images_handler: ImagesHandler, payload_conf):
         self._images_handler = images_handler
@@ -36,12 +40,11 @@ class PayloadHandler:
         self._apxs_conf = payload_conf["apxs"]
         self._APXS_WIDTH = payload_conf["apxs"]["resolution"][0]
         self._APXS_HEIGHT = payload_conf["apxs"]["resolution"][1]
-        self._images_handler.add_bucket(payload_conf["apxs"]["bucket"]["name"], payload_conf["apxs"]["bucket"]["path"])
+        self._images_handler.add_bucket(role=self.APXS_ROLE, bucket_conf=payload_conf["apxs"]["bucket"])
 
     def snap_apxs(self, apxs_power_state: PowerState = PowerState.OFF):
-        APXS_BUCKET = self._apxs_conf["bucket"]["name"]
-        APXS_COUNT = self._images_handler._counter[APXS_BUCKET]
-        text_to_write = f"{APXS_BUCKET}_{APXS_COUNT}"
+        APXS_COUNT = self._images_handler.image_count(self.APXS_ROLE)
+        text_to_write = f"{self._apxs_conf['bucket']['name']}_{APXS_COUNT}"
 
         if APXS_COUNT == 0:
             apxs_background_path = os.path.join(self._apxs_conf["samples_dir"], self._apxs_conf["no_data"])
@@ -53,7 +56,7 @@ class PayloadHandler:
         img = Image.open(apxs_background_path).convert("RGB").resize((self._APXS_WIDTH, self._APXS_HEIGHT))
         draw = ImageDraw.Draw(img)
         self._draw_text(draw, text=text_to_write, fill="black", position="top-right")
-        self._images_handler.save_image(img, APXS_BUCKET)
+        self._images_handler.save_image(img, role=self.APXS_ROLE)
 
     def _draw_text(self, draw: ImageDraw.ImageDraw, text: str, fill, position: str = "center"):
         APXS_FONT = ImageFont.load_default(self._APXS_HEIGHT // 15)

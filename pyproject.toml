@@ -1,6 +1,6 @@
 [project]
 name = "OmniLRS"
-version = "2.0.0"
+version = "3.0.0"
 description = "A IsaacSim based lunar simulator for rover locomotion."
 requires-python = ">=3.10"
 keywords = ["lunar", "simulator", "rover", "locomotion", "IsaacSim"]
@@ -18,12 +18,12 @@ dependencies = [
     "gdal",
     "omegaconf",
     "hydra-core",
-    "opencv-python",
+    "av",
 ]
 
 [tool.ruff]
 line-length = 120
-target-version = "py311"
+target-version = "py312"
 # WorldBuilders is a vendored git submodule — don't lint/format third-party code.
 extend-exclude = ["WorldBuilders"]
 
@@ -31,6 +31,16 @@ extend-exclude = ["WorldBuilders"]
 # Ruff's default rule set (E4/E7/E9 + Pyflakes) plus import sorting (I).
 select = ["E4", "E7", "E9", "F", "I"]
 
+[tool.ruff.lint.isort]
+# Submodule is absent in the CI lint checkout; pin it so import order matches locally.
+known-third-party = ["WorldBuilders"]
+
 [build-system]
 requires = ["setuptools>=42", "wheel"]
 build-backend = "setuptools.build_meta"
+
+[tool.pytest.ini_options]
+# Tests import OmniLRS modules as `src.*` from the repository root
+pythonpath = ["."]
+# Bare `pytest` runs the unit tests only; the sanity tests (test/ci_artefacts) start Isaac Sim
+testpaths = ["test/unit"]

@@ -18,6 +18,28 @@ def get_moon_env_name():
     return MOON_ENVIRONMENT_NAME
 
 
+def resolve_position(position, height_above_terrain_override=None, get_height_func=None):
+    """
+    Returns the position unchanged, or with z = terrain height at (x, y) + height_above_terrain_override when set.
+
+    Args:
+        position (List[float]): absolute (x, y, z) position.
+        height_above_terrain_override (float): optional height above the terrain, replaces z.
+        get_height_func (callable): returns the terrain height at an (x, y) position.
+
+    Returns:
+        List[float]: the resolved (x, y, z) position.
+    """
+
+    position = list(position)
+    if height_above_terrain_override is None:
+        return position
+    if get_height_func is None:
+        raise ValueError("height_above_terrain_override is set but no terrain height query is available.")
+    position[2] = float(get_height_func((position[0], position[1]))) + height_above_terrain_override
+    return position
+
+
 def set_xform_pose(xform, position, orientation):
     _set_xform_translate(xform, position)
     _set_xform_orientation(xform, orientation)
@@ -33,9 +55,9 @@ def _set_xform_translate(xform, position):
         translate_op = xform.AddTranslateOp()
 
     if translate_op.GetPrecision() == UsdGeom.XformOp.PrecisionDouble:
-        translate_op.Set(Gf.Vec3d(position[0], position[1], position[2]))
+        translate_op.Set(Gf.Vec3d(*(float(v) for v in position[:3])))
     else:
-        translate_op.Set(Gf.Vec3f(position[0], position[1], position[2]))
+        translate_op.Set(Gf.Vec3f(*(float(v) for v in position[:3])))
 
 
 def _set_xform_orientation(xform, orientation):
@@ -48,9 +70,9 @@ def _set_xform_orientation(xform, orientation):
         orient_op = xform.AddOrientOp()
 
     if orient_op.GetPrecision() == UsdGeom.XformOp.PrecisionDouble:
-        q = Gf.Quatd(orientation[3], Gf.Vec3d(orientation[0], orientation[1], orientation[2]))
+        q = Gf.Quatd(float(orientation[3]), Gf.Vec3d(*(float(v) for v in orientation[:3])))
     else:
-        q = Gf.Quatf(orientation[3], Gf.Vec3f(orientation[0], orientation[1], orientation[2]))
+        q = Gf.Quatf(float(orientation[3]), Gf.Vec3f(*(float(v) for v in orientation[:3])))
     orient_op.Set(q)
 
 
@@ -85,8 +107,10 @@ def transform_orientation_into_xyz(orientation_wxyz):
 
 
 def transform_orientation_from_xyzw_into_xyz(orientation_xyzw):
-    q_xyzw = np.array(orientation_xyzw)
-    e_zyx_from_wxyz = R.from_quat(q_xyzw).as_euler("zyx", degrees=True)
-    xyz_orient = [e_zyx_from_wxyz[2], e_zyx_from_wxyz[1], e_zyx_from_wxyz[0]]
-
-    return np.array(xyz_orient)
+    """
+    Roll, pitch and yaw in radians of an (x, y, z, w) quaternion, in the REP-103 convention: the rotation is yaw about z,
+    then pitch about the new y, then roll about the new x (intrinsic z-y'-x'', scipy "ZYX"). Roll and pitch are about the
+    axes of the rotated body, so they do not depend on the yaw.
+    """
+    yaw, pitch, roll = R.from_quat(np.array(orientation_xyzw)).as_euler("ZYX")
+    return np.array([roll, pitch, yaw])

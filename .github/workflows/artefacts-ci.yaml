@@ -1,0 +1,56 @@
+name: artefacts-ci
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+
+jobs:
+  # Skip the expensive artefacts run when the merged PR has the
+  # `skip-artefacts` label. Manual dispatches and direct pushes always run.
+  gate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      skip: ${{ steps.label.outputs.skip }}
+    steps:
+      - id: label
+        if: github.event_name == 'push'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          skip=$(gh api "repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/pulls" \
+            --jq 'any(.[] | select(.merged_at != null) | .labels[].name; . == "skip-artefacts")') || skip=false
+          echo "skip=$skip" >> "$GITHUB_OUTPUT"
+          if [ "$skip" = "true" ]; then
+            echo "::notice::Merged PR has the 'skip-artefacts' label, skipping artefacts CI."
+          fi
+
+  test:
+    needs: gate
+    if: needs.gate.outputs.skip != 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.12]
+
+    steps:
+      # Checkout repository under $GITHUB_WORKSPACE, so our jobs can access it.
+      - uses: actions/checkout@v4
+        with:
+          submodules: true  # WorldBuilders is not in base image
+
+      - name: Set Up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      # Start up test
+      - uses: art-e-fact/action-artefacts-ci@main
+        with:
+          artefacts-api-key: ${{ secrets.ARTEFACTS_API_KEY }}
+          job-name: test-startup

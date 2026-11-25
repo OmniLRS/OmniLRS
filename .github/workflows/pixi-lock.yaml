@@ -1,0 +1,38 @@
+name: Pixi lock
+
+on:
+  push:
+    paths:
+      - pixi.toml
+      - pixi.lock
+      - pyproject.toml
+      - .github/workflows/pixi-lock.yaml
+  pull_request:
+    paths:
+      - pixi.toml
+      - pixi.lock
+      - pyproject.toml
+      - .github/workflows/pixi-lock.yaml
+
+permissions:
+  contents: read
+
+jobs:
+  lock-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - uses: prefix-dev/setup-pixi@ad1da6449d9e506fd127fd67ab2d054a769f6a94 # v0.11.2
+        with:
+          pixi-version: v0.81.0
+          run-install: false
+
+      # The artefacts image runs `pixi install --locked`, which fails if the
+      # manifests changed without regenerating pixi.lock. Catch that here.
+      - name: Check pixi.lock is up to date
+        run: |
+          pixi lock --check || {
+            echo "::error file=pixi.lock::pixi.lock is out of date with pixi.toml/pyproject.toml. Run 'pixi lock' and commit the result."
+            exit 1
+          }

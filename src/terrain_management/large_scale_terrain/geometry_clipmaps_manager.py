@@ -1,4 +1,4 @@
-__author__ = "Antoine Richard"
+__author__ = "Antoine Richard, Shamistan Karimov"
 __maintainer__ = "Louis Burtz"
 __email__ = "ljburtz@jaops.com"
 
@@ -107,10 +107,11 @@ class GeoClipmapManager:
         with wp.ScopedTimer("complete update loop", active=self.profiling):
             self._geo_clipmap.update_elevation(position)
             with wp.ScopedTimer("mesh update", active=self.profiling):
+                # The terrain material samples world XY; local UVs only define the normal-map tangent frame.
                 self.render_mesh(
                     self._geo_clipmap.points,
                     self._geo_clipmap.indices,
-                    self._geo_clipmap.uvs,
+                    self._geo_clipmap.points[:, :2],
                     update_topology=self.update_topology,
                 )
         self.move_mesh(mesh_position)
@@ -118,7 +119,7 @@ class GeoClipmapManager:
 
     def move_mesh(self, position: np.ndarray) -> None:
         """
-        Moves the mesh to the given position.
+        Moves the mesh to the given position, keeping its configured orientation and scale.
 
         Args:
             position (np.ndarray): position to move the mesh to (in meters).
@@ -127,7 +128,12 @@ class GeoClipmapManager:
         self._mesh_pos = position
         mesh = UsdGeom.Mesh.Get(self._stage, self._mesh_path)
         if mesh:
-            set_xform_ops(mesh, Gf.Vec3d(self._mesh_pos[0], self._mesh_pos[1], self._mesh_pos[2]))
+            set_xform_ops(
+                mesh,
+                Gf.Vec3d(*(float(v) for v in self._mesh_pos[:3])),
+                Gf.Quatd(float(self._mesh_rot[-1]), Gf.Vec3d(*(float(v) for v in self._mesh_rot[:3]))),
+                Gf.Vec3d(*(float(v) for v in self._mesh_scale[:3])),
+            )
 
     def create_Xforms(self) -> None:
         """
@@ -138,7 +144,9 @@ class GeoClipmapManager:
             self._stage.DefinePrim(self._root_path, "Xform")
         if not self._stage.GetPrimAtPath(self._root_path + "/Terrain"):
             self._stage.DefinePrim(self._root_path + "/Terrain", "Xform")
-        self._stage.DefinePrim(self._mesh_path)
+        mesh = UsdGeom.Mesh.Define(self._stage, self._mesh_path)
+        mesh.CreateOrientationAttr(UsdGeom.Tokens.leftHanded)
+        mesh.CreateDoubleSidedAttr(True)
 
     def render_mesh(
         self,
@@ -153,8 +161,7 @@ class GeoClipmapManager:
         Args:
             points (np.ndarray): array of points to set as the mesh vertices.
             indices (np.ndarray): array of indices to set as the mesh indices.
-            uvs (np.ndarray): array of uvs to set as the mesh uvs.
-            colors (np.ndarray): array of colors to set as the mesh colors.
+            uvs (np.ndarray): mesh-local XY coordinates in meters, authored with topology.
             update_topology (bool): whether to update the mesh topology.
         """
 
@@ -171,18 +178,11 @@ class GeoClipmapManager:
 
         if update_topology:
             idxs = np.array(indices).reshape(-1, 3)
-            mesh.GetFaceVertexIndicesAttr().Set(idxs)
+            mesh.GetFaceVertexIndicesAttr().Set(idxs.ravel())
             mesh.GetFaceVertexCountsAttr().Set([3] * len(idxs))
             pv = UsdGeom.PrimvarsAPI(mesh.GetPrim()).CreatePrimvar("st", Sdf.ValueTypeNames.Float2Array)
             pv.Set(uvs)
-            pv.SetInterpolation("faceVarying")
-
-        set_xform_ops(
-            mesh,
-            Gf.Vec3d(self._mesh_pos[0], self._mesh_pos[1], self._mesh_pos[2]),
-            Gf.Quatd(self._mesh_rot[-1], (self._mesh_rot[0], self._mesh_rot[1], self._mesh_rot[2])),
-            Gf.Vec3d(self._mesh_scale[0], self._mesh_scale[1], self._mesh_scale[2]),
-        )
+            pv.SetInterpolation("vertex")
 
     def get_height_and_random_orientation(
         self,

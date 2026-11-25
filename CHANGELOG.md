@@ -9,6 +9,87 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 [WIP]
 
+> **Breaking:** migrated to Isaac Sim 6.2 (from 5.0). See [docs/migration_plan_6.2.md](docs/migration_plan_6.2.md).
+>   - Python 3.12, numpy 2.3.1, numba 0.63, SciPy 1.17, Warp 1.17 (versions pinned by the Isaac Sim 6.2 wheels).
+>   - Docker installation is now deprecated: Pixi is the only (and best) supported method. Docker is used for CI only.
+>   - ROS 2 uses the **Jazzy** libraries bundled with Isaac Sim (`ROS_DISTRO=jazzy`, `bridge_name: jazzy`); external nodes should run Jazzy.
+>   - `cfg/rendering/ray_tracing.yaml` uses the `RealTimePathTracing` renderer (replaces the legacy `RayTracedLighting`); the `/OmniLRS/Render/EnableRTXRealTime` topic switches to it as well.
+>   - The IMU is read through `isaacsim.sensors.experimental.physics.IMUSensor`; the reported values keep the same format.
+>   - `assets/Terrains/crater_spline_profiles.pkl` was re-pickled with SciPy 1.17 (identical curves; no longer loadable with SciPy < 1.17).
+>   - ROS 2 robot assets (`ros2_husky_PhysX_vlp16*.usd`, `ros2_jackal_PhysX_vlp16*.usd`, `ex1/ex1_spheres.usd`): TF graph migrated to `IsaacComputeTransformTree` → `ROS2PublishTransformTree` (removes the deprecated `targetPrims` path and its per-frame PoseTree warnings; published TF is unchanged).
+>   - Poses passed to USD `Gf` types are cast to Python floats (Isaac Sim 6.2's pxr rejects non-float64 numpy scalars).
+>   - CI runs on Ubuntu 24.04 / ROS 2 Jazzy (`public.ecr.aws/artefacts/ros2:jazzy-harmonic-nvidia`).
+>   - OmniLRS no longer uses or enables the Isaac Sim APIs deprecated in 6.0 (`isaacsim.core.api/prims/utils`, `isaacsim.sensors.camera`); details in [docs/TODO_6.2.md](docs/TODO_6.2.md).
+>   - Cameras use Isaac Sim's `CameraSensor`: robot cameras render RGBA and depth from one render product per resolution, frames requested before a camera has rendered are skipped (Yamcs, Zenoh), and cameras below 300 px (e.g. the 320×240 monitoring camera) render without post anti-aliasing. The pragyaan and Vikram lander camera prims now author square-pixel apertures (images unchanged).
+>   - `World` and `PhysicsSceneManager` are replaced by `Simulation` (`src/simulation.py`, also applies `cfg/physics`), which `RobotManager.preload_robot()` now takes.
+>   - Joint control and telemetry use Isaac Sim's experimental `Articulation`; the `ArticulationControl` / `ArticulationTelemetry` interface is unchanged (`joint_name_to_index` removed, use `joint_names`).
+
+### Added
+
+- Optional yaml config key `pose.height_above_terrain_override` for robots, static assets and monitoring cameras: when set, the (absolute) z of pose.position is overriden by the (absolute) terrain height at (x, y) plus this value. Works the same in Lunaryard, Lunalab and LargeScale.
+- `largescale_workshop` environment: the LargeScale counterpart of `lunaryard_40m_workshop` (lander, rock and monitoring camera), differing only in terrain.
+- Yamcs mode reads the TM/TC definitions (MDB) from the running Yamcs server and checks the robot and controller config against them and the server's storage buckets at startup: it stops if something it sends or handles is missing and warns about extras. `pixi run -e yamcs check-yamcs-contract` (`scripts/check_yamcs_contract.py`) runs the same check without Isaac Sim. See [docs/yamcs-omnilrs-sync.md](docs/yamcs-omnilrs-sync.md).
+- Pragyaan has three cameras: `NavCam_left` and `NavCam_right` (rgba) and `cam_depth` (depth).
+- Husky has three cameras: `cam_color`, `cam_left` and `cam_right` (rgba), `cam_left` also depth. In Zenoh mode each is published per resolution (`OmniLRS/husky/camera/<camera>/<resolution>`; previously only `cam_color`).
+- Pixi tasks `yamcs-husky` (Husky in Yamcs mode on `lunaryard_20m`, Yamcs instance `husky`) and `check-yamcs-contract-husky`.
+- Artefacts CI scenario `test_yamcs_husky_sanity` (`pixi run test-yamcs-husky`): the Husky in Yamcs mode against yamcs-mission-control-husky (telemetry, camera captures and streaming, driving, GO/NOGO). The CI image also builds the Husky Yamcs server and generates its MDB from the OmniLRS commit under test.
+- Unit tests run in CI on every push and pull request (`pixi run -e test-unit test-unit`). Tests are organized in `test/unit` (no Isaac Sim), `test/ci_artefacts` (sanity tests: the Artefacts CI scenarios) and `test/physics_models`; `check_yamcs_contract.py` moved to `scripts/`.
+- `scripts/assets/rebuild_pragyaan.py` writes `nograph_pragyaan.usd` from `nograph_pragyaan_source.usd`, the asset as exported from Blender, and applies the Pragyaan physics fixes. The plan and the audit are in [docs/todo_pragyaan_physics.md](docs/todo_pragyaan_physics.md).
+- Yamcs sanity flat area tests, before the other joint tests. The test starts the rover at (22, 13), a flat area of the workshop terrain (`cfg/robot/pragyaan.yaml` keeps its spawn, which is on a 3° slope): `test_start_pose_is_flat` (roll and pitch of 2° or less at rest), `test_drive_forward` and `test_drive_backward` (2 m at 0.2 m/s, back to the spawn), `test_spot_turn_left` and `test_spot_turn_right` (90° at 8°/s, back to the start heading). They compare the wheel encoders, the distance, the heading, the turn angle, the gyroscope rate and the IMU orientation with the ground truth pose. They print every measurement before they fail.
+- Video of every sanity test scenario (`OMNILRS_ROBOT_VIDEO`, `src/environments_wrappers/robot_video_recorder.py`, in Yamcs, ROS 2 and Zenoh modes): a top view and a side view of the robot, with the current test, the last Yamcs commands (Yamcs mode) and the commanded and measured wheel speeds. Each scenario writes `rover_<scenario>.mp4` next to its logs: in `test/ci_artefacts/`, or in the Artefacts upload folder in CI.
+- Zenoh simulation control keys `OmniLRS/sim/play`, `OmniLRS/sim/pause` and `OmniLRS/sim/stop` (any payload). A pause keeps the simulation state; a stop then play restarts from the initial state (environment and robot reset). `OmniLRS/sim/is_running` now also reports `is_playing`.
+
+### Changed
+
+- Scripts moved: the DEM download and preprocessing scripts to `scripts/dem_related/`, the pixi activation script to `scripts/pixi/`. `install_docker.sh`, `install_native.sh` and `download_only_native.sh` are removed.
+- LargeScale static assets no longer implicitly add the terrain height to their z; set `height_above_terrain_override` instead.
+- LargeScale robot spawn uses the configured pose in both ROS2 and Yamcs modes (ROS2 previously forced `(0, 0)`); the `largescale*` configs set `height_above_terrain_override: 0.5` to keep the previous spawn height.
+- The Lunaryard workshop configs and `robot=pragyaan` now place the rover, lander, rock and monitoring camera relative to the terrain height.
+- Robot yaml `camera` is a list of cameras, each with `name`, `prim_path`, `type` (`rgba` and/or `depth`) and `resolutions`, validated when the robot config is loaded in every mode (`src/configurations/robot_camera_confs.py`). In Yamcs mode, each camera has its own buckets (`images_<camera>_<kind>`), metadata and streaming telemetry (`/Rover/camera/<camera>/<kind>/...`), streaming job and compression model; the camera commands take a `camera_name` argument. Names come from `src/tmtc/yamcs_naming.py`, which the Yamcs MDB generators also use.
+- Yamcs controller yaml: `mdb` (file list) is replaced by `mdb_space_systems`, `images.buckets` is keyed by role (`lander`, `monitoring`) and `images.clear_buckets_on_startup` is added (default true; with `false`, earlier images are kept and each bucket's numbering continues after its last image).
+- Yamcs images are uploaded through the Yamcs storage API instead of written to `/tmp`. The image buckets are generated into the Yamcs `yamcs.yaml` together with the MDB, with limits sized to keep every image of a mission; OmniLRS never deletes images except when clearing the buckets at startup (`images.clear_buckets_on_startup`).
+- The ROS2 Artefacts CI scenarios load the EX1 robot yaml (`robot=ex1`) instead of the robot settings of the environment yaml. They check its Ackermann drive topic `/ackermann_cmd` instead of the Husky `/cmd_vel` and `/pointcloud`.
+- Husky in Yamcs mode starts in GO and sends `/Rover/go_nogo`; it handles `go_nogo_command`: NOGO stops it and blocks the drive commands until GO (previously it could always drive and sent no GO/NOGO state).
+- Husky Zenoh camera images are published at 5 Hz (`zenoh.camera.publish_period_s: 0.2`, previously 30 Hz), for each of its 6 camera streams.
+- The Zenoh stream settings (publish periods, wire formats, logging) moved from the robot yaml (`robots_settings.parameters.zenoh`) to the controller yaml (`robots_settings.zenoh` in `cfg/controller/husky-controller.yaml`). Zenoh mode needs `controller=husky-controller`, which the `zenoh_*` pixi tasks now pass.
+- The environment yamls no longer include a default robot (`robots_settings` keeps only `robots_root`). The ROS2, Yamcs and Zenoh modes need `robot=<name>`, and they stop before Isaac Sim starts if it is missing. In ROS2 mode, the Husky also needs its ROS 2 USD: `robot=husky environment.robots_settings.parameters.usd_path=assets/USD_Assets/robots/ros2_husky_PhysX_vlp16.usd`. In every environment, the Husky and the EX1 spawn at (5, 5), 0.5 m above the terrain.
+- Pragyaan `/Rover/solar_panel_state` follows the measured solar panel angle: it changes to DEPLOYED or STOWED once the panel is within 10° of that position, instead of when the command is received. The power model uses the same state.
+- The EX1 USD (`ex1/ex1_spheres.usd`) uses OmniPBR materials instead of OmniSurface presets, with the same colors. With an empty shader cache (CI container), its ROS2 startup is about 190 s shorter, because RTX no longer compiles a second ray tracing pipeline.
+
+- Pragyaan asset `nograph_pragyaan.usd` is one flattened layer in the REP-103 frame (x forward, y left, z up), built by `scripts/assets/rebuild_pragyaan.py`. No Xform, rigid body or camera has a scale. The mesh transforms are baked into the points. Each rigid body has its origin on its joint. base_link has its runtime pose, so its IMU no longer turns 120° on the first physics step. Prim paths are unchanged. The spawn `orientation` in `cfg/robot/pragyaan.yaml` is now `[0.70711, 0., 0., 0.70711]` for the same world pose. If you set a custom Pragyaan orientation, set it again.
+- Pragyaan has its real size: 0.913 m long, 0.943 m wide and 0.366 m high without the solar panel (published 0.917 × 0.750 × 0.397 m). The Blender model was 1.9 times too large. The spawn height in `cfg/robot/pragyaan.yaml` is 0.42 m.
+- Vikram lander `Vikram.usd` is Z-up, without scales, and its main body has the published size (2.0 × 2.0 m, 1.17 m high, factor 0.85). It is built from `Vikram_source.usd` by `scripts/assets/rebuild_vikram.py`. The workshop environments place it with the orientation `[0., 0., 0.70711, 0.70711]` (x, y, z, w) at 0.18 m above the terrain.
+- Robot yaml: `dimensions` and `turn_speed_coef` are replaced by a `drive` section with `wheel_radius`, `track_width` and `skid_steer_factor` (`DriveConf`). The Yamcs drive commands use wheel kinematics. `drive_straight` turns the wheels at speed / wheel radius. Before, it used a fixed factor of 10, and the Husky drove 1.78 times faster than the command. `drive_turn` uses the track width and the skid-steer factor. A robot without `drive` ignores the drive commands.
+- IMU roll, pitch and yaw follow REP-103: yaw, then pitch, then roll about the rover axes. This applies to the Yamcs `/Rover/imu_orientation` of Pragyaan and Husky and to the Zenoh orientation. Before, roll and pitch were angles about the world axes with inverted signs. If the rover did not face along x, they were wrong.
+- OmniLRS sends the IMU values without conversion, in SI units. The Yamcs `/Rover/imu_orientation` of Pragyaan and Husky is in rad (previously deg). `/Rover/imu_gyroscope` stays in rad/s, and the MDBs now declare rad/s (previously deg/s). The Yamcs MDBs derive `/Rover/imu_orientation_deg` and `/Rover/imu_gyroscope_deg` in deg and deg/s. The Zenoh IMU key `orientation_rpy_deg` is now `orientation_rpy_rad`, in rad.
+- Pragyaan left and right rockers, bogies and wheels are symmetric about the plane of base_link. The pivots and axles moved by 6 mm or less, and the left meshes are the mirrored right meshes.
+
+### Removed
+
+- `assets/USD_Assets/robots/pragyaan/pragyaan.usd` (unused version with an action graph).
+- User-facing Docker image `omnilrs.docker/`; install with pixi instead (Docker is only used for CI). `spaceros_demo.docker/` is kept as an unmaintained demo.
+- `cfg/mdb/` (local MDB copies of Pragyaan and Husky), `scripts/fix_yamcs_tmp.sh` and the pixi `fix-tmp` task.
+
+### Fixed
+
+- Pragyaan weighs 26 kg. Before, it weighed 675 kg, because the asset had no masses and PhysX used its default density on the collider volumes. Each rigid body now has a mass, and PhysX computes the inertia from its colliders. `base_link` has no collider, so it gets an explicit inertia. This removes the "invalid inertia tensor ... negative mass" warning.
+- A drive command that was stopped no longer acts later. `IntervalsHandler` dropped the next phase of a straight drive from its table, so a stop could not cancel it, and it later stopped or changed the next drive. A new drive or turn command also cancels the pending phases of the previous one, and the slow-down phase no longer depends on the OBC state.
+- Yamcs and Zenoh modes run with lunar gravity. They did not apply `cfg/physics`, so they ran with the Isaac Sim defaults, including Earth gravity (9.81 m/s²). `cfg/physics` (`physics_scene.gravity`, 1.62 m/s²) is now the only gravity setting: `Simulation` requires the physics configuration in every mode (SDG included) and stops if it has no gravity, and the terramechanics model reads the gravity of the physics scene (`physics_scene_gravity()` in `src/simulation.py`) instead of using 9.81. The unused `gravity` field of the deformation engine configuration is removed.
+- The physics no longer runs slower than the simulation time when the physics step is shorter than the rendering step (`cfg/physics` 1/60 s with a 1/30 s rendering step: half speed, also in ROS2 mode with the Lunalab and Lunaryard 30 Hz settings). `Simulation.configure_physics_scene` now sets the physics steps per rendering frame.
+- The slow start and stop phases of `drive_straight` are never faster than the requested speed. A command below 0.2 m/s started and stopped at 0.2 m/s.
+- Pragyaan rocker, bogie and motor meshes render with their materials. Their bindings pointed outside the asset, so they had no material.
+- ROS2 mode exits cleanly on SIGINT/SIGTERM (ROS 2 Jazzy shuts down the ROS context on these signals).
+- Yamcs mode with the LargeScale environment: terrain, rocks and colliders now update (EC.update()) as the  rover drives, terrain worker threads are joined on shutdown, and the simulation stops if a terrain worker dies.
+- Joint commands from Yamcs and Zenoh are no longer dropped, entirely or for some joints, when they arrive while PhysX is stepping: `ArticulationControl` queues them and `Robot.update_articulation_api()` writes them from the simulation loop.
+- Yamcs mode no longer sends an empty `/Rover/motor_encoder` before the wheel joints are measured (startup, timeline restart).
+- Stopping and replaying the timeline (e.g. from the GUI) runs the ROS2, Yamcs and Zenoh restart handling again (environment and robot reset). It was skipped because Isaac Sim's physics warm-up advanced the step counter it relied on.
+- The `chromatic_aberration` settings of `cfg/rendering` are applied. The code read the key `chromatic_aberrations`, so they had no effect.
+- The deformation engine uses `y_deform_offset` for the y offset. It used `x_deform_offset` on the two axes.
+- The `cfg/physics` keys `gpu_max_rigid_patch_contact_count` and `gpu_max_num_partitions` (previously spelled `gpu_max_num_partions`) are applied.
+- When the scene loads, OmniLRS applies the Lunalab keys `projector_position`, `projector_orientation` (x, y, z, w), `projector_on` and `ceiling_lights_on`. They had no effect. If a key is not set, the Lunalab USD keeps its state.
+- ROS2 mode: if the `ROS_DOMAIN_ID` environment variable is not set, OmniLRS sets it to `ROS_DOMAIN_ID` of `cfg/mode/ROS2.yaml` before Isaac Sim starts. Before, the key had no effect.
+- The odometry and drive graphs of the EX1 USD (`ex1/ex1_spheres.usd`) use ROS 2 domain 0, like its clock graph and the other robots. If the `ROS_DOMAIN_ID` environment variable was not set, they used domain 81.
+
 See also the [Roadmap and Milestones tracking](https://github.com/orgs/OmniLRS/projects/1)
 
 ## [3.0.0] - 2026-06-29

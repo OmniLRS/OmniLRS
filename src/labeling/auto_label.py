@@ -8,9 +8,9 @@ import string
 from typing import Dict, Tuple, Union
 
 import numpy as np
-import omni
 import omni.kit.actions.core
 import omni.replicator.core as rep
+import omni.usd
 from pxr import Usd, UsdGeom
 
 from src.configurations.auto_labeling_confs import AutoLabelingConf
@@ -83,6 +83,7 @@ class AutonomousLabeling:
             "semantic_segmentation": self.enableSemanticData,
             "depth": self.enableDepthData,
             "ir": self.enableIRData,
+            "normals": self.enableNormalsData,
         }
 
         self.stage = omni.usd.get_context().get_stage()
@@ -106,13 +107,18 @@ class AutonomousLabeling:
                 self.writers_cfgs[camera_name][name]["annot_format"] = self.annot_formats[i]
                 self.synthetic_writers[camera_name][name] = writerFactory(name, **self.writers_cfgs[camera_name][name])
 
-    def get_intrinsics_matrix(self, camera_prim) -> np.ndarray:
+    def get_intrinsics_matrix(self, camera_prim, resolution) -> np.ndarray:
         """
+        Args:
+            camera_prim: the USD camera prim.
+            resolution: (width, height) of the camera's render product, in pixels.
+
         Returns:
             np.ndarray: the intrinsics of the camera (used for calibration)
         """
+        # resolution comes from the render product config, not the camera prim attributes
+        (width, height) = resolution
         focal_length = camera_prim.GetAttribute("focalLength").Get() / 10.0
-        (width, height) = (1280, 720)
         horizontal_aperture = camera_prim.GetAttribute("horizontalAperture").Get() / 10.0
         vertical_aperture = (camera_prim.GetAttribute("horizontalAperture").Get() / 10.0) * (float(height) / width)
         fx = width * focal_length / horizontal_aperture
@@ -122,7 +128,8 @@ class AutonomousLabeling:
         return np.array([[fx, 0.0, cx], [0.0, fy, cy], [0.0, 0.0, 1.0]], dtype="float32")
 
     def save_intrinsics(self, camera_name: str) -> None:
-        intrinsics = self.get_intrinsics_matrix(self.camera_prims[camera_name])
+        resolution = self.camera_resolutions[self.get_camera_idx(camera_name)]
+        intrinsics = self.get_intrinsics_matrix(self.camera_prims[camera_name], resolution)
         np.savetxt(os.path.join(self.data_dir, camera_name + "_intrisics.csv"), intrinsics, delimiter=",")
         np.save(os.path.join(self.data_dir, camera_name + "_intrisics.npy"), intrinsics)
 
@@ -205,6 +212,15 @@ class AutonomousLabeling:
         depth_annot = rep.AnnotatorRegistry.get_annotator("distance_to_image_plane")
         self.annotators[camera_name + "_depth"] = (camera_name, "depth", depth_annot)
         depth_annot.attach([self.render_products[camera_name]])
+
+    def enableNormalsData(self, camera_name: str) -> None:
+        """
+        Enables the normals annotator (surface normal per pixel).
+        """
+
+        normals_annot = rep.AnnotatorRegistry.get_annotator("normals")
+        self.annotators[camera_name + "_normals"] = (camera_name, "normals", normals_annot)
+        normals_annot.attach([self.render_products[camera_name]])
 
     def enableSemanticData(self, camera_name: str) -> None:
         """
