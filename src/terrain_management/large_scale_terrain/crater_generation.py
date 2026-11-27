@@ -20,13 +20,11 @@ class CraterBuilderConf:
     """
     Args:
         block_size (int): size of the block in meters.
-        pad_size (int): size of the padding in meters.
         resolution (float): resolution of the DEM in pixel per meters.
         z_scale (float): scale of the z axis.
     """
 
     block_size: int = 50
-    pad_size: int = 10
     resolution: float = dataclasses.field(default_factory=float)
     z_scale: float = dataclasses.field(default_factory=float)
 
@@ -163,22 +161,24 @@ class CraterBuilder:
         )
         return crater
 
-    def check_if_crater_is_in_block(
-        self, crater_metadata: CraterMetadata, coords_np: np.ndarray, pad_size: int, dem_size: int
-    ) -> bool:
-        is_in_block = True
-        coord = np.array(crater_metadata.coordinates - coords_np) / self.settings.resolution
-        c_size = int(crater_metadata.radius * 2 / self.settings.resolution)
+    def get_stamp_offset(self, crater_metadata: CraterMetadata, coords_np: np.ndarray) -> Tuple[np.ndarray, int]:
+        """
+        Locates the crater stamp in the pixels of a block.
 
-        c_size += c_size % 2
-        coord_padded = (coord + pad_size).astype(np.int64)
-        if ((coord_padded[0] - c_size / 2) < 0) or ((coord_padded[1] - c_size / 2) < 0):
-            is_in_block = False
-        elif ((coord_padded[0] + c_size / 2) >= (pad_size * 2 + dem_size)) or (
-            (coord_padded[1] + c_size / 2) >= (pad_size * 2 + dem_size)
-        ):
-            is_in_block = False
-        return is_in_block, coord_padded
+        Args:
+            crater_metadata (CraterMetadata): data used to generate the crater.
+            coords_np (np.ndarray): coordinates of the block corner in meters.
+
+        Returns:
+            tuple: pixel of the top-left corner of the stamp in the block (may be negative or past the
+                block), and the stamp size in pixels (same as generate_crater).
+        """
+
+        coord = np.array(crater_metadata.coordinates - coords_np) / self.settings.resolution
+        size = int(crater_metadata.radius * 2 / self.settings.resolution)
+        size += size % 2
+        center = np.floor(coord).astype(np.int64)
+        return center - size // 2, size
 
     def generate_craters(
         self,
@@ -188,6 +188,12 @@ class CraterBuilder:
         """
         Generates a DEM with craters.
 
+        For each crater whose stamp (its height map) overlaps the block, the stamp is generated and the part
+        that overlaps the block is added to the block DEM. A crater crossing the edge between two blocks thus
+        adds its two parts to the two blocks and is continuous across them. The craters must come from
+        the block and its 8 neighbours (CraterDB.get_block_data_with_neighbors), so the radius can be at
+        most block_size.
+
         Args:
             craters_data (List[CraterMetadata]): list of craters metadata.
             coords (Tuple[int, int]): coordinates of the block.
@@ -196,26 +202,23 @@ class CraterBuilder:
             np.ndarray: DEM with craters.
         """
 
-        # Creates a padded DEM and mask
         dem_size = int(self.settings.block_size / self.settings.resolution)
-        pad_size = int(self.settings.pad_size / self.settings.resolution)
-        DEM_padded = np.zeros((pad_size * 2 + dem_size, pad_size * 2 + dem_size))
+        DEM = np.zeros((dem_size, dem_size))
         coords_np = np.array(coords)
-        # Adds the craters to the DEM
         for crater_data in craters_data:
-            is_in_block, coord_padded = self.check_if_crater_is_in_block(crater_data, coords_np, pad_size, dem_size)
-            if not is_in_block:
-                continue
+            offset, size = self.get_stamp_offset(crater_data, coords_np)
+            start = np.maximum(offset, 0)
+            end = np.minimum(offset + size, dem_size)
+            if np.any(start >= end):
+                continue  # the stamp does not overlap the block
 
             c = self.generate_crater(crater_data)
-            size = c.shape[0]
-            coord_offset = (coord_padded - size / 2).astype(np.int64)
-            DEM_padded[
-                coord_offset[0] : coord_offset[0] + size,
-                coord_offset[1] : coord_offset[1] + size,
-            ] += c
+            DEM[start[0] : end[0], start[1] : end[1]] += c[
+                start[0] - offset[0] : end[0] - offset[0],
+                start[1] - offset[1] : end[1] - offset[1],
+            ]
 
-        return DEM_padded[pad_size:-pad_size, pad_size:-pad_size]
+        return DEM
 
 
 if __name__ == "__main__":

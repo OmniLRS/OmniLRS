@@ -48,7 +48,6 @@ class HighResDEMConf:
     Args:
         num_blocks (int): The number of blocks in each direction. Total number of blocks is 2 * num_blocks + 1.
         block_size (float): The size of each block in meters. The blocks are square.
-        pad_size (float): The size of the padding in meters. Used to avoid edge cases when adding craters.
         max_blocks (int): The maximum number of blocks. Used to avoid memory issues.
         seed (int): The seed for the random number generator.
         resolution (float): The resolution of the high resolution DEM in meters per pixel.
@@ -61,7 +60,6 @@ class HighResDEMConf:
 
     num_blocks: int = dataclasses.field(default_factory=int)
     block_size: float = dataclasses.field(default_factory=float)
-    pad_size: float = dataclasses.field(default_factory=float)
     max_blocks: int = dataclasses.field(default_factory=int)
     seed: int = dataclasses.field(default_factory=int)
     resolution: float = dataclasses.field(default_factory=float)
@@ -721,19 +719,23 @@ class HighResDEMGen:
 
     def generate_craters_metadata(self, new_block_coord) -> None:
         """
-        Generates crater metadata for the blocks in the grid. The data is generated for
-        the blocks in the grid plus 2 blocks in each direction. This is done to ensure
-        that the crater data is available for the blocks that are being rendered.
+        Generates crater metadata for the blocks in the grid. The grid spans num_blocks + 1
+        blocks in each direction (padding included), and the crater builder adds to each block
+        the craters of the block and of its 8 neighbours that overlap it, so the metadata is
+        generated for the grid plus 1 block in each direction. This is done to ensure that the
+        crater data is available for the blocks that are being rendered.
 
         The generated crater metadata is stored in the crater database. And the blocks
         state is udpated to reflect that the crater metadata is available.
         """
 
+        # The crater DB treats x_max / y_max as exclusive: x_max is the far corner of the last block.
+        n = self.settings.num_blocks + 2
         region = BoundingBox(
-            x_min=int(new_block_coord[0] - (self.settings.num_blocks + 2) * self.settings.block_size),
-            x_max=int(new_block_coord[0] + (self.settings.num_blocks + 2) * self.settings.block_size),
-            y_min=int(new_block_coord[1] - (self.settings.num_blocks + 2) * self.settings.block_size),
-            y_max=int(new_block_coord[1] + (self.settings.num_blocks + 2) * self.settings.block_size),
+            x_min=int(new_block_coord[0] - n * self.settings.block_size),
+            x_max=int(new_block_coord[0] + (n + 1) * self.settings.block_size),
+            y_min=int(new_block_coord[1] - n * self.settings.block_size),
+            y_max=int(new_block_coord[1] + (n + 1) * self.settings.block_size),
         )
         self.crater_sampler.sample_craters_by_region(region)
         # Check if the block has crater data (it should always be true)
@@ -900,7 +902,6 @@ if __name__ == "__main__":
     HRDEMCfg_D = {
         "num_blocks": 4,
         "block_size": 50,
-        "pad_size": 10.0,
         "max_blocks": int(1e7),
         "seed": 42,
         "resolution": 0.05,
@@ -948,7 +949,6 @@ if __name__ == "__main__":
     }
     CraterBuilderCfg_D = {
         "block_size": 50,
-        "pad_size": 10.0,
         "resolution": 0.05,
         "z_scale": 1.0,
     }
