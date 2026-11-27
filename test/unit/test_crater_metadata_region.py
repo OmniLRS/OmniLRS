@@ -56,7 +56,6 @@ def make_generator(tmp_path):
         settings = HighResDEMConf(
             num_blocks=num_blocks,
             block_size=BLOCK_SIZE,
-            pad_size=2.0,
             max_blocks=100,
             seed=42,
             resolution=0.1,

@@ -439,7 +439,6 @@ if __name__ == "__main__":
     HRDEMCfg_D = {
         "num_blocks": 4,
         "block_size": 50,
-        "pad_size": 10.0,
         "max_blocks": int(1e7),
         "seed": 42,
         "resolution": 0.05,
@@ -487,7 +486,6 @@ if __name__ == "__main__":
     }
     CraterBuilderCfg_D = {
         "block_size": 50,
-        "pad_size": 10.0,
         "resolution": 0.05,
         "z_scale": 1.0,
     }

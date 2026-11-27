@@ -155,7 +155,6 @@ class LargeScaleTerrainConf:
     crater_gen_densities: list = dataclasses.field(default_factory=list)
     crater_gen_radius: list = dataclasses.field(default_factory=list)
     crater_gen_profiles_path: str = "assets/Terrains/crater_spline_profiles.pkl"
-    crater_gen_padding: float = 10.0
     crater_gen_min_xy_ratio: float = 0.85
     crater_gen_max_xy_ratio: float = 1.0
     crater_gen_random_rotation: bool = True
@@ -225,7 +224,6 @@ class LargeScaleTerrainConf:
         HRDEMCfg_D = {
             "num_blocks": self.hr_dem_num_blocks,
             "block_size": self.block_size,
-            "pad_size": self.crater_gen_padding,
             "max_blocks": self.dbs_max_elements,
             "seed": 42,
             "z_scale": self.z_scale,
@@ -269,8 +267,6 @@ class LargeScaleTerrainConf:
         )
         assert type(self.crater_gen_profiles_path) is str, "crater_gen_profiles_path must be a string."
         assert os.path.exists(self.crater_gen_profiles_path), "crater_gen_profiles_path does not exist."
-        assert type(self.crater_gen_padding) is float, "crater_gen_padding must be a float."
-        assert self.crater_gen_padding > 0, "crater_gen_padding must be a positive float."
         assert type(self.crater_gen_min_xy_ratio) is float, "crater_gen_min_xy_ratio must be a float."
         assert type(self.crater_gen_max_xy_ratio) is float, "crater_gen_max_xy_ratio must be a float."
         assert self.crater_gen_min_xy_ratio > 0, "crater_gen_min_xy_ratio must be a positive float."
@@ -317,7 +313,6 @@ class LargeScaleTerrainConf:
         }
         CraterBuilderCfg_D = {
             "block_size": self.block_size,
-            "pad_size": self.crater_gen_padding,
             "resolution": self.hr_dem_resolution,
             "z_scale": self.z_scale,
         }

@@ -48,7 +48,6 @@ class HighResDEMConf:
     Args:
         num_blocks (int): The number of blocks in each direction. Total number of blocks is 2 * num_blocks + 1.
         block_size (float): The size of each block in meters. The blocks are square.
-        pad_size (float): The size of the padding in meters. Used to avoid edge cases when adding craters.
         max_blocks (int): The maximum number of blocks. Used to avoid memory issues.
         seed (int): The seed for the random number generator.
         resolution (float): The resolution of the high resolution DEM in meters per pixel.
@@ -61,7 +60,6 @@ class HighResDEMConf:
 
     num_blocks: int = dataclasses.field(default_factory=int)
     block_size: float = dataclasses.field(default_factory=float)
-    pad_size: float = dataclasses.field(default_factory=float)
     max_blocks: int = dataclasses.field(default_factory=int)
     seed: int = dataclasses.field(default_factory=int)
     resolution: float = dataclasses.field(default_factory=float)
@@ -904,7 +902,6 @@ if __name__ == "__main__":
     HRDEMCfg_D = {
         "num_blocks": 4,
         "block_size": 50,
-        "pad_size": 10.0,
         "max_blocks": int(1e7),
         "seed": 42,
         "resolution": 0.05,
@@ -952,7 +949,6 @@ if __name__ == "__main__":
     }
     CraterBuilderCfg_D = {
         "block_size": 50,
-        "pad_size": 10.0,
         "resolution": 0.05,
         "z_scale": 1.0,
     }

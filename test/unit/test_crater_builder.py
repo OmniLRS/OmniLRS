@@ -27,8 +27,7 @@ from src.terrain_management.large_scale_terrain.utils import CraterMetadata  # n
 
 RES = 0.025  # m/px, as in the LargeScale configs
 BLOCK = 50
-PAD = 10  # 2 * PAD < 2 * RADIUS: the former padded canvas could not hold the whole stamp
-RADIUS = 6.0
+RADIUS = 6.0  # larger than the former 10 m canvas padding allowed: that canvas could not hold the whole stamp
 
 
 class FakeDB:
@@ -45,7 +44,7 @@ class FakeDB:
 
 
 def _builder(block_size=BLOCK):
-    conf = CraterBuilderConf(block_size=block_size, pad_size=PAD, resolution=RES, z_scale=1.0)
+    conf = CraterBuilderConf(block_size=block_size, resolution=RES, z_scale=1.0)
     return CraterBuilder(conf, db=FakeDB())
 
 

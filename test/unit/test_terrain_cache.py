@@ -39,7 +39,6 @@ def make_map_manager(tmp_path):
         "high_res_dem_cfg": {
             "num_blocks": 1,
             "block_size": 10,
-            "pad_size": 2.0,
             "max_blocks": 100,
             "seed": 42,
             "resolution": 0.1,
@@ -61,7 +60,7 @@ def make_map_manager(tmp_path):
             },
             "crater_dist_cfg": {"densities": [0.01], "radius": [[0.5, 0.75]], "seed": 44},
         },
-        "crater_builder_cfg": {"block_size": 10, "pad_size": 2.0, "resolution": 0.1, "z_scale": 1.0},
+        "crater_builder_cfg": {"block_size": 10, "resolution": 0.1, "z_scale": 1.0},
         "interpolator_cfg": {
             "source_resolution": 5.0,
             "target_resolution": 0.1,

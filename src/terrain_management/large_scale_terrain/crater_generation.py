@@ -20,13 +20,11 @@ class CraterBuilderConf:
     """
     Args:
         block_size (int): size of the block in meters.
-        pad_size (int): size of the padding in meters.
         resolution (float): resolution of the DEM in pixel per meters.
         z_scale (float): scale of the z axis.
     """
 
     block_size: int = 50
-    pad_size: int = 10
     resolution: float = dataclasses.field(default_factory=float)
     z_scale: float = dataclasses.field(default_factory=float)
 
@@ -179,9 +177,7 @@ class CraterBuilder:
         coord = np.array(crater_metadata.coordinates - coords_np) / self.settings.resolution
         size = int(crater_metadata.radius * 2 / self.settings.resolution)
         size += size % 2
-        # The pad offset only keeps the rounding of the former padded canvas, so the pixel grid is unchanged.
-        pad_px = int(self.settings.pad_size / self.settings.resolution)
-        center = np.floor(coord + pad_px).astype(np.int64) - pad_px
+        center = np.floor(coord).astype(np.int64)
         return center - size // 2, size
 
     def generate_craters(
